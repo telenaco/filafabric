@@ -3,6 +3,7 @@ import { bedFitErrors, PreflightError, writeGcode } from './gcode.js';
 import { computeStats } from './stats.js';
 import { PolygonBoundary } from './boundary.js';
 import { serpentineChains } from './fill.js';
+import { emitStrands } from './emit.js';
 
 /**
  * Squiggle Textile Generator
@@ -325,37 +326,7 @@ export function generateSquiggle(machine, material, squiggleParams = {}) {
     colorChange: squiggleParams.colorChange ?? false,
   });
 
-  const moves = [];
-  const travel = (x, y, z, customGcode, comment) => ({
-    x, y, z, cls: 'travel', extrude: false, customGcode, comment,
-  });
-
-  let cur = null;
-  for (let sIdx = 0; sIdx < res.strands.length; sIdx++) {
-    const strand = res.strands[sIdx];
-    if (strand.pts.length < 2) continue;
-    const first = strand.pts[0];
-
-    if (cur === null) {
-      moves.push(travel(first.x, first.y, first.z + 5));
-      moves.push(travel(first.x, first.y, first.z));
-    } else {
-      const safeZ = Math.max(cur.z, first.z) + 3;
-      moves.push(travel(cur.x, cur.y, safeZ));
-      if (strand.pauseBefore) {
-        moves.push(travel(cur.x, cur.y, safeZ, 'M600 ; Pause for filament color change', 'Filament change pause before ' + strand.name));
-      }
-      moves.push(travel(first.x, first.y, safeZ));
-      moves.push(travel(first.x, first.y, first.z));
-    }
-
-    const moveCls = strand.kind === 'base' ? 'base' : 'supported';
-    for (let i = 1; i < strand.pts.length; i++) {
-      const p = strand.pts[i];
-      moves.push({ x: p.x, y: p.y, z: p.z, cls: moveCls, extrude: true, tag: strand.id });
-    }
-    cur = strand.pts[strand.pts.length - 1];
-  }
+  const moves = emitStrands(res.strands);
 
   const stats = computeStats(moves, cfg, []);
   stats.loops = 0;
