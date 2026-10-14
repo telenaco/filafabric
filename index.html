@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Filafabric: textile G-code studio</title>
+<meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
@@ -12,7 +13,34 @@
 { "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
 </script>
 </head>
-<body>
+<body class="locked">
+<main id="gate" class="gate" aria-labelledby="gate-title">
+  <div class="gate-card">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 22C3 8 12 8 12 22"/><path d="M10 22C10 8 19 8 19 22"/><path d="M17 22C17 8 26 8 26 22"/><path d="M2 26H28"/></svg>
+      <span class="brand-name">Filafabric</span>
+    </div>
+    <p class="gate-kicker">Coming soon</p>
+    <h1 id="gate-title" class="gate-title">Fabric you can print, designed in your browser</h1>
+    <p class="gate-lead">Filafabric is a design studio for flexible fabric structures (loops, coils, weaves, meshes and lace) that turns each one into G-code for a 3D printer and flexible filament. Pick a structure, shape it with a few sliders, check every strand in the preview, and export a file that is ready to print.</p>
+    <ul class="gate-list">
+      <li><strong>Eighteen structures</strong>, from soft loop pile to auxetic mesh and Voronoi lace.</li>
+      <li><strong>A crossing report</strong> that says whether a design will hold together before you print it.</li>
+      <li><strong>A swatch code and a link</strong> on every sample, so any one can be made again.</li>
+    </ul>
+    <form id="gate-form" class="gate-form" autocomplete="off">
+      <label class="gate-label" for="gate-password">Password</label>
+      <div class="gate-row">
+        <input id="gate-password" type="password" required autocomplete="current-password" spellcheck="false" aria-describedby="gate-error">
+        <button id="gate-submit" type="submit" class="btn primary">Open the studio</button>
+      </div>
+      <p id="gate-error" class="gate-error" role="alert" hidden></p>
+      <label class="gate-remember"><input id="gate-remember" type="checkbox" checked> Stay unlocked on this device</label>
+    </form>
+    <p class="gate-note">An early preview for testers. If you were given a link and a password, this is the place for it.</p>
+  </div>
+</main>
+
 <header class="topbar">
   <div class="brand">
     <svg width="28" height="28" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 22C3 8 12 8 12 22"/><path d="M10 22C10 8 19 8 19 22"/><path d="M17 22C17 8 26 8 26 22"/><path d="M2 26H28"/></svg>
@@ -43,6 +71,8 @@
   <div class="menu-sep" role="separator"></div>
   <button type="button" class="menu-item" id="btn-save-file"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7M5 7l3 3 3-3M3 12.5h10"/></svg>Save settings file</button>
   <label class="menu-item file-link"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5h4l1.5 1.5h5.5v6.5h-11z"/></svg>Open settings file…<input type="file" id="file-open" accept=".json,application/json"></label>
+  <div class="menu-sep" role="separator"></div>
+  <button type="button" class="menu-item" id="btn-lock"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2"/></svg>Lock the studio</button>
   <div class="menu-sep" role="separator"></div>
   <button type="button" class="menu-item" id="btn-reset"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a5 5 0 105-5H5"/><path d="M6.5 1.5L5 3l1.5 1.5"/></svg>Reset this design</button>
 </div>
@@ -264,6 +294,6 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-<script type="module" src="src/ui/main.js"></script>
+<script type="module" src="src/boot.js"></script>
 </body>
 </html>

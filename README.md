@@ -4,13 +4,28 @@ A browser-based toolbox that generates direct G-code for experimental non-planar
 base plus a dense pile of raised, anchored 3D loops. First target: Prusa MK3S, Filaflex Foamy 95, a 100 × 100 mm
 sample. Machine and material profiles are data files, so more machines can be added from G-code you share.
 
-**Status:** the generator and the studio are built for the Prusa MK3S, with twenty cards (Loop pile, Squiggle &
+**Status:** the generator and the studio are built for the Prusa MK3S, with eighteen structures (nineteen tiles, with the Zigzag mesh preset) (Loop pile, Squiggle &
 Gyroid, Zigzag mesh, Coil, Weave, Spiral panel, Bouclé & picots, Relief, Fringe, Crosshatch & isogrid, Auxetic mesh, Dip weave,
 Spiderweb, Ring mail, Meander, Harmonograph, Truchet tiles, Voronoi lace, Turing stripes), a strand-shape and pattern library,
 and the automated tests passing. See `docs/fabric-structures.md` for the library.
 The first physical print has not been done yet; the Foamy material profile stays unverified until then.
 
 **Live site:** https://filafabric.pages.dev (Cloudflare Pages publishes every push to `main`; nothing to install).
+
+## The password gate
+
+The studio opens on a "Coming soon" page that says what it is and asks for one password (no username). Only a salted hash of the
+password is in the repository (`src/ui/gate-config.json`); the studio itself is loaded only after the password is right.
+
+```bash
+node tools/set-password.mjs                  # a new random password, printed once
+node tools/set-password.mjs "a longer phrase"  # or choose your own (8 characters or more)
+```
+
+Then commit `src/ui/gate-config.json` and push. **This is a soft gate**: the site is static, so anyone who knows the file
+names can still download the studio's code. It keeps casual visitors out; for real access control put the site behind
+Cloudflare Access (free for small teams) instead of, or as well as, this page. *Lock the studio* in the ⋯ menu locks this
+browser again.
 
 ## Run it
 
