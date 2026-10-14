@@ -29,11 +29,11 @@ test('every spoke crosses the turns, so the layers hold each other', () => {
 
 test('the sawtooth moves the turns in and out without breaking them', () => {
   const b = boundaryFor(50, 50);
-  const plain = webLayers(b, { spacing: 5, spokes: 16, hub: 3, tooth: 0 }).layers[0].flat();
-  const saw = webLayers(b, { spacing: 5, spokes: 16, hub: 3, tooth: 1 }).layers[0].flat();
-  const rough = (pts) => pts.reduce((m, p, i) => (i ? Math.max(m, Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y)) : m), 0);
-  assert.ok(rough(saw) < 1.5, 'no jumps');
-  assert.notDeepEqual(plain.slice(100, 110), saw.slice(100, 110));
+  const plain = webLayers(b, { spacing: 5, spokes: 16, hub: 3, tooth: 0 }).layers[0];
+  const saw = webLayers(b, { spacing: 5, spokes: 16, hub: 3, tooth: 1 }).layers[0];
+  const rough = (polylines) => polylines.reduce((m, pts) => pts.reduce((mm, p, i) => (i ? Math.max(mm, Math.hypot(p.x - pts[i - 1].x, p.y - pts[i - 1].y)) : mm), m), 0);
+  assert.ok(rough(saw) < 1.5, `no jumps: ${rough(saw)}`);
+  assert.notDeepEqual(plain[0].slice(100, 110), saw[0].slice(100, 110));
 });
 
 test('the web prints as a few strands', () => {
