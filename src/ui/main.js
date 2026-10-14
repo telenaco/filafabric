@@ -474,8 +474,7 @@ function currentVerdict() {
   const fabric = state.result.fabric;
   if (fabric && !fabric.exportable) return { level: 'error', title: 'Structure needs attention', body: fabric.issues.join('. ') || 'Nothing fits inside this shape.', action: null };
   const mod = designById(state.design);
-  if (!mod.legacy) return mod.verdict(state.result, state.designs[mod.id]);
-  return state.design === 'squiggle'
+  const verdict = !mod.legacy ? mod.verdict(state.result, state.designs[mod.id]) : state.design === 'squiggle'
     ? buildSquiggleVerdict(state.result.stats, { colorChange: state.squiggle.colorChange })
     : buildVerdict(state.result.stats, { roomy: state.primary.roomy });
   return verdict.level === 'ready' || verdict.level === 'ok' ? { ...verdict, title: 'Geometry checked · test a swatch', body: `${fabric?.components === 1 ? 'One connected fabric region. ' : ''}${verdict.body} Physical print testing is still pending.` } : verdict;
