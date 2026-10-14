@@ -42,13 +42,11 @@ function intersect(ax, ay, bx, by, cx, cy, dx, dy) {
 }
 
 /**
- * @param strands  ordered strands
- * @param opts     lift (mm, default 0.25), ramp (mm, 1.6), strandWidth (mm, 0.5), cell (mm, 1),
- *                 arch (mm, 1), archSpan (mm, 3), archRamp (mm, 3), decide ({ a, b, x, y }) → 'later-over' | 'earlier-over'
- * @returns        { strands, crossings, maxLift, maxSlopeDeg }
+ * Every place two passes cross, once each. Strands are { pts: [{ x, y }] }.
+ * @returns { found, arcs }: found is [{ sa, sb, arcA, arcB, x, y, angle }] sorted in print order (angle: the acute
+ *          angle between the strands in degrees); arcs[i][k] is the distance along strand i to its point k
  */
-export function resolveCrossings(strands, opts = {}) {
-  const { lift = 0.25, ramp = 1.6, strandWidth = 0.5, cell = 1, arch = 1, archSpan = 3, archRamp = 3, decide = null } = opts;
+export function findCrossings(strands, { strandWidth = 0.5, cell = 1 } = {}) {
   const minArc = 3 * strandWidth;
 
   // cumulative arc length of every point, and one record per segment in print order
@@ -100,7 +98,10 @@ export function resolveCrossings(strands, opts = {}) {
         const key = `${A.si}|${B.si}`;
         const near = recent.get(key);
         if (near && near.some((c) => Math.abs(c.arcA - arcA) < strandWidth && Math.abs(c.arcB - arcB) < strandWidth)) continue;
-        const c = { sa: A.si, sb: B.si, arcA, arcB, x: pa.x + hit[0] * (qa.x - pa.x), y: pa.y + hit[0] * (qa.y - pa.y) };
+        const da = Math.atan2(qa.y - pa.y, qa.x - pa.x), db = Math.atan2(qb.y - pb.y, qb.x - pb.x);
+        let angle = Math.abs(((da - db) * 180) / Math.PI) % 180;
+        if (angle > 90) angle = 180 - angle;
+        const c = { sa: A.si, sb: B.si, arcA, arcB, x: pa.x + hit[0] * (qa.x - pa.x), y: pa.y + hit[0] * (qa.y - pa.y), angle };
         if (near) near.push(c);
         else recent.set(key, [c]);
         found.push(c);
@@ -109,6 +110,18 @@ export function resolveCrossings(strands, opts = {}) {
   }
   // deterministic order whatever the grid iteration was
   found.sort((p, q) => p.sa - q.sa || p.arcA - q.arcA || p.sb - q.sb || p.arcB - q.arcB);
+  return { found, arcs };
+}
+
+/**
+ * @param strands  ordered strands
+ * @param opts     lift (mm, default 0.25), ramp (mm, 1.6), strandWidth (mm, 0.5), cell (mm, 1),
+ *                 arch (mm, 1), archSpan (mm, 3), archRamp (mm, 3), decide ({ a, b, x, y }) → 'later-over' | 'earlier-over'
+ * @returns        { strands, crossings, maxLift, maxSlopeDeg }
+ */
+export function resolveCrossings(strands, opts = {}) {
+  const { lift = 0.25, ramp = 1.6, strandWidth = 0.5, cell = 1, arch = 1, archSpan = 3, archRamp = 3, decide = null } = opts;
+  const { found, arcs } = findCrossings(strands, { strandWidth, cell });
 
   // bumps per strand
   const bumps = strands.map(() => []);
