@@ -4,8 +4,8 @@ A browser-based toolbox that generates direct G-code for experimental non-planar
 base plus a dense pile of raised, anchored 3D loops. First target: Prusa MK3S, Filaflex Foamy 95, a 100 × 100 mm
 sample. Machine and material profiles are data files, so more machines can be added from G-code you share.
 
-**Status:** the generator and the studio are built for the Prusa MK3S, with three structures (Loop pile, Squiggle &
-Gyroid with a strand-shape and pattern library, Coil) and the Zigzag mesh preset, five more shown as placeholders,
+**Status:** the generator and the studio are built for the Prusa MK3S, with nine cards (Loop pile, Squiggle &
+Gyroid, Zigzag mesh, Coil, Weave, Spiral panel, Bouclé & picots, Relief, Fringe), a strand-shape and pattern library,
 and the automated tests passing. See `docs/fabric-structures.md` for the library.
 The first physical print has not been done yet; the Foamy material profile stays unverified until then.
 
@@ -101,8 +101,8 @@ Code:
 2. G-code → machine-profile extractor (from G-code you share)
 3. SVG outline boundary with rotate (done, both designs)
 4. Interwoven base + loops as one continuous extrusion path
-   - Structure library, phase 0 to 2 done (registry, pattern/shape/crossing libraries, Coil). Next: Weave, then
-     Spiral panel, Bouclé & picots, Relief, Fringe, and the pattern as pile height on the Loop pile
+   - Structure library done (registry, pattern/shape/crossing libraries, nine cards, swatch codes). Next: the first
+     prints, then tune the crossing lift, the relief limits and the weave from what they show
 5. Bambu Lab A1 mini support (`.gcode.3mf` packaging, Bambu start/end macros)
 6. Product shell: design gallery on the left, settings on the right, preconfigured printer bundles, shareable
    links (see `docs/product-direction-2026-10-14.md`, which also lists candidate names)

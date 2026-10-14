@@ -123,6 +123,87 @@ export function buildCoilVerdict(stats, { loopsClose = false } = {}) {
   };
 }
 
+const NONE = { action: null, actionLabel: '', share: 0 };
+
+/**
+ * Relief: one strand that rises and falls with a pattern. Says how high, how long a stretch hangs unsupported and
+ * how steep it climbs, and warns when either is more than the strand is likely to hold.
+ * @param relief  { peak, longestSpan, maxSlopeDeg } from the engine
+ */
+export function buildReliefVerdict(relief) {
+  if (relief.peak < 0.05) {
+    return { ...NONE, level: 'info', title: 'Nothing rises', body: 'With this pattern and relief no part of the strand leaves the bed, so it prints as flat rows. Raise the relief or choose a pattern with taller parts.' };
+  }
+  if (relief.maxSlopeDeg > 30) {
+    return { ...NONE, level: 'heads-up', title: 'Steep in places', body: `The strand climbs as steeply as ${Math.round(relief.maxSlopeDeg)}°, more than it can follow cleanly. Lower the relief or make the pattern broader.` };
+  }
+  if (relief.longestSpan > 20) {
+    return { ...NONE, level: 'heads-up', title: 'Long raised stretches', body: `One raised stretch is ${Math.round(relief.longestSpan)} mm long with nothing under it, and a flexible strand sags over that. Make the pattern finer or lower the relief.` };
+  }
+  return {
+    ...NONE,
+    level: 'ok',
+    title: 'Ready to print',
+    body: `The rows rise up to ${relief.peak.toFixed(1)} mm over stretches up to ${Math.round(relief.longestSpan)} mm, steepest ${Math.round(relief.maxSlopeDeg)}°. It prints as one strand with no lifts.`,
+  };
+}
+
+/** Fringe: hairs anchored on a base, hanging free. Close hairs are the one thing to watch. */
+export function buildFringeVerdict(stats, fringe) {
+  if (fringe.hairs === 0) {
+    return { ...NONE, level: 'info', title: 'No hairs', body: 'The swatch is shorter than one hair, so only the base will print.' };
+  }
+  const share = stats.violations / Math.max(1, stats.extrudingMoves);
+  if (share < 0.02) {
+    return { ...NONE, level: 'ok', title: 'Looks good', body: `${fringe.hairs} hairs on ${fringe.rows} rows, almost none passing close to a neighbour. Each hair is a lift, so the nozzle moves ${stats.hops} times.`, share };
+  }
+  return {
+    ...NONE,
+    level: 'heads-up',
+    title: 'Hairs are close in places',
+    body: `${shareLabel(share).replace(/^about /, '')} of the moves pass close to a neighbouring hair, so the nozzle may brush one. Space the hairs wider or the rows further apart for a first try.`,
+    share,
+  };
+}
+
+/** Spiral panel: rings joined by short jogs. */
+export function buildSpiralVerdict(stats, spiral) {
+  if (spiral.rings === 0) {
+    return { ...NONE, level: 'info', title: 'Nothing to print', body: 'The panel is too narrow for a ring at this spacing. Use a closer spacing or a larger panel.' };
+  }
+  const lifts = stats.hops === 0 ? 'one unbroken strand with no lifts' : stats.hops === 1 ? 'one lift' : `${stats.hops} lifts`;
+  return { ...NONE, level: 'ok', title: 'Ready to print', body: `${spiral.rings} rings following the edge, printed as ${lifts}.` };
+}
+
+/** Bouclé: rings standing on a line, alternately each side. */
+export function buildBoucleVerdict(stats, { rings }) {
+  if (!rings) {
+    return { ...NONE, level: 'info', title: 'No rings', body: 'The swatch is narrower than one ring spacing, so each row is a plain line.' };
+  }
+  return {
+    ...NONE,
+    level: 'ok',
+    title: 'Ready to print',
+    body: `${rings} rings on the rows, one layer thick${stats.crossings ? `, ${stats.crossings} places where strands lie over each other` : ''}. It prints as ${stats.hops === 0 ? 'one unbroken strand with no lifts' : `${stats.hops} lifts between strands`}.`,
+  };
+}
+
+/**
+ * Weave: warp and weft in two levels. Honest about the cost: a lift for every piece, and the strands fuse where they
+ * cross.
+ */
+export function buildWeaveVerdict(stats) {
+  if (!stats.pieces) {
+    return { ...NONE, level: 'info', title: 'Nothing to weave', body: 'The swatch is smaller than one line pitch.' };
+  }
+  return {
+    ...NONE,
+    level: 'info',
+    title: 'Experimental: two passes',
+    body: `${stats.crossings} crossings in ${stats.pieces} pieces: the lower strands print first, then the upper ones, with ${stats.hops} lifts between pieces. The nozzle cannot go under a printed strand, so this is a two-level weave, and strands fuse where they cross.`,
+  };
+}
+
 function capitalise(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }

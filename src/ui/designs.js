@@ -18,9 +18,39 @@ import { SQUIGGLE_DEFAULTS, sanitizeSquiggle } from './squiggle-controls.js';
 import {
   COIL_RANGES, COIL_DEFAULTS, COIL_PRESETS, COIL_SHAPES, COIL_PATTERNS, sanitizeCoil, describeCoil, coilParams, presetMatch,
 } from './coil-controls.js';
-import { buildCoilVerdict } from './verdict.js';
+import {
+  buildCoilVerdict, buildReliefVerdict, buildFringeVerdict, buildSpiralVerdict, buildBoucleVerdict, buildWeaveVerdict,
+} from './verdict.js';
 import { generateCoil } from '../engine/coil.js';
 import { loopsClose } from '../engine/shapes.js';
+import { FIELD_IDS, createField } from '../engine/fields.js';
+import { generateRelief } from '../engine/relief.js';
+import { generateFringe } from '../engine/fringe.js';
+import { generateSpiral } from '../engine/spiral.js';
+import { generateWeave, WEAVE_BINDINGS, WEAVE_BINDING_IDS } from '../engine/weave.js';
+import { bindingThumb } from './thumbs.js';
+import {
+  RELIEF_CONTROLS, FRINGE_CONTROLS, BOUCLE_CONTROLS, SPIRAL_CONTROLS, WEAVE_CONTROLS,
+} from './structure-controls.js';
+
+const WEAVE = WEAVE_CONTROLS(WEAVE_BINDING_IDS);
+const fieldFor = (pattern, scale) => (pattern === 'none' ? null : createField(pattern, { scale }));
+const sizeOf = (s) => [s.width, s.height];
+const setSizeOf = (s, w, h) => { s.width = w; s.height = h; };
+const SCALE_SLIDER = { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false };
+
+/** What every newer design shares: its controls object spread in, size accessors, and the pieces the panel needs. */
+const fromControls = (c) => ({
+  status: 'ready',
+  defaults: () => ({ ...c.defaults }),
+  sanitize: c.sanitize,
+  ranges: c.ranges,
+  presets: c.presets,
+  presetMatch: c.presetMatch,
+  describe: c.describe,
+  size: sizeOf,
+  setSize: setSizeOf,
+});
 
 export const DESIGNS = [
   {
@@ -98,12 +128,139 @@ export const DESIGNS = [
     figure: (result) => ({ value: result.stats.crossings.toLocaleString('en'), unit: '', label: 'Crossings' }),
     summary: (result) => `a coil of ${result.stats.loops} loops`,
   },
-  // placeholders: shown in the column so the whole library is visible; each becomes a design in a later phase
-  { id: 'weave', name: 'Weave', blurb: 'Over and under, plain to satin', file: 'weave', status: 'planned' },
-  { id: 'spiral', name: 'Spiral panel', blurb: 'One strand, no hops, follows an outline', file: 'spiral', status: 'planned' },
-  { id: 'boucle', name: 'Bouclé & picots', blurb: 'Flat rings on a line, for edges', file: 'boucle', status: 'planned' },
-  { id: 'relief', name: 'Relief', blurb: 'Bobbles, seersucker and pleats', file: 'relief', status: 'planned' },
-  { id: 'fringe', name: 'Fringe', blurb: 'Hanging loops with a free end', file: 'fringe', status: 'planned' },
+  {
+    ...fromControls(WEAVE),
+    id: 'weave',
+    name: 'Weave',
+    blurb: 'Over and under, plain to satin',
+    about: 'Warp and weft lines that pass over and under each other, printed in two passes by level (a nozzle cannot go under a printed strand). Experimental: it needs a lift for every piece, and the strands fuse where they cross.',
+    file: 'weave',
+    roles: { base: 'Lower strands', anchored: 'Upper strands' },
+    presetMatch: (s) => s.binding,
+    controls: [
+      { kind: 'size', title: 'Size and shape' },
+      {
+        kind: 'choice',
+        key: 'binding',
+        title: 'Binding',
+        hint: 'Which strand is on top at each crossing. Satin has the fewest lifts.',
+        options: WEAVE_BINDING_IDS.map((id) => ({ id, label: WEAVE_BINDINGS[id].label, hint: WEAVE_BINDINGS[id].hint, thumb: bindingThumb(WEAVE_BINDINGS[id].over) })),
+      },
+      { kind: 'sliders', title: 'Look and feel', items: [{ key: 'pitch', label: 'Line spacing', help: 'Distance between neighbouring warp lines and between neighbouring weft lines.', lo: 'Fine', hi: 'Open', unit: 'mm', edit: true }] },
+    ],
+    generate: (machine, material, s, { outline = null } = {}) => generateWeave(machine, material, { ...s, outline }),
+    verdict: (result) => buildWeaveVerdict(result.stats),
+    figure: (result) => ({ value: result.stats.pieces.toLocaleString('en'), unit: '', label: 'Pieces' }),
+    summary: (result) => `a ${result.weave.columns} by ${result.weave.rows} weave in ${result.stats.pieces} pieces`,
+  },
+  {
+    ...fromControls(SPIRAL_CONTROLS),
+    id: 'spiral',
+    name: 'Spiral panel',
+    blurb: 'One strand, no hops, follows an outline',
+    about: 'Rings that follow the edge of the panel, nested inwards and joined by short jogs, so a panel prints as one strand with no lifts. Drop an SVG outline to follow any shape.',
+    file: 'spiral',
+    roles: { base: 'Ring' },
+    controls: [
+      { kind: 'presets', title: 'Start from' },
+      { kind: 'size', title: 'Size and shape' },
+      { kind: 'sliders', title: 'Look and feel', items: [{ key: 'spacing', label: 'Ring spacing', help: 'Distance between neighbouring rings.', lo: 'Tight', hi: 'Open', unit: 'mm', edit: true }] },
+    ],
+    generate: (machine, material, s, { outline = null } = {}) => generateSpiral(machine, material, { width: s.width, height: s.height, spacing: s.spacing, outline }),
+    verdict: (result) => buildSpiralVerdict(result.stats, result.spiral),
+    figure: (result) => ({ value: result.spiral.rings.toLocaleString('en'), unit: '', label: 'Rings' }),
+    summary: (result) => `a spiral panel of ${result.spiral.rings} rings`,
+  },
+  {
+    ...fromControls(BOUCLE_CONTROLS),
+    id: 'boucle',
+    name: 'Bouclé & picots',
+    blurb: 'Flat rings on a line, for edges',
+    about: 'Rows of line with a round ring standing on it, alternately above and below, printed as one strand. Rings that touch the next row lie over it, one layer thick.',
+    file: 'boucle',
+    shapes: [],
+    patterns: ['none', ...FIELD_IDS],
+    roles: { base: 'Line and rings', anchored: 'Crossing over' },
+    controls: [
+      { kind: 'presets', title: 'Start from' },
+      { kind: 'size', title: 'Size and shape' },
+      {
+        kind: 'sliders',
+        title: 'Look and feel',
+        items: [
+          { key: 'size', label: 'Ring size', help: 'Diameter of each ring.', lo: 'Small', hi: 'Large', unit: 'mm', edit: true },
+          { key: 'pitch', label: 'Ring spacing', help: 'Distance along the row from one ring to the next.', lo: 'Packed', hi: 'Open', unit: 'mm', edit: true },
+          { key: 'rowPitch', label: 'Row spacing', help: 'Distance between the rows of line.', lo: 'Close', hi: 'Wide', unit: 'mm', edit: true },
+          { key: 'lift', label: 'Crossing lift', help: 'How far a strand rises where it lies over another. About one layer.', lo: 'Flat', hi: 'High', unit: 'mm', edit: true },
+        ],
+      },
+      { kind: 'pattern', key: 'pattern', title: 'Pattern', hint: 'Where the pattern is bright the rings are full size; where it is dark they shrink.', scale: SCALE_SLIDER },
+    ],
+    generate: (machine, material, s, { outline = null } = {}) => generateCoil(machine, material, {
+      width: s.width, height: s.height, shape: 'ring', size: s.size, pitch: s.pitch, rowPitch: s.rowPitch, rowOverlap: 0, lift: s.lift, sampler: fieldFor(s.pattern, s.patternScale), outline,
+    }),
+    verdict: (result) => buildBoucleVerdict(result.stats, { rings: result.coil.loops }),
+    figure: (result) => ({ value: result.coil.loops.toLocaleString('en'), unit: '', label: 'Rings' }),
+    summary: (result) => `a bouclé of ${result.coil.loops} rings`,
+  },
+  {
+    ...fromControls(RELIEF_CONTROLS),
+    id: 'relief',
+    name: 'Relief',
+    blurb: 'Bobbles, seersucker and pleats',
+    about: 'Rows of one strand that rise and fall with a pattern: bobbles, puckered stripes or broad pleats. Nothing is printed on top of anything, so the fabric is one strand thick and the relief gives it body.',
+    file: 'relief',
+    patterns: FIELD_IDS,
+    roles: { base: 'Base', anchored: 'On the bed', lifting: 'Rising and falling', free: 'Raised' },
+    controls: [
+      { kind: 'presets', title: 'Start from' },
+      { kind: 'size', title: 'Size and shape' },
+      {
+        kind: 'sliders',
+        title: 'Look and feel',
+        items: [
+          { key: 'relief', label: 'Relief', help: 'How far the strand rises where the pattern is brightest.', lo: 'Subtle', hi: 'Deep', unit: 'mm', edit: true },
+          { key: 'rowPitch', label: 'Row spacing', help: 'Distance between neighbouring rows of strand.', lo: 'Close', hi: 'Open', unit: 'mm', edit: true },
+        ],
+      },
+      { kind: 'pattern', key: 'pattern', title: 'Pattern', hint: 'The strand rises where the pattern is bright and lies on the bed where it is dark.', scale: { ...SCALE_SLIDER, lo: 'Fine', hi: 'Broad' } },
+    ],
+    generate: (machine, material, s, { outline = null } = {}) => generateRelief(machine, material, {
+      width: s.width, height: s.height, relief: s.relief, rowPitch: s.rowPitch, field: fieldFor(s.pattern, s.patternScale), outline,
+    }),
+    verdict: (result) => buildReliefVerdict(result.relief),
+    figure: (result) => ({ value: result.relief.peak.toFixed(1), unit: 'mm', label: 'Peak height' }),
+    summary: (result) => `a relief up to ${result.relief.peak.toFixed(1)} millimetres high`,
+  },
+  {
+    ...fromControls(FRINGE_CONTROLS),
+    id: 'fringe',
+    name: 'Fringe',
+    blurb: 'Hanging loops with a free end',
+    about: 'A base of lines with hairs standing off them: each rises in the first half of its length and hangs free to its end. Printed from the far rows to the near rows so the nozzle never dives under a hair.',
+    file: 'fringe',
+    outline: false,
+    roles: { base: 'Base', anchored: 'Anchored feet', lifting: 'Rising', free: 'Free end' },
+    controls: [
+      { kind: 'presets', title: 'Start from' },
+      { kind: 'size', title: 'Size and shape' },
+      {
+        kind: 'sliders',
+        title: 'Look and feel',
+        items: [
+          { key: 'length', label: 'Hair length', help: 'How far each hair reaches from its base line.', lo: 'Short', hi: 'Long', unit: 'mm', edit: true },
+          { key: 'lift', label: 'Hair height', help: 'How high the free end stands above the base.', lo: 'Low', hi: 'High', unit: 'mm', edit: true },
+          { key: 'spacing', label: 'Hair spacing', help: 'Distance between neighbouring hairs in a row.', lo: 'Packed', hi: 'Open', unit: 'mm', edit: true },
+          { key: 'rowGap', label: 'Row gap', help: 'Distance between the base lines the hairs stand on.', lo: 'Close', hi: 'Wide', unit: 'mm', edit: true },
+          { key: 'variation', label: 'Natural variation', help: 'Random wobble in each hair\'s length, height and drift.', lo: 'Even', hi: 'Wild', unit: '%', edit: true },
+        ],
+      },
+    ],
+    generate: (machine, material, s) => generateFringe(machine, material, s),
+    verdict: (result) => buildFringeVerdict(result.stats, result.fringe),
+    figure: (result) => ({ value: result.fringe.hairs.toLocaleString('en'), unit: '', label: 'Hairs' }),
+    summary: (result) => `a fringe of ${result.fringe.hairs} hairs`,
+  },
 ];
 
 const BY_ID = new Map(DESIGNS.map((d) => [d.id, d]));

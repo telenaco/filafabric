@@ -151,6 +151,7 @@ function bindingFor(mod) {
       ranges: { w: mod.ranges.width, h: mod.ranges.height },
       get: () => mod.size(own()),
       set: (w, h) => mod.setSize(own(), w, h),
+      outline: mod.outline !== false,
     },
   };
 }
@@ -365,7 +366,7 @@ function regenerate() {
     if (!mod.legacy) {
       const own = state.designs[mod.id];
       const [w, h] = mod.size(own);
-      result = mod.generate(machine, material, own, { outline: placedOutline(w, h) });
+      result = mod.generate(machine, material, own, { outline: mod.outline === false ? null : placedOutline(w, h) });
     } else if (state.design === 'squiggle') {
       const s = state.squiggle;
       result = generateSquiggle(machine, material, {
@@ -806,7 +807,7 @@ function buildSize(id) {
   $(b.host).replaceChildren(
     el('div', { class: 'size-inputs' }, wf.field, el('span', { class: 'times', 'aria-hidden': 'true', text: '×' }), hf.field),
     error,
-    buildOutlineBox(id));
+    b.outline === false ? null : buildOutlineBox(id));
 }
 
 /* ---------- outline (an SVG the pattern fills) ---------- */
@@ -1310,6 +1311,15 @@ function buildDesignPanel(mod) {
         const btn = el('button', { type: 'button', class: 'pattern', 'data-choice': `${id}:${c.key}:${shape}`, 'aria-pressed': 'false', title: SHAPES[shape].hint });
         btn.innerHTML = `${shapeThumb(shape)}<span>${SHAPES[shape].label}</span>`;
         btn.addEventListener('click', () => { state.designs[id][c.key] = shape; afterDesignChange(); });
+        grid.append(btn);
+      }
+      panel.append(group(c.hint ? el('p', { class: 'group-hint', text: c.hint }) : null, grid));
+    } else if (c.kind === 'choice') {
+      const grid = el('div', { class: 'patterns', role: 'group', 'aria-labelledby': titleId });
+      for (const opt of c.options) {
+        const btn = el('button', { type: 'button', class: 'pattern', 'data-choice': `${id}:${c.key}:${opt.id}`, 'aria-pressed': 'false', title: opt.hint });
+        btn.innerHTML = `${opt.thumb ?? ''}<span>${opt.label}</span>`;
+        btn.addEventListener('click', () => { state.designs[id][c.key] = opt.id; afterDesignChange(); });
         grid.append(btn);
       }
       panel.append(group(c.hint ? el('p', { class: 'group-hint', text: c.hint }) : null, grid));

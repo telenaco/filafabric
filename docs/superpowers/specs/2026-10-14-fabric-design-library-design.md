@@ -98,7 +98,14 @@ Lifted samples are class `supported` (legend role "Crossing over"). Strand order
 - Outlines use `serpentineChains`, one coil row per chain, so the SVG fill works.
 - Presets: Open chain (spacing wide, no overlap), Overlapping (30 %), Dense (50 %).
 
-### 4.6 Weave (phase 4)
+### 4.6 Weave (built; this replaces the arch design below)
+
+A nozzle cannot go under a printed strand (its body is above the tip), so the arch-and-tunnel weave described here
+originally cannot be printed. The built weave puts every strand at one of two levels, one layer apart, cuts it into
+pieces at each change of level, prints all lower pieces and then all upper ones, and fuses strands where they cross.
+Each piece is a strand (a lift between pieces); satin has the fewest. The text below is kept for the record.
+
+### 4.6a Weave as first designed (not buildable)
 
 - Warp: a serpentine of columns along Y. Weft: a serpentine of rows along X, printed second.
 - `binding(i, j) → 'weft-over' | 'weft-under'`: plain `(i+j)%2`, twill 2/1 `(i+j)%3<2`, twill 2/2, basket 2×2, satin 5.

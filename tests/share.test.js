@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { encodeState, decodeState, stateToHash, hashToState, sanitizeState, sanitizeOutline, DESIGN_IDS } from '../src/ui/share.js';
 import { SQUIGGLE_DEFAULTS } from '../src/ui/squiggle-controls.js';
 import { COIL_DEFAULTS } from '../src/ui/coil-controls.js';
+import { DESIGNS } from '../src/ui/designs.js';
+
+const newerDefaults = () => Object.fromEntries(DESIGNS.filter((d) => d.status === 'ready' && !d.legacy).map((d) => [d.id, d.defaults()]));
 import { PRIMARY_DEFAULTS } from '../src/ui/controls.js';
 
 const known = { machines: ['prusa-mk3s'], materials: ['filaflex-95-foamy', 'generic-flex-mk3'] };
@@ -86,10 +89,10 @@ test('an outline survives a link, and anything malformed or oversized is refused
 });
 
 test('v3 states carry per-design settings; unknown or planned designs fall back to the loop pile', () => {
-  const s = sanitizeState({ v: 3, design: 'weave', designs: { weave: { a: 1 } } }, known);
+  const s = sanitizeState({ v: 3, design: 'nope', designs: { nope: { a: 1 } } }, known);
   assert.equal(s.design, 'loop-pile');
   assert.equal(s.v, 3);
-  assert.deepEqual(s.designs, { coil: COIL_DEFAULTS }, 'an unknown design id adds nothing; every newer design still has its defaults');
+  assert.deepEqual(s.designs, newerDefaults(), 'an unknown design id adds nothing; every newer design still has its defaults');
 });
 
 test('a version 2 link (squiggle key, no designs) opens identically', () => {
@@ -97,7 +100,8 @@ test('a version 2 link (squiggle key, no designs) opens identically', () => {
   assert.equal(s.design, 'squiggle');
   assert.equal(s.squiggle.mode, 'parallel');
   assert.equal(s.squiggle.spacing, 4);
-  assert.deepEqual(s.designs, { coil: COIL_DEFAULTS });
+  assert.deepEqual(s.designs, newerDefaults());
+  assert.deepEqual(s.designs.coil, COIL_DEFAULTS);
 });
 
 test('coil settings travel in a link and are sanitised', () => {

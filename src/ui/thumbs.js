@@ -18,6 +18,23 @@ const coilRows = [20, 38, 56, 74]
   .map((y, k) => `<path d="${lanePath('looped', 10, y, 140, 22, 11)}" stroke="var(--role-${k % 2 ? 'anchored' : 'base'})"/>`)
   .join('');
 
+/** A 48 x 28 picture of a weave binding: warp (vertical) and weft (horizontal) with gaps where one is under. */
+export function bindingThumb(over) {
+  const X = (i) => 7 + i * 11, Y = (j) => 4 + j * 6.7, gap = 2;
+  let body = '';
+  for (let i = 0; i < 4; i++) {
+    let from = 1;
+    for (let j = 0; j < 4; j++) if (over(i, j)) { body += `<path d="M${X(i)} ${from}V${Y(j) - gap}" stroke="var(--role-base)"/>`; from = Y(j) + gap; }
+    body += `<path d="M${X(i)} ${from}V27" stroke="var(--role-base)"/>`;
+  }
+  for (let j = 0; j < 4; j++) {
+    let from = 1;
+    for (let i = 0; i < 4; i++) if (!over(i, j)) { body += `<path d="M${from} ${Y(j)}H${X(i) - gap}" stroke="var(--role-anchored)"/>`; from = X(i) + gap; }
+    body += `<path d="M${from} ${Y(j)}H47" stroke="var(--role-anchored)"/>`;
+  }
+  return `<svg class="shape-thumb" width="48" height="28" viewBox="0 0 48 28" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">${body}</svg>`;
+}
+
 const R = 'var(--role-base)';
 const A = 'var(--role-anchored)';
 const svgTile = (body, extra = '') => `<svg class="design-thumb" viewBox="0 0 160 96" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${extra}>${body}</svg>`;
