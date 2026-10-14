@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  PRIMARY_DEFAULTS, RANGES, ADVANCED_DEFAULTS, PRIMARY_KEYS, sampleSize, toTextile, sanitizePrimary, describePrimary,
+  PRIMARY_DEFAULTS, RANGES, ADVANCED_DEFAULTS, PRIMARY_KEYS, sampleSize, toTextile, sanitizePrimary, describePrimary, overlapPercent,
+  airStrandMm,
 } from '../src/ui/controls.js';
 import { validateTextile, DEFAULT_TEXTILE } from '../src/engine/params.js';
 
@@ -70,9 +71,11 @@ test('every combination of slider extremes is a valid engine configuration', () 
           for (const baseGap of [R.baseGap.min, R.baseGap.max]) {
             for (const variation of [0, 100]) {
               for (const roomy of [false, true]) {
-                const p = { ...PRIMARY_DEFAULTS, swatch, pileHeight, loopSize, loopSpacing, baseGap, variation, roomy };
-                const errors = validateTextile({ ...DEFAULT_TEXTILE, ...toTextile(p) });
-                assert.deepEqual(errors, [], JSON.stringify(p));
+                for (const airFlow of [R.airFlow.min, R.airFlow.max]) {
+                  const p = { ...PRIMARY_DEFAULTS, swatch, pileHeight, loopSize, loopSpacing, baseGap, variation, roomy, airFlow };
+                  const errors = validateTextile({ ...DEFAULT_TEXTILE, ...toTextile(p) });
+                  assert.deepEqual(errors, [], JSON.stringify(p));
+                }
               }
             }
           }
@@ -109,4 +112,33 @@ test('PRIMARY_KEYS lists every engine key the primary controls own', () => {
   for (const k of ['sample_width', 'sample_height', 'loop_z_lift', 'loop_width', 'loop_length', 'loop_pitch', 'leg_gap', 'clearance', 'base_spacing', 'random_enabled']) {
     assert.ok(PRIMARY_KEYS.includes(k), k);
   }
+});
+
+test('the spacing read-out says how much neighbouring loops overlap', () => {
+  assert.equal(overlapPercent(PRIMARY_DEFAULTS), 50);
+  assert.equal(describePrimary(PRIMARY_DEFAULTS).overlap, '50% overlap');
+  assert.equal(overlapPercent({ ...PRIMARY_DEFAULTS, loopSize: 0.6, loopSpacing: 6 }), 0);
+  assert.equal(describePrimary({ ...PRIMARY_DEFAULTS, loopSize: 0.6, loopSpacing: 6 }).overlap, 'loops don\'t touch');
+  assert.equal(describePrimary({ ...PRIMARY_DEFAULTS, roomy: true }).roomy, '1.5 mm at the feet');
+});
+
+test('strand thickness sets the flow of every strand in the air and reads out plainly', () => {
+  const t = toTextile({ ...PRIMARY_DEFAULTS, airFlow: 130 });
+  assert.equal(t.flow_nonplanar, 130);
+  assert.equal(t.flow_unsupported, 130);
+  assert.equal(toTextile(PRIMARY_DEFAULTS).flow_unsupported, 100);
+  assert.equal(toTextile(PRIMARY_DEFAULTS, { flow_unsupported: 250 }).flow_unsupported, 100, 'Advanced cannot override it');
+  assert.equal(describePrimary(PRIMARY_DEFAULTS).airFlow, 'Standard flow');
+  assert.equal(describePrimary({ ...PRIMARY_DEFAULTS, airFlow: 120 }).airFlow, '+20% flow');
+  assert.equal(describePrimary({ ...PRIMARY_DEFAULTS, airFlow: 90 }).airFlow, '−10% flow');
+  assert.equal(sanitizePrimary({ airFlow: 999 }).airFlow, RANGES.airFlow.max);
+  assert.equal(sanitizePrimary({}).airFlow, 100, 'older links open at standard flow');
+});
+
+test('the strand thickness read-out follows the nozzle, the foam and the flow', () => {
+  const foamy = { flow: { foam_expansion: 1.5 } };
+  near(airStrandMm(PRIMARY_DEFAULTS, {}, foamy), 0.4 * Math.sqrt(1.5), 1e-9);
+  near(airStrandMm({ ...PRIMARY_DEFAULTS, airFlow: 200 }, {}, foamy), 0.4 * Math.sqrt(3), 1e-9);
+  near(airStrandMm(PRIMARY_DEFAULTS, { free_strand_diameter: 0.6 }, { flow: { foam_expansion: 1 } }), 0.6, 1e-9);
+  assert.equal(airStrandMm(PRIMARY_DEFAULTS, { nozzle_diameter: NaN }, foamy), null);
 });

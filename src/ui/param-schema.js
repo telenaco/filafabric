@@ -1,5 +1,8 @@
 // The Advanced drawer: every engine setting that is NOT one of the primary controls (39 of them),
 // grouped by purpose. Primary controls live in controls.js.
+import { DEFAULT_TEXTILE } from '../engine/params.js';
+import { ADVANCED_DEFAULTS } from './controls.js';
+
 const num = (key, label, unit, step, min, extra = {}) => ({ key, label, type: 'number', unit, step, min, ...extra });
 const bool = (key, label) => ({ key, label, type: 'checkbox' });
 const sel = (key, label, options) => ({ key, label, type: 'select', options });
@@ -22,7 +25,7 @@ export const ADVANCED_GROUPS = [
     num('layer_height', 'Layer height', 'mm', 0.05, 0.05),
     num('extrusion_width', 'Base strand width', 'mm', 0.05, 0.1),
     num('nozzle_diameter', 'Nozzle diameter', 'mm', 0.05, 0.1),
-    num('free_strand_diameter', 'Free strand diameter (blank = nozzle)', 'mm', 0.05, 0.1, { nullable: true }),
+    num('free_strand_diameter', 'Free strand diameter (blank = nozzle)', 'mm', 0.05, 0.1, { nullable: true, placeholder: 'Same as nozzle' }),
   ] },
   { id: 'shape', title: 'Loop shape and anchoring', hint: 'Profile, dwell, corner radius', fields: [
     sel('fiber_shape', 'Shape', ['hairpin', 'arch']),
@@ -41,8 +44,8 @@ export const ADVANCED_GROUPS = [
     num('nozzle_cone_half_angle', 'Nozzle cone half-angle', '°', 5, 1),
   ] },
   { id: 'retraction', title: 'Retraction', hint: 'Length and speed (blank = material default)', fields: [
-    num('retraction_length', 'Length', 'mm', 0.5, 0, { nullable: true }),
-    num('retraction_speed', 'Speed', 'mm/s', 5, 1, { nullable: true }),
+    num('retraction_length', 'Length', 'mm', 0.5, 0, { nullable: true, placeholder: 'Filament default' }),
+    num('retraction_speed', 'Speed', 'mm/s', 5, 1, { nullable: true, placeholder: 'Filament default' }),
   ] },
   { id: 'random', title: 'Randomness detail', hint: 'Seed, and each amplitude at 100 % variation', fields: [
     num('random_seed', 'Seed', '', 1, 0),
@@ -73,3 +76,13 @@ export const FIELD_LABELS = Object.freeze({
   base_spacing: 'Base openness', random_enabled: 'Natural variation',
   ...Object.fromEntries(ADVANCED_GROUPS.flatMap((g) => g.fields.map((f) => [f.key, f.label]))),
 });
+
+/** The value a field shows when the person has not changed it. */
+export function fieldDefault(key) {
+  return key in ADVANCED_DEFAULTS ? ADVANCED_DEFAULTS[key] : DEFAULT_TEXTILE[key];
+}
+
+/** Keys in this group whose saved override differs from the default, in drawer order. */
+export function changedFields(group, advanced = {}) {
+  return group.fields.map((f) => f.key).filter((key) => key in advanced && !Object.is(advanced[key], fieldDefault(key)));
+}

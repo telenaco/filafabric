@@ -75,6 +75,26 @@ export function buildVerdict(stats, { roomy }) {
   };
 }
 
+/**
+ * The Squiggle & Gyroid design prints two continuous layers with one lift between them, so there is
+ * no neighbour for the nozzle to brush: the verdict says what will happen instead.
+ * @param stats  engine stats ({ hops })
+ * @param opts   { colorChange } whether the printer pauses for a filament swap between layers
+ */
+export function buildSquiggleVerdict(stats, { colorChange }) {
+  const lifts = stats.hops === 1 ? 'one lift' : `${stats.hops} lifts`;
+  return {
+    level: 'ok',
+    title: 'Ready to print',
+    body: colorChange
+      ? `Two continuous layers with ${lifts} between them. The printer pauses after the first layer so you can load the second colour.`
+      : `Two continuous layers with ${lifts} between them, so there is nothing for the nozzle to brush.`,
+    action: null,
+    actionLabel: '',
+    share: 0,
+  };
+}
+
 function capitalise(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }

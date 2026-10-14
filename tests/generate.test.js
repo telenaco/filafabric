@@ -56,3 +56,13 @@ test('same inputs give byte-identical G-code; a changed seed with randomness on 
   const d = generate(machine, material, { ...over, random_seed: 2 });
   assert.notEqual(c.gcode, d.gcode);
 });
+
+test('thicker strands in the air use more filament and count as closer to their neighbours', () => {
+  const size = { sample_width: 20, sample_height: 20 };
+  const plain = generate(machine, material, size);
+  const thick = generate(machine, material, { ...size, flow_nonplanar: 150, flow_unsupported: 150 });
+  assert.equal(thick.moves.length, plain.moves.length, 'same toolpath');
+  assert.ok(thick.stats.filamentMm > plain.stats.filamentMm);
+  assert.ok(thick.stats.violations >= plain.stats.violations);
+  assert.match(thick.gcode, /; param flow_unsupported = 150/);
+});

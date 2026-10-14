@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ADVANCED_GROUPS, FIELD_LABELS } from '../src/ui/param-schema.js';
+import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from '../src/ui/param-schema.js';
 import { PRIMARY_KEYS, ADVANCED_DEFAULTS } from '../src/ui/controls.js';
 import { DEFAULT_TEXTILE } from '../src/engine/params.js';
 
@@ -32,4 +32,13 @@ test('every engine setting is reachable: a primary control, an Advanced field, o
 
 test('error messages can name every field in plain words', () => {
   for (const f of fields) assert.ok(FIELD_LABELS[f.key], f.key);
+});
+
+test('changedFields lists only overrides that differ from the default', () => {
+  const speeds = ADVANCED_GROUPS.find((g) => g.id === 'speeds');
+  assert.deepEqual(changedFields(speeds, {}), []);
+  assert.deepEqual(changedFields(speeds, { speed_base: fieldDefault('speed_base') }), []);
+  assert.deepEqual(changedFields(speeds, { fan_travel: 1, speed_base: 99, layer_height: 0.3 }), ['speed_base', 'fan_travel']);
+  assert.equal(fieldDefault('amp_xy'), ADVANCED_DEFAULTS.amp_xy);
+  assert.equal(fieldDefault('speed_base'), DEFAULT_TEXTILE.speed_base);
 });

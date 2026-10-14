@@ -4,8 +4,12 @@ A browser-based toolbox that generates direct G-code for experimental non-planar
 base plus a dense pile of raised, anchored 3D loops. First target: Prusa MK3S, Filaflex Foamy 95, a 100 × 100 mm
 sample. Machine and material profiles are data files, so more machines can be added from G-code you share.
 
-**Status:** the generator and the redesigned studio are built for the Prusa MK3S (123 automated tests passing).
+**Status:** the generator and the studio are built for the Prusa MK3S, with two designs (Loop pile, Squiggle &
+Gyroid) and 145 automated tests passing.
 The first physical print has not been done yet; the Foamy material profile stays unverified until then.
+
+**Live site:** https://telenaco.github.io/filafabric/ (published from `main` by `.github/workflows/pages.yml` after
+the tests pass; nothing to install).
 
 ## Run it
 
@@ -14,22 +18,29 @@ http://localhost:5173/ in your browser. Close the window to stop it. From a term
 
 ```bash
 npm run serve     # server + browser
-npm test          # engine tests (84)
+npm test          # engine and UI-logic tests (145)
 npm run golden    # re-record the 20 x 20 golden summary after an intended engine change
 ```
 
-In the page: pick a swatch (a small test one by default), move the five sliders, and read the verdict card. The
-preview shows four layers you can combine: **Path** (the exact nozzle route), **Strand** (that route at true
-thickness), **Travel** (horizontal moves between strands) and **Hops** (the vertical lifts and drops). Scrub or play
-the print order in minutes, then **Export G-code**. Everything else lives under Advanced (39 settings). Undo/redo,
-"Share link" (the whole design in the address) and "Reset to defaults" are in the bar and the settings column.
-Every exported file records its full parameter set and seed in comment lines. Red points mark moves the
-clearance model thinks come too close to printed strands (tick "Show tight spots"; it is on automatically only
-when there are few).
+In the page, work left to right: pick a **design**, shape it with the **settings** on the right (swatch size, then a
+few sliders; click a slider's value to type an exact number), and read the **print summary** at the bottom of the
+settings: a check (amber with an "Add room" fix when loops are tight), print time, filament, and **Export G-code**.
+**Strand thickness** adds flow only where the loops are in the air (rising, falling and free-hanging; the base and
+the anchored feet stay at normal flow), from 80 to 200 %, and shows the expected foamed strand diameter. Moves slow
+down on their own if the extra flow would exceed what the hotend can melt, and the clearance check and the
+true-thickness preview both use the thicker strands.
+The preview opens on the strands at their true thickness; drag to turn, scroll to zoom, use Top / Angled / Side,
+and press play to watch the print order. The **View** menu adds the nozzle path, travel moves, lifts, exaggerated
+height and the red tight-spot marks (the clearance model's moves that come too close to printed strands; "Show
+where" in the check turns them on too). For the loop pile, everything else lives under Advanced settings (39
+settings in groups that show what you changed). The printer chip in the header opens the printer setup; the
+**···** menu has Getting started, Save/Open settings file and Reset this design. Undo/redo and **Share** (a link that
+reopens the design and its settings) work for every design. Every exported file records its full parameter set
+and seed in comment lines.
 
 ## First prints (spec section 9)
 
-1. Test swatch (30 × 30 mm), Advanced → What to print → untick "Print the loops": base only. Check adhesion,
+1. Test swatch (30 × 30 mm), Advanced settings → What to print → untick "Print the loops": base only. Check adhesion,
    flow and corners.
 2. Custom size 30 × 15 mm, base and loops on: exactly one row of loops. Check that the feet bond and the
    unsupported strands hold their height.
@@ -37,7 +48,7 @@ when there are few).
 4. Full swatch (100 × 100 mm).
 
 Filaflex Foamy 95 values are unverified until the first print; change flow, temperature and the unsupported
-speed one at a time. With the spec defaults the clearance model flags about 40 % of moves on the full sample.
+speed one at a time. If the loops come out thin or break, raise Strand thickness in steps of 10 to 20 %. With the spec defaults the clearance model flags about 40 % of moves on the full sample.
 There are two causes: legs only 0.6 mm apart sit inside the nozzle keep-out, and neighbouring loops' caps cross
 at the same height (normal at 50 % overlap, and not removed by more room). `leg_gap` 1.5 mm with `clearance`
 0.5 mm (the "Roomy" option, or "Give loops more room" on the verdict card) brings the count to about 6 %; with
@@ -50,6 +61,7 @@ Use the count to compare layouts, not as pass or fail.
 |---|---|
 | `docs/original-brief.md` | The original brief (verbatim) and the decisions made while brainstorming |
 | `docs/product-direction-2026-10-14.md` | Where the UI is heading (Plotcaster-style gallery + preconfigured printers) and name candidates |
+| `docs/ux-round-2-2026-10-14.md` | Second UX review: what was still in the way, the reference tools, and what changed |
 | `docs/superpowers/specs/2026-10-14-textile-gcode-generator-design.md` | The v1 design spec (architecture, data model, engine behaviour, tests, first-print plan) |
 | `docs/superpowers/plans/2026-10-14-textile-gcode-generator.md` | The v1 implementation plan (13 tasks, test-first) |
 | `reference/research-notes-2026-10-14.md` | MK3S limits, PrusaSlicer Generic FLEX values, Recreus Foamy parameters, sources |
@@ -89,6 +101,13 @@ in this folder.
 - [Bubaki Design](https://github.com/bubakiDesign)
 
 ## Publishing
+
+The site: every push to `main` runs the tests and, if they pass, publishes `index.html`, `src/`, `profiles/` and
+`vendor/` to GitHub Pages (`.github/workflows/pages.yml`). It needs one setting, once: Settings → Pages → Build and
+deployment → Source: **GitHub Actions**. To republish without a code change, run the "Deploy site" workflow from
+the Actions tab.
+
+The repository:
 
 This folder lives inside a larger local repository that also holds other sites, so only this folder is published,
 to https://github.com/telenaco/filafabric (branch `main`). From the parent repository:

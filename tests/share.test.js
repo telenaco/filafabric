@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { encodeState, decodeState, stateToHash, hashToState, sanitizeState } from '../src/ui/share.js';
+import { encodeState, decodeState, stateToHash, hashToState, sanitizeState, DESIGN_IDS } from '../src/ui/share.js';
+import { SQUIGGLE_DEFAULTS } from '../src/ui/squiggle-controls.js';
 import { PRIMARY_DEFAULTS } from '../src/ui/controls.js';
 
 const known = { machines: ['prusa-mk3s'], materials: ['filaflex-95-foamy', 'generic-flex-mk3'] };
@@ -51,4 +52,20 @@ test('sanitizeState tolerates null and wrong shapes', () => {
   assert.deepEqual(s.advanced, {});
   const t = sanitizeState({ primary: 'x', advanced: [1, 2] }, known);
   assert.deepEqual(t.advanced, {});
+});
+
+test('sanitizeState keeps the design and the squiggle settings', () => {
+  const s = sanitizeState({ design: 'squiggle', squiggle: { mode: 'parallel', spacing: 99 } }, known);
+  assert.equal(s.design, 'squiggle');
+  assert.equal(s.squiggle.mode, 'parallel');
+  assert.equal(s.squiggle.spacing, 6);
+});
+
+test('a version 1 link without a design opens the loop pile with default squiggle settings', () => {
+  const s = sanitizeState({ v: 1, machine: 'prusa-mk3s', primary: { pileHeight: 4 } }, known);
+  assert.equal(s.design, DESIGN_IDS[0]);
+  assert.equal(s.design, 'loop-pile');
+  assert.equal(s.primary.pileHeight, 4);
+  assert.deepEqual(s.squiggle, SQUIGGLE_DEFAULTS);
+  assert.equal(sanitizeState({ design: 'nope' }, known).design, 'loop-pile');
 });

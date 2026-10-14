@@ -15,280 +15,248 @@
 <body>
 <header class="topbar">
   <div class="brand">
-    <svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 22C3 8 12 8 12 22"/><path d="M10 22C10 8 19 8 19 22"/><path d="M17 22C17 8 26 8 26 22"/><path d="M2 26H28"/></svg>
+    <svg width="28" height="28" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 22C3 8 12 8 12 22"/><path d="M10 22C10 8 19 8 19 22"/><path d="M17 22C17 8 26 8 26 22"/><path d="M2 26H28"/></svg>
     <span class="brand-name">Filafabric</span>
   </div>
   <span class="sep" aria-hidden="true"></span>
-  <label class="docname"><span class="visually-hidden">Swatch name</span><input id="doc-name" type="text" value="Untitled swatch" maxlength="60" autocomplete="off"></label>
+  <label class="docname" title="Rename this swatch">
+    <span class="visually-hidden">Swatch name</span>
+    <input id="doc-name" type="text" value="Untitled swatch" maxlength="60" autocomplete="off" spellcheck="false">
+    <svg class="pencil" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 2.5l2.5 2.5L5 13.5H2.5V11z"/></svg>
+  </label>
   <div class="top-actions">
-    <button type="button" id="btn-undo" class="icon-btn" aria-label="Undo" disabled><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4L3 8l4 4"/><path d="M3 8h8a4 4 0 010 8H8"/></svg></button>
-    <button type="button" id="btn-redo" class="icon-btn" aria-label="Redo" disabled><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4l4 4-4 4"/><path d="M15 8H7a4 4 0 000 8h3"/></svg></button>
-    <button type="button" id="btn-share" class="btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="4" cy="8" r="2"/><circle cx="12" cy="3.5" r="2"/><circle cx="12" cy="12.5" r="2"/><path d="M5.8 7l4.4-2.5M5.8 9l4.4 2.5"/></svg>Share link</button>
-    <button type="button" id="btn-export" class="btn primary" disabled><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 7L8 10.5 11.5 7M2.5 13.5h11"/></svg>Export G-code <span id="export-size" class="export-size"></span></button>
+    <button type="button" id="btn-printer" class="printer-chip" aria-haspopup="dialog">
+      <span class="status-dot" id="printer-dot" aria-hidden="true"></span>
+      <span class="pc-text"><span class="pc-name" id="printer-name">Printer</span><span class="pc-sub" id="printer-material">Filament</span></span>
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>
+    </button>
+    <span class="sep hide-narrow" aria-hidden="true"></span>
+    <button type="button" id="btn-undo" class="icon-btn" aria-label="Undo" title="Undo (Ctrl+Z)" disabled><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4L3 8l4 4"/><path d="M3 8h8a4 4 0 010 8H8"/></svg></button>
+    <button type="button" id="btn-redo" class="icon-btn" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4l4 4-4 4"/><path d="M15 8H7a4 4 0 000 8h3"/></svg></button>
+    <button type="button" id="btn-share" class="btn" title="Copy a link that opens this design with these settings"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 9.5a3 3 0 004.2 0l2.3-2.3a3 3 0 00-4.2-4.2l-.9.9"/><path d="M9.5 6.5a3 3 0 00-4.2 0L3 8.8a3 3 0 004.2 4.2l.9-.9"/></svg><span class="btn-label">Share</span></button>
+    <button type="button" id="btn-more" class="icon-btn" popovertarget="more-menu" aria-label="More options"><svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><circle cx="4" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="14" cy="9" r="1.6"/></svg></button>
   </div>
 </header>
 
+<div id="more-menu" class="menu" popover>
+  <button type="button" class="menu-item" id="btn-help"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M6.2 6.2a1.9 1.9 0 113 1.5c-.8.5-1.2.9-1.2 1.7M8 11.6v.1"/></svg>Getting started</button>
+  <div class="menu-sep" role="separator"></div>
+  <button type="button" class="menu-item" id="btn-save-file"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7M5 7l3 3 3-3M3 12.5h10"/></svg>Save settings file</button>
+  <label class="menu-item file-link"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5h4l1.5 1.5h5.5v6.5h-11z"/></svg>Open settings file…<input type="file" id="file-open" accept=".json,application/json"></label>
+  <div class="menu-sep" role="separator"></div>
+  <button type="button" class="menu-item" id="btn-reset"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a5 5 0 105-5H5"/><path d="M6.5 1.5L5 3l1.5 1.5"/></svg>Reset this design</button>
+</div>
+
 <div class="app">
-  <aside class="designs" aria-label="Designs and printer">
-    <section>
-      <h2 class="eyebrow">Designs</h2>
-      <button type="button" class="tile selected" id="tile-loop-pile" data-design="loop-pile" aria-pressed="true">
-        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden="true" class="tile-thumb"><path d="M8 52H56M8 44H56M8 36H56" stroke="var(--role-base)" stroke-width="1.6"/><path d="M10 52C10 28 22 28 22 52M18 52C18 28 30 28 30 52M26 52C26 28 38 28 38 52M34 52C34 28 46 28 46 52M42 52C42 28 54 28 54 52" stroke="var(--role-free)" stroke-width="2.2" stroke-linecap="round"/></svg>
-        <span class="tile-text"><span class="tile-title">Loop pile</span><span class="tile-sub">Raised looped pile on an open base</span></span>
-      </button>
-      <button type="button" class="tile" id="tile-squiggle" data-design="squiggle" aria-pressed="false" style="margin-top: 10px;">
-        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden="true" class="tile-thumb">
-          <path d="M10 20 C18 10 26 30 34 20 C42 10 50 30 58 20" stroke="var(--role-base)" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M10 34 C18 24 26 44 34 34 C42 24 50 44 58 34" stroke="var(--role-base)" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M10 48 C18 38 26 58 34 48 C42 38 50 58 58 48" stroke="var(--role-base)" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M20 10 C10 18 30 26 20 34 C10 42 30 50 20 58" stroke="var(--role-anchored)" stroke-width="2.2" stroke-linecap="round"/>
-          <path d="M44 10 C34 18 54 26 44 34 C34 42 54 50 44 58" stroke="var(--role-anchored)" stroke-width="2.2" stroke-linecap="round"/>
+  <aside class="designs" aria-labelledby="designs-title">
+    <h2 class="eyebrow" id="designs-title">Designs</h2>
+    <div class="design-list">
+      <button type="button" class="design-tile" data-design="loop-pile" aria-pressed="true">
+        <svg class="design-thumb" viewBox="0 0 160 96" fill="none" aria-hidden="true">
+          <g stroke="var(--role-base)" stroke-width="1.4" opacity="0.65"><path d="M8 88H152M8 76H152M8 64H152"/></g>
+          <g stroke="var(--role-free)" stroke-width="2.2" stroke-linecap="round">
+            <path d="M18 52C18 32 34 32 34 52M28 52C28 32 44 32 44 52M38 52C38 32 54 32 54 52M48 52C48 32 64 32 64 52M58 52C58 32 74 32 74 52M68 52C68 32 84 32 84 52M78 52C78 32 94 32 94 52M88 52C88 32 104 32 104 52M98 52C98 32 114 32 114 52M108 52C108 32 124 32 124 52M118 52C118 32 134 32 134 52" opacity="0.4"/>
+            <path d="M24 68C24 42 42 42 42 68M34 68C34 42 52 42 52 68M44 68C44 42 62 42 62 68M54 68C54 42 72 42 72 68M64 68C64 42 82 42 82 68M74 68C74 42 92 42 92 68M84 68C84 42 102 42 102 68M94 68C94 42 112 42 112 68M104 68C104 42 122 42 122 68M114 68C114 42 132 42 132 68" opacity="0.7"/>
+            <path d="M18 84C18 52 38 52 38 84M28 84C28 52 48 52 48 84M38 84C38 52 58 52 58 84M48 84C48 52 68 52 68 84M58 84C58 52 78 52 78 84M68 84C68 52 88 52 88 84M78 84C78 52 98 52 98 84M88 84C88 52 108 52 108 84M98 84C98 52 118 52 118 84M108 84C108 52 128 52 128 84M118 84C118 52 138 52 138 84"/>
+          </g>
         </svg>
-        <span class="tile-text"><span class="tile-title">Squiggle &amp; Gyroid</span><span class="tile-sub">2-layer wavy flexible interlock</span></span>
+        <span class="design-text"><span class="design-name">Loop pile</span><span class="design-sub">Soft raised loops on an open base</span></span>
       </button>
-    </section>
-    <section>
-      <h2 class="eyebrow">Printer</h2>
-      <div class="card printer-card">
-        <div>
-          <div class="printer-name" id="printer-name">Prusa MK3S</div>
-          <div class="muted" id="printer-material">Filaflex 95A Foamy · 0.4 mm nozzle</div>
-        </div>
-        <div class="chips" id="printer-chips"></div>
-        <p class="muted small" id="printer-note">There are no printer settings to tune.</p>
-        <button type="button" id="btn-printer" class="link">Change setup</button>
-      </div>
-    </section>
+      <button type="button" class="design-tile" data-design="squiggle" aria-pressed="false">
+        <svg class="design-thumb" viewBox="0 0 160 96" fill="none" stroke-linecap="round" aria-hidden="true">
+          <path stroke="var(--role-base)" stroke-width="1.8" d="M22 8Q16.8 12 22 16T22 24T22 32T22 40T22 48T22 56T22 64T22 72T22 80T22 88M35 8Q40.2 12 35 16T35 24T35 32T35 40T35 48T35 56T35 64T35 72T35 80T35 88M48 8Q42.8 12 48 16T48 24T48 32T48 40T48 48T48 56T48 64T48 72T48 80T48 88M61 8Q66.2 12 61 16T61 24T61 32T61 40T61 48T61 56T61 64T61 72T61 80T61 88M74 8Q68.8 12 74 16T74 24T74 32T74 40T74 48T74 56T74 64T74 72T74 80T74 88M87 8Q92.2 12 87 16T87 24T87 32T87 40T87 48T87 56T87 64T87 72T87 80T87 88M100 8Q94.8 12 100 16T100 24T100 32T100 40T100 48T100 56T100 64T100 72T100 80T100 88M113 8Q118.2 12 113 16T113 24T113 32T113 40T113 48T113 56T113 64T113 72T113 80T113 88M126 8Q120.8 12 126 16T126 24T126 32T126 40T126 48T126 56T126 64T126 72T126 80T126 88M139 8Q144.2 12 139 16T139 24T139 32T139 40T139 48T139 56T139 64T139 72T139 80T139 88"/>
+          <path stroke="var(--role-anchored)" stroke-width="1.8" d="M10 14Q15 19.2 20 14T30 14T40 14T50 14T60 14T70 14T80 14T90 14T100 14T110 14T120 14T130 14T140 14T150 14M10 26Q15 20.8 20 26T30 26T40 26T50 26T60 26T70 26T80 26T90 26T100 26T110 26T120 26T130 26T140 26T150 26M10 38Q15 43.2 20 38T30 38T40 38T50 38T60 38T70 38T80 38T90 38T100 38T110 38T120 38T130 38T140 38T150 38M10 50Q15 44.8 20 50T30 50T40 50T50 50T60 50T70 50T80 50T90 50T100 50T110 50T120 50T130 50T140 50T150 50M10 62Q15 67.2 20 62T30 62T40 62T50 62T60 62T70 62T80 62T90 62T100 62T110 62T120 62T130 62T140 62T150 62M10 74Q15 68.8 20 74T30 74T40 74T50 74T60 74T70 74T80 74T90 74T100 74T110 74T120 74T130 74T140 74T150 74M10 86Q15 91.2 20 86T30 86T40 86T50 86T60 86T70 86T80 86T90 86T100 86T110 86T120 86T130 86T140 86T150 86"/>
+        </svg>
+        <span class="design-text"><span class="design-name">Squiggle &amp; Gyroid</span><span class="design-sub">Two wavy layers that lock together</span></span>
+      </button>
+    </div>
+    <p class="more-designs">More designs are on the way.</p>
   </aside>
 
   <main class="stage" id="stage" aria-label="Preview">
-    <div class="stage-bar">
-      <div class="seg" role="group" aria-label="Camera" id="camera-seg">
-        <button type="button" data-camera="top" aria-pressed="false">Top</button>
-        <button type="button" data-camera="angled" aria-pressed="true">Angled</button>
-        <button type="button" data-camera="side" aria-pressed="false">Side</button>
-      </div>
-      <div class="layers" role="group" aria-label="Layers">
-        <span class="small muted strong">Show</span>
-        <button type="button" class="pill" data-layer="path" aria-pressed="true" title="The nozzle route, exactly as the G-code will run it">Path</button>
-        <button type="button" class="pill" data-layer="strand" aria-pressed="false" title="The route drawn at true strand thickness">Strand</button>
-        <button type="button" class="pill" data-layer="travel" aria-pressed="false" title="Horizontal moves between strands">Travel</button>
-        <button type="button" class="pill" data-layer="hops" aria-pressed="false" title="Vertical lifts and drops at each strand start and end">Hops</button>
-      </div>
-    </div>
-
     <div class="canvas-wrap" id="canvas-wrap">
       <div id="preview" class="preview" role="img" aria-label="3D preview of the toolpath"></div>
-      <div class="canvas-note" id="canvas-note" hidden>Showing your last valid settings</div>
-      <div class="roles" role="group" aria-label="Strand roles" id="roles"></div>
-      <div class="thickness-note" id="thickness-note" hidden>Strands drawn at true thickness: free-hanging about 0.49 mm once foamed, base 0.45 mm.</div>
-      <div class="busy-chip" id="busy-chip" hidden>Updating…</div>
-    </div>
-
-    <div class="playback card">
-      <button type="button" id="btn-play" class="play" aria-label="Play the print"><svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><path id="play-icon" d="M5 3l10 6-10 6z"/></svg></button>
-      <div class="scrub">
-        <label for="scrub" class="small muted strong">Print order</label>
-        <input id="scrub" type="range" min="0" max="1000" step="1" value="1000">
+      <div class="canvas-tools">
+        <div class="seg glass" role="group" aria-label="Camera" id="camera-seg">
+          <button type="button" data-camera="top" aria-pressed="false">Top</button>
+          <button type="button" data-camera="angled" aria-pressed="true">Angled</button>
+          <button type="button" data-camera="side" aria-pressed="false">Side</button>
+        </div>
+        <button type="button" id="btn-view" class="tool-btn" popovertarget="view-menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l6 3-6 3-6-3z"/><path d="M2 8l6 3 6-3M2 11l6 3 6-3"/></svg>View</button>
       </div>
-      <span class="time" id="time-label">0 of 0 min</span>
-      <label class="check"><input type="checkbox" id="exaggerate" checked> Exaggerate height</label>
-      <label class="check"><input type="checkbox" id="show-violations"> Show tight spots</label>
+      <div class="canvas-note" id="canvas-note" hidden>Showing your last valid settings</div>
+      <div class="busy-chip" id="busy-chip" hidden>Updating…</div>
+      <div class="canvas-foot">
+        <div class="roles" role="group" aria-label="Colours in the preview: click one to hide or show it" id="roles"></div>
+        <p class="canvas-hint" aria-hidden="true"><span class="hint-mouse">Drag to turn · scroll to zoom</span><span class="hint-touch">Drag to turn · pinch to zoom</span></p>
+      </div>
     </div>
 
-    <div class="status" id="status" aria-live="polite"></div>
-    <div class="details card" id="details" hidden></div>
-    <p class="muted small" id="custom-note" hidden></p>
+    <div class="playback">
+      <button type="button" id="btn-play" class="play" aria-label="Play the print order"><svg width="16" height="16" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><path id="play-icon" d="M5 3l10 6-10 6z"/></svg></button>
+      <label for="scrub" class="scrub-label">Print order</label>
+      <input id="scrub" type="range" min="0" max="1000" step="1" value="1000">
+      <span class="time" id="time-label">0 of 0 min</span>
+    </div>
   </main>
 
-  <aside class="settings" aria-label="Settings">
-    <div id="panel-loop-pile">
-      <div>
-        <h1 class="title">Loop pile</h1>
-        <p class="muted">Raised loops anchored to an open base, printed as one soft pile.</p>
-      </div>
+  <div id="view-menu" class="menu view-menu" popover>
+    <p class="menu-title">Show in the preview</p>
+    <label class="menu-check"><input type="checkbox" data-layer="strand" checked><span><strong>Filament</strong><small>Strands at their true thickness</small></span></label>
+    <label class="menu-check"><input type="checkbox" data-layer="path"><span><strong>Nozzle path</strong><small>The exact centre line the G-code follows</small></span></label>
+    <label class="menu-check"><input type="checkbox" data-layer="travel"><span><strong>Travel moves</strong><small>Moves between strands, not printing</small></span></label>
+    <label class="menu-check"><input type="checkbox" data-layer="hops"><span><strong>Lifts</strong><small>Where the nozzle rises and drops between strands</small></span></label>
+    <div class="menu-sep" role="separator"></div>
+    <label class="menu-check"><input type="checkbox" id="exaggerate"><span><strong>Exaggerate height</strong><small>Stretch heights 2.5× to read the pile</small></span></label>
+    <label class="menu-check" id="tight-option"><input type="checkbox" id="show-violations"><span><strong>Tight spots</strong><small>Red marks where the nozzle passes close to a loop</small></span></label>
+  </div>
 
+  <aside class="settings" aria-label="Settings">
+    <div class="settings-body" id="settings-body">
       <div class="errors" id="errors" role="alert" hidden></div>
 
-      <section class="verdict" id="verdict" aria-live="polite"></section>
+      <div id="panel-loop-pile" class="panel">
+        <header class="panel-head">
+          <h1 class="title">Loop pile</h1>
+          <p class="muted">Raised loops anchored to an open base, printed as one soft pile.</p>
+        </header>
 
-      <section>
-        <div style="display: flex; justify-content: space-between; align-items: baseline;">
-          <h2 class="eyebrow" style="margin: 0;">Swatch Dimensions</h2>
-          <span class="info-tip" title="Fabric swatch dimensions. Enter any width and height in millimetres, or click a quick preset.">ⓘ</span>
-        </div>
-        <div class="swatch-direct-grid" style="margin-top: 8px;">
-          <div class="swatch-dim-box">
-            <label for="custom-width"><span>Width (mm)</span></label>
-            <input id="custom-width" type="number" inputmode="decimal" min="10" max="240" step="5" value="30">
-          </div>
-          <span class="swatch-times">×</span>
-          <div class="swatch-dim-box">
-            <label for="custom-height"><span>Height (mm)</span></label>
-            <input id="custom-height" type="number" inputmode="decimal" min="10" max="200" step="5" value="30">
-          </div>
-        </div>
-        <div class="swatch-presets" id="swatch-presets">
-          <button type="button" data-swatch="test" class="active">30 × 30 mm</button>
-          <button type="button" data-swatch="mid">50 × 50 mm</button>
-          <button type="button" data-swatch="full">100 × 100 mm</button>
-        </div>
-        <p class="field-error" id="custom-error" hidden></p>
-        <p class="muted small" id="swatch-hint"></p>
-      </section>
+        <section class="group" aria-labelledby="lp-size-title">
+          <h2 class="eyebrow" id="lp-size-title">Swatch size</h2>
+          <div id="lp-size"></div>
+        </section>
 
-      <section>
-        <h2 class="eyebrow">Look and feel</h2>
-        <div id="sliders" class="sliders"></div>
-        <div class="room-row">
-          <div class="row-top"><span class="label">Room between loops</span><span class="value" id="room-value"></span></div>
-          <div class="seg two compact" role="group" aria-label="Room between loops" id="room-seg">
-            <button type="button" data-room="standard" aria-pressed="true">Standard</button>
-            <button type="button" data-room="roomy" aria-pressed="false">Roomy</button>
-          </div>
-        </div>
-      </section>
-
-      <section>
-        <h2 class="eyebrow">Path</h2>
-        <div class="seg two" role="group" aria-label="How loops are connected">
-          <button type="button" aria-pressed="true"><span class="seg-main">Separate loops</span><span class="seg-sub">Lift between each</span></button>
-          <button type="button" disabled aria-pressed="false" class="planned"><span class="seg-main">Overlapping line</span><span class="seg-sub">Planned, not built yet</span></button>
-        </div>
-        <p class="muted small">Overlapping would start each loop on the line before it, so the nozzle hops far less.</p>
-      </section>
-
-      <section class="advanced">
-        <button type="button" id="btn-advanced" class="disclosure" aria-expanded="false" aria-controls="advanced-body">
-          <span>Advanced <span class="muted" id="advanced-count">· 39 settings</span></span>
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l5 5 5-5"/></svg>
-        </button>
-        <div id="advanced-body" hidden></div>
-        <div class="adv-actions">
-          <button type="button" id="btn-reset" class="link">Reset to defaults</button>
-          <button type="button" id="btn-save-file" class="link">Save settings file</button>
-          <label class="link file-link">Open settings file<input type="file" id="file-open" accept=".json,application/json"></label>
-        </div>
-      </section>
-    </div>
-
-    <div id="panel-squiggle" hidden>
-      <div>
-        <h1 class="title">Squiggle &amp; Gyroid</h1>
-        <p class="muted">2-layer flexible textile: continuous undulating squiggles with contact-fused interlock.</p>
-      </div>
-
-      <section>
-        <h2 class="eyebrow">Structure / Interlock Mode</h2>
-        <div class="seg two" role="group" aria-label="Squiggle structure mode" id="sq-mode-seg">
-          <button type="button" data-sqmode="cross" aria-pressed="true">
-            <span class="seg-main">Cross Gyroid</span>
-            <span class="seg-sub">Vertical squiggle + Horizontal gyroid</span>
-          </button>
-          <button type="button" data-sqmode="parallel" aria-pressed="false">
-            <span class="seg-main">Parallel Zigzag</span>
-            <span class="seg-sub">Both horizontal with anti-phase crossing</span>
-          </button>
-        </div>
-      </section>
-
-      <section>
-        <div style="display: flex; justify-content: space-between; align-items: baseline;">
-          <h2 class="eyebrow" style="margin: 0;">Swatch Dimensions</h2>
-          <span class="info-tip" title="Squiggle swatch dimensions. Enter any custom size, or upload an image to automatically match its aspect ratio.">ⓘ</span>
-        </div>
-        <div class="swatch-direct-grid" style="margin-top: 8px;">
-          <div class="swatch-dim-box">
-            <label for="sq-width-input"><span>Width (mm)</span></label>
-            <input id="sq-width-input" type="number" inputmode="decimal" min="10" max="240" step="5" value="50">
-          </div>
-          <span class="swatch-times">×</span>
-          <div class="swatch-dim-box">
-            <label for="sq-height-input"><span>Height (mm)</span></label>
-            <input id="sq-height-input" type="number" inputmode="decimal" min="10" max="200" step="5" value="50">
-          </div>
-        </div>
-        <div class="swatch-presets" id="sq-swatch-presets">
-          <button type="button" data-sqpreset="30x30">30 × 30 mm</button>
-          <button type="button" data-sqpreset="50x50" class="active">50 × 50 mm</button>
-          <button type="button" data-sqpreset="100x100">100 × 100 mm</button>
-        </div>
-        <p class="muted small" id="sq-aspect-hint" hidden style="margin-top: 4px;"></p>
-      </section>
-
-      <section>
-        <h2 class="eyebrow">Wave Modulation Source</h2>
-        <div class="field-row stacked" style="margin: 0 0 10px;">
-          <select id="sq-pattern-sel">
-            <option value="centerSpot">Center Spot (Radial focus)</option>
-            <option value="gradientX">Horizontal Gradient</option>
-            <option value="gradientY">Vertical Gradient</option>
-            <option value="waves">Harmonic Waves</option>
-            <option value="uniform">Uniform Waves</option>
-            <option value="image">Custom Photo / Image</option>
-          </select>
-        </div>
-
-        <div id="sq-image-box" class="card" hidden style="margin-top: 8px;">
-          <label class="dropzone" id="sq-dropzone">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            <span class="small strong">Drop an image here, or browse</span>
-            <span class="small muted">PNG, JPG, or WebP</span>
-            <input type="file" id="sq-file-input" accept="image/*" class="visually-hidden">
-          </label>
-          <div id="sq-img-info" hidden style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
-            <canvas id="sq-thumb" width="56" height="56" style="border-radius: 4px; border: 1px solid var(--line); flex: none;"></canvas>
-            <div style="flex: 1; min-width: 0;">
-              <div id="sq-img-name" class="small strong" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
-              <button type="button" id="sq-img-clear" class="link small" style="min-height: auto; padding: 0;">Remove image</button>
+        <section class="group" aria-labelledby="lp-look-title">
+          <h2 class="eyebrow" id="lp-look-title">Look and feel</h2>
+          <div id="lp-sliders" class="controls"></div>
+          <div class="ctl">
+            <div class="ctl-top"><span class="ctl-label" id="room-label">Room between loops</span><span class="ctl-readout" id="room-value"></span></div>
+            <p class="ctl-help">Space where neighbouring loop feet meet, so the nozzle can pass.</p>
+            <div class="seg two" role="group" aria-labelledby="room-label" id="room-seg">
+              <button type="button" data-room="standard" aria-pressed="true">Standard</button>
+              <button type="button" data-room="roomy" aria-pressed="false">Roomy</button>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section>
-        <h2 class="eyebrow">Wave Geometry</h2>
-        <div class="sliders">
-          <div class="slider">
-            <div class="row-top"><label for="sq-spacing" class="label">Row spacing</label><span class="value" id="sq-spacing-val">2.5 mm</span></div>
-            <input id="sq-spacing" type="range" min="1.5" max="6.0" step="0.5" value="2.5">
-            <div class="ends"><span>Dense (1.5 mm)</span><span>Airy (6 mm)</span></div>
-          </div>
-          <div class="slider">
-            <div class="row-top"><label for="sq-amplitude" class="label">Wave amplitude</label><span class="value" id="sq-amplitude-val">1.2 mm</span></div>
-            <input id="sq-amplitude" type="range" min="0.4" max="3.0" step="0.1" value="1.2">
-            <div class="ends"><span>Subtle (0.4 mm)</span><span>Deep (3 mm)</span></div>
-          </div>
-          <div class="slider">
-            <div class="row-top"><label for="sq-wavelength" class="label">Wavelength (pitch)</label><span class="value" id="sq-wavelength-val">4.0 mm</span></div>
-            <input id="sq-wavelength" type="range" min="2.0" max="10.0" step="0.5" value="4.0">
-            <div class="ends"><span>Tight (2 mm)</span><span>Stretched (10 mm)</span></div>
-          </div>
-        </div>
-      </section>
+        <section class="group advanced">
+          <button type="button" id="btn-advanced" class="disclosure" aria-expanded="false" aria-controls="advanced-body">
+            <span class="disc-text"><span class="disc-title">Advanced settings</span><span class="disc-sub" id="advanced-count">Speeds, cooling, strand, nozzle and more</span></span>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l5 5 5-5"/></svg>
+          </button>
+          <div id="advanced-body" hidden></div>
+        </section>
+      </div>
 
-      <section>
-        <h2 class="eyebrow">Color &amp; Layers</h2>
-        <label class="check" style="font-size: 13.5px; align-items: flex-start; margin-top: 4px;">
-          <input type="checkbox" id="sq-color-change">
-          <span>Pause with M600 between Layer 1 &amp; 2 for 2-color filament change</span>
-        </label>
-        <p class="muted small" style="margin-top: 8px;">
-          Layer 1 prints at 0.20 mm, Layer 2 prints at 0.40 mm. Both layers print continuously in single serpentines with zero nozzle hops.
-        </p>
-      </section>
+      <div id="panel-squiggle" class="panel" hidden>
+        <header class="panel-head">
+          <h1 class="title">Squiggle &amp; Gyroid</h1>
+          <p class="muted">Two layers of wavy lines printed on top of each other and fused where they cross, with no lifts inside a layer.</p>
+        </header>
+
+        <section class="group" aria-labelledby="sq-size-title">
+          <h2 class="eyebrow" id="sq-size-title">Swatch size</h2>
+          <div id="sq-size"></div>
+        </section>
+
+        <section class="group" aria-labelledby="sq-mode-title">
+          <h2 class="eyebrow" id="sq-mode-title">Structure</h2>
+          <div class="seg two" role="group" aria-labelledby="sq-mode-title" id="sq-mode-seg">
+            <button type="button" data-sqmode="cross" aria-pressed="true">
+              <svg width="44" height="28" viewBox="0 0 44 28" fill="none" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path stroke="var(--role-base)" d="M14 2Q18 4 14 6T14 10T14 14T14 18T14 22T14 26M30 2Q26 4 30 6T30 10T30 14T30 18T30 22T30 26"/><path stroke="var(--role-anchored)" d="M4 9Q6.5 5 9 9T14 9T19 9T24 9T29 9T34 9T39 9M4 19Q6.5 23 9 19T14 19T19 19T24 19T29 19T34 19T39 19"/></svg>
+              <span class="seg-main">Crossed</span><span class="seg-sub">Columns, then rows</span>
+            </button>
+            <button type="button" data-sqmode="parallel" aria-pressed="false">
+              <svg width="44" height="28" viewBox="0 0 44 28" fill="none" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path stroke="var(--role-base)" d="M4 10Q6.5 4 9 10T14 10T19 10T24 10T29 10T34 10T39 10M4 20Q6.5 14 9 20T14 20T19 20T24 20T29 20T34 20T39 20"/><path stroke="var(--role-anchored)" d="M4 10Q6.5 16 9 10T14 10T19 10T24 10T29 10T34 10T39 10M4 20Q6.5 26 9 20T14 20T19 20T24 20T29 20T34 20T39 20"/></svg>
+              <span class="seg-main">Parallel</span><span class="seg-sub">Mirrored rows</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="group" aria-labelledby="sq-pattern-title">
+          <h2 class="eyebrow" id="sq-pattern-title">Pattern</h2>
+          <p class="group-hint">Darker parts of the pattern get deeper, tighter waves.</p>
+          <div class="patterns" role="group" aria-labelledby="sq-pattern-title" id="sq-patterns"></div>
+          <div id="sq-image-box" class="image-box" hidden>
+            <div id="sq-img-info" class="img-info" hidden>
+              <canvas id="sq-thumb" width="112" height="112" aria-hidden="true"></canvas>
+              <div class="img-text">
+                <div id="sq-img-name" class="img-name"></div>
+                <div id="sq-img-size" class="small muted"></div>
+                <div class="img-actions">
+                  <button type="button" id="sq-img-match" class="link small">Match its shape</button>
+                  <button type="button" id="sq-img-clear" class="link small">Remove</button>
+                </div>
+              </div>
+            </div>
+            <label class="dropzone" id="sq-dropzone">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              <span class="small strong" id="sq-drop-label">Drop a picture here, or browse</span>
+              <span class="small muted">PNG, JPG or WebP. It stays on this computer.</span>
+              <input type="file" id="sq-file-input" accept="image/*" class="visually-hidden">
+            </label>
+          </div>
+        </section>
+
+        <section class="group" aria-labelledby="sq-look-title">
+          <h2 class="eyebrow" id="sq-look-title">Look and feel</h2>
+          <div id="sq-sliders" class="controls"></div>
+        </section>
+
+        <section class="group" aria-labelledby="sq-colour-title">
+          <h2 class="eyebrow" id="sq-colour-title">Colour</h2>
+          <label class="switch-row">
+            <input type="checkbox" role="switch" id="sq-color-change">
+            <span><strong>Two colours</strong><small>Pause after the first layer so you can load a second filament (M600).</small></span>
+          </label>
+        </section>
+      </div>
     </div>
+
+    <footer class="summary" id="summary" aria-label="Print summary">
+      <div class="check" id="check" aria-live="polite"></div>
+      <div class="figures-row">
+        <div class="figures" id="figures"></div>
+        <button type="button" id="btn-details" class="link small" aria-expanded="false" aria-controls="details">Details</button>
+      </div>
+      <div class="details" id="details" hidden></div>
+      <button type="button" id="btn-export" class="btn primary export" disabled><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 7L8 10.5 11.5 7M2.5 13.5h11"/></svg>Export G-code <span id="export-size" class="export-size"></span></button>
+    </footer>
   </aside>
 </div>
 
 <dialog id="printer-dialog" aria-labelledby="printer-dialog-title">
   <form method="dialog">
     <h2 id="printer-dialog-title">Printer setup</h2>
-    <p class="muted">A setup bundles the printer's limits and the filament's behaviour, so you don't have to.</p>
+    <p class="muted">A setup holds the printer's limits and the filament's behaviour, so there is nothing to tune here.</p>
     <label class="field-row stacked" for="sel-machine"><span>Printer</span><select id="sel-machine"></select></label>
     <label class="field-row stacked" for="sel-material"><span>Filament</span><select id="sel-material"></select></label>
+    <div class="chips" id="dialog-chips"></div>
     <p class="muted small" id="dialog-note"></p>
     <div class="dialog-actions"><button class="btn primary" value="close">Done</button></div>
+  </form>
+</dialog>
+
+<dialog id="help-dialog" class="help" aria-labelledby="help-title">
+  <form method="dialog">
+    <h2 id="help-title">Getting started</h2>
+    <ol class="steps">
+      <li><strong>Pick a design</strong> on the left. Each one is a different kind of printed fabric.</li>
+      <li><strong>Shape it</strong> with the controls on the right. The preview updates as you go: drag it to turn, scroll to zoom, and press play to watch the print order.</li>
+      <li><strong>Check the summary</strong> above the Export button: print time, filament, and anything worth a second look.</li>
+      <li><strong>Export the G-code</strong> and print it from your printer's SD card or USB. No slicer is needed.</li>
+    </ol>
+    <h3>Your first prints</h3>
+    <p class="muted">The filament profile is new, so build up in small steps and change one thing at a time.</p>
+    <ol class="steps small">
+      <li>A 30 × 30 mm test swatch with the loops switched off (Advanced settings › What to print), to check adhesion and flow.</li>
+      <li>A 30 × 15 mm swatch with loops: one row, to check the feet bond and the loops hold their height.</li>
+      <li>The 30 × 30 mm test swatch with the defaults. Turn on <em>Tight spots</em> in View to compare with what you see.</li>
+      <li>The full 100 × 100 mm swatch.</li>
+    </ol>
+    <p class="muted small">If the loops come out thin, break or don't hold their shape, raise <em>Strand thickness</em> in steps of 10 to 20 % and compare. More flow also means more weight, so a tall pile can sag a little more.</p>
+    <p class="muted small">Every exported file lists its settings in comment lines, and Share copies a link that reopens this exact design.</p>
+    <div class="dialog-actions"><button class="btn primary" value="close">Got it</button></div>
   </form>
 </dialog>
 
