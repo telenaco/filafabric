@@ -3,6 +3,7 @@ import { ConfigError } from './params.js';
 
 const EPS = 1e-9;
 export const MAX_LOOPS = 4000;
+export const MAX_MOVES = 250000;
 const NO_JITTER = Object.freeze({ width: 0, length: 0, lift: 0 });
 
 /** X positions of the two leg lines a loop centred at cx would have. */
@@ -45,6 +46,15 @@ export function tile(cfg, boundary, rng) {
   if (perRow * rowCount > MAX_LOOPS) {
     throw new ConfigError([
       `Too many loops (about ${perRow * rowCount}); the limit is ${MAX_LOOPS}. Increase loop_pitch or base_spacing, or use a smaller sample.`,
+    ]);
+  }
+
+  const halfWidth = t.loop_width / 2;
+  const fiberLength = t.fiber_shape === 'arch' ? t.loop_length : 2 * (t.loop_length - halfWidth) + Math.PI * halfWidth;
+  const estimatedMoves = Math.ceil((perRow * rowCount * fiberLength) / t.curve_resolution);
+  if (estimatedMoves > MAX_MOVES) {
+    throw new ConfigError([
+      `This layout would need about ${estimatedMoves} moves; the limit is ${MAX_MOVES}. Use a coarser curve_resolution, fewer loops or a smaller sample.`,
     ]);
   }
 
@@ -117,7 +127,15 @@ export function tile(cfg, boundary, rng) {
     warnings.push(`${counts.unresolvedLegs} loop(s) could not keep the ${t.leg_gap} mm leg gap; increase loop_pitch or reduce leg_gap`);
   }
   if (counts.kept === 0) warnings.push('No loops fit inside the boundary; only the base will print');
-  return { placements: rows.reverse().flat(), warnings, counts };
+  const placements = rows.reverse().flat();
+  if (t.random_enabled) {
+    // The nudge was chosen from nominal positions; jitter can undo it, so check the final geometry.
+    const broken = countLegGapViolations(placements, t.leg_gap);
+    if (broken > 0) {
+      warnings.push(`Random placement left ${broken} loop pair(s) closer than the ${t.leg_gap} mm leg gap; reduce the XY, width or orientation variation`);
+    }
+  }
+  return { placements, warnings, counts };
 }
 
 /** Counts pairs of loops in the same row whose leg lines are closer than `gap`. */

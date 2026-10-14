@@ -32,9 +32,11 @@ printed strands (tick "Show violations"; it is on automatically only when there 
 4. Width 100, height 100: the full sample.
 
 Filaflex Foamy 95 values are unverified until the first print; change flow, temperature and the unsupported
-speed one at a time. With the spec defaults the clearance model flags about 40 % of moves on the full sample
-(legs 0.6 mm apart sit inside the nozzle keep-out); `leg_gap` 1.5 mm with `clearance` 0.5 mm brings that to
-about 6 %, which is a good first comparison against reality.
+speed one at a time. With the spec defaults the clearance model flags about 40 % of moves on the full sample.
+There are two causes: legs only 0.6 mm apart sit inside the nozzle keep-out, and neighbouring loops' caps cross
+at the same height (normal at 50 % overlap, and not removed by more room). `leg_gap` 1.5 mm with `clearance`
+0.5 mm brings the count to about 6 %; with `clearance` 0 the crossings alone still flag about 1,600 moves (3 %).
+Use the count to compare layouts, not as pass or fail.
 
 ## Where things are
 

@@ -8,8 +8,11 @@ export class ConfigError extends Error {
   }
 }
 
-/** Prime line in machine coordinates (outside the print area, in front of the bed). */
-export const PRIME = Object.freeze({ x0: 60, x1: 100, y: -3, liftZ: 2 });
+/**
+ * Prime line in machine coordinates (outside the print area, in front of the bed).
+ * `filamentMm` is how much filament it purges: the user's own PrusaSlicer start block pushes about 21.5 mm.
+ */
+export const PRIME = Object.freeze({ x0: 20, x1: 100, y: -3, liftZ: 2, filamentMm: 20 });
 
 export const Z_PROFILE_NAMES = ['sin2', 'bell', 'smoothstep'];
 export const FIBER_SHAPE_NAMES = ['hairpin', 'arch'];
@@ -82,6 +85,26 @@ const NON_NEGATIVE = [
 const PERCENT = ['fan_base', 'fan_supported', 'fan_nonplanar', 'fan_unsupported', 'fan_travel'];
 const BOOLEAN = ['include_base', 'include_loops', 'random_enabled'];
 
+const MAX = {
+  sample_width: 1000,
+  sample_height: 1000,
+  base_spacing: 200,
+  loop_width: 100,
+  loop_length: 200,
+  loop_pitch: 100,
+  curve_resolution: 5,
+  nozzle_cone_half_angle: 85,
+  speed_base: 500,
+  speed_supported: 500,
+  speed_nonplanar: 500,
+  speed_unsupported: 500,
+  speed_travel: 500,
+  print_acceleration: 20000,
+};
+const MIN_CURVE_RESOLUTION = 0.05;
+const MAX_RETRACTION_LENGTH = 15;
+const MAX_RETRACTION_SPEED = 120;
+
 export function validateTextile(t) {
   const errors = [];
   const num = (k) => typeof t[k] === 'number' && Number.isFinite(t[k]);
@@ -107,6 +130,19 @@ export function validateTextile(t) {
   }
   if (num('anchor_dwell') && num('loop_length') && 2 * t.anchor_dwell >= t.loop_length) {
     errors.push('anchor_dwell must be less than half of loop_length');
+  }
+  // Upper bounds: values beyond these hang the page, exhaust memory or have no physical meaning.
+  for (const [key, max] of Object.entries(MAX)) {
+    if (num(key) && t[key] > max) errors.push(`${key} must be at most ${max}`);
+  }
+  if (num('curve_resolution') && t.curve_resolution < MIN_CURVE_RESOLUTION) {
+    errors.push(`curve_resolution must be at least ${MIN_CURVE_RESOLUTION} mm`);
+  }
+  if (typeof t.retraction_length === 'number' && t.retraction_length > MAX_RETRACTION_LENGTH) {
+    errors.push(`retraction_length must be at most ${MAX_RETRACTION_LENGTH} mm (longer retractions jam flexible filament)`);
+  }
+  if (typeof t.retraction_speed === 'number' && t.retraction_speed > MAX_RETRACTION_SPEED) {
+    errors.push(`retraction_speed must be at most ${MAX_RETRACTION_SPEED} mm/s`);
   }
   return errors;
 }

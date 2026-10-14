@@ -1,4 +1,4 @@
-import { moveSpeed, segmentE } from './extrusion.js';
+import { filamentArea, moveSpeed, segmentE } from './extrusion.js';
 import { PRIME, startPosition } from './params.js';
 
 export class PreflightError extends Error {
@@ -13,14 +13,21 @@ const MESH_MARGIN = 3;
 const fmt = (n, dp) => String(Number(n.toFixed(dp)));
 const roundTo = (n, dp) => Math.round(n * 10 ** dp) / 10 ** dp;
 
-export function preflight(moves, cfg) {
-  const errors = [];
+/** Cheap check that needs no geometry; generate() runs it before tiling and planning. */
+export function bedFitErrors(cfg) {
   const { bed } = cfg.machine;
   const { t, derived } = cfg;
-  const o = derived.origin;
-  if (o.x < 0 || o.y < 0) {
-    errors.push(`Sample (${t.sample_width} x ${t.sample_height} mm) does not fit the bed (${bed.width} x ${bed.depth} mm)`);
+  if (derived.origin.x < 0 || derived.origin.y < 0) {
+    return [`Sample (${t.sample_width} x ${t.sample_height} mm) does not fit the bed (${bed.width} x ${bed.depth} mm)`];
   }
+  return [];
+}
+
+export function preflight(moves, cfg) {
+  const errors = bedFitErrors(cfg);
+  const { bed } = cfg.machine;
+  const { derived } = cfg;
+  const o = derived.origin;
   const { first, print, bed: bedTemp } = derived.temperatures;
   if (!(first > 0 && first <= 300)) errors.push(`first layer temperature ${first} C is outside 1-300`);
   if (!(print > 0 && print <= 300)) errors.push(`print temperature ${print} C is outside 1-300`);
@@ -60,8 +67,12 @@ function limitsBlock(cfg) {
 
 function primeBlock(cfg) {
   const length = PRIME.x1 - PRIME.x0;
-  const e = segmentE(length, 'base', cfg);
-  const f = Math.round(moveSpeed('base', length, 0, 0, cfg) * 60);
+  const e = PRIME.filamentMm;
+  // Purge a fixed amount (foamy TPU oozes while it heats and the bed levels), slowly enough
+  // to respect the material's volumetric ceiling.
+  const volumePerMm = (e * filamentArea(cfg.derived.filamentDiameter)) / length;
+  const v = Math.min(cfg.t.speed_base, cfg.derived.maxVolActual / volumePerMm, cfg.derived.limits.max_feedrate.x);
+  const f = Math.round(v * 60);
   return [
     `G1 Z${fmt(cfg.t.layer_height, 3)} F720`,
     `G1 X${PRIME.x0} Y${PRIME.y} F3000 ; go outside print area`,

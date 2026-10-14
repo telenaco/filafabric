@@ -69,3 +69,23 @@ not been checked**):
 | Threadform | Says "thread" and "form" | Generic |
 | Fibrecast | Echoes Plotcaster's "-caster" | Too derivative of the reference |
 | Selvage | Textile word for the finished edge; distinctive | Obscure outside textile circles |
+
+## Design canvas and preview layers (added 2026-10-14)
+
+A review of v1 and an interactive redesign were made as a design canvas:
+https://claude.ai/artifact/1fYdnmtwtvNqobN3NRr5uj (private to the owner until shared). It holds a written review
+(ten findings), the current screen annotated, the redesign (try it: camera, layers, playback, test/full swatch,
+"Give loops more room"), and a phone layout.
+
+Preview requirements from the user's notes:
+
+| Layer | What it shows | Notes |
+|---|---|---|
+| **Path** | The G-code centreline, coloured by role (base, anchored, lifting, free-hanging) | Always the exact nozzle route |
+| **Strand** | The same route at true thickness (base 0.45 mm, free strand about 0.49 mm once foamed) | Makes near-touching neighbours visible; default leg gap leaves about 0.1 mm of air |
+| **Travel** | Horizontal travel moves between strands, at hop height | Dashed |
+| **Hops** | The vertical lift and drop at each strand start and end | Separate from Travel by request |
+
+Related measurements for the default full swatch: 568 strands, 567 hops, 3.4 m of travel, about 4 % of print time.
+The user's idea of overlapping each loop onto the previous print line (to hop less) is recorded as a planned
+"Overlapping line" path option; its main benefit is fewer start/stop blobs and stronger bonds, not speed.

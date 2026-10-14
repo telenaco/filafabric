@@ -192,7 +192,11 @@ export function plan(cfg, base, placements, boundary) {
 
   const warnings = [];
   if (violations > 0) {
-    warnings.push(`${violations} move(s) come closer to printed strands than the clearance model allows (tick 'Show violations' above the preview to see them as red points)`);
+    warnings.push(
+      `${violations} move(s) come closer to printed strands than the clearance model allows. ` +
+        `Usual causes: loops spaced more tightly than the nozzle tip is wide, and the caps of neighbouring loops crossing at the same height (normal at 50% overlap). ` +
+        `Use the count to compare layouts rather than as pass or fail; tick 'Show violations' above the preview to see where.`
+    );
   }
   return { moves, warnings, violations };
 }

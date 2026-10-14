@@ -5,7 +5,7 @@ import { tile } from './tiler.js';
 import { createRng } from './rng.js';
 import { plan } from './planner.js';
 import { computeStats } from './stats.js';
-import { writeGcode } from './gcode.js';
+import { writeGcode, bedFitErrors, PreflightError } from './gcode.js';
 
 /**
  * The whole pipeline: profiles + textile parameters -> tagged moves -> stats -> G-code.
@@ -13,6 +13,8 @@ import { writeGcode } from './gcode.js';
  */
 export function generate(machine, material, textile = {}) {
   const cfg = resolveConfig(machine, material, textile);
+  const fit = bedFitErrors(cfg);
+  if (fit.length > 0) throw new PreflightError(fit);
   const t = cfg.t;
   const boundary = new RectBoundary(t.sample_width, t.sample_height);
 
