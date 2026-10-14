@@ -2,8 +2,8 @@ import { sampleFiber } from './fiber.js';
 import { ConfigError } from './params.js';
 
 const EPS = 1e-9;
-export const MAX_LOOPS = 4000;
-export const MAX_MOVES = 250000;
+export const MAX_LOOPS = 6000;
+export const MAX_MOVES = 400000;
 const NO_JITTER = Object.freeze({ width: 0, length: 0, lift: 0 });
 
 /** X positions of the two leg lines a loop centred at cx would have. */

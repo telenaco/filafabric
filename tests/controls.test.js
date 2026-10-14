@@ -8,10 +8,10 @@ import { validateTextile, DEFAULT_TEXTILE } from '../src/engine/params.js';
 
 const near = (a, b, tol = 1e-9) => assert.ok(Math.abs(a - b) <= tol, `${a} vs ${b}`);
 
-test('the defaults open on a 30 x 30 test swatch with the specified loop geometry', () => {
+test('the defaults open on a 200 x 190 swatch (the back loops overhang a bed 210 deep) with the specified loop geometry', () => {
   const t = toTextile(PRIMARY_DEFAULTS);
-  assert.equal(t.sample_width, 30);
-  assert.equal(t.sample_height, 30);
+  assert.equal(t.sample_width, 200);
+  assert.equal(t.sample_height, 190);
   assert.equal(t.loop_z_lift, 3);
   assert.equal(t.loop_width, 6);
   assert.equal(t.loop_length, 15);
@@ -58,7 +58,7 @@ test('advanced settings pass through but can never override a primary control', 
   const t = toTextile(PRIMARY_DEFAULTS, { speed_base: 9, loop_z_lift: 99, sample_width: 5, leg_gap: 7 });
   assert.equal(t.speed_base, 9);
   assert.equal(t.loop_z_lift, 3);
-  assert.equal(t.sample_width, 30);
+  assert.equal(t.sample_width, 200);
   assert.equal(t.leg_gap, 0.6);
 });
 

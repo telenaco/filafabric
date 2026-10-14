@@ -73,14 +73,20 @@ export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = nu
   const c = Math.cos(a), s = Math.sin(a);
   const turned = new PolygonBoundary(boundary.rings.map((ring) => ring.map((p) => rotate(p, c, -s))));
   const box = turned.bbox();
+  // no lane closer to the edge than the other layers' lines reach (they stop `inset` short of it), or the edge lane
+  // would run the whole width with nothing crossing it
+  const edge = inset + 0.2;
+  const lo = box.minY + edge, hi = box.maxY - edge;
   let lanes;
   if (anchor) {
     // lanes on a fixed lattice through `anchor`, so several hatches can be placed exactly against each other
     const y0 = rotate(anchor, c, -s).y + offset * spacing;
     lanes = [];
-    for (let k = Math.ceil((box.minY - y0) / spacing); y0 + k * spacing < box.maxY; k++) lanes.push(y0 + k * spacing);
+    for (let k = Math.ceil((lo - y0) / spacing); y0 + k * spacing <= hi; k++) lanes.push(y0 + k * spacing);
+  } else if (hi > lo) {
+    lanes = centredLanes(lo, hi, spacing).map((y) => y + offset * spacing).filter((y) => y > lo - 1e-9 && y < hi + 1e-9);
   } else {
-    lanes = centredLanes(box.minY, box.maxY, spacing).map((y) => y + offset * spacing).filter((y) => y > box.minY - 1e-9 && y < box.maxY + 1e-9);
+    lanes = [(box.minY + box.maxY) / 2];
   }
   const chains = serpentineChains(turned, 'y', lanes, { inset, minLength: 1, maxJog: 3 * spacing });
   return chains.map((segments) => {

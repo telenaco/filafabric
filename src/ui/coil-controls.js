@@ -2,6 +2,7 @@
 // Pure functions: no DOM, so they are tested in Node like the engine.
 import { SHAPE_IDS, loopsClose } from '../engine/shapes.js';
 import { FIELD_IDS, createField } from '../engine/fields.js';
+import { DEFAULT_SIDE } from './structure-controls.js';
 
 export const COIL_RANGES = Object.freeze({
   width: { min: 10, max: 240, step: 5 },
@@ -20,8 +21,8 @@ export const COIL_PATTERNS = Object.freeze(['none', ...FIELD_IDS]);
 
 export const COIL_DEFAULTS = Object.freeze({
   shape: 'looped',
-  width: 50,
-  height: 50,
+  width: DEFAULT_SIDE,
+  height: DEFAULT_SIDE,
   size: 3, // mm: how far the strand swings to each side (the loop radius)
   pitch: 5, // mm along the row per loop
   rowOverlap: 25, // percent: how far each row reaches into the one before

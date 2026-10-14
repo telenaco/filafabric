@@ -140,9 +140,24 @@ export function lanePoints({ shape, length, pitch, size, sizeAt = null, step = 0
   if (lead > 1e-9) straight(0, lead);
   const ds = step / arcRate(shape, pitch, size);
   // a whole number of samples per period, so a sample always lands on a period boundary
-  const n = periods * Math.max(1, Math.ceil(pitch / ds));
-  for (let i = 1; i <= n; i++) {
-    const s = (span * i) / n;
+  const samples = [];
+  const straightRun = pitch - RING_WINDOW;
+  if (shape === 'ring' && straightRun > 0) {
+    // a ring is walked in a short window at the end of each period: sample that window finely and the straight run
+    // before it at `step` (sampling the whole period finely would put dozens of points on every straight millimetre)
+    const nStraight = Math.max(1, Math.ceil(straightRun / step));
+    const nRing = Math.max(1, Math.ceil(RING_WINDOW / ds));
+    for (let p = 0; p < periods; p++) {
+      // a ring ends back where it began, a window short of the period's end: pick the line up at the boundary
+      if (p > 0) samples.push(p * pitch + 1e-9);
+      for (let i = 1; i <= nStraight; i++) samples.push(p * pitch + (straightRun * i) / nStraight);
+      for (let i = 1; i <= nRing; i++) samples.push(p * pitch + straightRun + (RING_WINDOW * i) / nRing);
+    }
+  } else {
+    const n = periods * Math.max(1, Math.ceil(pitch / ds));
+    for (let i = 1; i <= n; i++) samples.push((span * i) / n);
+  }
+  for (const s of samples) {
     const factor = sizeAt ? sizeAt(lead + s) : 1;
     const { v, du } = shapeAt(shape, s, { pitch, size: size * factor });
     pts.push({ u: lead + s + du, v });

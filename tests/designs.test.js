@@ -65,11 +65,16 @@ test('every newer design describes itself completely, so the studio needs no per
   }
 });
 
-test('every newer design prints its defaults, and again from every preset, with a verdict and a figure', () => {
+test('every newer design prints its defaults (at the full default size), and again from every preset, with a verdict and a figure', () => {
   const { machine, material } = defaultProfiles();
   for (const d of DESIGNS.filter((x) => x.status === 'ready' && !x.legacy)) {
-    const runs = [d.defaults(), ...(d.presets ?? []).map((p) => d.sanitize({ ...d.defaults(), ...p.patch }))];
-    for (const s of runs) {
+    // presets on a smaller swatch, to keep the suite quick; the defaults as the studio opens them
+    const presets = (d.presets ?? []).map((p) => {
+      const s = d.sanitize({ ...d.defaults(), ...p.patch });
+      d.setSize(s, 60, 60);
+      return s;
+    });
+    for (const s of [d.defaults(), ...presets]) {
       const r = d.generate(machine, material, s, { outline: null });
       assert.ok(r.moves.some((m) => m.extrude), `${d.id} prints something`);
       assert.ok(r.gcode.includes('G1'));

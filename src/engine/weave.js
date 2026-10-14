@@ -28,7 +28,7 @@ export const WEAVE_BINDINGS = Object.freeze({
 
 export const WEAVE_BINDING_IDS = Object.freeze(Object.keys(WEAVE_BINDINGS));
 
-export const MAX_PIECES = 3000;
+export const MAX_PIECES = 12000;
 const STEP = 0.5;
 const smooth = (t) => {
   const c = Math.max(0, Math.min(1, t));

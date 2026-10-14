@@ -12,7 +12,7 @@ import { ConfigError } from './params.js';
 
 const GOLDEN = Math.PI * (3 - Math.sqrt(5));
 const FIB = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377];
-export const MAX_SEEDS = 5000;
+export const MAX_SEEDS = 12000;
 
 /**
  * @param spacing  mm between neighbouring seeds

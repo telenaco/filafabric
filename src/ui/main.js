@@ -1143,7 +1143,7 @@ function renderTiles() {
       'aria-pressed': planned ? false : 'false',
       'aria-disabled': planned ? 'true' : false,
       disabled: planned,
-      title: planned ? `${d.name} is coming soon` : false,
+      title: planned ? `${d.name} is coming soon` : `${d.name}: ${d.blurb}`,
     });
     tile.innerHTML = `${d.thumb ?? THUMBS[d.id] ?? ''}<span class="design-text"><span class="design-name">${d.name}${planned ? '<span class="soon">Soon</span>' : ''}</span><span class="design-sub">${d.blurb}</span></span>`;
     if (ready) tile.addEventListener('click', () => setDesign(d.id));

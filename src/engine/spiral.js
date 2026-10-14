@@ -197,8 +197,9 @@ function distanceAt(field, x, y) {
 /**
  * The second layer of a spiral panel: lines along the normals of the outline, so they cross every ring at a right
  * angle. A line starts on the outermost ring every `spacing` mm and climbs the distance field (the direction
- * away from the nearest edge) until the distance stops growing, which is the middle of the panel. Neighbouring
- * lines are joined end to end, so the layer is a zigzag of normals rather than a hop for each one.
+ * away from the nearest edge) until the distance stops growing or the climb turns sharply, which is the middle of
+ * the panel or the ridge where the normals from two edges meet. Neighbouring lines are joined end to end, so the
+ * layer is a zigzag of normals rather than a hop for each one.
  */
 export function normalLines(field, boundary, { spacing = 3, inset = 0.4 } = {}) {
   const outer = contourLoops(field, inset).map((pts) => (signedArea(pts) < 0 ? pts.slice().reverse() : pts));
@@ -219,11 +220,16 @@ export function normalLines(field, boundary, { spacing = 3, inset = 0.4 } = {}) 
     let p = { x: seed.x, y: seed.y };
     let d = distanceAt(field, p.x, p.y);
     let flat = 0;
+    let first = null;
     for (let step = 0; step < 600; step++) {
       const gx = (distanceAt(field, p.x + h, p.y) - distanceAt(field, p.x - h, p.y)) / (2 * h);
       const gy = (distanceAt(field, p.x, p.y + h) - distanceAt(field, p.x, p.y - h)) / (2 * h);
       const g = Math.hypot(gx, gy);
       if (g < 1e-6) break;
+      // the ridge where normals from two edges meet (a square's diagonals): the climb turns sharply there, and
+      // following it would pile every normal onto the ridge, so the line stops
+      if (!first) first = { x: gx / g, y: gy / g };
+      else if ((gx * first.x + gy * first.y) / g < 0.8) break;
       const next = { x: p.x + (gx / g) * 0.5, y: p.y + (gy / g) * 0.5 };
       const nd = distanceAt(field, next.x, next.y);
       if (nd < d - 1e-3 || !boundary.contains(next.x, next.y)) break;

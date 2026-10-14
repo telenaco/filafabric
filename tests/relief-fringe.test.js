@@ -80,7 +80,7 @@ test('generateRelief returns moves in the air classes, stats and G-code, determi
 });
 
 test('an absurd relief layout is refused plainly', () => {
-  assert.throws(() => generateRelief(machine, material, { width: 240, height: 200, relief: 2, rowPitch: 0.3 }), ConfigError);
+  assert.throws(() => generateRelief(machine, material, { width: 240, height: 200, relief: 2, rowPitch: 0.1 }), ConfigError);
 });
 
 test('fringe hairs stand on the base lines, rise, and end free; far rows print first', () => {

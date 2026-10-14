@@ -3,6 +3,7 @@
 import { DEFAULT_TEXTILE } from '../engine/params.js';
 import { airStrandDiameter } from '../engine/extrusion.js';
 import { FIELD_IDS, createField } from '../engine/fields.js';
+import { DEFAULT_SIDE } from './structure-controls.js';
 
 export const RANGES = Object.freeze({
   pileHeight: { min: 1, max: 6, step: 0.5 },
@@ -17,9 +18,10 @@ export const RANGES = Object.freeze({
 });
 
 export const PRIMARY_DEFAULTS = Object.freeze({
-  swatch: 'test', // 'test' | 'full' | 'custom'
-  customWidth: 60,
-  customHeight: 60,
+  swatch: 'custom', // 'test' | 'mid' | 'full' | 'custom'
+  customWidth: DEFAULT_SIDE,
+  // the loops on the last rows reach a loop length past the back edge, and the MK3S bed is 210 mm deep
+  customHeight: DEFAULT_SIDE - 10,
   pileHeight: 3, // mm of lift
   loopSize: 1, // 1 = 6 x 15 mm
   loopSpacing: 3, // mm between loop centres

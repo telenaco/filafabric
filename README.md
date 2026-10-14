@@ -69,12 +69,13 @@ and seed in comment lines.
 
 ## First prints (spec section 9)
 
-1. A 30 × 30 mm swatch (the default size), Advanced settings → What to print → untick "Print the loops": base only. Check adhesion,
+1. A 30 × 30 mm swatch (the studio opens at 200 × 200 mm, so set the size first), Advanced settings → What to print →
+   untick "Print the loops": base only. Check adhesion,
    flow and corners.
 2. Custom size 30 × 15 mm, base and loops on, Loops at the back edge → **Inside the swatch**: exactly one row of
    loops. Check that the feet bond and the unsupported strands hold their height.
 3. The 30 × 30 mm swatch with the defaults: compare the tight-spot markers with real collisions.
-4. A 100 × 100 mm swatch.
+4. A 100 × 100 mm swatch, then the full 200 mm default.
 
 Filaflex Foamy 95 values are unverified until the first print; change flow, temperature and the unsupported
 speed one at a time. If the loops come out thin or break, raise Strand thickness in steps of 10 to 20 %. With the spec defaults the clearance model flags about 40 % of moves on the full sample.

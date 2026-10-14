@@ -14,7 +14,7 @@ import { delaunay } from './voronoi.js';
  */
 
 const TAU = Math.PI * 2;
-export const MAX_BUBBLES = 900;
+export const MAX_BUBBLES = 8000;
 
 const circle = (c, r, from = 0, to = TAU, step = 0.5) => {
   const n = Math.max(8, Math.ceil((Math.abs(to - from) * r) / step));
@@ -37,7 +37,7 @@ export function packCircles(boundary, { size = 4, gap = 0.6, seed = 1, tone = nu
   const w = box.maxX - box.minX, h = box.maxY - box.minY;
   const maxAt = (x, y) => (tone ? size * (1.3 - 0.7 * Math.max(0, Math.min(1, tone(x - box.minX, y - box.minY, w, h)))) : size);
   const rMin = Math.max(1, 0.2 * size);
-  const estimate = (w * h) / (Math.PI * (0.55 * size) ** 2);
+  const estimate = (w * h) / (Math.PI * (0.65 * size) ** 2); // about one bubble per π(0.65·size)² of swatch
   if (estimate > MAX_BUBBLES) throw new ConfigError([`This would need about ${Math.round(estimate)} bubbles; the limit is ${MAX_BUBBLES}. Use larger bubbles or a smaller swatch.`]);
 
   // room[i]: how large a circle centred on grid point i could be (distance to the nearest circle, less the gap)

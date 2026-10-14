@@ -109,7 +109,7 @@ h1, h2, h3 { margin: 0; }
 
 /* ---------- layout ---------- */
 .app { display: flex; align-items: stretch; min-height: calc(100% - 61px); }
-.designs { flex: 0 0 248px; padding: 20px 16px; border-right: 1px solid var(--line); }
+.designs { flex: 0 0 312px; padding: 20px 14px; border-right: 1px solid var(--line); }
 .stage { flex: 1 1 auto; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .settings {
   flex: 0 0 380px; display: flex; flex-direction: column; min-height: 0;
@@ -118,7 +118,8 @@ h1, h2, h3 { margin: 0; }
 .settings-body { flex: 1 1 auto; padding: 20px 20px 28px; display: flex; flex-direction: column; gap: 16px; }
 
 /* ---------- designs ---------- */
-.design-list { display: flex; flex-direction: column; gap: 12px; }
+/* two tiles to a row, so more of the library is in view at once */
+.design-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-items: stretch; }
 .design-tile {
   display: flex; flex-direction: column; padding: 0; overflow: hidden; text-align: left;
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius);
@@ -126,9 +127,12 @@ h1, h2, h3 { margin: 0; }
 .design-tile:hover { border-color: var(--line-2); }
 .design-tile[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent); }
 .design-thumb { display: block; width: 100%; height: auto; aspect-ratio: 160 / 96; background: var(--ground); border-bottom: 1px solid var(--line); }
-.design-text { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px 12px; }
-.design-name { font-size: 15px; font-weight: 700; }
-.design-sub { font-size: 13px; color: var(--muted); }
+.design-text { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px 10px; }
+.design-name { font-size: 14px; font-weight: 700; line-height: 1.25; }
+.design-sub {
+  font-size: 12px; line-height: 1.35; color: var(--muted);
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden;
+}
 .more-designs { margin: 12px 0 0; padding: 12px; border: 1.5px dashed var(--line-2); border-radius: var(--radius); font-size: 13px; color: var(--muted); text-align: center; }
 
 /* ---------- stage ---------- */
@@ -369,7 +373,10 @@ dialog p { margin: 6px 0; }
   .designs, .settings-body { overflow-y: auto; min-height: 0; }
 }
 @media (min-width: 901px) and (max-width: 1180px) {
-  .designs { flex-basis: 176px; padding: 16px 12px; }
+  .designs { flex-basis: 236px; padding: 16px 10px; }
+  .design-list { gap: 8px; }
+  .design-text { padding: 6px 8px 8px; }
+  .design-name { font-size: 13px; }
   .design-sub, .more-designs { display: none; }
   .settings { flex-basis: 344px; }
   .pc-sub { display: none; }
@@ -384,7 +391,7 @@ dialog p { margin: 6px 0; }
   .app { flex-direction: column; padding-bottom: 88px; }
   .designs { flex: none; padding: 12px 16px 0; border-right: 0; }
   .designs .eyebrow, .more-designs, .design-sub { display: none; }
-  .design-list { flex-direction: row; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; }
+  .design-list { display: flex; flex-direction: row; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 4px; }
   .design-tile { flex: 0 0 auto; flex-direction: row; align-items: center; scroll-snap-align: start; }
   .design-thumb { width: 88px; border-bottom: 0; border-right: 1px solid var(--line); }
   .design-text { padding: 8px 14px 8px 12px; }

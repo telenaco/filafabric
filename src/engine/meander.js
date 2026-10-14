@@ -259,7 +259,7 @@ export function curveOrder(curve, size, cell) {
  * @param angle    angle of the second layer's hatch, degrees
  * @param spacing  spacing of the hatch, mm
  */
-export const MAX_TOUR_POINTS = 600;
+export const MAX_TOUR_POINTS = 1500;
 
 export function meanderLayers(boundary, { curve = 'hilbert', cell = 6, angle = 45, spacing = 5, seed = 1, tone = null } = {}) {
   if (!CURVES[curve]) throw new Error(`Unknown meander curve: ${curve}`);

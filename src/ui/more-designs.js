@@ -1,7 +1,7 @@
 // The layered designs of the line-algorithm library: structures made of a few layers of plotted lines, each a card.
 // Every one is described by a small `layered({...})` call: its controls, and a `build(settings, boundary)` that turns
 // settings into layers of polylines. The rest (the panel, the print, the verdict, the report) is shared.
-import { defineControls, r1, r2 } from './structure-controls.js';
+import { defineControls, r1, r2, DEFAULT_SIDE as D } from './structure-controls.js';
 import { buildLayeredVerdict } from './verdict.js';
 import { thumbFromLayers, shapeThumb } from './thumbs.js';
 import { boundaryFor, layeredResult } from '../engine/layers.js';
@@ -74,7 +74,7 @@ export function layered(def) {
 
 const CROSSHATCH = defineControls({
   ranges: { ...SIZE, spacing: { min: 2, max: 8, step: 0.5 }, size: { min: 0, max: 2.5, step: 0.25 }, pitch: { min: 3, max: 10, step: 0.5 } },
-  defaults: { width: 50, height: 50, directions: '0-90', spacing: 3.5, shape: 'wave', size: 0, pitch: 6, colorChange: false },
+  defaults: { width: D, height: D, directions: '0-90', spacing: 3.5, shape: 'wave', size: 0, pitch: 6, colorChange: false },
   enums: { directions: DIRECTION_IDS, shape: WAVY },
   bools: ['colorChange'],
   presets: [
@@ -124,7 +124,7 @@ export const MORE_DESIGNS = [
 
 const AUXETIC = defineControls({
   ranges: { ...SIZE, rowPitch: { min: 3, max: 10, step: 0.5 }, period: { min: 4, max: 16, step: 0.5 }, amplitude: { min: 0.5, max: 4, step: 0.25 } },
-  defaults: { width: 50, height: 50, rowPitch: 6, period: 8, amplitude: 1.75, cell: 'reentrant', colorChange: false },
+  defaults: { width: D, height: D, rowPitch: 6, period: 8, amplitude: 1.75, cell: 'reentrant', colorChange: false },
   enums: { cell: CELL_IDS },
   bools: ['colorChange'],
   presets: [
@@ -169,7 +169,7 @@ MORE_DESIGNS.push(layered({
 
 const DIPWEAVE = defineControls({
   ranges: { ...SIZE, warpPitch: { min: 2, max: 8, step: 0.5 }, weftPitch: { min: 2, max: 8, step: 0.5 } },
-  defaults: { width: 50, height: 50, warpPitch: 3.5, weftPitch: 3.5 },
+  defaults: { width: D, height: D, warpPitch: 3.5, weftPitch: 3.5 },
   presets: [
     { id: 'fine', name: 'Fine', blurb: 'Close lines, many crossings', patch: { warpPitch: 3, weftPitch: 3 } },
     { id: 'open', name: 'Open', blurb: 'Airy mesh', patch: { warpPitch: 5, weftPitch: 5 } },
@@ -215,7 +215,7 @@ MORE_DESIGNS.push(layered({
 
 const WEB = defineControls({
   ranges: { ...SIZE, spacing: { min: 2, max: 8, step: 0.5 }, spokes: { min: 8, max: 48, step: 4 }, hub: { min: 1, max: 10, step: 0.5 }, tooth: { min: 0, max: 2, step: 0.25 } },
-  defaults: { width: 50, height: 50, spacing: 4, spokes: 24, hub: 3, tooth: 0, colorChange: false },
+  defaults: { width: D, height: D, spacing: 4, spokes: 24, hub: 3, tooth: 0, colorChange: false },
   bools: ['colorChange'],
   presets: [
     { id: 'spiderweb', name: 'Spiderweb', blurb: 'Smooth turns, many spokes', patch: { spacing: 4, spokes: 24, tooth: 0 } },
@@ -253,7 +253,7 @@ MORE_DESIGNS.push(layered({
 
 const CHAINMAIL = defineControls({
   ranges: { ...SIZE, spacing: { min: 3, max: 10, step: 0.5 }, ratio: { min: 1.1, max: 1.8, step: 0.1 } },
-  defaults: { width: 50, height: 50, spacing: 6, ratio: 1.5, colorChange: false },
+  defaults: { width: D, height: D, spacing: 6, ratio: 1.5, colorChange: false },
   bools: ['colorChange'],
   presets: [
     { id: 'mail', name: 'Mail', blurb: 'Rings overlapping like chainmail', patch: { spacing: 6, ratio: 1.5 } },
@@ -289,7 +289,7 @@ MORE_DESIGNS.push(layered({
 
 const MEANDER = defineControls({
   ranges: { ...SIZE, cell: { min: 3, max: 14, step: 0.5 }, angle: { min: 15, max: 75, step: 5 }, spacing: { min: 3, max: 10, step: 0.5 }, seed: { min: 1, max: 999, step: 1 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
-  defaults: { width: 50, height: 50, curve: 'hilbert', cell: 6, angle: 45, spacing: 5, seed: 1, pattern: 'none', patternScale: 1, colorChange: false },
+  defaults: { width: D, height: D, curve: 'hilbert', cell: 6, angle: 45, spacing: 5, seed: 1, pattern: 'none', patternScale: 1, colorChange: false },
   enums: { curve: CURVE_IDS, pattern: ['none', ...FIELD_IDS] },
   bools: ['colorChange'],
   presets: [
@@ -342,7 +342,7 @@ MORE_DESIGNS.push(layered({
 
 const HARMONOGRAPH = defineControls({
   ranges: { ...SIZE, a: { min: 2, max: 14, step: 1 }, b: { min: 2, max: 14, step: 1 }, phase: { min: 0, max: 90, step: 5 } },
-  defaults: { width: 50, height: 50, a: 7, b: 6, phase: 30, second: true, colorChange: false },
+  defaults: { width: D, height: D, a: 7, b: 6, phase: 30, second: true, colorChange: false },
   bools: ['second', 'colorChange'],
   presets: [
     { id: 'fine', name: 'Fine lattice', blurb: 'Seven by six, diamond cells', patch: { a: 7, b: 6, phase: 30 } },
@@ -380,7 +380,7 @@ MORE_DESIGNS.push(layered({
 
 const TRUCHET = defineControls({
   ranges: { ...SIZE, size: { min: 3, max: 12, step: 0.5 }, seed: { min: 1, max: 999, step: 1 } },
-  defaults: { width: 50, height: 50, tile: 'arcs', size: 5, seed: 7, colorChange: false },
+  defaults: { width: D, height: D, tile: 'arcs', size: 5, seed: 7, colorChange: false },
   enums: { tile: TILE_IDS },
   bools: ['colorChange'],
   presets: [
@@ -424,7 +424,7 @@ MORE_DESIGNS.push(layered({
 
 const VORONOI = defineControls({
   ranges: { ...SIZE, spacing: { min: 4, max: 14, step: 0.5 }, relax: { min: 0, max: 8, step: 1 }, seed: { min: 1, max: 999, step: 1 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
-  defaults: { width: 50, height: 50, spacing: 8, relax: 5, seed: 11, pattern: 'none', patternScale: 1, colorChange: false },
+  defaults: { width: D, height: D, spacing: 8, relax: 5, seed: 11, pattern: 'none', patternScale: 1, colorChange: false },
   enums: { pattern: ['none', ...FIELD_IDS] },
   bools: ['colorChange'],
   presets: [
@@ -464,7 +464,7 @@ MORE_DESIGNS.push(layered({
 
 const TURING = defineControls({
   ranges: { ...SIZE, wavelength: { min: 4, max: 14, step: 0.5 }, seed: { min: 1, max: 999, step: 1 }, angle: { min: 15, max: 75, step: 5 }, spacing: { min: 3, max: 10, step: 0.5 } },
-  defaults: { width: 50, height: 50, wavelength: 7, seed: 5, angle: 45, spacing: 5, colorChange: false },
+  defaults: { width: D, height: D, wavelength: 7, seed: 5, angle: 45, spacing: 5, colorChange: false },
   bools: ['colorChange'],
   presets: [
     { id: 'fine', name: 'Fine stripes', blurb: 'Close, thin worms', patch: { wavelength: 5, spacing: 4 } },

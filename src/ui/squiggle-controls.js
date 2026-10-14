@@ -11,6 +11,7 @@ export const SQ_RANGES = Object.freeze({
 
 import { SHAPE_IDS } from '../engine/shapes.js';
 import { FIELD_IDS } from '../engine/fields.js';
+import { DEFAULT_SIDE } from './structure-controls.js';
 
 export const SQ_MODES = Object.freeze(['cross', 'parallel']);
 
@@ -23,8 +24,8 @@ export const SQ_PATTERNS = Object.freeze(['centerSpot', 'gradientX', 'gradientY'
 export const SQUIGGLE_DEFAULTS = Object.freeze({
   mode: 'cross',
   shape: 'wave',
-  width: 50,
-  height: 50,
+  width: DEFAULT_SIDE,
+  height: DEFAULT_SIDE,
   pattern: 'centerSpot',
   spacing: 2.5, // mm between neighbouring wavy lines
   amplitude: 1.2, // mm of side-to-side swing

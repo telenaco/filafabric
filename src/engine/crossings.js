@@ -60,15 +60,20 @@ export function findCrossings(strands, { strandWidth = 0.5, cell = 1 } = {}) {
     for (let i = 0; i + 1 < s.pts.length; i++) segs.push({ si, i });
   });
 
-  // uniform grid: each segment goes in every cell its bounding box touches
+  // uniform grid: each segment goes in every cell its bounding box touches (numeric cell keys, so a large swatch
+  // does not build millions of strings)
+  const box = new Float64Array(segs.length * 4); // minX, minY, maxX, maxY per segment
+  const cellKey = (ix, iy) => (ix + 1048576) * 2097152 + (iy + 1048576);
   const grid = new Map();
   segs.forEach((g, index) => {
     const p = strands[g.si].pts[g.i], q = strands[g.si].pts[g.i + 1];
-    const x0 = Math.floor(Math.min(p.x, q.x) / cell), x1 = Math.floor(Math.max(p.x, q.x) / cell);
-    const y0 = Math.floor(Math.min(p.y, q.y) / cell), y1 = Math.floor(Math.max(p.y, q.y) / cell);
+    const minX = Math.min(p.x, q.x), maxX = Math.max(p.x, q.x), minY = Math.min(p.y, q.y), maxY = Math.max(p.y, q.y);
+    box[4 * index] = minX; box[4 * index + 1] = minY; box[4 * index + 2] = maxX; box[4 * index + 3] = maxY;
+    const x0 = Math.floor(minX / cell), x1 = Math.floor(maxX / cell);
+    const y0 = Math.floor(minY / cell), y1 = Math.floor(maxY / cell);
     for (let ix = x0; ix <= x1; ix++) {
       for (let iy = y0; iy <= y1; iy++) {
-        const key = `${ix},${iy}`;
+        const key = cellKey(ix, iy);
         const list = grid.get(key);
         if (list) list.push(index);
         else grid.set(key, [index]);
@@ -79,14 +84,14 @@ export function findCrossings(strands, { strandWidth = 0.5, cell = 1 } = {}) {
   // every crossing once, with its position along both strands
   const found = [];
   const recent = new Map();
-  const seenPairs = new Set();
-  for (const list of grid.values()) {
+  for (const [cellId, list] of grid) {
     for (let m = 0; m < list.length; m++) {
       for (let n = m + 1; n < list.length; n++) {
         const ia = Math.min(list[m], list[n]), ib = Math.max(list[m], list[n]);
-        const pairKey = ia * segs.length + ib;
-        if (seenPairs.has(pairKey)) continue;
-        seenPairs.add(pairKey);
+        // two segments share every cell their boxes overlap in: test the pair only in the first of those cells
+        const ox = Math.max(box[4 * ia], box[4 * ib]), oy = Math.max(box[4 * ia + 1], box[4 * ib + 1]);
+        if (ox > Math.min(box[4 * ia + 2], box[4 * ib + 2]) || oy > Math.min(box[4 * ia + 3], box[4 * ib + 3])) continue;
+        if (cellKey(Math.floor(ox / cell), Math.floor(oy / cell)) !== cellId) continue;
         const A = segs[ia], B = segs[ib];
         const pa = strands[A.si].pts[A.i], qa = strands[A.si].pts[A.i + 1];
         const pb = strands[B.si].pts[B.i], qb = strands[B.si].pts[B.i + 1];
@@ -97,9 +102,18 @@ export function findCrossings(strands, { strandWidth = 0.5, cell = 1 } = {}) {
         if (A.si === B.si && Math.abs(arcB - arcA) < minArc) continue;
         // the end of a closed strand meeting its own start is the closing joint, not a crossing
         if (A.si === B.si && A.i === 0 && B.i === strands[B.si].pts.length - 2 && hit[0] < 1e-9 && hit[1] > 1 - 1e-9) continue;
-        const key = `${A.si}|${B.si}`;
+        // the same crossing found twice (two segments meeting at a shared point) is within a strand width along
+        // both strands; earlier crossings are kept in buckets of a strand width along A, so only the neighbouring
+        // buckets are searched (one long strand crossing itself thousands of times stays fast)
+        const bucket = Math.floor(arcA / strandWidth);
+        let dup = false;
+        for (let d = -1; d <= 1 && !dup; d++) {
+          const list = recent.get(`${A.si}|${B.si}|${bucket + d}`);
+          dup = !!list && list.some((c) => Math.abs(c.arcA - arcA) < strandWidth && Math.abs(c.arcB - arcB) < strandWidth);
+        }
+        if (dup) continue;
+        const key = `${A.si}|${B.si}|${bucket}`;
         const near = recent.get(key);
-        if (near && near.some((c) => Math.abs(c.arcA - arcA) < strandWidth && Math.abs(c.arcB - arcB) < strandWidth)) continue;
         const da = Math.atan2(qa.y - pa.y, qa.x - pa.x), db = Math.atan2(qb.y - pb.y, qb.x - pb.x);
         let angle = Math.abs(((da - db) * 180) / Math.PI) % 180;
         if (angle > 90) angle = 180 - angle;

@@ -73,3 +73,17 @@ test('flow in the air defaults to 100 % and must stay between 50 and 300 %', () 
   }
   assert.doesNotThrow(() => resolveConfig(machine, material, { flow_nonplanar: 50, flow_unsupported: 300 }));
 });
+
+test('loops that reach past the back edge are centred on the bed with the swatch, and refused when they cannot fit', async () => {
+  const { bedFitErrors } = await import('../src/engine/gcode.js');
+  const { machine, material } = (await import('./helpers.js')).defaultProfiles();
+  const inside = resolveConfig(machine, material, { sample_width: 200, sample_height: 190, boundary_policy: 'feet-only', loop_length: 15 });
+  assert.equal(inside.derived.overhang, 15);
+  assert.equal(inside.derived.origin.y, (210 - 190 - 15) / 2);
+  assert.deepEqual(bedFitErrors(inside), []);
+  const flat = resolveConfig(machine, material, { sample_width: 200, sample_height: 200, boundary_policy: 'footprint' });
+  assert.equal(flat.derived.overhang, 0);
+  assert.deepEqual(bedFitErrors(flat), []);
+  const over = resolveConfig(machine, material, { sample_width: 200, sample_height: 200, boundary_policy: 'feet-only', loop_length: 15 });
+  assert.match(bedFitErrors(over)[0], /15 mm past the back edge/);
+});
