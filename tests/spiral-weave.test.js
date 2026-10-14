@@ -159,3 +159,22 @@ test('a swatch smaller than one pitch says so', () => {
   assert.equal(r.strands.length, 0);
   assert.ok(r.warnings.length > 0);
 });
+
+test('with normals, a second layer climbs away from the edge and crosses every ring at a right angle', async () => {
+  const { generateSpiral: gen, normalLines, distanceField } = await import('../src/engine/spiral.js');
+  const b = rect(40, 30);
+  const field = distanceField(b.rings, b, 0.5);
+  const lines = normalLines(field, b, { spacing: 4 });
+  assert.ok(lines.length >= 1);
+  const flat = lines.flat();
+  assert.ok(flat.length > 100);
+  // every point is inside, and the lines reach well into the panel
+  for (const p of flat) assert.ok(p.x >= -0.01 && p.x <= 40.01 && p.y >= -0.01 && p.y <= 30.01);
+  const depth = Math.max(...flat.map((p) => Math.min(p.x, 40 - p.x, p.y, 30 - p.y)));
+  assert.ok(depth > 10, `reaches ${depth} mm in`);
+  const r = gen(machine, material, { width: 40, height: 30, spacing: 4, second: 'normals' });
+  assert.equal(r.layerCount, 2);
+  assert.ok(r.report.between > 20, `${r.report.between}`);
+  assert.ok(r.report.minAngle > 70, `rings and normals cross squarely: ${r.report.minAngle}`);
+  assert.equal(r.spiral.rings > 3, true);
+});

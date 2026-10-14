@@ -78,11 +78,14 @@ export const BOUCLE_CONTROLS = defineControls({
 
 export const SPIRAL_CONTROLS = defineControls({
   ranges: { ...SIZE, spacing: { min: 1.5, max: 8, step: 0.5 } },
-  defaults: { width: 50, height: 50, spacing: 3 },
+  defaults: { width: 50, height: 50, spacing: 3, second: 'none', colorChange: false },
+  enums: { second: ['none', 'normals'] },
+  bools: ['colorChange'],
   presets: [
-    { id: 'tight', name: 'Tight', blurb: 'Rings close together', patch: { spacing: 2 } },
-    { id: 'standard', name: 'Standard', blurb: 'A moderate gap', patch: { spacing: 3 } },
-    { id: 'open', name: 'Open', blurb: 'Airy, wide gaps', patch: { spacing: 5 } },
+    { id: 'tight', name: 'Tight', blurb: 'Rings close together', patch: { spacing: 2, second: 'none' } },
+    { id: 'standard', name: 'Standard', blurb: 'A moderate gap', patch: { spacing: 3, second: 'none' } },
+    { id: 'open', name: 'Open', blurb: 'Airy, wide gaps', patch: { spacing: 5, second: 'none' } },
+    { id: 'normals', name: 'With normals', blurb: 'Rings crossed at right angles', patch: { spacing: 3, second: 'normals' } },
   ],
   describe: (s) => ({ spacing: `${r1(s.spacing)} mm apart` }),
 });

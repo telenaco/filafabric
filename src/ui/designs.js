@@ -19,7 +19,7 @@ import {
   COIL_RANGES, COIL_DEFAULTS, COIL_PRESETS, COIL_SHAPES, COIL_PATTERNS, sanitizeCoil, describeCoil, coilParams, presetMatch,
 } from './coil-controls.js';
 import {
-  buildCoilVerdict, buildReliefVerdict, buildFringeVerdict, buildSpiralVerdict, buildBoucleVerdict, buildWeaveVerdict,
+  buildCoilVerdict, buildReliefVerdict, buildFringeVerdict, buildSpiralVerdict, buildBoucleVerdict, buildWeaveVerdict, buildLayeredVerdict,
 } from './verdict.js';
 import { generateCoil } from '../engine/coil.js';
 import { loopsClose } from '../engine/shapes.js';
@@ -165,10 +165,21 @@ export const DESIGNS = [
     controls: [
       { kind: 'presets', title: 'Start from' },
       { kind: 'size', title: 'Size and shape' },
+      {
+        kind: 'choice',
+        key: 'second',
+        title: 'Second layer',
+        hint: 'Normals are lines that climb away from the edge, crossing every ring at a right angle, so the panel has crossings and holds together.',
+        options: [
+          { id: 'none', label: 'None', hint: 'Rings only: one strand, no lifts' },
+          { id: 'normals', label: 'Normals', hint: 'Lines along the outline's normals, crossing every ring at a right angle' },
+        ],
+      },
       { kind: 'sliders', title: 'Look and feel', items: [{ key: 'spacing', label: 'Ring spacing', help: 'Distance between neighbouring rings.', lo: 'Tight', hi: 'Open', unit: 'mm', edit: true }] },
+      { kind: 'switch', key: 'colorChange', label: 'Two colours', help: 'Pause after the rings so you can load a second filament (M600). Only with normals.' },
     ],
-    generate: (machine, material, s, { outline = null } = {}) => generateSpiral(machine, material, { width: s.width, height: s.height, spacing: s.spacing, outline }),
-    verdict: (result) => buildSpiralVerdict(result.stats, result.spiral),
+    generate: (machine, material, s, { outline = null } = {}) => generateSpiral(machine, material, { width: s.width, height: s.height, spacing: s.spacing, second: s.second, colorChange: s.colorChange, outline }),
+    verdict: (result) => (result.layerCount > 1 ? buildLayeredVerdict(result) : buildSpiralVerdict(result.stats, result.spiral)),
     figure: (result) => ({ value: result.spiral.rings.toLocaleString('en'), unit: '', label: 'Rings' }),
     summary: (result) => `a spiral panel of ${result.spiral.rings} rings`,
   },

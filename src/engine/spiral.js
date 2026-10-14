@@ -3,6 +3,7 @@ import { bedFitErrors, PreflightError, writeGcode } from './gcode.js';
 import { computeStats } from './stats.js';
 import { PolygonBoundary } from './boundary.js';
 import { emitStrands } from './emit.js';
+import { chainPolylines, layeredResult } from './layers.js';
 import { MAX_MOVES } from './tiler.js';
 
 /**
@@ -181,7 +182,62 @@ export function generateSpiralTextile({ width, height, spacing = 3, inset = 0.4,
   if (points > MAX_MOVES) {
     throw new ConfigError([`This layout would need about ${points.toLocaleString('en')} moves; the limit is ${MAX_MOVES.toLocaleString('en')}. Use wider spacing or a smaller panel.`]);
   }
-  return { strands, rings: ringCount, levels: levels.length, warnings };
+  return { strands, rings: ringCount, levels: levels.length, warnings, field, shape };
+}
+
+/** Distance at (x, y), interpolated between the four nearest grid samples. */
+function distanceAt(field, x, y) {
+  const fx = (x - field.minX) / field.cell, fy = (y - field.minY) / field.cell;
+  const ix = Math.max(0, Math.min(field.nx - 2, Math.floor(fx))), iy = Math.max(0, Math.min(field.ny - 2, Math.floor(fy)));
+  const tx = Math.max(0, Math.min(1, fx - ix)), ty = Math.max(0, Math.min(1, fy - iy));
+  const at = (i, j) => field.data[j * field.nx + i];
+  return (at(ix, iy) * (1 - tx) + at(ix + 1, iy) * tx) * (1 - ty) + (at(ix, iy + 1) * (1 - tx) + at(ix + 1, iy + 1) * tx) * ty;
+}
+
+/**
+ * The second layer of a spiral panel: lines along the normals of the outline, so they cross every ring at a right
+ * angle. A line starts on the outermost ring every `spacing` mm and climbs the distance field (the direction
+ * away from the nearest edge) until the distance stops growing, which is the middle of the panel. Neighbouring
+ * lines are joined end to end, so the layer is a zigzag of normals rather than a hop for each one.
+ */
+export function normalLines(field, boundary, { spacing = 3, inset = 0.4 } = {}) {
+  const outer = contourLoops(field, inset).map((pts) => (signedArea(pts) < 0 ? pts.slice().reverse() : pts));
+  const seeds = [];
+  for (const loop of outer) {
+    let carried = spacing / 2;
+    for (let i = 1; i < loop.length; i++) {
+      const a = loop[i - 1], b = loop[i];
+      const len = Math.hypot(b.x - a.x, b.y - a.y);
+      for (let t = carried; t <= len; t += spacing) seeds.push({ x: a.x + ((b.x - a.x) * t) / len, y: a.y + ((b.y - a.y) * t) / len, loop: outer.indexOf(loop) });
+      carried = (carried + spacing - (len % spacing)) % spacing || spacing;
+    }
+  }
+  const h = field.cell * 0.75;
+  const lines = [];
+  for (const seed of seeds) {
+    const pts = [{ x: seed.x, y: seed.y }];
+    let p = { x: seed.x, y: seed.y };
+    let d = distanceAt(field, p.x, p.y);
+    let flat = 0;
+    for (let step = 0; step < 600; step++) {
+      const gx = (distanceAt(field, p.x + h, p.y) - distanceAt(field, p.x - h, p.y)) / (2 * h);
+      const gy = (distanceAt(field, p.x, p.y + h) - distanceAt(field, p.x, p.y - h)) / (2 * h);
+      const g = Math.hypot(gx, gy);
+      if (g < 1e-6) break;
+      const next = { x: p.x + (gx / g) * 0.5, y: p.y + (gy / g) * 0.5 };
+      const nd = distanceAt(field, next.x, next.y);
+      if (nd < d - 1e-3 || !boundary.contains(next.x, next.y)) break;
+      flat = nd - d < 0.05 ? flat + 1 : 0;
+      p = next;
+      d = nd;
+      pts.push(next);
+      if (flat >= 3) break;
+    }
+    if (pts.length >= 3) lines.push(pts);
+  }
+  // alternate directions so the ends meet at the middle, then chain neighbours
+  const alternate = lines.map((l, i) => (i % 2 === 0 ? l : l.slice().reverse()));
+  return chainPolylines(alternate, boundary, 4 * spacing + 4);
 }
 
 /**
@@ -202,6 +258,19 @@ export function generateSpiral(machine, material, params = {}) {
     layerHeight: cfg.t.layer_height,
     boundary: outline ? new PolygonBoundary(outline) : null,
   });
+  if (params.second === 'normals') {
+    const normals = normalLines(spiral.field, spiral.shape, { spacing: params.spacing ?? 3 });
+    const layered = layeredResult(machine, material, {
+      width,
+      height,
+      layers: [spiral.strands.map((s) => s.pts.map(({ x, y }) => ({ x, y }))), normals],
+      outline,
+      colorChange: !!params.colorChange,
+      extra: { layerCount: 2, spiral: { rings: spiral.rings, levels: spiral.levels, warnings: spiral.warnings } },
+    });
+    layered.stats.loops = spiral.rings;
+    return layered;
+  }
   const moves = emitStrands(spiral.strands, { retraction: cfg.derived.retraction });
   const stats = computeStats(moves, cfg, []);
   stats.loops = spiral.rings;
