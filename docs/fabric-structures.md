@@ -18,13 +18,30 @@ Nothing here has been printed yet: every drape or handle description below is a 
 | **Bouclé & picots** | Rows of line with a round ring standing on it, alternately above and below, as one strand | 1 (+ lift where rings meet a row) | presets (Picot trim, Bouclé, Curls), ring size and spacing, row spacing, pattern |
 | **Relief** | Rows of one strand that rise and fall with a pattern: bobbles, puckered stripes, pleats | 1 + Z | presets (Seersucker, Bobbles, Pleats), relief height, row spacing, pattern |
 | **Fringe** | A base of lines with hairs standing off them, rising then hanging free | base + free ends | presets (Fringe, Shag, Fine pile), hair length, height, spacing, row gap, variation |
+| **Crosshatch & isogrid** | Layers of parallel lines, each at its own angle: 0/90, 45/135, 60/120 or three ways 60° apart; lines can be wavy | 2 or 3 | directions, line shape and wave size, spacing |
+| **Auxetic mesh** | Rows of zigzag, each the mirror of the one below, with staircases of struts: honeycomb cells, or re-entrant bow-ties that widen when pulled | 2 | cell type, row spacing, cell width and depth |
+| **Dip weave** | Straight warp on the bed, straight weft that rides over each warp and dips back to the bed between | 1 (+ lift at crossings) | warp and weft spacing |
+| **Spiderweb** | One continuous spiral crossed by a radial zigzag out along one spoke and back along the next | 2 | turn spacing, spokes, hub hole, sawtooth |
+| **Ring mail** | Overlapping rings on a hexagonal lattice, a second layer of rings shifted into the triangular gaps | 2 | ring spacing, ring overlap |
+| **Meander** | One strand that never crosses itself (Hilbert, Peano, a random maze, or a stipple tour through graded dots), held by a hatch at an angle | 2 | curve, fold size, hatch angle and spacing, pattern |
+| **Harmonograph** | A closed Lissajous curve that crosses itself in a diamond lattice, optionally with a phase-turned copy | 1 or 2 | lobes across and up, phase |
+| **Truchet tiles** | Random tiles per cell: diagonals (an X in every cell) or arcs that flow into curves, seeded | 2 | tile, size, pattern number |
+| **Voronoi lace** | Relaxed Voronoi cells with their Delaunay triangulation across; cells smaller where a pattern is bright | 2 | cell size, evenness, pattern number, pattern |
+| **Turing stripes** | Reaction-diffusion stripes grown from a few specks, crossed by a hatch; the same number grows the same pattern | 2 | stripe spacing, pattern number, hatch |
 
-Strand shapes (Coil, Bouclé's ring, and Squiggle & Gyroid): looped, figure-8, zigzag, honeycomb (flat tops and
+Strand shapes (Coil, Bouclé's ring, Crosshatch and Squiggle & Gyroid): looped, figure-8, zigzag, honeycomb (flat tops and
 bottoms, so neighbouring layers stack), wave, square and rings.
 
 Patterns (a brightness map that shrinks or deepens the loops, waves, lifts or relief) are ported from the Blender
 ceramics add-on: deep spiral, brick, diamond grid, tribal feathers, circuit board, ocean waves, hexagon cells, mountain
 peaks, lotus petals, lightning bolts, plus soft noise, bumps and stripes.
+
+## The crossing report
+
+Every layered card (Squiggle onwards) reports, in *Details*, how well its layers hold together: crossings and crossings per
+cm², crossings between layers, the smallest usual crossing angle (the 10th percentile, so the short jogs that join lines do
+not decide it), and the longest stretch of any strand with nothing crossing it. The verdict warns about the one failure that
+matters: layers that never cross, which can simply be peeled apart.
 
 ## What is honest about each
 
