@@ -192,7 +192,7 @@ export function plan(cfg, base, placements, boundary) {
 
   const warnings = [];
   if (violations > 0) {
-    warnings.push(`${violations} move(s) come closer to printed strands than the clearance model allows (red points in the preview)`);
+    warnings.push(`${violations} move(s) come closer to printed strands than the clearance model allows (tick 'Show violations' above the preview to see them as red points)`);
   }
   return { moves, warnings, violations };
 }

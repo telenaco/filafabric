@@ -14,6 +14,7 @@ const state = {
 };
 let preview = null;
 let timer = null;
+let violationsTouched = false;
 
 const store = {
   get(key) { try { return localStorage.getItem(key); } catch { return null; } },
@@ -157,6 +158,12 @@ function regenerate() {
     renderStats(result);
     renderWarnings(result);
     preview.update(result);
+    if (!violationsTouched) {
+      // many violations would bury the model; show them by default only when there are few
+      const box = $('#show-violations');
+      box.checked = result.stats.violations > 0 && result.stats.violations <= 2000;
+      preview.setShowViolations(box.checked);
+    }
     const scrub = $('#scrub');
     scrub.max = String(result.moves.length);
     scrub.value = scrub.max;
@@ -241,6 +248,10 @@ async function init() {
   $('#btn-save').addEventListener('click', saveParams);
   $('#file-load').addEventListener('change', (e) => { if (e.target.files[0]) loadParams(e.target.files[0]); e.target.value = ''; });
   $('#show-travel').addEventListener('change', (e) => preview.setShowTravel(e.target.checked));
+  $('#show-violations').addEventListener('change', (e) => {
+    violationsTouched = true;
+    preview.setShowViolations(e.target.checked);
+  });
   $('#z-scale').addEventListener('input', (e) => preview.setZScale(Number(e.target.value)));
   $('#scrub').addEventListener('input', (e) => preview.setScrub(Number(e.target.value)));
   buildForm();
