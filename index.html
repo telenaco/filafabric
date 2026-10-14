@@ -4,9 +4,46 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Textile G-code Generator</title>
+<link rel="stylesheet" href="src/ui/styles.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
 </head>
 <body>
-<h1>Textile G-code Generator</h1>
-<p>The server works. The tool is being built.</p>
+<header>
+  <h1>Textile G-code Generator</h1>
+  <div class="actions">
+    <button id="btn-download" disabled>Download .gcode</button>
+    <button id="btn-save" type="button">Save parameters</button>
+    <label class="file-button">Load parameters<input type="file" id="file-load" accept=".json,application/json"></label>
+  </div>
+</header>
+<main>
+  <aside id="controls">
+    <section class="profiles">
+      <label class="field"><span>Machine</span><select id="machine"></select></label>
+      <label class="field"><span>Material</span><select id="material"></select></label>
+    </section>
+    <div id="param-groups"></div>
+  </aside>
+  <section id="viewport">
+    <div id="preview" aria-label="3D toolpath preview"></div>
+    <div class="toolbar">
+      <label><input type="checkbox" id="show-travel" checked> Show travel</label>
+      <label>Z scale <input type="range" id="z-scale" min="1" max="6" step="0.5" value="1"></label>
+      <label class="grow">Print order <input type="range" id="scrub" min="0" max="1" value="1"></label>
+    </div>
+    <div id="errors" class="errors" role="alert" hidden></div>
+    <dl id="stats" class="stats"></dl>
+    <ul id="warnings" class="warnings"></ul>
+    <p class="legend">
+      <span class="sw base"></span>base <span class="sw supported"></span>supported
+      <span class="sw rising"></span>rising <span class="sw falling"></span>falling
+      <span class="sw unsupported"></span>unsupported <span class="sw travel"></span>travel
+      <span class="sw violation"></span>clearance violation
+    </p>
+  </section>
+</main>
+<script type="module" src="src/ui/main.js"></script>
 </body>
 </html>
