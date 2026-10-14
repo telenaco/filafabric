@@ -64,7 +64,8 @@ not been checked**):
 
 | Name | Why | Caveat |
 |---|---|---|
-| **Meltloom** (recommended) | Molten filament + loom; fits loops now and weave/mesh designs later; not tied to a printer brand | Check `.com` / `.app` and trademarks |
+| **Filafabric** (chosen) | Filament + fabric; fits loops now, squiggle/weave and lace designs | Selected by user |
+| Meltloom (prior candidate) | Molten filament + loom; fits loops now and weave/mesh designs later; not tied to a printer brand | Check `.com` / `.app` and trademarks |
 | Pilework | Names the raised loop pile | Narrower once designs go beyond loops |
 | Threadform | Says "thread" and "form" | Generic |
 | Fibrecast | Echoes Plotcaster's "-caster" | Too derivative of the reference |

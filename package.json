@@ -1,8 +1,14 @@
 {
-  "name": "fashion-printing-tools",
+  "name": "filafabric",
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "contributors": [
+    {
+      "name": "Bubaki Design",
+      "url": "https://github.com/bubakiDesign"
+    }
+  ],
   "scripts": {
     "test": "node --test",
     "serve": "node tools/serve.mjs --open",

@@ -84,6 +84,10 @@ A PrusaSlicer-sliced `.gcode` made with **Filaflex Foamy 95** (not Generic FLEX)
 material profile be verified; the MK3S machine and Generic FLEX values are already confirmed from the sample
 in this folder.
 
+## Contributors
+
+- [Bubaki Design](https://github.com/bubakiDesign)
+
 ## Publishing
 
 This folder lives inside a larger local repository that also holds other sites, so only this folder is published,

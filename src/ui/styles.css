@@ -175,11 +175,141 @@ input[type="range"] { width: 100%; height: 28px; margin: 0; accent-color: var(--
 .field-error { margin: 0; color: var(--danger-ink); font-size: 13.5px; font-weight: 600; }
 .field-error[hidden] { display: none; }
 .sliders { display: flex; flex-direction: column; gap: 16px; }
-.slider .row-top, .room-row .row-top { display: flex; justify-content: space-between; align-items: baseline; }
+.slider .row-top, .room-row .row-top { display: flex; justify-content: space-between; align-items: center; }
 .slider .label, .room-row .label { font-weight: 600; }
 .slider .value, .room-row .value { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; }
 .slider .ends { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
 .room-row { margin-top: 16px; display: flex; flex-direction: column; gap: 6px; }
+
+/* Swatch direct inputs & presets */
+.swatch-direct-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.swatch-dim-box {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.swatch-dim-box span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.swatch-dim-box input {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+  width: 100%;
+}
+.swatch-times {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--muted);
+  margin-top: 16px;
+}
+.swatch-presets {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.swatch-presets button {
+  flex: 1;
+  min-height: 32px;
+  padding: 0 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink-2);
+  transition: all 0.15s;
+}
+.swatch-presets button:hover {
+  border-color: var(--accent);
+}
+.swatch-presets button.active {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+/* Tooltips, number inputs, and link constraints */
+.label-with-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.info-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: var(--seg-bg);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: help;
+  user-select: none;
+}
+.info-tip:hover {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.input-val-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.num-input {
+  width: 68px;
+  min-height: 32px;
+  padding: 2px 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-align: right;
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--ink);
+}
+.num-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.unit-tag {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.link-constraint-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: color-mix(in srgb, var(--accent) 7%, var(--panel));
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: 8px;
+  margin: -4px 0 4px;
+}
+.link-constraint-row .check {
+  min-height: auto;
+  font-size: 13px;
+}
+.readout-text {
+  font-weight: 600;
+  color: var(--ink-2);
+}
 .disclosure {
   width: 100%; min-height: 52px; display: flex; align-items: center; justify-content: space-between; background: transparent; border: 0;
   border-top: 1px solid var(--line); padding: 0; font-weight: 700; font-size: 15px;
@@ -202,6 +332,26 @@ dialog { border: 1px solid var(--line); border-radius: var(--radius); background
 dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
 dialog h2 { font-size: 20px; margin-bottom: 4px; }
 .dialog-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+
+/* dropzone & image uploads */
+.dropzone {
+  border: 1.5px dashed var(--line-2);
+  border-radius: var(--radius);
+  padding: 14px;
+  text-align: center;
+  background: var(--panel);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.dropzone:hover, .dropzone.dragover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--panel));
+}
+.dropzone svg { color: var(--accent); }
 
 @media (max-width: 900px) {
   .app { flex-direction: column; flex-wrap: nowrap; padding-bottom: 84px; }

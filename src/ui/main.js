@@ -1,5 +1,6 @@
 import { DEFAULT_TEXTILE } from '../engine/params.js';
 import { generate } from '../engine/generate.js';
+import { generateSquiggle, SAMPLERS, createImageSampler } from '../engine/squiggle.js';
 import { createPreview, ROLES } from './preview.js';
 import { RANGES, PRIMARY_DEFAULTS, ADVANCED_DEFAULTS, sampleSize, toTextile, describePrimary } from './controls.js';
 import { buildVerdict, formatMinutes } from './verdict.js';
@@ -12,13 +13,48 @@ const PLAY_ICON = 'M5 3l10 6-10 6z';
 const PAUSE_ICON = 'M4 3h3.5v12H4zM10.5 3H14v12h-3.5z';
 
 const SLIDERS = [
-  { key: 'pileHeight', label: 'Pile height', lo: 'Low', hi: 'Tall' },
-  { key: 'loopSize', label: 'Loop size', lo: 'Small', hi: 'Large' },
-  { key: 'loopSpacing', label: 'Loop density', lo: 'Dense', hi: 'Sparse' },
-  { key: 'baseGap', label: 'Base openness', lo: 'Tight', hi: 'Airy' },
-  { key: 'variation', label: 'Natural variation', lo: 'Even', hi: 'Wild' },
+  {
+    key: 'pileHeight',
+    label: 'Pile height',
+    lo: 'Low (1 mm)',
+    hi: 'Tall (6 mm)',
+    unit: 'mm',
+    desc: 'Z-lift height of loops above the base. Higher lift gives a thick, plush fleece; lower lift makes a flatter, lightweight textile.',
+  },
+  {
+    key: 'loopSize',
+    label: 'Loop size',
+    lo: 'Small (0.6×)',
+    hi: 'Large (1.4×)',
+    unit: '×',
+    desc: 'Scale of each loop (width × length). Larger loops create a bolder surface grain and softer drape.',
+  },
+  {
+    key: 'loopSpacing',
+    label: 'Loop density',
+    lo: 'Dense (2 mm)',
+    hi: 'Sparse (6 mm)',
+    unit: 'mm',
+    desc: 'Distance between loop centres along rows. Smaller spacing packs loops densely; larger spacing makes it open and breathable.',
+  },
+  {
+    key: 'baseGap',
+    label: 'Base openness',
+    lo: 'Tight (3 mm)',
+    hi: 'Airy (10 mm)',
+    unit: 'mm',
+    desc: 'Spacing between base serpentine lines. Tighter base adds strength; wider base makes the backing flexible and airy.',
+  },
+  {
+    key: 'variation',
+    label: 'Natural variation',
+    lo: 'Even (0%)',
+    hi: 'Wild (100%)',
+    unit: '%',
+    desc: 'Organic variation in loop height, tilt, and length so the fabric resembles natural wool rather than rigid plastic.',
+  },
 ];
-const ROLE_LABELS = { base: 'Base', anchored: 'Anchored', lifting: 'Lifting and lowering', free: 'Free-hanging' };
+const ROLE_LABELS = { base: 'Base / L1', anchored: 'Anchored / L2', lifting: 'Lifting and lowering', free: 'Free-hanging' };
 const ROLE_HEIGHT = { base: 2, anchored: 3, lifting: 3, free: 5 };
 
 const state = {
@@ -26,8 +62,24 @@ const state = {
   materials: new Map(),
   machine: 'prusa-mk3s',
   material: 'filaflex-95-foamy',
+  design: 'loop-pile',
+  linkSizeDensity: true,
   primary: { ...PRIMARY_DEFAULTS },
   advanced: {},
+  squiggle: {
+    mode: 'cross',
+    swatch: 'mid',
+    width: 50,
+    height: 50,
+    pattern: 'centerSpot',
+    spacing: 2.5,
+    amplitude: 1.2,
+    wavelength: 4.0,
+    colorChange: false,
+    customSampler: null,
+    imageElement: null,
+    imageName: '',
+  },
   docName: 'Untitled swatch',
   result: null,
   error: null,
@@ -156,7 +208,23 @@ function regenerate() {
   const machine = state.machines.get(state.machine);
   const material = state.materials.get(state.material);
   try {
-    const result = generate(machine, material, toTextile(state.primary, state.advanced));
+    let result;
+    if (state.design === 'squiggle') {
+      const s = state.squiggle;
+      const sampler = (s.pattern === 'image' && s.customSampler) ? s.customSampler : (SAMPLERS[s.pattern] ?? SAMPLERS.centerSpot);
+      result = generateSquiggle(machine, material, {
+        width: s.width,
+        height: s.height,
+        mode: s.mode,
+        spacing: s.spacing,
+        amplitude: s.amplitude,
+        wavelength: s.wavelength,
+        sampler,
+        colorChange: s.colorChange,
+      });
+    } else {
+      result = generate(machine, material, toTextile(state.primary, state.advanced));
+    }
     state.result = result;
     state.error = null;
     preview.update(result);
@@ -263,9 +331,10 @@ function renderStatus() {
   if (!state.result) { status.replaceChildren(); return; }
   const { stats, cfg } = state.result;
   const t = cfg.t;
+  const isSq = state.design === 'squiggle';
   const parts = [
     el('strong', { text: `${t.sample_width} × ${t.sample_height} mm` }),
-    el('span', { text: `${stats.loops} loops` }),
+    ...(isSq ? [el('span', { text: '2-layer mesh' })] : [el('span', { text: `${stats.loops} loops` })]),
     el('span', { text: `about ${formatMinutes(stats.timeSec / 60)} min` }),
     el('span', { text: `${stats.filamentGrams < 1 ? stats.filamentGrams.toFixed(2) : stats.filamentGrams.toFixed(1)} g filament` }),
     el('span', { text: `${stats.hops} nozzle hops` }),
@@ -325,26 +394,38 @@ function renderPrinter() {
 }
 
 function renderSwatch() {
-  for (const b of document.querySelectorAll('[data-swatch]')) b.setAttribute('aria-pressed', String(state.primary.swatch === b.dataset.swatch));
   const [w, h] = sampleSize(state.primary);
-  const isCustom = state.primary.swatch === 'custom';
-  $('#custom-size').open = $('#custom-size').open || isCustom;
-  $('#custom-width').value = isCustom ? state.primary.customWidth : $('#custom-width').value || state.primary.customWidth;
-  $('#custom-height').value = isCustom ? state.primary.customHeight : $('#custom-height').value || state.primary.customHeight;
+  const wInput = $('#custom-width');
+  const hInput = $('#custom-height');
+  if (wInput && document.activeElement !== wInput) wInput.value = String(w);
+  if (hInput && document.activeElement !== hInput) hInput.value = String(h);
+
+  for (const b of document.querySelectorAll('#swatch-presets button')) {
+    const isTest = b.dataset.swatch === 'test' && w === 30 && h === 30;
+    const isMid = b.dataset.swatch === 'mid' && w === 50 && h === 50;
+    const isFull = b.dataset.swatch === 'full' && w === 100 && h === 100;
+    b.classList.toggle('active', isTest || isMid || isFull);
+    b.setAttribute('aria-pressed', String(isTest || isMid || isFull));
+  }
+
   const stats = state.result?.stats;
   $('#swatch-hint').textContent = stats && !state.error
-    ? `${state.primary.swatch === 'test' ? 'A good first print' : `${w} × ${h} mm`}: about ${formatMinutes(stats.timeSec / 60)} minutes and ${stats.filamentGrams < 1 ? stats.filamentGrams.toFixed(2) : stats.filamentGrams.toFixed(1)} g.`
+    ? `${w} × ${h} mm: about ${formatMinutes(stats.timeSec / 60)} minutes and ${stats.filamentGrams < 1 ? stats.filamentGrams.toFixed(2) : stats.filamentGrams.toFixed(1)} g.`
     : '';
 }
 
 function renderSliders() {
   const d = describePrimary(state.primary);
   for (const def of SLIDERS) {
-    const input = $(`#s-${def.key}`);
-    if (input && document.activeElement !== input) input.value = String(state.primary[def.key]);
+    const sInput = $(`#s-${def.key}`);
+    if (sInput && document.activeElement !== sInput) sInput.value = String(state.primary[def.key]);
+    const numInput = $(`#num-${def.key}`);
+    if (numInput && document.activeElement !== numInput) numInput.value = String(state.primary[def.key]);
     const out = $(`#v-${def.key}`);
     if (out) out.textContent = d[def.key];
   }
+  const linkBox = $('#link-size-density');
+  if (linkBox) linkBox.checked = state.linkSizeDensity;
   $('#room-value').textContent = state.primary.roomy ? 'Roomy: 1.5 mm gap' : 'Standard: 0.6 mm gap';
   for (const b of document.querySelectorAll('[data-room]')) b.setAttribute('aria-pressed', String((b.dataset.room === 'roomy') === state.primary.roomy));
 }
@@ -373,22 +454,117 @@ function setRoomy(on) {
 function buildSliders() {
   const host = $('#sliders');
   host.replaceChildren();
+
   for (const def of SLIDERS) {
     const range = RANGES[def.key];
-    const input = el('input', { id: `s-${def.key}`, type: 'range', min: range.min, max: range.max, step: range.step, value: state.primary[def.key] });
-    input.addEventListener('input', () => {
-      state.primary[def.key] = Number(input.value);
+
+    const slider = el('input', {
+      id: `s-${def.key}`,
+      type: 'range',
+      min: range.min,
+      max: range.max,
+      step: range.step,
+      value: state.primary[def.key],
+    });
+
+    const numInput = el('input', {
+      id: `num-${def.key}`,
+      class: 'num-input',
+      type: 'number',
+      min: range.min,
+      max: range.max,
+      step: range.step,
+      value: state.primary[def.key],
+    });
+
+    const updateVal = (newVal) => {
+      state.primary[def.key] = newVal;
+
+      if (state.linkSizeDensity) {
+        if (def.key === 'loopSize') {
+          const linkedPitch = Math.min(
+            RANGES.loopSpacing.max,
+            Math.max(RANGES.loopSpacing.min, Math.round(3.0 * newVal * 10) / 10)
+          );
+          state.primary.loopSpacing = linkedPitch;
+        } else if (def.key === 'loopSpacing') {
+          const linkedSize = Math.min(
+            RANGES.loopSize.max,
+            Math.max(RANGES.loopSize.min, Math.round((newVal / 3.0) * 10) / 10)
+          );
+          state.primary.loopSize = linkedSize;
+        }
+      }
+
       renderSliders();
       schedule();
+    };
+
+    slider.addEventListener('input', () => updateVal(Number(slider.value)));
+    slider.addEventListener('change', commit);
+
+    numInput.addEventListener('input', () => {
+      const v = Number(numInput.value);
+      if (Number.isFinite(v) && v >= range.min && v <= range.max) {
+        updateVal(v);
+      }
     });
-    input.addEventListener('change', commit);
-    host.append(
-      el('div', { class: 'slider' },
-        el('div', { class: 'row-top' }, el('label', { class: 'label', for: input.id, text: def.label }), el('span', { class: 'value', id: `v-${def.key}` })),
-        input,
-        el('div', { class: 'ends' }, el('span', { text: def.lo }), el('span', { text: def.hi }))
+    numInput.addEventListener('change', commit);
+
+    const sliderDiv = el('div', { class: 'slider' },
+      el('div', { class: 'row-top' },
+        el('div', { class: 'label-with-tip' },
+          el('label', { class: 'label', for: slider.id, text: def.label }),
+          el('span', { class: 'info-tip', title: def.desc, text: 'ⓘ' })
+        ),
+        el('div', { class: 'input-val-wrap' },
+          numInput,
+          el('span', { class: 'unit-tag', text: def.unit })
+        )
+      ),
+      slider,
+      el('div', { class: 'ends' },
+        el('span', { text: def.lo }),
+        el('span', { class: 'readout-text', id: `v-${def.key}` }),
+        el('span', { text: def.hi })
       )
     );
+
+    host.append(sliderDiv);
+
+    if (def.key === 'loopSize') {
+      const linkBox = el('input', {
+        type: 'checkbox',
+        id: 'link-size-density',
+        checked: state.linkSizeDensity,
+      });
+      linkBox.addEventListener('change', (e) => {
+        state.linkSizeDensity = e.target.checked;
+        if (state.linkSizeDensity) {
+          state.primary.loopSpacing = Math.min(
+            RANGES.loopSpacing.max,
+            Math.max(RANGES.loopSpacing.min, Math.round(3.0 * state.primary.loopSize * 10) / 10)
+          );
+          renderSliders();
+          schedule();
+          commit();
+        }
+      });
+
+      const linkRow = el('div', { class: 'link-constraint-row' },
+        el('label', { class: 'check small', for: 'link-size-density' },
+          linkBox,
+          el('span', { class: 'link-icon', text: '🔗' }),
+          el('span', {}, el('strong', { text: 'Link size & density' }), ' (proportional packing)')
+        ),
+        el('span', {
+          class: 'info-tip',
+          title: 'Maintains consistent 50% loop overlap and symmetric packing when resizing loops, preventing overcrowding or accidental holes.',
+          text: 'ⓘ',
+        })
+      );
+      host.append(linkRow);
+    }
   }
 }
 
@@ -477,7 +653,8 @@ function slug(s) {
 function exportGcode() {
   if (!state.result || state.error) return;
   const t = state.result.cfg.t;
-  const name = `${slug(state.docName)}_${t.sample_width}x${t.sample_height}_${state.material}.gcode`;
+  const prefix = state.design === 'squiggle' ? 'squiggle' : 'looppile';
+  const name = `${slug(state.docName)}_${prefix}_${t.sample_width}x${t.sample_height}_${state.material}.gcode`;
   const url = URL.createObjectURL(new Blob([state.result.gcode], { type: 'text/plain' }));
   const a = el('a', { href: url, download: name });
   document.body.append(a);
@@ -587,8 +764,17 @@ function bindStatic() {
       $('#thickness-note').hidden = b.dataset.layer === 'strand' ? !on : $('#thickness-note').hidden;
     });
   }
-  for (const b of document.querySelectorAll('[data-swatch]')) {
-    b.addEventListener('click', () => { state.primary.swatch = b.dataset.swatch; renderSwatch(); schedule(); commit(); });
+  for (const b of document.querySelectorAll('#swatch-presets button, [data-swatch]')) {
+    b.addEventListener('click', () => {
+      const sw = b.dataset.swatch;
+      state.primary.swatch = sw;
+      if (sw === 'test') { state.primary.customWidth = 30; state.primary.customHeight = 30; }
+      else if (sw === 'mid') { state.primary.customWidth = 50; state.primary.customHeight = 50; }
+      else if (sw === 'full') { state.primary.customWidth = 100; state.primary.customHeight = 100; }
+      renderSwatch();
+      schedule();
+      commit();
+    });
   }
   for (const b of document.querySelectorAll('[data-room]')) b.addEventListener('click', () => setRoomy(b.dataset.room === 'roomy'));
 
@@ -646,6 +832,250 @@ function bindStatic() {
     if (e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); }
     else if (e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
   });
+
+  bindSquiggleControls();
+}
+
+function bindSquiggleControls() {
+  const tileLoop = $('#tile-loop-pile');
+  const tileSq = $('#tile-squiggle');
+  const panelLoop = $('#panel-loop-pile');
+  const panelSq = $('#panel-squiggle');
+
+  function setDesign(design) {
+    state.design = design;
+    const isSq = design === 'squiggle';
+    if (tileSq) {
+      tileSq.classList.toggle('selected', isSq);
+      tileSq.setAttribute('aria-pressed', String(isSq));
+    }
+    if (tileLoop) {
+      tileLoop.classList.toggle('selected', !isSq);
+      tileLoop.setAttribute('aria-pressed', String(!isSq));
+    }
+    if (panelSq) panelSq.hidden = !isSq;
+    if (panelLoop) panelLoop.hidden = isSq;
+    schedule();
+    commit();
+  }
+
+  if (tileLoop && tileSq) {
+    tileLoop.addEventListener('click', () => setDesign('loop-pile'));
+    tileSq.addEventListener('click', () => setDesign('squiggle'));
+  }
+
+  // Squiggle structure mode
+  const modeButtons = document.querySelectorAll('#sq-mode-seg button');
+  for (const b of modeButtons) {
+    b.addEventListener('click', () => {
+      state.squiggle.mode = b.dataset.sqmode;
+      for (const btn of modeButtons) btn.setAttribute('aria-pressed', String(btn === b));
+      schedule();
+      commit();
+    });
+  }
+
+  // Squiggle swatch dimensions & presets
+  const sqWInput = $('#sq-width-input');
+  const sqHInput = $('#sq-height-input');
+
+  const updateSqDim = () => {
+    const w = Number(sqWInput?.value);
+    const h = Number(sqHInput?.value);
+    if (Number.isFinite(w) && w >= 10 && w <= 240) state.squiggle.width = w;
+    if (Number.isFinite(h) && h >= 10 && h <= 200) state.squiggle.height = h;
+    for (const btn of document.querySelectorAll('#sq-swatch-presets button')) {
+      const is30 = btn.dataset.sqpreset === '30x30' && w === 30 && h === 30;
+      const is50 = btn.dataset.sqpreset === '50x50' && w === 50 && h === 50;
+      const is100 = btn.dataset.sqpreset === '100x100' && w === 100 && h === 100;
+      btn.classList.toggle('active', is30 || is50 || is100);
+    }
+    if (state.squiggle.imageElement) {
+      processSquiggleImage(state.squiggle.imageElement, state.squiggle.imageName, false);
+    }
+    schedule();
+  };
+
+  if (sqWInput && sqHInput) {
+    sqWInput.addEventListener('input', updateSqDim);
+    sqHInput.addEventListener('input', updateSqDim);
+    sqWInput.addEventListener('change', commit);
+    sqHInput.addEventListener('change', commit);
+  }
+
+  for (const b of document.querySelectorAll('#sq-swatch-presets button')) {
+    b.addEventListener('click', () => {
+      const preset = b.dataset.sqpreset;
+      const size = preset === '30x30' ? 30 : preset === '100x100' ? 100 : 50;
+      state.squiggle.width = size;
+      state.squiggle.height = size;
+      if (sqWInput) sqWInput.value = String(size);
+      if (sqHInput) sqHInput.value = String(size);
+      for (const btn of document.querySelectorAll('#sq-swatch-presets button')) {
+        btn.classList.toggle('active', btn === b);
+      }
+      if (state.squiggle.imageElement) {
+        processSquiggleImage(state.squiggle.imageElement, state.squiggle.imageName, false);
+      }
+      schedule();
+      commit();
+    });
+  }
+
+  // Pattern selector
+  const patternSel = $('#sq-pattern-sel');
+  const imgBox = $('#sq-image-box');
+  if (patternSel) {
+    patternSel.addEventListener('change', (e) => {
+      state.squiggle.pattern = e.target.value;
+      if (imgBox) imgBox.hidden = e.target.value !== 'image';
+      schedule();
+      commit();
+    });
+  }
+
+  // Geometry sliders
+  const setupSqSlider = (id, valId, key, unit) => {
+    const input = $(id);
+    const label = $(valId);
+    if (!input || !label) return;
+    input.addEventListener('input', (e) => {
+      const val = Number(e.target.value);
+      state.squiggle[key] = val;
+      label.textContent = `${val.toFixed(1)} ${unit}`;
+      schedule();
+    });
+    input.addEventListener('change', commit);
+  };
+  setupSqSlider('#sq-spacing', '#sq-spacing-val', 'spacing', 'mm');
+  setupSqSlider('#sq-amplitude', '#sq-amplitude-val', 'amplitude', 'mm');
+  setupSqSlider('#sq-wavelength', '#sq-wavelength-val', 'wavelength', 'mm');
+
+  // Color change checkbox
+  const colorBox = $('#sq-color-change');
+  if (colorBox) {
+    colorBox.addEventListener('change', (e) => {
+      state.squiggle.colorChange = e.target.checked;
+      schedule();
+      commit();
+    });
+  }
+
+  // Image upload and dropzone
+  const fileInput = $('#sq-file-input');
+  const dropzone = $('#sq-dropzone');
+  const imgInfo = $('#sq-img-info');
+  const imgName = $('#sq-img-name');
+  const imgClear = $('#sq-img-clear');
+
+  function processSquiggleImage(img, filename = 'Image', autoSize = true) {
+    state.squiggle.imageElement = img;
+    state.squiggle.imageName = filename;
+
+    const natW = img.naturalWidth || img.width;
+    const natH = img.naturalHeight || img.height;
+
+    // Auto-size swatch dimensions from image aspect ratio
+    if (autoSize && natW > 0 && natH > 0) {
+      const aspect = natW / natH;
+      let targetW, targetH;
+      if (aspect >= 1) {
+        targetW = 80;
+        targetH = Math.max(15, Math.min(200, Math.round(targetW / aspect)));
+      } else {
+        targetH = 80;
+        targetW = Math.max(15, Math.min(240, Math.round(targetH * aspect)));
+      }
+      state.squiggle.width = targetW;
+      state.squiggle.height = targetH;
+      if (sqWInput) sqWInput.value = String(targetW);
+      if (sqHInput) sqHInput.value = String(targetH);
+
+      const aspectHint = $('#sq-aspect-hint');
+      if (aspectHint) {
+        aspectHint.textContent = `Auto-sized from image (${natW} × ${natH} px → ${targetW} × ${targetH} mm)`;
+        aspectHint.hidden = false;
+      }
+    }
+
+    const canvas = document.createElement('canvas');
+    const maxDim = 400;
+    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+    canvas.width = Math.max(1, Math.round(img.width * scale));
+    canvas.height = Math.max(1, Math.round(img.height * scale));
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    state.squiggle.customSampler = createImageSampler(
+      imgData,
+      state.squiggle.width,
+      state.squiggle.height
+    );
+
+    const thumb = $('#sq-thumb');
+    if (thumb) {
+      const tctx = thumb.getContext('2d');
+      tctx.clearRect(0, 0, 56, 56);
+      tctx.drawImage(canvas, 0, 0, 56, 56);
+    }
+
+    if (imgName) imgName.textContent = filename;
+    if (imgInfo) imgInfo.hidden = false;
+    if (patternSel) patternSel.value = 'image';
+    state.squiggle.pattern = 'image';
+    if (imgBox) imgBox.hidden = false;
+    schedule();
+    commit();
+  }
+
+  function handleFile(file) {
+    if (!file || !file.type.startsWith('image/')) {
+      toast('Please select an image file (PNG, JPG, WebP)');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => processSquiggleImage(img, file.name);
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files?.[0]) handleFile(e.target.files[0]);
+    });
+  }
+
+  if (dropzone) {
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer?.files?.[0]) handleFile(e.dataTransfer.files[0]);
+    });
+  }
+
+  if (imgClear) {
+    imgClear.addEventListener('click', () => {
+      state.squiggle.customSampler = null;
+      state.squiggle.imageElement = null;
+      state.squiggle.imageName = '';
+      state.squiggle.pattern = 'centerSpot';
+      if (patternSel) patternSel.value = 'centerSpot';
+      if (imgInfo) imgInfo.hidden = true;
+      if (imgBox) imgBox.hidden = true;
+      if (fileInput) fileInput.value = '';
+      schedule();
+      commit();
+    });
+  }
 }
 
 async function init() {

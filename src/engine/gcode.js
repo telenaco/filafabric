@@ -143,6 +143,9 @@ export function writeGcode(moves, cfg, info = {}) {
   let fan = 0;
 
   for (const m of moves) {
+    if (m.comment) out.push(`; ${m.comment}`);
+    if (m.customGcode) out.push(m.customGcode);
+
     if (m.retract === 'retract') {
       const f = Math.round(r.speed * 60);
       out.push(`G1 E-${fmt(r.length, 5)} F${f}`);

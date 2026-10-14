@@ -23,7 +23,7 @@ export const PRIMARY_DEFAULTS = Object.freeze({
   variation: 0, // 0 = off, 100 = full amplitudes
 });
 
-export const SWATCH_SIZES = Object.freeze({ test: [30, 30], full: [100, 100] });
+export const SWATCH_SIZES = Object.freeze({ test: [30, 30], mid: [50, 50], full: [100, 100] });
 
 /** Amplitudes reached at 100 % variation; editable under Advanced. */
 export const ADVANCED_DEFAULTS = Object.freeze({
@@ -41,7 +41,7 @@ export const PRIMARY_KEYS = Object.freeze([
   'leg_gap', 'clearance', 'base_spacing', 'random_enabled',
 ]);
 
-const SWATCHES = ['test', 'full', 'custom'];
+const SWATCHES = ['test', 'mid', 'full', 'custom'];
 const r1 = (n) => Math.round(n * 10) / 10;
 const r3 = (n) => Math.round(n * 1000) / 1000;
 const trim = (n) => String(r1(n));
