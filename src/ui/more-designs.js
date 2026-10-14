@@ -10,6 +10,7 @@ import { crosshatchLayers, DIRECTIONS, DIRECTION_IDS } from '../engine/crosshatc
 import { auxeticLayers, CELLS, CELL_IDS } from '../engine/auxetic.js';
 import { dipweaveLayers, MIN_DIP_PITCH } from '../engine/dipweave.js';
 import { webLayers } from '../engine/web.js';
+import { chainmailLayers } from '../engine/chainmail.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const WAVY = ['looped', 'figure8', 'zigzag', 'honeycomb', 'wave', 'square'];
@@ -240,4 +241,40 @@ MORE_DESIGNS.push(layered({
   ],
   build: (s, boundary) => webLayers(boundary, { spacing: s.spacing, spokes: s.spokes, hub: s.hub, tooth: s.tooth }),
   summary: (result) => `a spiderweb of ${result.report.crossings} crossings`,
+}));
+
+const CHAINMAIL = defineControls({
+  ranges: { ...SIZE, spacing: { min: 3, max: 10, step: 0.5 }, ratio: { min: 1.1, max: 1.8, step: 0.1 } },
+  defaults: { width: 50, height: 50, spacing: 6, ratio: 1.5, colorChange: false },
+  bools: ['colorChange'],
+  presets: [
+    { id: 'mail', name: 'Mail', blurb: 'Rings overlapping like chainmail', patch: { spacing: 6, ratio: 1.5 } },
+    { id: 'fine', name: 'Fine mail', blurb: 'Small rings, close together', patch: { spacing: 4, ratio: 1.5 } },
+    { id: 'loose', name: 'Loose rings', blurb: 'Barely overlapping, soft', patch: { spacing: 7, ratio: 1.2 } },
+  ],
+  describe: (s) => ({ spacing: `${r1(s.spacing)} mm apart`, ratio: `${Math.round((s.ratio - 1) * 100)}% overlap` }),
+});
+
+MORE_DESIGNS.push(layered({
+  id: 'chainmail',
+  name: 'Ring mail',
+  blurb: 'Overlapping rings, two layers, a chainmail look',
+  about: 'Overlapping rings on a hexagonal lattice, with a second layer of rings shifted into the triangular gaps. Each ring of the second layer crosses three rings of the first twice, so the layers hold each other with no straight run of strand: near the same in every direction, with good drape.',
+  file: 'chainmail',
+  c: CHAINMAIL,
+  controls: [
+    { kind: 'presets', title: 'Start from' },
+    { kind: 'size', title: 'Size and shape' },
+    {
+      kind: 'sliders',
+      title: 'Look and feel',
+      items: [
+        { key: 'spacing', label: 'Ring spacing', help: 'Distance between the centres of neighbouring rings.', lo: 'Fine', hi: 'Coarse', unit: 'mm', edit: true },
+        { key: 'ratio', label: 'Ring overlap', help: 'How far each ring reaches into its neighbours. Rings of 130% to 170% read as chainmail.', lo: 'Touching', hi: 'Deep', unit: '', edit: true },
+      ],
+    },
+    COLOUR,
+  ],
+  build: (s, boundary) => chainmailLayers(boundary, { spacing: s.spacing, ratio: s.ratio }),
+  summary: (result) => `a ring mail of ${result.report.crossings} crossings`,
 }));
