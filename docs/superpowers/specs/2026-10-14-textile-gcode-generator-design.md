@@ -439,3 +439,9 @@ Because this is novel toolpath on a real machine, prints are staged. The UI togg
    strand's own height.
 7. Default tile is 567 loops (18 rows; 32 on even rows, 31 on staggered rows), not 576.
 8. Sub-project 5 (Bambu A1 mini) added to the roadmap; machine data recorded in the reference notes.
+9. Observed on the implemented v1 (MK3S, Foamy profile, defaults): the 100 × 100 mm tile is 567 loops,
+   49,532 moves, 1.35 MB of G-code, about 51 min without acceleration, 718 mm (2.1 g) of filament. The clearance
+   model flags 19,206 moves (about 40 %) with `leg_gap` 0.6 and `clearance` 1.0, because legs 0.6 mm apart sit
+   inside the nozzle keep-out; `leg_gap` 1.5 with `clearance` 0.5 flags 3,060 (6.5 %) over 558 loops. The stats
+   panel reports the violation count instead of a "min clearance" number, and a "Show violations" toggle was
+   added to the preview (on automatically only when there are 2000 or fewer).
