@@ -218,7 +218,7 @@ export function buildLayeredVerdict(result) {
   if (result.layerCount > 1 && r.between === 0) {
     return { ...NONE, level: 'heads-up', title: 'The layers never cross', body: 'Lines that never cross anything can simply be peeled apart. Change an angle or an offset so the layers cross each other.' };
   }
-  if (r.longestUncrossed > 30) {
+  if (r.longestUncrossed > 60) {
     return { ...NONE, level: 'heads-up', title: 'Long free strands', body: `One strand runs ${Math.round(r.longestUncrossed)} mm without crossing anything, so it can sag or pull away. Use closer lines or add a direction.` };
   }
   const lifts = result.stats.hops === 0 ? 'one unbroken strand with no lifts' : result.stats.hops === 1 ? 'one lift' : `${result.stats.hops} lifts`;

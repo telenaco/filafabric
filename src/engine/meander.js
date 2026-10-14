@@ -191,7 +191,10 @@ export function meanderLayers(boundary, { curve = 'hilbert', cell = 6, angle = 4
   const order = curveOrder(curve, Math.max(w, h), cell);
   const cells = curve === 'peano' ? peanoCells(order) : curve === 'maze' ? mazeCells(order, seed) : hilbertCells(order);
   const n = curve === 'peano' ? 3 ** order : 1 << order;
-  let pts = cells.map((c) => ({ x: box.minX + ((c.x + 0.5) * w) / n, y: box.minY + ((c.y + 0.5) * h) / n }));
+  // cell centres run (almost) edge to edge, so the curve reaches the border and the hatch there is held too
+  const edge = 0.4;
+  const span = Math.max(1, n - 1);
+  let pts = cells.map((c) => ({ x: box.minX + edge + (c.x * (w - 2 * edge)) / span, y: box.minY + edge + (c.y * (h - 2 * edge)) / span }));
   // round the corners so the strand turns instead of stopping dead
   pts = chaikin(chaikin(pts));
   const layer1 = clipPolyline(pts, boundary);
