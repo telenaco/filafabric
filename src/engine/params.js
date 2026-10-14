@@ -168,6 +168,7 @@ export function resolveConfig(machine, material, overrides = {}) {
   const mode = t.limits_mode in machine.limits.modes ? t.limits_mode : machine.limits.default_mode;
   const multiplier = material.flow.multiplier;
   const r = material.retraction;
+  const overhang = t.include_loops && t.boundary_policy === 'feet-only' ? t.loop_length + (t.random_enabled ? t.amp_length : 0) : 0;
   const derived = {
     filamentDiameter: material.filament_diameter,
     multiplier,
@@ -190,9 +191,12 @@ export function resolveConfig(machine, material, overrides = {}) {
       print: material.temperature.print,
       bed: material.bed_temperature,
     },
+    // loops on the last rows may reach past the back edge by up to a loop length ('feet-only'), so what is centred
+    // on the bed is the swatch plus that overhang
+    overhang,
     origin: {
       x: (machine.bed.width - t.sample_width) / 2,
-      y: (machine.bed.depth - t.sample_height) / 2,
+      y: (machine.bed.depth - t.sample_height - overhang) / 2,
     },
   };
   return { machine, material, t, derived };

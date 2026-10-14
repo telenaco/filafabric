@@ -35,11 +35,11 @@ export const PRINTABILITY = [
     "exportable": true,
     "physicallyVerified": false,
     "hops": 1,
-    "moves": 1759,
+    "moves": 1745,
     "clearanceFlags": 0,
     "routing": {
       "beforeMm": 97.82750444021353,
-      "afterMm": 0.7040063926514288
+      "afterMm": 3.3978853718158346
     }
   },
   {
@@ -317,19 +317,19 @@ export const PRINTABILITY = [
   },
   {
     "id": "boucle",
-    "score": 37.65002300249272,
+    "score": 37.6500000000004,
     "components": 1,
     "joints": 53,
     "reversedCrossings": 0,
     "separatedCrossings": 28,
-    "longestUnsupported": 5.0000115012456945,
-    "maxSlopeDeg": 25.000000000001332,
+    "longestUnsupported": 5.000000000000028,
+    "maxSlopeDeg": 25.00000000000034,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
     "hops": 53,
-    "moves": 16856,
+    "moves": 16545,
     "clearanceFlags": 0,
     "routing": {
       "beforeMm": 471.30159942159224,
@@ -464,23 +464,23 @@ export const PRINTABILITY = [
   },
   {
     "id": "bubbles",
-    "score": 71.22405122610684,
+    "score": 70.21915426130207,
     "components": 1,
-    "joints": 797,
+    "joints": 777,
     "reversedCrossings": 0,
-    "separatedCrossings": 191,
-    "longestUnsupported": 3.187025612955953,
-    "maxSlopeDeg": 25.000000000194927,
+    "separatedCrossings": 182,
+    "longestUnsupported": 3.1845771306488544,
+    "maxSlopeDeg": 25.00000000000435,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 797,
-    "moves": 37625,
+    "hops": 777,
+    "moves": 36737,
     "clearanceFlags": 0,
     "routing": {
-      "beforeMm": 16916.374063680978,
-      "afterMm": 2481.3649557808076
+      "beforeMm": 16139.425752672476,
+      "afterMm": 2590.8616583811936
     }
   },
   {
@@ -518,8 +518,8 @@ export const PRINTABILITY = [
     "moves": 15835,
     "clearanceFlags": 0,
     "routing": {
-      "beforeMm": 8981.317392899287,
-      "afterMm": 7485.632917320934
+      "beforeMm": 8978.463437857845,
+      "afterMm": 7484.7548188531655
     }
   },
   {

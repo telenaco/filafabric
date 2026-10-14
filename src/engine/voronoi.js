@@ -170,7 +170,7 @@ export function tessellate(points, box) {
  * @param seed     random seed
  * @param tone     optional (x, y, w, h) giving 0..1; cells are smaller where it is bright
  */
-export const MAX_SITES = 700;
+export const MAX_SITES = 1500;
 
 export function voronoiLayers(boundary, { spacing = 8, relax = 4, seed = 1, tone = null } = {}) {
   const box = boundary.bbox();

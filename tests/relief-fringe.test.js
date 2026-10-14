@@ -81,7 +81,7 @@ test('generateRelief returns moves in the air classes, stats and G-code, determi
 });
 
 test('an absurd relief layout is refused plainly', () => {
-  assert.throws(() => generateRelief(machine, material, { width: 240, height: 200, relief: 2, rowPitch: 0.3 }), ConfigError);
+  assert.throws(() => generateRelief(machine, material, { width: 240, height: 200, relief: 2, rowPitch: 0.1 }), ConfigError);
 });
 
 test('fringe hairs stand on the base lines, rise, and end free; far rows print first', () => {
@@ -120,4 +120,10 @@ test('generateFringe returns a base, hairs, moves and G-code', () => {
 
 test('too many hairs gives the plain error', () => {
   assert.throws(() => generateFringe(machine, material, { width: 240, height: 200, spacing: 2, rowGap: 3 }), ConfigError);
+});
+
+test('fringe variation stays inside the width when a staggered foot lands on the edge', () => {
+  const r = generateFringe(machine, material, { width: 60, height: 60, length: 25, lift: 4, spacing: 3, rowGap: 6, variation: 40 });
+  assert.equal(r.fabric.outsideSegments, 0);
+  assert.equal(r.fabric.exportable, true);
 });

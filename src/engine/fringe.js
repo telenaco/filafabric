@@ -52,7 +52,7 @@ export function fringePlacements({ width, height, length = 15, lift = 3, spacing
       const points = [];
       for (let m = 0; m <= n; m++) {
         const t = m / n;
-        points.push({ x: x0 + v * 1.2 * drift * Math.sin(Math.PI * t) , y: y0 + L * t, z: h * smooth(t / 0.5), s: L * t, part: 'leg' });
+        points.push({ x: Math.max(0.225, Math.min(width - 0.225, x0 + v * 1.2 * drift * Math.sin(Math.PI * t))) , y: y0 + L * t, z: h * smooth(t / 0.5), s: L * t, part: 'leg' });
       }
       list.push({ id: `h${k}c${i}`, row: k, col: i, footY: y0, points, arcLength: L, lift: h });
     }

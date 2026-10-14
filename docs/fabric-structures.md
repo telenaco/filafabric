@@ -79,10 +79,10 @@ matters: layers that never cross, which can simply be peeled apart.
 
 ## Printing notes
 
-- Start with a 30 × 30 mm swatch of each new structure. Increase size once it prints cleanly.
+- Every design opens at 100 × 100 mm. For a first physical print, choose a 30 × 30 mm test swatch and increase the size once it prints cleanly.
 - The Foamy filament profile is unverified; see *Your first prints* in the studio's help. That profile retracts
   nothing; if strings hurt (Fringe, Weave), raise the retraction in the material profile.
 - Crossings are printed as strand lying on strand, so the nozzle passes over a strand one layer high. If the nozzle
   drags a strand at a crossing, raise *Crossing lift* by 0.05 mm.
 - Large swatches of fine detail are refused with a plain message rather than building millions of moves (limit
-  250 000 moves; the weave also limits itself to 3 000 pieces).
+  400 000 moves; the weave also limits itself to 12 000 pieces).

@@ -63,6 +63,7 @@ export function findCrossings(strands, { strandWidth = 0.5, cell = 1, mergeDista
 
   // uniform grid: each segment goes in every cell its bounding box touches
   const grid = new Map();
+  const cellKey = (ix, iy) => (ix + 1048576) * 2097152 + (iy + 1048576);
   segs.forEach((g, index) => {
     const p = strands[g.si].pts[g.i], q = strands[g.si].pts[g.i + 1];
     const x0 = Math.floor(Math.min(p.x, q.x) / cell), x1 = Math.floor(Math.max(p.x, q.x) / cell);
@@ -70,7 +71,7 @@ export function findCrossings(strands, { strandWidth = 0.5, cell = 1, mergeDista
     Object.assign(g, { x0, x1, y0, y1 });
     for (let ix = x0; ix <= x1; ix++) {
       for (let iy = y0; iy <= y1; iy++) {
-        const key = `${ix},${iy}`;
+        const key = cellKey(ix, iy);
         const list = grid.get(key);
         if (list) list.push(index);
         else grid.set(key, [index]);
@@ -85,7 +86,7 @@ export function findCrossings(strands, { strandWidth = 0.5, cell = 1, mergeDista
   for (let ia = 0; ia < segs.length; ia++) {
     const g = segs[ia], neighbours = new Set();
     for (let ix = g.x0; ix <= g.x1; ix++) for (let iy = g.y0; iy <= g.y1; iy++) {
-      for (const ib of grid.get(`${ix},${iy}`) ?? []) if (ib > ia) neighbours.add(ib);
+      for (const ib of grid.get(cellKey(ix, iy)) ?? []) if (ib > ia) neighbours.add(ib);
     }
     for (const ib of neighbours) {
         const A = segs[ia], B = segs[ib];
@@ -98,9 +99,15 @@ export function findCrossings(strands, { strandWidth = 0.5, cell = 1, mergeDista
         if (A.si === B.si && Math.abs(arcB - arcA) < minArc) continue;
         // the end of a closed strand meeting its own start is the closing joint, not a crossing
         if (A.si === B.si && A.i === 0 && B.i === strands[B.si].pts.length - 2 && hit[0] < 1e-9 && hit[1] > 1 - 1e-9) continue;
-        const key = `${A.si}|${B.si}`;
-        const near = recent.get(key);
-        if (near && near.some((c) => Math.abs(c.arcA - arcA) < mergeDistance && Math.abs(c.arcB - arcB) < mergeDistance)) continue;
+        // Retain the upstream arc-bucket optimization, including exact crossing knots used by support planning.
+        const bucketWidth = Math.max(mergeDistance, 1e-6), bucket = Math.floor(arcA / bucketWidth);
+        let duplicate = false;
+        for (let d = -1; d <= 1 && !duplicate; d++) {
+          const nearby = recent.get(`${A.si}|${B.si}|${bucket + d}`);
+          duplicate = !!nearby && nearby.some((c) => Math.abs(c.arcA - arcA) < mergeDistance && Math.abs(c.arcB - arcB) < mergeDistance);
+        }
+        if (duplicate) continue;
+        const key = `${A.si}|${B.si}|${bucket}`, near = recent.get(key);
         const da = Math.atan2(qa.y - pa.y, qa.x - pa.x), db = Math.atan2(qb.y - pb.y, qb.x - pb.x);
         let angle = Math.abs(((da - db) * 180) / Math.PI) % 180;
         if (angle > 90) angle = 180 - angle;

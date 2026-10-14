@@ -1172,7 +1172,7 @@ function renderTiles() {
       'aria-pressed': planned ? false : 'false',
       'aria-disabled': planned ? 'true' : false,
       disabled: planned,
-      title: planned ? `${d.name} is coming soon` : false,
+      title: planned ? `${d.name} is coming soon` : `${d.name}: ${d.blurb}`,
     });
     const assessment = ranking.get(d.id);
     tile.title = `${d.blurb}${assessment ? ` · Estimated printability ${assessment.rank} of ${PRINTABILITY.length}. ${assessment.longestUnsupported.toFixed(1)} mm longest free span; ${assessment.maxSlopeDeg.toFixed(1)}° maximum slope. Default 100 × 100 mm geometry; physical testing pending.` : ''}`;

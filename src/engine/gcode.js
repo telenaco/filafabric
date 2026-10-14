@@ -18,7 +18,8 @@ export function bedFitErrors(cfg) {
   const { bed } = cfg.machine;
   const { t, derived } = cfg;
   if (derived.origin.x < 0 || derived.origin.y < 0) {
-    return [`Sample (${t.sample_width} x ${t.sample_height} mm) does not fit the bed (${bed.width} x ${bed.depth} mm)`];
+    const reach = derived.overhang > 0 ? `, with loops reaching ${fmt(derived.overhang, 1)} mm past the back edge,` : '';
+    return [`Sample (${t.sample_width} x ${t.sample_height} mm)${reach} does not fit the bed (${bed.width} x ${bed.depth} mm)`];
   }
   return [];
 }

@@ -101,7 +101,7 @@ test('layeredResult returns moves, stats, G-code and a report; refuses an absurd
   assert.ok(r.report.between > 20);
   assert.equal(r.stats.crossings, r.report.crossings);
   assert.ok(r.gcode.includes('G1'));
-  const dense = [hatch(boundaryFor(240, 200), { angle: 0, spacing: 0.3 })];
+  const dense = [hatch(boundaryFor(240, 200), { angle: 0, spacing: 0.1 })];
   assert.throws(() => layeredResult(machine, material, { width: 240, height: 200, layers: dense }), ConfigError);
 });
 
