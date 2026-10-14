@@ -12,6 +12,7 @@ import { dipweaveLayers, MIN_DIP_PITCH } from '../engine/dipweave.js';
 import { webLayers } from '../engine/web.js';
 import { chainmailLayers } from '../engine/chainmail.js';
 import { meanderLayers, CURVES, CURVE_IDS } from '../engine/meander.js';
+import { lissajousLayers } from '../engine/lissajous.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const WAVY = ['looped', 'figure8', 'zigzag', 'honeycomb', 'wave', 'square'];
@@ -323,4 +324,42 @@ MORE_DESIGNS.push(layered({
   ],
   build: (s, boundary) => meanderLayers(boundary, { curve: s.curve, cell: s.cell, angle: s.angle, spacing: s.spacing }),
   summary: (result) => `a meander of ${result.report.crossings} crossings`,
+}));
+
+const HARMONOGRAPH = defineControls({
+  ranges: { ...SIZE, a: { min: 2, max: 14, step: 1 }, b: { min: 2, max: 14, step: 1 }, phase: { min: 0, max: 90, step: 5 } },
+  defaults: { width: 50, height: 50, a: 7, b: 6, phase: 30, second: true, colorChange: false },
+  bools: ['second', 'colorChange'],
+  presets: [
+    { id: 'fine', name: 'Fine lattice', blurb: 'Seven by six, diamond cells', patch: { a: 7, b: 6, phase: 30 } },
+    { id: 'coarse', name: 'Coarse lattice', blurb: 'Four by three, large diamonds', patch: { a: 4, b: 3, phase: 30 } },
+    { id: 'lens', name: 'Lens', blurb: 'Three by two, one closed curve', patch: { a: 3, b: 2, phase: 45 } },
+  ],
+  describe: (s) => ({ a: `${s.a} across`, b: `${s.b} up`, phase: `${s.phase}°` }),
+});
+
+MORE_DESIGNS.push(layered({
+  id: 'harmonograph',
+  name: 'Harmonograph',
+  blurb: 'One closed curve that crosses itself in diamonds',
+  about: 'A Lissajous curve: one closed strand that sweeps across the fabric and back, crossing itself in a diamond lattice with a dense band along the edge, a natural hem. A second curve with its phase turned crosses the first everywhere. It fills the whole swatch; an outline clips it rather than being followed.',
+  file: 'harmonograph',
+  c: HARMONOGRAPH,
+  controls: [
+    { kind: 'presets', title: 'Start from' },
+    { kind: 'size', title: 'Size and shape' },
+    {
+      kind: 'sliders',
+      title: 'Look and feel',
+      items: [
+        { key: 'a', label: 'Lobes across', help: 'How many times the curve swings across. Coprime pairs (7 and 6) make one unbroken curve.', lo: 'Few', hi: 'Many', unit: '', edit: true },
+        { key: 'b', label: 'Lobes up', help: 'How many times the curve swings up the fabric.', lo: 'Few', hi: 'Many', unit: '', edit: true },
+        { key: 'phase', label: 'Phase', help: 'Turns the curve: zero is a straight diagonal at the extreme, larger fills the diamond.', lo: 'Squeezed', hi: 'Open', unit: '°', edit: true },
+      ],
+    },
+    { kind: 'switch', key: 'second', label: 'Second curve', help: 'A copy with its phase turned, which crosses the first everywhere.' },
+    COLOUR,
+  ],
+  build: (s, boundary) => lissajousLayers(boundary, { a: s.a, b: s.b, phase: s.phase, second: s.second }),
+  summary: (result) => `a harmonograph of ${result.report.crossings} crossings`,
 }));
