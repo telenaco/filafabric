@@ -172,7 +172,7 @@ export const DESIGNS = [
         hint: 'Normals are lines that climb away from the edge, crossing every ring at a right angle, so the panel has crossings and holds together.',
         options: [
           { id: 'none', label: 'None', hint: 'Rings only: one strand, no lifts' },
-          { id: 'normals', label: 'Normals', hint: 'Lines along the outline's normals, crossing every ring at a right angle' },
+          { id: 'normals', label: 'Normals', hint: 'Lines along the normals of the outline, crossing every ring at a right angle' },
         ],
       },
       { kind: 'sliders', title: 'Look and feel', items: [{ key: 'spacing', label: 'Ring spacing', help: 'Distance between neighbouring rings.', lo: 'Tight', hi: 'Open', unit: 'mm', edit: true }] },
