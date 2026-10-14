@@ -19,6 +19,9 @@ Nothing here has been printed yet: every drape or handle description below is a 
 | **Relief** | Rows of one strand that rise and fall with a pattern: bobbles, puckered stripes, pleats | 1 + Z | presets (Seersucker, Bobbles, Pleats), relief height, row spacing, pattern |
 | **Fringe** | A base of lines with hairs standing off them, rising then hanging free | base + free ends | presets (Fringe, Shag, Fine pile), hair length, height, spacing, row gap, variation |
 
+Strand shapes (Coil, Bouclé's ring, and Squiggle & Gyroid): looped, figure-8, zigzag, honeycomb (flat tops and
+bottoms, so neighbouring layers stack), wave, square and rings.
+
 Patterns (a brightness map that shrinks or deepens the loops, waves, lifts or relief) are ported from the Blender
 ceramics add-on: deep spiral, brick, diamond grid, tribal feathers, circuit board, ocean waves, hexagon cells, mountain
 peaks, lotus petals, lightning bolts, plus soft noise, bumps and stripes.

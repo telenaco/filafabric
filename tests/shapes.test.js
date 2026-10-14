@@ -4,8 +4,8 @@ import { SHAPES, SHAPE_IDS, shapeAt, lanePoints, lanePeriods, loopCount, loopsCl
 
 const opts = { pitch: 6, size: 3 };
 
-test('the six shapes are registered with labels', () => {
-  assert.deepEqual([...SHAPE_IDS].sort(), ['figure8', 'looped', 'ring', 'square', 'wave', 'zigzag']);
+test('the seven shapes are registered with labels', () => {
+  assert.deepEqual([...SHAPE_IDS].sort(), ['figure8', 'honeycomb', 'looped', 'ring', 'square', 'wave', 'zigzag']);
   for (const id of SHAPE_IDS) assert.ok(SHAPES[id].label && SHAPES[id].hint, id);
 });
 
@@ -92,4 +92,17 @@ test('a ring sits on the line, alternately above and below, and the line carries
   assert.equal(straight.du, 0);
   // the line is back on the centre at the end of every ring
   for (let k = 1; k <= 4; k++) assert.ok(Math.abs(shapeAt('ring', k * 8, opts2).v) < 1e-9, `ring ${k} closes`);
+});
+
+test('a honeycomb wave has flat tops and bottoms: it spends longer near its extremes than a sine does', () => {
+  const near = (shape) => {
+    let n = 0, total = 0;
+    for (let s = 0; s < 60; s += 0.05) {
+      total++;
+      if (Math.abs(shapeAt(shape, s, { pitch: 6, size: 3 }).v) > 0.9 * 3) n++;
+    }
+    return n / total;
+  };
+  assert.ok(near('honeycomb') > near('wave') * 1.5, `${near('honeycomb')} vs ${near('wave')}`);
+  assert.ok(Math.abs(shapeAt('honeycomb', 1.5, { pitch: 6, size: 3 }).v - 3) < 1e-9, 'reaches the full size');
 });

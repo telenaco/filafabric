@@ -16,6 +16,7 @@ export const SHAPES = Object.freeze({
   looped: { id: 'looped', label: 'Looped', hint: 'One line that circles over itself' },
   figure8: { id: 'figure8', label: 'Figure-8', hint: 'Crossing S-curves in a chain' },
   zigzag: { id: 'zigzag', label: 'Zigzag', hint: 'Straight diagonals, soft corners' },
+  honeycomb: { id: 'honeycomb', label: 'Honeycomb', hint: 'Flat tops and bottoms, so neighbouring layers stack' },
   ring: { id: 'ring', label: 'Rings', hint: 'A straight line with a round ring on it' },
   wave: { id: 'wave', label: 'Wave', hint: 'A smooth sine wave' },
   square: { id: 'square', label: 'Square', hint: 'Steps with rounded corners' },
@@ -25,6 +26,7 @@ export const SHAPE_IDS = Object.freeze(Object.keys(SHAPES));
 
 const ZIGZAG_ROUND = 0.9; // 1 would be a sharp triangle, 0 a sine
 const SQUARE_SOFT = 2.5; // larger is squarer
+const HONEYCOMB_PUSH = 3.5; // larger is flatter on top
 const RING_WINDOW = 0.4; // mm of progress along the lane spent walking round a ring
 
 /** Lateral offset `v` and along-lane shift `du` at distance `s` from the start of the lane. */
@@ -35,6 +37,11 @@ export function shapeAt(shape, s, { pitch, size }) {
       return { v: size * Math.sin(theta), du: 0 };
     case 'zigzag':
       return { v: (size * Math.asin(ZIGZAG_ROUND * Math.sin(theta))) / Math.asin(ZIGZAG_ROUND), du: 0 };
+    case 'honeycomb': {
+      // a trapezoid wave: a triangle wave pushed against a soft ceiling and floor, so each peak and trough has a flat
+      const tri = (2 / Math.PI) * Math.asin(Math.sin(theta));
+      return { v: (size * Math.tanh(HONEYCOMB_PUSH * tri)) / Math.tanh(HONEYCOMB_PUSH), du: 0 };
+    }
     case 'square':
       return { v: (size * Math.tanh(SQUARE_SOFT * Math.sin(theta))) / Math.tanh(SQUARE_SOFT), du: 0 };
     case 'looped': {
