@@ -75,7 +75,8 @@ const isMain = process.argv[1] && pathToFileURL(path.resolve(process.argv[1])).h
 if (isMain) {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const server = createServer(root);
-  const start = Number(process.env.PORT) || 5173;
+  const portArg = process.argv.find((a) => a.startsWith('--port='));
+  const start = Number(process.env.PORT) || Number(portArg?.slice(7)) || 5173;
   listen(server, start, 20).then((port) => {
     const url = `http://localhost:${port}/`;
     console.log(`Textile G-code Generator is running at ${url}`);

@@ -8,6 +8,8 @@ import { buildVerdict, buildSquiggleVerdict, formatMinutes } from './verdict.js'
 import { stateToHash, hashToState, sanitizeState } from './share.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
 import { readSvgOutline, drawOutlineThumb } from './svg-outline.js';
+import { DESIGNS, designById, isReady } from './designs.js';
+import { THUMBS } from './thumbs.js';
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -15,17 +17,6 @@ const STORAGE_KEY = 'filament-textile-studio:v1'; // kept so a returning visitor
 const PLAY_ICON = 'M5 3l10 6-10 6z';
 const PAUSE_ICON = 'M4 3h3.5v12H4zM10.5 3H14v12h-3.5z';
 
-/** What each design calls its parts, and how its exported file is named. */
-const DESIGNS = {
-  'loop-pile': {
-    file: 'looppile',
-    roles: { base: 'Base', anchored: 'Anchored feet', lifting: 'Rising and falling', free: 'Free-hanging' },
-  },
-  squiggle: {
-    file: 'squiggle',
-    roles: { base: 'Layer 1', anchored: 'Layer 2' },
-  },
-};
 const ROLE_HEIGHT = { base: 2, anchored: 3, lifting: 3, free: 5 };
 
 const LOOP_SLIDERS = [
@@ -111,6 +102,7 @@ const state = {
   primary: { ...PRIMARY_DEFAULTS },
   advanced: {},
   squiggle: { ...SQUIGGLE_DEFAULTS },
+  designs: {}, // settings of every design newer than the loop pile and squiggle, by design id
   image: null, // { data: ImageData, name, px: [w, h], thumb: canvas }: stays on this computer, never in a link
   imageBoxOpen: false,
   outline: null, // { name, rings (flat, unit box), rotation }: shared by every design, travels in links
@@ -196,13 +188,14 @@ function known() {
 
 function snapshot() {
   return {
-    v: 2,
+    v: 3,
     design: state.design,
     machine: state.machine,
     material: state.material,
     primary: state.primary,
     advanced: state.advanced,
     squiggle: state.squiggle,
+    designs: state.designs,
     outline: state.outline,
     name: state.docName,
   };
@@ -230,7 +223,7 @@ const grams = (g) => (g < 1 ? g.toFixed(2) : g.toFixed(1));
 
 /* ---------- history (undo / redo) ---------- */
 function snapshotKey() {
-  return JSON.stringify({ d: state.design, m: state.machine, t: state.material, p: state.primary, a: state.advanced, s: state.squiggle, o: state.outline });
+  return JSON.stringify({ d: state.design, m: state.machine, t: state.material, p: state.primary, a: state.advanced, s: state.squiggle, g: state.designs, o: state.outline });
 }
 
 function commit() {
@@ -260,6 +253,7 @@ function loadState(data) {
   state.primary = clean.primary;
   state.advanced = clean.advanced;
   state.squiggle = clean.squiggle;
+  state.designs = clean.designs;
   state.outline = clean.outline;
   if (typeof data?.name === 'string') state.docName = data.name.slice(0, 60);
   if (designChanged) resetRoles();
@@ -616,7 +610,7 @@ function renderAdvancedSummary() {
 
 function renderLegend() {
   const host = $('#roles');
-  const labels = DESIGNS[state.design].roles;
+  const labels = designById(state.design).roles;
   const present = state.result ? preview.presentRoles().filter((role) => labels[role]) : [];
   host.replaceChildren(...present.map((role) => {
     const on = state.roles[role] !== false;
@@ -1053,6 +1047,27 @@ function updateDialogNote() {
 }
 
 /* ---------- designs ---------- */
+/** One tile per registry module; planned designs are visible placeholders that cannot be selected. */
+function renderTiles() {
+  const tiles = DESIGNS.map((d) => {
+    const ready = d.status === 'ready';
+    const tile = el('button', {
+      type: 'button',
+      class: ready ? 'design-tile' : 'design-tile planned',
+      'data-design': ready ? d.id : false,
+      'data-planned': ready ? false : d.id,
+      'aria-pressed': ready ? String(d.id === state.design) : false,
+      'aria-disabled': ready ? false : 'true',
+      disabled: !ready,
+      title: ready ? false : `${d.name} is coming soon`,
+    });
+    tile.innerHTML = `${THUMBS[d.id] ?? ''}<span class="design-text"><span class="design-name">${d.name}${ready ? '' : '<span class="soon">Soon</span>'}</span><span class="design-sub">${d.blurb}</span></span>`;
+    if (ready) tile.addEventListener('click', () => setDesign(d.id));
+    return tile;
+  });
+  $('#design-list').replaceChildren(...tiles);
+}
+
 function resetRoles() {
   state.roles = {};
   preview?.setRoles(Object.fromEntries(ROLES.map((r) => [r, true])));
@@ -1067,7 +1082,7 @@ function showDesign() {
 }
 
 function setDesign(id) {
-  if (state.design === id) return;
+  if (state.design === id || !isReady(id)) return;
   stopPlay();
   state.design = id;
   state.fraction = 1;
@@ -1184,7 +1199,7 @@ function download(name, blob) {
 function exportGcode() {
   if (!state.result || state.error) return;
   const t = state.result.cfg.t;
-  const name = `${slug(state.docName)}_${DESIGNS[state.design].file}_${t.sample_width}x${t.sample_height}_${state.material}.gcode`;
+  const name = `${slug(state.docName)}_${designById(state.design).file}_${t.sample_width}x${t.sample_height}_${state.material}.gcode`;
   download(name, new Blob([state.result.gcode], { type: 'text/plain' }));
   toast(`Saved ${name}`);
 }
@@ -1296,8 +1311,6 @@ function closeMenus() {
 }
 
 function bindStatic() {
-  for (const tile of $$('[data-design]')) tile.addEventListener('click', () => setDesign(tile.dataset.design));
-
   for (const b of $$('[data-camera]')) {
     b.addEventListener('click', () => {
       for (const o of $$('[data-camera]')) o.setAttribute('aria-pressed', String(o === b));
@@ -1383,6 +1396,7 @@ async function init() {
   buildAdvanced();
   buildPatterns();
   fillDialogSelects();
+  renderTiles();
   bindStatic();
   showDesign();
   $('#doc-name').value = state.docName;

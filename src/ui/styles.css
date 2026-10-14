@@ -412,3 +412,13 @@ dialog p { margin: 6px 0; }
   #btn-printer { margin-right: auto; }
   .seg.glass button { padding: 0 10px; }
 }
+
+/* planned designs: visible, not selectable */
+.design-tile.planned { opacity: 0.55; cursor: default; }
+.design-tile.planned:hover { border-color: var(--line); }
+.soon { margin-left: 8px; padding: 1px 7px; border: 1px solid var(--line-2); border-radius: 999px; font-size: 11px; font-weight: 600; color: var(--muted); vertical-align: 2px; }
+
+/* planned designs: visible, not selectable */
+.design-tile.planned { opacity: 0.55; cursor: default; }
+.design-tile.planned:hover { border-color: var(--line); }
+.soon { margin-left: 8px; padding: 1px 7px; border: 1px solid var(--line-2); border-radius: 999px; font-size: 11px; font-weight: 600; color: var(--muted); vertical-align: 2px; }
