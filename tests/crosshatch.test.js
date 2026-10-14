@@ -63,3 +63,18 @@ test('three ways prints three layers one layer height apart', () => {
   const zs = [...new Set(r.strands.map((s) => Number(s.pts[0].z.toFixed(3))))];
   assert.deepEqual(zs, [0.2, 0.4, 0.6]);
 });
+
+test('the isogrid meets three ways at its nodes; the kagome never stacks three strands', () => {
+  const b = boundaryFor(50, 50);
+  const triple = (id) => {
+    const { layers } = crosshatchLayers(b, { directions: id, spacing: 5 });
+    const { found } = findCrossings(items(layers).map((it) => ({ pts: it.pts })));
+    // a node where three lines meet shows as crossings almost on top of each other
+    let close = 0;
+    for (let i = 0; i < found.length; i++) for (let j = i + 1; j < found.length; j++) if (Math.hypot(found[i].x - found[j].x, found[i].y - found[j].y) < 0.3) close++;
+    return { close, total: found.length };
+  };
+  const iso = triple('0-60-120'), kag = triple('kagome');
+  assert.ok(iso.close > 0.5 * iso.total / 3, `isogrid: ${iso.close} of ${iso.total}`);
+  assert.ok(kag.close < 0.03 * kag.total, `kagome: ${kag.close} of ${kag.total}`);
+});

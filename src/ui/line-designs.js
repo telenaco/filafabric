@@ -8,6 +8,8 @@ import { rosetteLayers } from '../engine/rosette.js';
 import { flowLayers, FLOWS, FLOW_IDS } from '../engine/flowlines.js';
 import { bubblesLayers } from '../engine/bubbles.js';
 import { parquetLayers, TILINGS, TILING_IDS } from '../engine/parquet.js';
+import { spirographLayers } from '../engine/spirograph.js';
+import { starLayers, STAR_TILINGS, STAR_TILING_IDS } from '../engine/starlattice.js';
 import { FIELD_IDS, createField } from '../engine/fields.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
@@ -254,4 +256,81 @@ LINE_DESIGNS.push(layered({
   ],
   build: (s, boundary) => parquetLayers(boundary, { tiling: s.tiling, block: s.block, ratio: s.ratio, spacing: s.spacing, turn: s.turn }),
   summary: (result) => `a ${TILINGS[result.tiling]?.label.toLowerCase() ?? 'parquet'} of ${result.report.crossings} crossings`,
+}));
+
+const SPIRO = defineControls({
+  ranges: { ...SIZE, spacing: { min: 2.5, max: 8, step: 0.5 }, loop: { min: 0.6, max: 2.5, step: 0.1 }, hub: { min: 0, max: 15, step: 0.5 } },
+  defaults: { width: 50, height: 50, spacing: 4, loop: 1.5, hub: 3, colorChange: false },
+  bools: ['colorChange'],
+  presets: [
+    { id: 'loops', name: 'Loops', blurb: 'Rings of small curls', patch: { spacing: 4, loop: 1.5 } },
+    { id: 'scales', name: 'Scales', blurb: 'Big curls like fish scales', patch: { spacing: 5, loop: 2.2 } },
+    { id: 'web', name: 'Web', blurb: 'Waves without curls', patch: { spacing: 4, loop: 0.8 } },
+    { id: 'fine', name: 'Fine', blurb: 'Close rings of curls', patch: { spacing: 3, loop: 1.3 } },
+  ],
+  describe: (s) => ({ spacing: `${r1(s.spacing)} mm apart`, loop: s.loop < 1 ? `${r2(s.loop)}: waves` : `${r2(s.loop)}: curls`, hub: s.hub === 0 ? 'As small as it can be' : `${r1(s.hub)} mm` }),
+});
+
+LINE_DESIGNS.push(layered({
+  id: 'spirograph',
+  name: 'Spirograph',
+  blurb: 'Rings of curls, the next layer half a ring out',
+  about: 'Rings of the curve a spirograph draws when the pen is outside its little wheel: each ring swings in and out and, past a certain point, curls into a loop at every swing. The rings of one layer never touch; the second layer\'s rings lie half a spacing further out and swing into the rings on both sides, as in the parallel squiggle mesh, so every ring is held. Rings go out to the corners, so square pieces are filled too.',
+  file: 'spirograph',
+  c: SPIRO,
+  controls: [
+    { kind: 'presets', title: 'Start from' },
+    { kind: 'size', title: 'Size and shape' },
+    {
+      kind: 'sliders',
+      title: 'Look and feel',
+      items: [
+        { key: 'spacing', label: 'Ring spacing', help: 'Distance between neighbouring rings of one layer.', lo: 'Dense', hi: 'Airy', unit: 'mm', edit: true },
+        { key: 'loop', label: 'Curl', help: 'Below 1 the rings wave; above 1 every swing curls into a loop, larger the higher it goes.', lo: 'Waves', hi: 'Big curls', unit: '', edit: true },
+        { key: 'hub', label: 'Open centre', help: 'Radius of the open middle; widened if the first ring would be too small.', lo: 'Small', hi: 'Wide', unit: 'mm', edit: true },
+      ],
+    },
+    COLOUR,
+  ],
+  build: (s, boundary) => spirographLayers(boundary, { spacing: s.spacing, loop: s.loop, hub: s.hub }),
+  summary: (result) => `${result.rings} rings of curls with ${result.report.crossings} crossings`,
+}));
+
+const STAR = defineControls({
+  ranges: { ...SIZE, size: { min: 4, max: 20, step: 0.5 }, angle: { min: 50, max: 80, step: 2.5 } },
+  defaults: { width: 50, height: 50, tiling: 'square', size: 8, angle: 67.5, colorChange: false },
+  enums: { tiling: STAR_TILING_IDS },
+  bools: ['colorChange'],
+  presets: [
+    { id: 'stars', name: 'Stars and crosses', blurb: 'Four-pointed stars in a square grid', patch: { tiling: 'square', size: 8, angle: 67.5 } },
+    { id: 'hexagram', name: 'Hexagrams', blurb: 'Six-pointed stars, three layers', patch: { tiling: 'hexagon', size: 6, angle: 60 } },
+    { id: 'rosettes', name: 'Rosettes', blurb: 'Six-pointed rosettes, three layers', patch: { tiling: 'hexagon', size: 6, angle: 70 } },
+    { id: 'girih', name: 'Girih', blurb: 'Octagons and squares, four layers', patch: { tiling: 'octagon', size: 5, angle: 67.5 } },
+  ],
+  describe: (s) => ({ size: `${r1(s.size)} mm tiles`, angle: `${r1(s.angle)}°` }),
+});
+
+LINE_DESIGNS.push(layered({
+  id: 'starlattice',
+  name: 'Star lattice',
+  blurb: 'Islamic star patterns, one family of straps per layer',
+  about: 'Geometric star patterns drawn the way Hankin found them: under the fabric lies a tiling of squares, hexagons or octagons; from the middle of every edge two straps leave at the contact angle and run on until they meet, and through the edge into the next tile. The straps fall into families that never cross each other, two on squares, three on hexagons and four on octagons; each family is a layer of its own, so wherever two straps cross they are in different layers and hold each other. A larger angle gives sharper stars.',
+  file: 'starlattice',
+  c: STAR,
+  controls: [
+    { kind: 'presets', title: 'Start from' },
+    { kind: 'size', title: 'Size and shape' },
+    { kind: 'choice', key: 'tiling', title: 'Tiling', hint: 'The tiles under the pattern.', options: STAR_TILING_IDS.map((id) => ({ id, label: STAR_TILINGS[id].label, hint: STAR_TILINGS[id].hint })) },
+    {
+      kind: 'sliders',
+      title: 'Look and feel',
+      items: [
+        { key: 'size', label: 'Tile size', help: 'Edge length of the tiles under the pattern.', lo: 'Small', hi: 'Large', unit: 'mm', edit: true },
+        { key: 'angle', label: 'Contact angle', help: 'How far the straps lean from the tile edges: sharper stars as it grows.', lo: 'Blunt', hi: 'Sharp', unit: '°', edit: true },
+      ],
+    },
+    COLOUR,
+  ],
+  build: (s, boundary) => starLayers(boundary, { tiling: s.tiling, size: s.size, angle: s.angle }),
+  summary: (result) => `a star lattice of ${result.families} strap families and ${result.report.crossings} crossings`,
 }));

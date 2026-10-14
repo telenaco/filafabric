@@ -91,3 +91,18 @@ test('the tsp meander is one loop, denser where the tone is bright, and refuses 
   const r = layeredResult(machine, material, { width: 60, height: 40, layers });
   assert.ok(r.moves.some((m) => m.extrude));
 });
+
+test('the L-system curves are closed loops or fill their island, and every fold is held', async () => {
+  const { lsystemCurve } = await import('../src/engine/meander.js');
+  const s = lsystemCurve('sierpinski', 3);
+  assert.ok(Math.hypot(s[0].x - s[s.length - 1].x, s[0].y - s[s.length - 1].y) < 1e-6, 'Sierpiński closes');
+  const m = lsystemCurve('moore', 3);
+  assert.ok(Math.abs(Math.hypot(m[0].x - m[m.length - 1].x, m[0].y - m[m.length - 1].y) - 1) < 1e-6, 'Moore ends next to its start');
+  assert.equal(lsystemCurve('gosper', 2).length, 7 ** 2 + 1);
+  for (const [curve, angle] of [['moore', 45], ['sierpinski', 30], ['gosper', 60]]) {
+    const { layers } = meanderLayers(boundaryFor(50, 50), { curve, cell: 4, angle, spacing: 5 });
+    const r = crossingReport(layers.flatMap((l, k) => l.map((pts) => ({ pts, layer: k }))), 2500);
+    assert.ok(r.longestUncrossed < 35, `${curve}: ${r.longestUncrossed}`);
+    for (const p of layers.flat(2)) assert.ok(p.x > -0.5 && p.x < 50.5 && p.y > -0.5 && p.y < 50.5, curve);
+  }
+});

@@ -65,14 +65,23 @@ const rotate = (p, c, s) => ({ x: p.x * c - p.y * s, y: p.x * s + p.y * c });
 /**
  * Parallel lines at `angle` (degrees) `spacing` apart, clipped to the boundary and joined into as few serpentine
  * strands as its shape allows. `shape` / `size` / `pitch` make each line wavy (see shapes.js); `offset` slides the
- * lines sideways by a fraction of the spacing so two layers can interleave.
+ * lines sideways by a fraction of the spacing so two layers can interleave. With an `anchor` point the lines lie on a
+ * lattice through it (otherwise they are centred in the outline).
  */
-export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = null, size = 0, pitch = 4, inset = 0.3 } = {}) {
+export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = null, size = 0, pitch = 4, inset = 0.3, anchor = null } = {}) {
   const a = (angle * Math.PI) / 180;
   const c = Math.cos(a), s = Math.sin(a);
   const turned = new PolygonBoundary(boundary.rings.map((ring) => ring.map((p) => rotate(p, c, -s))));
   const box = turned.bbox();
-  const lanes = centredLanes(box.minY, box.maxY, spacing).map((y) => y + offset * spacing).filter((y) => y > box.minY - 1e-9 && y < box.maxY + 1e-9);
+  let lanes;
+  if (anchor) {
+    // lanes on a fixed lattice through `anchor`, so several hatches can be placed exactly against each other
+    const y0 = rotate(anchor, c, -s).y + offset * spacing;
+    lanes = [];
+    for (let k = Math.ceil((box.minY - y0) / spacing); y0 + k * spacing < box.maxY; k++) lanes.push(y0 + k * spacing);
+  } else {
+    lanes = centredLanes(box.minY, box.maxY, spacing).map((y) => y + offset * spacing).filter((y) => y > box.minY - 1e-9 && y < box.maxY + 1e-9);
+  }
   const chains = serpentineChains(turned, 'y', lanes, { inset, minLength: 1, maxJog: 3 * spacing });
   return chains.map((segments) => {
     const pts = [];
