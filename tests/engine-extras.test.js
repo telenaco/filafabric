@@ -43,3 +43,13 @@ test('the clearance height map reaches as far out as a loop can lean', () => {
   assert.ok(heightMapMargin(cfg) >= 30);
   assert.ok(heightMapMargin(resolveConfig(machine, material, {})) >= 10);
 });
+
+test('stats expose when each move starts, so a scrubber can speak in minutes', () => {
+  const r = generate(machine, material, { sample_width: 20, sample_height: 20 });
+  const t = r.stats.moveStartSec;
+  assert.equal(t.length, r.moves.length);
+  assert.equal(t[0], 0);
+  for (let i = 1; i < t.length; i++) assert.ok(t[i] >= t[i - 1], `time went backwards at ${i}`);
+  assert.ok(t[t.length - 1] <= r.stats.timeSec + 1e-9);
+  assert.ok(t[t.length - 1] > r.stats.timeSec * 0.99, 'the last move starts near the end of the print');
+});

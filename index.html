@@ -3,48 +3,171 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Textile G-code Generator</title>
+<title>Meltloom: textile G-code studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
 <link rel="stylesheet" href="src/ui/styles.css">
 <script type="importmap">
 { "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
 </script>
 </head>
 <body>
-<header>
-  <h1>Textile G-code Generator</h1>
-  <div class="actions">
-    <button id="btn-download" disabled>Download .gcode</button>
-    <button id="btn-save" type="button">Save parameters</button>
-    <label class="file-button">Load parameters<input type="file" id="file-load" accept=".json,application/json"></label>
+<header class="topbar">
+  <div class="brand">
+    <svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 22C3 8 12 8 12 22"/><path d="M10 22C10 8 19 8 19 22"/><path d="M17 22C17 8 26 8 26 22"/><path d="M2 26H28"/></svg>
+    <span class="brand-name">Meltloom</span>
+  </div>
+  <span class="sep" aria-hidden="true"></span>
+  <label class="docname"><span class="visually-hidden">Swatch name</span><input id="doc-name" type="text" value="Untitled swatch" maxlength="60" autocomplete="off"></label>
+  <div class="top-actions">
+    <button type="button" id="btn-undo" class="icon-btn" aria-label="Undo" disabled><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4L3 8l4 4"/><path d="M3 8h8a4 4 0 010 8H8"/></svg></button>
+    <button type="button" id="btn-redo" class="icon-btn" aria-label="Redo" disabled><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4l4 4-4 4"/><path d="M15 8H7a4 4 0 000 8h3"/></svg></button>
+    <button type="button" id="btn-share" class="btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="4" cy="8" r="2"/><circle cx="12" cy="3.5" r="2"/><circle cx="12" cy="12.5" r="2"/><path d="M5.8 7l4.4-2.5M5.8 9l4.4 2.5"/></svg>Share link</button>
+    <button type="button" id="btn-export" class="btn primary" disabled><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 7L8 10.5 11.5 7M2.5 13.5h11"/></svg>Export G-code <span id="export-size" class="export-size"></span></button>
   </div>
 </header>
-<main>
-  <aside id="controls">
-    <section class="profiles">
-      <label class="field"><span>Machine</span><select id="machine"></select></label>
-      <label class="field"><span>Material</span><select id="material"></select></label>
+
+<div class="app">
+  <aside class="designs" aria-label="Designs and printer">
+    <section>
+      <h2 class="eyebrow">Designs</h2>
+      <button type="button" class="tile selected" aria-pressed="true">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" aria-hidden="true" class="tile-thumb"><path d="M8 52H56M8 44H56M8 36H56" stroke="var(--role-base)" stroke-width="1.6"/><path d="M10 52C10 28 22 28 22 52M18 52C18 28 30 28 30 52M26 52C26 28 38 28 38 52M34 52C34 28 46 28 46 52M42 52C42 28 54 28 54 52" stroke="var(--role-free)" stroke-width="2.2" stroke-linecap="round"/></svg>
+        <span class="tile-text"><span class="tile-title">Loop pile</span><span class="tile-sub">Raised looped pile on an open base</span></span>
+      </button>
+      <div class="placeholder-tile">More designs will appear here as they are added.</div>
     </section>
-    <div id="param-groups"></div>
+    <section>
+      <h2 class="eyebrow">Printer</h2>
+      <div class="card printer-card">
+        <div>
+          <div class="printer-name" id="printer-name">Prusa MK3S</div>
+          <div class="muted" id="printer-material">Filaflex 95A Foamy · 0.4 mm nozzle</div>
+        </div>
+        <div class="chips" id="printer-chips"></div>
+        <p class="muted small" id="printer-note">There are no printer settings to tune.</p>
+        <button type="button" id="btn-printer" class="link">Change setup</button>
+      </div>
+    </section>
   </aside>
-  <section id="viewport">
-    <div id="preview" aria-label="3D toolpath preview"></div>
-    <div class="toolbar">
-      <label><input type="checkbox" id="show-travel" checked> Show travel</label>
-      <label><input type="checkbox" id="show-violations"> Show violations</label>
-      <label>Z scale <input type="range" id="z-scale" min="1" max="6" step="0.5" value="1"></label>
-      <label class="grow">Print order <input type="range" id="scrub" min="0" max="1" value="1"></label>
+
+  <main class="stage" id="stage" aria-label="Preview">
+    <div class="stage-bar">
+      <div class="seg" role="group" aria-label="Camera" id="camera-seg">
+        <button type="button" data-camera="top" aria-pressed="false">Top</button>
+        <button type="button" data-camera="angled" aria-pressed="true">Angled</button>
+        <button type="button" data-camera="side" aria-pressed="false">Side</button>
+      </div>
+      <div class="layers" role="group" aria-label="Layers">
+        <span class="small muted strong">Show</span>
+        <button type="button" class="pill" data-layer="path" aria-pressed="true" title="The nozzle route, exactly as the G-code will run it">Path</button>
+        <button type="button" class="pill" data-layer="strand" aria-pressed="false" title="The route drawn at true strand thickness">Strand</button>
+        <button type="button" class="pill" data-layer="travel" aria-pressed="false" title="Horizontal moves between strands">Travel</button>
+        <button type="button" class="pill" data-layer="hops" aria-pressed="false" title="Vertical lifts and drops at each strand start and end">Hops</button>
+      </div>
     </div>
-    <div id="errors" class="errors" role="alert" hidden></div>
-    <dl id="stats" class="stats"></dl>
-    <ul id="warnings" class="warnings"></ul>
-    <p class="legend">
-      <span class="sw base"></span>base <span class="sw supported"></span>supported
-      <span class="sw rising"></span>rising <span class="sw falling"></span>falling
-      <span class="sw unsupported"></span>unsupported <span class="sw travel"></span>travel
-      <span class="sw violation"></span>clearance violation
-    </p>
-  </section>
-</main>
+
+    <div class="canvas-wrap" id="canvas-wrap">
+      <div id="preview" class="preview" role="img" aria-label="3D preview of the toolpath"></div>
+      <div class="canvas-note" id="canvas-note" hidden>Showing your last valid settings</div>
+      <div class="roles" role="group" aria-label="Strand roles" id="roles"></div>
+      <div class="thickness-note" id="thickness-note" hidden>Strands drawn at true thickness: free-hanging about 0.49 mm once foamed, base 0.45 mm.</div>
+      <div class="busy-chip" id="busy-chip" hidden>Updating…</div>
+    </div>
+
+    <div class="playback card">
+      <button type="button" id="btn-play" class="play" aria-label="Play the print"><svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><path id="play-icon" d="M5 3l10 6-10 6z"/></svg></button>
+      <div class="scrub">
+        <label for="scrub" class="small muted strong">Print order</label>
+        <input id="scrub" type="range" min="0" max="1000" step="1" value="1000">
+      </div>
+      <span class="time" id="time-label">0 of 0 min</span>
+      <label class="check"><input type="checkbox" id="exaggerate" checked> Exaggerate height</label>
+      <label class="check"><input type="checkbox" id="show-violations"> Show tight spots</label>
+    </div>
+
+    <div class="status" id="status" aria-live="polite"></div>
+    <div class="details card" id="details" hidden></div>
+    <p class="muted small" id="custom-note" hidden></p>
+  </main>
+
+  <aside class="settings" aria-label="Settings">
+    <div>
+      <h1 class="title">Loop pile</h1>
+      <p class="muted">Raised loops anchored to an open base, printed as one soft pile.</p>
+    </div>
+
+    <div class="errors" id="errors" role="alert" hidden></div>
+
+    <section class="verdict" id="verdict" aria-live="polite"></section>
+
+    <section>
+      <h2 class="eyebrow">Swatch</h2>
+      <div class="seg two" role="group" aria-label="Swatch size" id="swatch-seg">
+        <button type="button" data-swatch="test" aria-pressed="true"><span class="seg-main">Test swatch</span><span class="seg-sub">30 × 30 mm</span></button>
+        <button type="button" data-swatch="full" aria-pressed="false"><span class="seg-main">Full swatch</span><span class="seg-sub">100 × 100 mm</span></button>
+      </div>
+      <p class="muted small" id="swatch-hint"></p>
+      <details class="custom-size" id="custom-size">
+        <summary>Custom size</summary>
+        <div class="custom-grid">
+          <label class="field-row" for="custom-width"><span>Width (mm)</span><input id="custom-width" type="number" inputmode="decimal" min="10" max="240" step="5"></label>
+          <label class="field-row" for="custom-height"><span>Height (mm)</span><input id="custom-height" type="number" inputmode="decimal" min="10" max="200" step="5"></label>
+        </div>
+        <p class="field-error" id="custom-error" hidden></p>
+      </details>
+    </section>
+
+    <section>
+      <h2 class="eyebrow">Look and feel</h2>
+      <div id="sliders" class="sliders"></div>
+      <div class="room-row">
+        <div class="row-top"><span class="label">Room between loops</span><span class="value" id="room-value"></span></div>
+        <div class="seg two compact" role="group" aria-label="Room between loops" id="room-seg">
+          <button type="button" data-room="standard" aria-pressed="true">Standard</button>
+          <button type="button" data-room="roomy" aria-pressed="false">Roomy</button>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2 class="eyebrow">Path</h2>
+      <div class="seg two" role="group" aria-label="How loops are connected">
+        <button type="button" aria-pressed="true"><span class="seg-main">Separate loops</span><span class="seg-sub">Lift between each</span></button>
+        <button type="button" disabled aria-pressed="false" class="planned"><span class="seg-main">Overlapping line</span><span class="seg-sub">Planned, not built yet</span></button>
+      </div>
+      <p class="muted small">Overlapping would start each loop on the line before it, so the nozzle hops far less.</p>
+    </section>
+
+    <section class="advanced">
+      <button type="button" id="btn-advanced" class="disclosure" aria-expanded="false" aria-controls="advanced-body">
+        <span>Advanced <span class="muted" id="advanced-count">· 39 settings</span></span>
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l5 5 5-5"/></svg>
+      </button>
+      <div id="advanced-body" hidden></div>
+      <div class="adv-actions">
+        <button type="button" id="btn-reset" class="link">Reset to defaults</button>
+        <button type="button" id="btn-save-file" class="link">Save settings file</button>
+        <label class="link file-link">Open settings file<input type="file" id="file-open" accept=".json,application/json"></label>
+      </div>
+    </section>
+  </aside>
+</div>
+
+<dialog id="printer-dialog" aria-labelledby="printer-dialog-title">
+  <form method="dialog">
+    <h2 id="printer-dialog-title">Printer setup</h2>
+    <p class="muted">A setup bundles the printer's limits and the filament's behaviour, so you don't have to.</p>
+    <label class="field-row stacked" for="sel-machine"><span>Printer</span><select id="sel-machine"></select></label>
+    <label class="field-row stacked" for="sel-material"><span>Filament</span><select id="sel-material"></select></label>
+    <p class="muted small" id="dialog-note"></p>
+    <div class="dialog-actions"><button class="btn primary" value="close">Done</button></div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
 <script type="module" src="src/ui/main.js"></script>
 </body>
 </html>

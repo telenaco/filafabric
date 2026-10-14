@@ -15,8 +15,11 @@ export function computeStats(moves, cfg, placements) {
   const strandTags = new Set();
   let previous = null;
   let previousExtruded = false;
+  const moveStartSec = new Float64Array(moves.length);
+  let moveIndex = 0;
 
   for (const m of moves) {
+    moveStartSec[moveIndex++] = timeSec;
     const dx = m.x - pos.x, dy = m.y - pos.y, dz = m.z - pos.z;
     const ds = Math.hypot(dx, dy, dz);
     pos = { x: m.x, y: m.y, z: m.z };
@@ -62,5 +65,6 @@ export function computeStats(moves, cfg, placements) {
     strands: strandTags.size,
     hops,
     travelMm,
+    moveStartSec,
   };
 }

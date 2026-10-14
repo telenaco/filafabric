@@ -89,3 +89,11 @@ Preview requirements from the user's notes:
 Related measurements for the default full swatch: 568 strands, 567 hops, 3.4 m of travel, about 4 % of print time.
 The user's idea of overlapping each loop onto the previous print line (to hop less) is recorded as a planned
 "Overlapping line" path option; its main benefit is fewer start/stop blobs and stronger bonds, not speed.
+
+## Built so far (2026-10-14)
+
+The redesign from the design canvas is implemented in the running tool: designs column and printer card on the
+left, the preview with Path / Strand / Travel / Hops layers in the centre, and the verdict card, swatch choice,
+five sliders and the Advanced drawer on the right, with undo/redo, share link, reset, plain-language field errors
+and a phone layout. Not built: a second design, curated printer bundles beyond the two profiles, and the
+overlapping-line path (shown as "Planned").

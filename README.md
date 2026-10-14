@@ -4,8 +4,8 @@ A browser-based toolbox that generates direct G-code for experimental non-planar
 base plus a dense pile of raised, anchored 3D loops. First target: Prusa MK3S, Filaflex Foamy 95, a 100 × 100 mm
 sample. Machine and material profiles are data files, so more machines can be added from G-code you share.
 
-**Status:** v1 implemented for the Prusa MK3S (84 automated tests passing). The first physical print has not
-been done yet; the Foamy material profile stays unverified until then.
+**Status:** the generator and the redesigned studio are built for the Prusa MK3S (123 automated tests passing).
+The first physical print has not been done yet; the Foamy material profile stays unverified until then.
 
 ## Run it
 
@@ -18,24 +18,30 @@ npm test          # engine tests (84)
 npm run golden    # re-record the 20 x 20 golden summary after an intended engine change
 ```
 
-In the page: pick the machine and material, adjust the parameters (the preview updates as you type), orbit the
-3D view, scrub the "Print order" slider to replay the path, then **Download .gcode**. Every file records its full
-parameter set and seed in comment lines. Red points mark moves the clearance model thinks come too close to
-printed strands (tick "Show violations"; it is on automatically only when there are few).
+In the page: pick a swatch (a small test one by default), move the five sliders, and read the verdict card. The
+preview shows four layers you can combine: **Path** (the exact nozzle route), **Strand** (that route at true
+thickness), **Travel** (horizontal moves between strands) and **Hops** (the vertical lifts and drops). Scrub or play
+the print order in minutes, then **Export G-code**. Everything else lives under Advanced (39 settings). Undo/redo,
+"Share link" (the whole design in the address) and "Reset to defaults" are in the bar and the settings column.
+Every exported file records its full parameter set and seed in comment lines. Red points mark moves the
+clearance model thinks come too close to printed strands (tick "Show tight spots"; it is on automatically only
+when there are few).
 
 ## First prints (spec section 9)
 
-1. Width 30, height 30, untick "Print loops": base only. Check adhesion, flow and corners.
-2. Width 30, height 15, both ticked: exactly one row of loops. Check that the feet bond and the unsupported
-   strands hold their height.
-3. Width 30, height 30, both ticked, starting speeds: compare the clearance warnings with real collisions.
-4. Width 100, height 100: the full sample.
+1. Test swatch (30 × 30 mm), Advanced → What to print → untick "Print the loops": base only. Check adhesion,
+   flow and corners.
+2. Custom size 30 × 15 mm, base and loops on: exactly one row of loops. Check that the feet bond and the
+   unsupported strands hold their height.
+3. Test swatch (30 × 30 mm) with the defaults: compare the tight-spot markers with real collisions.
+4. Full swatch (100 × 100 mm).
 
 Filaflex Foamy 95 values are unverified until the first print; change flow, temperature and the unsupported
 speed one at a time. With the spec defaults the clearance model flags about 40 % of moves on the full sample.
 There are two causes: legs only 0.6 mm apart sit inside the nozzle keep-out, and neighbouring loops' caps cross
 at the same height (normal at 50 % overlap, and not removed by more room). `leg_gap` 1.5 mm with `clearance`
-0.5 mm brings the count to about 6 %; with `clearance` 0 the crossings alone still flag about 1,600 moves (3 %).
+0.5 mm (the "Roomy" option, or "Give loops more room" on the verdict card) brings the count to about 6 %; with
+`clearance` 0 the crossings alone still flag about 1,600 moves (3 %).
 Use the count to compare layouts, not as pass or fail.
 
 ## Where things are
@@ -48,8 +54,8 @@ Use the count to compare layouts, not as pass or fail.
 | `docs/superpowers/plans/2026-10-14-textile-gcode-generator.md` | The v1 implementation plan (13 tasks, test-first) |
 | `reference/research-notes-2026-10-14.md` | MK3S limits, PrusaSlicer Generic FLEX values, Recreus Foamy parameters, sources |
 | `reference/g-code-analysis-2026-10-14.md` | What the user's own MK3S G-code and Bambu A1 mini 3MF contain (verified values, start/end blocks, Bambu notes) |
-| `Shape-Box_0.2mm_FLEX_MK3S_5m.gcode` | User's sliced MK3S sample (PrusaSlicer 2.9.6, Generic FLEX): ground truth for the MK3S profile |
-| `bambu lab a1 mini.gcode.3mf` | User's Bambu Studio sample for the A1 mini (future sub-project 5) |
+| `Shape-Box_0.2mm_FLEX_MK3S_5m.gcode` | The user's sliced MK3S sample (PrusaSlicer 2.9.6, Generic FLEX): ground truth for the MK3S profile. **Local only, not published** |
+| `bambu lab a1 mini.gcode.3mf` | The user's Bambu Studio sample for the A1 mini (future sub-project 5). **Local only, not published** |
 
 Code:
 
@@ -77,3 +83,15 @@ Code:
 A PrusaSlicer-sliced `.gcode` made with **Filaflex Foamy 95** (not Generic FLEX) on the MK3S would let the Foamy
 material profile be verified; the MK3S machine and Generic FLEX values are already confirmed from the sample
 in this folder.
+
+## Publishing
+
+This folder lives inside a larger local repository that also holds other sites, so only this folder is published,
+to https://github.com/telenaco/filafabric (branch `main`). From the parent repository:
+
+```bash
+git subtree split --prefix="fashionPrinting Tools" -b filafabric-main     # this folder's history only
+git push filafabric filafabric-main:main                                   # remote: https://github.com/telenaco/filafabric.git
+```
+
+Later updates: `git subtree push --prefix="fashionPrinting Tools" filafabric main`.

@@ -8,6 +8,11 @@ const dst = path.join(root, 'vendor', 'three');
 fs.mkdirSync(path.join(dst, 'addons', 'controls'), { recursive: true });
 fs.copyFileSync(path.join(src, 'build', 'three.module.js'), path.join(dst, 'three.module.js'));
 fs.copyFileSync(path.join(src, 'examples', 'jsm', 'controls', 'OrbitControls.js'), path.join(dst, 'addons', 'controls', 'OrbitControls.js'));
+// fat lines: strokes with a width in world units (used for the true-thickness strand layer)
+fs.mkdirSync(path.join(dst, 'addons', 'lines'), { recursive: true });
+for (const name of ['LineSegments2.js', 'LineSegmentsGeometry.js', 'LineMaterial.js']) {
+  fs.copyFileSync(path.join(src, 'examples', 'jsm', 'lines', name), path.join(dst, 'addons', 'lines', name));
+}
 fs.copyFileSync(path.join(src, 'LICENSE'), path.join(dst, 'LICENSE'));
 const version = JSON.parse(fs.readFileSync(path.join(src, 'package.json'), 'utf8')).version;
 console.log(`vendored three ${version} into vendor/three`);

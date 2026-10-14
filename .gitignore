@@ -1,2 +1,6 @@
 node_modules/
 *.log
+
+# personal sample files from the printers (kept locally, not published)
+*.gcode
+*.3mf
