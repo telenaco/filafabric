@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { resolveConfig } from '../src/engine/params.js';
 import { RectBoundary } from '../src/engine/boundary.js';
 import { buildBase } from '../src/engine/base.js';
@@ -18,4 +19,18 @@ export function scene(over = {}, profiles = {}) {
     ? tile(cfg, boundary, createRng(t.random_seed))
     : { placements: [], warnings: [], counts: { candidates: 0, kept: 0, dropped: 0, unresolvedLegs: 0 } };
   return { cfg, boundary, base, tiled };
+}
+
+const round = (n, dp) => Math.round(n * 10 ** dp) / 10 ** dp;
+
+/** Compact, stable summary used by the golden test. */
+export function goldenSummary(result) {
+  return {
+    loops: result.stats.loops,
+    moves: result.moves.length,
+    violations: result.stats.violations,
+    filamentMm: round(result.stats.filamentMm, 3),
+    timeSec: round(result.stats.timeSec, 1),
+    sha256: crypto.createHash('sha256').update(result.gcode).digest('hex'),
+  };
 }

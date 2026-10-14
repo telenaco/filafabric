@@ -2,14 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { writeGcode, preflight, PreflightError } from '../src/engine/gcode.js';
 import { plan } from '../src/engine/planner.js';
-import { computeStatsStub } from './gcode-helpers.js';
+import { computeStats } from '../src/engine/stats.js';
 import { defaultProfiles } from './helpers.js';
 import { scene } from './scene.js';
 
 function build(over = {}) {
   const s = scene({ sample_width: 20, sample_height: 20, ...over });
   const planned = plan(s.cfg, s.base, s.tiled.placements, s.boundary);
-  return { ...s, moves: planned.moves, gcode: writeGcode(planned.moves, s.cfg, { stats: computeStatsStub() }) };
+  const stats = computeStats(planned.moves, s.cfg, s.tiled.placements);
+  return { ...s, moves: planned.moves, gcode: writeGcode(planned.moves, s.cfg, { stats }) };
 }
 
 /** Minimal G-code reader: absolute XYZ, relative E, modal F. */
