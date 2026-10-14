@@ -13,6 +13,7 @@ import { webLayers } from '../engine/web.js';
 import { chainmailLayers } from '../engine/chainmail.js';
 import { meanderLayers, CURVES, CURVE_IDS } from '../engine/meander.js';
 import { lissajousLayers } from '../engine/lissajous.js';
+import { truchetLayers, TILES, TILE_IDS } from '../engine/truchet.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const WAVY = ['looped', 'figure8', 'zigzag', 'honeycomb', 'wave', 'square'];
@@ -362,4 +363,48 @@ MORE_DESIGNS.push(layered({
   ],
   build: (s, boundary) => lissajousLayers(boundary, { a: s.a, b: s.b, phase: s.phase, second: s.second }),
   summary: (result) => `a harmonograph of ${result.report.crossings} crossings`,
+}));
+
+const TRUCHET = defineControls({
+  ranges: { ...SIZE, size: { min: 3, max: 12, step: 0.5 }, seed: { min: 1, max: 999, step: 1 } },
+  defaults: { width: 50, height: 50, tile: 'arcs', size: 5, seed: 7, colorChange: false },
+  enums: { tile: TILE_IDS },
+  bools: ['colorChange'],
+  presets: [
+    { id: 'arcs', name: 'Arcs', blurb: 'Flowing curves', patch: { tile: 'arcs', size: 5 } },
+    { id: 'diagonals', name: 'Diagonals', blurb: 'An X in every cell', patch: { tile: 'diagonals', size: 5 } },
+    { id: 'big-arcs', name: 'Big arcs', blurb: 'Large, soft curves', patch: { tile: 'arcs', size: 8 } },
+  ],
+  describe: (s) => ({ size: `${r1(s.size)} mm tiles`, seed: `#${s.seed}` }),
+});
+
+MORE_DESIGNS.push(layered({
+  id: 'truchet',
+  name: 'Truchet tiles',
+  blurb: 'Random tiles that flow into curves',
+  about: 'A grid where every cell holds one of two orientations of a simple tile, picked at random. Diagonals give an X in every cell; arcs flow into long curves, with the second layer a half tile over so it crosses the first. The same seed always makes the same pattern, so a swatch can be made again.',
+  file: 'truchet',
+  c: TRUCHET,
+  controls: [
+    { kind: 'presets', title: 'Start from' },
+    { kind: 'size', title: 'Size and shape' },
+    {
+      kind: 'choice',
+      key: 'tile',
+      title: 'Tile',
+      hint: 'What each cell holds.',
+      options: TILE_IDS.map((id) => ({ id, label: TILES[id].label, hint: TILES[id].hint })),
+    },
+    {
+      kind: 'sliders',
+      title: 'Look and feel',
+      items: [
+        { key: 'size', label: 'Tile size', help: 'Width of one cell.', lo: 'Fine', hi: 'Coarse', unit: 'mm', edit: true },
+        { key: 'seed', label: 'Pattern number', help: 'Each number is a different random pattern; the same number always repeats it.', lo: '1', hi: '999', unit: '', edit: true },
+      ],
+    },
+    COLOUR,
+  ],
+  build: (s, boundary) => truchetLayers(boundary, { tile: s.tile, size: s.size, seed: s.seed }),
+  summary: (result) => `a Truchet pattern of ${result.report.crossings} crossings`,
 }));
