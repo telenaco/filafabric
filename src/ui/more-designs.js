@@ -7,6 +7,7 @@ import { thumbFromLayers, shapeThumb } from './thumbs.js';
 import { boundaryFor, layeredResult } from '../engine/layers.js';
 import { SHAPES } from '../engine/shapes.js';
 import { crosshatchLayers, DIRECTIONS, DIRECTION_IDS } from '../engine/crosshatch.js';
+import { auxeticLayers, CELLS, CELL_IDS } from '../engine/auxetic.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const WAVY = ['looped', 'figure8', 'zigzag', 'honeycomb', 'wave', 'square'];
@@ -108,3 +109,48 @@ export const MORE_DESIGNS = [
     summary: (result) => `a crosshatch of ${result.layerCount} layers with ${result.report.crossings} crossings`,
   }),
 ];
+
+const AUXETIC = defineControls({
+  ranges: { ...SIZE, rowPitch: { min: 3, max: 10, step: 0.5 }, period: { min: 4, max: 16, step: 0.5 }, amplitude: { min: 0.5, max: 4, step: 0.25 } },
+  defaults: { width: 50, height: 50, rowPitch: 6, period: 8, amplitude: 1.75, cell: 'reentrant', colorChange: false },
+  enums: { cell: CELL_IDS },
+  bools: ['colorChange'],
+  presets: [
+    { id: 'honeycomb', name: 'Honeycomb', blurb: 'Convex hexagon cells', patch: { cell: 'hexagon', amplitude: 1.5, rowPitch: 6, period: 8 } },
+    { id: 're-entrant', name: 'Re-entrant', blurb: 'Bow-tie cells that widen when pulled', patch: { cell: 'reentrant', amplitude: 1.75, rowPitch: 6, period: 8 } },
+    { id: 'deep-auxetic', name: 'Deep auxetic', blurb: 'Larger cells, deeper bow-ties', patch: { cell: 'reentrant', amplitude: 2.25, rowPitch: 7, period: 10 } },
+  ],
+  describe: (s) => ({ rowPitch: `${r1(s.rowPitch)} mm apart`, period: `${r1(s.period)} mm`, amplitude: `${r2(s.amplitude)} mm` }),
+});
+
+MORE_DESIGNS.push(layered({
+  id: 'auxetic',
+  name: 'Auxetic mesh',
+  blurb: 'Honeycomb and re-entrant (bow-tie) cells',
+  about: 'Rows of zigzag, each the mirror of the one below, and staircases that climb through them. Struts at the waists make an ordinary honeycomb; struts at the wide points make bow-tie cells that widen when pulled, so the fabric spreads under tension and hugs a curve.',
+  file: 'auxetic',
+  c: AUXETIC,
+  controls: [
+    { kind: 'presets', title: 'Start from' },
+    { kind: 'size', title: 'Size and shape' },
+    {
+      kind: 'choice',
+      key: 'cell',
+      title: 'Cell',
+      hint: 'Where the struts join the rows.',
+      options: CELL_IDS.map((id) => ({ id, label: CELLS[id].label, hint: CELLS[id].hint })),
+    },
+    {
+      kind: 'sliders',
+      title: 'Look and feel',
+      items: [
+        { key: 'rowPitch', label: 'Row spacing', help: 'Distance between the rows of zigzag, and so the height of a cell.', lo: 'Close', hi: 'Wide', unit: 'mm', edit: true },
+        { key: 'period', label: 'Cell width', help: 'Length of one zigzag, and so the width of a cell.', lo: 'Narrow', hi: 'Wide', unit: 'mm', edit: true },
+        { key: 'amplitude', label: 'Cell depth', help: 'How far each row swings. Deeper bow-ties are more auxetic. Limited so rows never touch.', lo: 'Shallow', hi: 'Deep', unit: 'mm', edit: true },
+      ],
+    },
+    COLOUR,
+  ],
+  build: (s, boundary) => auxeticLayers(boundary, { rowPitch: s.rowPitch, period: s.period, amplitude: s.amplitude, cell: s.cell }),
+  summary: (result) => `an auxetic mesh of ${result.report.crossings} crossings`,
+}));

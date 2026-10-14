@@ -93,6 +93,30 @@ export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = nu
 }
 
 /**
+ * Joins polylines (in the order given) into longer strands: a polyline continues the strand before it when its start
+ * is within `maxJog` of that strand's end and the connector stays inside the boundary; otherwise it starts a new one.
+ */
+export function chainPolylines(list, boundary, maxJog = 6) {
+  const chains = [];
+  let cur = null;
+  for (const pts of list) {
+    if (pts.length < 2) continue;
+    if (cur) {
+      const end = cur[cur.length - 1];
+      const d = Math.hypot(pts[0].x - end.x, pts[0].y - end.y);
+      if (d <= maxJog && boundary.contains((pts[0].x + end.x) / 2, (pts[0].y + end.y) / 2)) {
+        cur.push(...densify([end, pts[0]]).slice(1), ...pts.slice(1));
+        continue;
+      }
+      chains.push(cur);
+    }
+    cur = pts.map((p) => ({ x: p.x, y: p.y }));
+  }
+  if (cur) chains.push(cur);
+  return chains;
+}
+
+/**
  * Splits a graph into trails (walks that never reuse an edge), starting at odd-degree vertices first so as few trails
  * as the graph allows are needed. Edges are polylines; two edges meet where their ends are within 0.01 mm.
  */
