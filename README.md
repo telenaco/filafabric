@@ -41,6 +41,7 @@ about 6 %, which is a good first comparison against reality.
 | Path | What |
 |---|---|
 | `docs/original-brief.md` | The original brief (verbatim) and the decisions made while brainstorming |
+| `docs/product-direction-2026-10-14.md` | Where the UI is heading (Plotcaster-style gallery + preconfigured printers) and name candidates |
 | `docs/superpowers/specs/2026-10-14-textile-gcode-generator-design.md` | The v1 design spec (architecture, data model, engine behaviour, tests, first-print plan) |
 | `docs/superpowers/plans/2026-10-14-textile-gcode-generator.md` | The v1 implementation plan (13 tasks, test-first) |
 | `reference/research-notes-2026-10-14.md` | MK3S limits, PrusaSlicer Generic FLEX values, Recreus Foamy parameters, sources |
@@ -66,6 +67,8 @@ Code:
 3. SVG silhouette boundary with rotate-to-fit
 4. Interwoven base + loops as one continuous extrusion path
 5. Bambu Lab A1 mini support (`.gcode.3mf` packaging, Bambu start/end macros)
+6. Product shell: design gallery on the left, settings on the right, preconfigured printer bundles, shareable
+   links (see `docs/product-direction-2026-10-14.md`, which also lists candidate names)
 
 ## Open requests
 

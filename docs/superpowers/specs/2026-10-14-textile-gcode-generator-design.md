@@ -423,6 +423,9 @@ Because this is novel toolpath on a real machine, prints are staged. The UI togg
 - **Sub-project 5 — Bambu Lab A1 mini:** profile with `accel_syntax: P_R_T`, 180 mm bed, Z limit 30 mm/s, macro
   start/end blocks, `.gcode.3mf` packaging (zip + MD5), and disabling the spaghetti/clog detectors for this
   experiment. See `reference/g-code-analysis-2026-10-14.md`.
+- **Sub-project 6 — Product shell:** a gallery of designs on the left, the selected design's settings on the right,
+  curated printer bundles instead of raw machine/material controls, shareable state in the URL hash. See
+  `docs/product-direction-2026-10-14.md`; needs its own brainstorm and spec.
 - More fiber shapes (teardrop, horseshoe, asymmetric), automatic rotation suggestion, per-region randomness.
 
 ## 12. Amendments (2026-10-14, after the user's G-code samples)
