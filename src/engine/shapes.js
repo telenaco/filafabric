@@ -8,12 +8,15 @@
  * `pitch` is the length of one period (mm) and `size` the sideways reach (mm). With `a = pitch / 2π`:
  *   looped  u = s − size·(sinθ' − 1), v = −size·cosθ', θ' = s/a + π/2   (a prolate trochoid: loops when size > a)
  *   figure8 u = s + 0.6·size·sin 2θ,  v = size·sinθ,   θ = s/a
+ *   ring    a straight line with a round ring (diameter `size`) tangent to it once per period, alternately above
+ *           and below. The ring is walked in a short window of progress, so the line carries on right after it.
  */
 
 export const SHAPES = Object.freeze({
   looped: { id: 'looped', label: 'Looped', hint: 'One line that circles over itself' },
   figure8: { id: 'figure8', label: 'Figure-8', hint: 'Crossing S-curves in a chain' },
   zigzag: { id: 'zigzag', label: 'Zigzag', hint: 'Straight diagonals, soft corners' },
+  ring: { id: 'ring', label: 'Rings', hint: 'A straight line with a round ring on it' },
   wave: { id: 'wave', label: 'Wave', hint: 'A smooth sine wave' },
   square: { id: 'square', label: 'Square', hint: 'Steps with rounded corners' },
 });
@@ -22,6 +25,7 @@ export const SHAPE_IDS = Object.freeze(Object.keys(SHAPES));
 
 const ZIGZAG_ROUND = 0.9; // 1 would be a sharp triangle, 0 a sine
 const SQUARE_SOFT = 2.5; // larger is squarer
+const RING_WINDOW = 0.4; // mm of progress along the lane spent walking round a ring
 
 /** Lateral offset `v` and along-lane shift `du` at distance `s` from the start of the lane. */
 export function shapeAt(shape, s, { pitch, size }) {
@@ -39,6 +43,17 @@ export function shapeAt(shape, s, { pitch, size }) {
     }
     case 'figure8':
       return { v: size * Math.sin(theta), du: 0.6 * size * Math.sin(2 * theta) };
+    case 'ring': {
+      const r = Math.min(size / 2, pitch / 4); // never bigger than a quarter of the spacing
+      // a sample exactly on a period boundary closes the ring before it, so the ring's end is always sampled
+      const index = Math.max(0, Math.ceil(s / pitch - 1e-12) - 1);
+      const local = s - index * pitch;
+      const start = pitch - RING_WINDOW;
+      if (local <= start) return { v: 0, du: 0 };
+      const phi = (2 * Math.PI * (local - start)) / RING_WINDOW;
+      const side = index % 2 === 0 ? 1 : -1;
+      return { v: side * r * (1 - Math.cos(phi)), du: start + r * Math.sin(phi) - local };
+    }
     default:
       throw new Error(`Unknown strand shape: ${shape}`);
   }
@@ -117,16 +132,17 @@ export function lanePoints({ shape, length, pitch, size, sizeAt = null, step = 0
   const lead = -uMin + (length - ((periods - 1) * pitch + uMax - uMin)) / 2;
   if (lead > 1e-9) straight(0, lead);
   const ds = step / arcRate(shape, pitch, size);
-  const n = Math.ceil(span / ds);
+  // a whole number of samples per period, so a sample always lands on a period boundary
+  const n = periods * Math.max(1, Math.ceil(pitch / ds));
   for (let i = 1; i <= n; i++) {
     const s = (span * i) / n;
     const factor = sizeAt ? sizeAt(lead + s) : 1;
     const { v, du } = shapeAt(shape, s, { pitch, size: size * factor });
     pts.push({ u: lead + s + du, v });
   }
-  // a modulated size is never exactly 1 at the end of a period: land on the centre line before leading out
+  // land on the centre line at the end of the last period before leading out (a ring ends a little short of it)
   const end = pts[pts.length - 1];
-  if (Math.abs(end.v) > 1e-9 || Math.abs(end.u - (lead + span)) > 1e-9) pts[pts.length - 1] = { u: lead + span, v: 0 };
+  if (Math.abs(end.v) > 1e-9 || Math.abs(end.u - (lead + span)) > 1e-9) pts.push({ u: lead + span, v: 0 });
   if (length - (lead + span) > 1e-9) straight(lead + span, length);
   return pts;
 }

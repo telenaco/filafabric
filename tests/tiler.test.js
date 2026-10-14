@@ -104,3 +104,15 @@ test('loops that leave the boundary are dropped', () => {
   assert.ok(counts.dropped > 0);
   for (const p of placements) for (const q of p.points) assert.ok(q.y <= 18 + 1e-9);
 });
+
+test('liftAt scales the pile height of each loop from where it sits', () => {
+  const { cfg, boundary } = setup({ sample_width: 40, sample_height: 20 });
+  const flat = tile(cfg, boundary, createRng(1));
+  const shaped = tile(cfg, boundary, createRng(1), { liftAt: (x) => (x < 20 ? 0.4 : 1) });
+  const peak = (p) => Math.max(...p.points.map((q) => q.z));
+  const left = shaped.placements.filter((p) => p.points[0].x < 18);
+  const right = shaped.placements.filter((p) => p.points[0].x > 22);
+  assert.ok(left.length > 0 && right.length > 0);
+  assert.ok(Math.max(...left.map(peak)) < Math.max(...right.map(peak)) - 0.5);
+  assert.ok(Math.abs(Math.max(...right.map(peak)) - Math.max(...flat.placements.map(peak))) < 1e-9, 'a factor of 1 leaves the loop alone');
+});

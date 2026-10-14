@@ -9,11 +9,11 @@ const grid = (f, w = 100, h = 100, step = 1.3) => {
 };
 
 test('the ten Blender patterns plus noise and bumps are registered', () => {
-  for (const id of ['deepSpiral', 'brick', 'diamondGrid', 'tribalFeathers', 'circuitBoard', 'oceanWaves', 'hexagonCells', 'mountainPeaks', 'lotusPetals', 'lightningBolts', 'noise', 'bumps']) {
+  for (const id of ['deepSpiral', 'brick', 'diamondGrid', 'tribalFeathers', 'circuitBoard', 'oceanWaves', 'hexagonCells', 'mountainPeaks', 'lotusPetals', 'lightningBolts', 'noise', 'bumps', 'stripes']) {
     assert.ok(FIELDS[id], id);
     assert.ok(FIELDS[id].label && FIELDS[id].hint, id);
   }
-  assert.equal(FIELD_IDS.length, 12);
+  assert.equal(FIELD_IDS.length, 13);
 });
 
 test('every field stays in 0..1, is deterministic, and is not flat', () => {

@@ -4,8 +4,8 @@ import { SHAPES, SHAPE_IDS, shapeAt, lanePoints, lanePeriods, loopCount, loopsCl
 
 const opts = { pitch: 6, size: 3 };
 
-test('the five shapes are registered with labels', () => {
-  assert.deepEqual([...SHAPE_IDS].sort(), ['figure8', 'looped', 'square', 'wave', 'zigzag']);
+test('the six shapes are registered with labels', () => {
+  assert.deepEqual([...SHAPE_IDS].sort(), ['figure8', 'looped', 'ring', 'square', 'wave', 'zigzag']);
   for (const id of SHAPE_IDS) assert.ok(SHAPES[id].label && SHAPES[id].hint, id);
 });
 
@@ -75,4 +75,21 @@ test('lanePeriods keeps room for the swing at the end of a looped line', () => {
   assert.equal(lanePeriods({ shape: 'wave', length: 50, ...opts }), 8);
   assert.equal(lanePeriods({ shape: 'looped', length: 50, ...opts }), 7);
   assert.equal(lanePeriods({ shape: 'looped', length: 4, ...opts }), 0);
+});
+
+test('a ring sits on the line, alternately above and below, and the line carries on', () => {
+  const opts2 = { pitch: 8, size: 3 };
+  let up = 0, down = 0;
+  for (let s = 0; s < 40; s += 0.05) {
+    const { v } = shapeAt('ring', s, opts2);
+    if (v > 0.1) up++;
+    if (v < -0.1) down++;
+    assert.ok(Math.abs(v) <= 3 + 1e-9);
+  }
+  assert.ok(up > 0 && down > 0, 'rings on both sides');
+  const straight = shapeAt('ring', 2, opts2);
+  assert.equal(straight.v, 0);
+  assert.equal(straight.du, 0);
+  // the line is back on the centre at the end of every ring
+  for (let k = 1; k <= 4; k++) assert.ok(Math.abs(shapeAt('ring', k * 8, opts2).v) < 1e-9, `ring ${k} closes`);
 });

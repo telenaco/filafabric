@@ -2,7 +2,7 @@ import { generate } from '../engine/generate.js';
 import { generateSquiggle, SAMPLERS, createImageSampler, minCrossingAmplitude } from '../engine/squiggle.js';
 import { placeOutline, rotateRings, ringsAspect, unflattenRings } from '../engine/outline.js';
 import { createPreview, ROLES } from './preview.js';
-import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airStrandMm, fitAspect } from './controls.js';
+import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airStrandMm, fitAspect, pileLiftFactor } from './controls.js';
 import { SQ_RANGES, SQUIGGLE_DEFAULTS, describeSquiggle, sizeForAspect } from './squiggle-controls.js';
 import { buildVerdict, buildSquiggleVerdict, formatMinutes } from './verdict.js';
 import { stateToHash, hashToState, sanitizeState } from './share.js';
@@ -35,6 +35,7 @@ const SQ_SLIDERS = [
   { key: 'amplitude', label: 'Wave depth', help: 'How far each line swings to the side.', lo: 'Subtle', hi: 'Deep', unit: 'mm', edit: true },
   { key: 'wavelength', label: 'Wave length', help: 'Length of one full wave.', lo: 'Tight', hi: 'Stretched', unit: 'mm', edit: true },
 ];
+const PATTERN_SCALE = { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false };
 const PATTERNS = [
   { id: 'centerSpot', label: 'Centre spot' },
   { id: 'gradientX', label: 'Fade across' },
@@ -48,7 +49,8 @@ const PATTERNS = [
 /** The two designs' controls, wired to the same slider and size components. */
 const BINDINGS = {
   'loop-pile': {
-    sliders: LOOP_SLIDERS,
+    sliders: [...LOOP_SLIDERS, PATTERN_SCALE],
+    build: LOOP_SLIDERS,
     host: '#lp-sliders',
     get: (key) => state.primary[key],
     set: (key, value) => { state.primary[key] = value; },
@@ -380,7 +382,7 @@ function regenerate() {
       });
     } else {
       const [w, h] = sampleSize(state.primary);
-      result = generate(machine, material, toTextile(state.primary, state.advanced), { outline: placedOutline(w, h) });
+      result = generate(machine, material, toTextile(state.primary, state.advanced), { outline: placedOutline(w, h), liftAt: pileLiftFactor(state.primary) });
     }
     state.result = result;
     state.error = null;
@@ -1268,6 +1270,19 @@ function drawFieldThumb(canvas) {
   }
 }
 
+/** The grid of pattern fields and the room for the pattern-size slider, for design `id`'s setting `c.key`. */
+function patternPicker(id, c, patterns, titleId) {
+  const grid = el('div', { class: 'patterns', role: 'group', 'aria-labelledby': titleId });
+  for (const field of patterns) {
+    const btn = el('button', { type: 'button', class: 'pattern', 'data-choice': `${id}:${c.key}:${field}`, 'aria-pressed': 'false', title: field === 'none' ? 'Every loop the same' : FIELDS[field].hint },
+      el('canvas', { class: 'pattern-thumb', 'data-field': field, 'aria-hidden': 'true' }),
+      el('span', { text: field === 'none' ? 'Plain' : FIELDS[field].label }));
+    btn.addEventListener('click', () => { settingsOf(id)[c.key] = field; afterDesignChange(); });
+    grid.append(btn);
+  }
+  return [grid, el('div', { id: `${id}-pattern-scale`, class: 'pattern-scale' })];
+}
+
 function buildDesignPanel(mod) {
   const id = mod.id;
   const panel = el('div', { id: `panel-${id}`, class: 'panel', hidden: true },
@@ -1301,16 +1316,7 @@ function buildDesignPanel(mod) {
     } else if (c.kind === 'sliders') {
       panel.append(group(el('div', { id: `${id}-sliders`, class: 'controls' })));
     } else if (c.kind === 'pattern') {
-      const grid = el('div', { class: 'patterns', role: 'group', 'aria-labelledby': titleId });
-      for (const field of mod.patterns) {
-        const btn = el('button', { type: 'button', class: 'pattern', 'data-choice': `${id}:${c.key}:${field}`, 'aria-pressed': 'false', title: field === 'none' ? 'Every loop the same size' : FIELDS[field].hint },
-          el('canvas', { class: 'pattern-thumb', 'data-field': field, 'aria-hidden': 'true' }),
-          el('span', { text: field === 'none' ? 'Plain' : FIELDS[field].label }));
-        btn.addEventListener('click', () => { state.designs[id][c.key] = field; afterDesignChange(); });
-        grid.append(btn);
-      }
-      const scaleBox = el('div', { id: `${id}-pattern-scale`, class: 'pattern-scale' });
-      panel.append(group(c.hint ? el('p', { class: 'group-hint', text: c.hint }) : null, grid, scaleBox));
+      panel.append(group(c.hint ? el('p', { class: 'group-hint', text: c.hint }) : null, ...patternPicker(id, c, mod.patterns, titleId)));
     }
   });
   $('#settings-body').append(panel);
@@ -1329,8 +1335,8 @@ function drawFieldThumbs() {
 /** Press states for the presets, shape and pattern pickers; the pattern size shows only when a pattern is chosen. */
 function renderDesignChoices() {
   for (const mod of DESIGNS) {
-    if (mod.status !== 'ready' || mod.legacy) continue;
-    const s = state.designs[mod.id];
+    if (mod.status !== 'ready') continue;
+    const s = settingsOf(mod.id);
     for (const btn of $$(`[data-choice^="${mod.id}:"]`)) {
       const [, key, value] = btn.dataset.choice.split(':');
       btn.setAttribute('aria-pressed', String(String(s[key]) === value));
@@ -1338,7 +1344,7 @@ function renderDesignChoices() {
     const active = mod.presetMatch ? mod.presetMatch(s) : null;
     for (const btn of $$(`#${mod.id}-presets [data-preset]`)) btn.setAttribute('aria-pressed', String(btn.dataset.preset === active));
     const scale = $(`#${mod.id}-pattern-scale`);
-    if (scale) scale.hidden = s.pattern === 'none';
+    if (scale) scale.hidden = !s.pattern || s.pattern === 'none';
   }
 }
 
@@ -1647,6 +1653,11 @@ async function init() {
     buildSliders(id);
   }
   for (const mod of DESIGNS) if (mod.status === 'ready' && !mod.legacy) buildPatternScale(mod);
+  {
+    const [grid, scaleBox] = patternPicker('loop-pile', { key: 'pattern' }, ['none', ...FIELD_IDS], 'lp-pattern-title');
+    $('#lp-pattern').replaceChildren(grid, scaleBox);
+    scaleBox.replaceChildren(buildSlider('loop-pile', PATTERN_SCALE));
+  }
   drawFieldThumbs();
   buildAdvanced();
   buildSquiggleShapes();

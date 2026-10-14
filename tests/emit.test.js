@@ -30,3 +30,14 @@ test('a point class overrides the strand kind, and pauseBefore inserts M600 once
 test('strands with fewer than two points are skipped', () => {
   assert.equal(emitStrands([strand('a', 'base', [P(0, 0)])]).length, 0);
 });
+
+test('with a retraction, a long travel retracts first and primes at the next strand; a short one does not', () => {
+  const retraction = { length: 1, minTravel: 2 };
+  const m = emitStrands([strand('a', 'base', [P(0, 0), P(5, 0)]), strand('b', 'base', [P(0, 9), P(5, 9)]), strand('c', 'base', [P(5, 9.5), P(0, 9.5)])], { retraction });
+  assert.equal(m.filter((q) => q.retract === 'retract').length, 1, 'only the 9 mm travel retracts');
+  assert.equal(m.filter((q) => q.retract === 'unretract').length, 1);
+  const retractAt = m.findIndex((q) => q.retract === 'retract');
+  const unretractAt = m.findIndex((q) => q.retract === 'unretract');
+  assert.ok(retractAt < unretractAt && m[unretractAt].extrude && m[unretractAt].tag === 'b');
+  assert.equal(emitStrands([strand('a', 'base', [P(0, 0), P(5, 0)]), strand('b', 'base', [P(0, 9), P(5, 9)])]).filter((q) => q.retract).length, 0, 'off by default');
+});

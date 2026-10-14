@@ -47,10 +47,11 @@ export function generateCoilTextile({
   lift = 0.25,
   sizeAt = null,
   boundary = null,
+  rowPitch: rowPitchOverride = null,
 }) {
   const warnings = [];
-  const rowPitch = coilRowPitch(size, rowOverlap, strandWidth);
-  const makesLoops = shape === 'looped' || shape === 'figure8';
+  const rowPitch = rowPitchOverride ?? coilRowPitch(size, rowOverlap, strandWidth);
+  const makesLoops = shape === 'looped' || shape === 'figure8' || shape === 'ring';
   if (shape === 'looped' && loopsClose(pitch, size)) {
     warnings.push('The loops close up: this size is too small for this spacing, so the line is only wavy. Make the loops larger or the spacing smaller.');
   }
@@ -170,6 +171,7 @@ export function generateCoil(machine, material, params = {}) {
     size: params.size ?? 3,
     pitch: params.pitch ?? 5,
     rowOverlap: params.rowOverlap ?? 0.25,
+    rowPitch: params.rowPitch ?? null,
     layerHeight: cfg.t.layer_height,
     strandWidth: cfg.t.extrusion_width,
     lift: params.lift ?? 0.25,

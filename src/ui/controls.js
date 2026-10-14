@@ -2,6 +2,7 @@
 // Pure functions: no DOM, so they are tested in Node like the engine.
 import { DEFAULT_TEXTILE } from '../engine/params.js';
 import { airStrandDiameter } from '../engine/extrusion.js';
+import { FIELD_IDS, createField } from '../engine/fields.js';
 
 export const RANGES = Object.freeze({
   pileHeight: { min: 1, max: 6, step: 0.5 },
@@ -12,6 +13,7 @@ export const RANGES = Object.freeze({
   airFlow: { min: 80, max: 200, step: 5 },
   customWidth: { min: 10, max: 240, step: 5 },
   customHeight: { min: 10, max: 200, step: 5 },
+  patternScale: { min: 0.5, max: 2, step: 0.25 },
 });
 
 export const PRIMARY_DEFAULTS = Object.freeze({
@@ -26,6 +28,8 @@ export const PRIMARY_DEFAULTS = Object.freeze({
   variation: 0, // 0 = off, 100 = full amplitudes
   airFlow: 100, // % flow for the strands in the air (rising, falling, free-hanging)
   edgeLoops: true, // true: loops on every base line, the last rows reach past the back edge; false: keep inside
+  pattern: 'none', // a pattern field that raises some loops and lowers others ('none': every loop the same height)
+  patternScale: 1, // stretches the pattern across the fabric
 });
 
 export const SWATCH_SIZES = Object.freeze({ test: [30, 30], mid: [50, 50], full: [100, 100] });
@@ -95,6 +99,7 @@ export function sanitizePrimary(raw) {
   if (SWATCHES.includes(raw.swatch)) out.swatch = raw.swatch;
   if (typeof raw.roomy === 'boolean') out.roomy = raw.roomy;
   if (typeof raw.edgeLoops === 'boolean') out.edgeLoops = raw.edgeLoops;
+  if (raw.pattern === 'none' || FIELD_IDS.includes(raw.pattern)) out.pattern = raw.pattern;
   return out;
 }
 
@@ -117,7 +122,18 @@ export function describePrimary(primary) {
     airFlow: primary.airFlow === 100 ? 'Standard flow' : `${primary.airFlow > 100 ? '+' : '−'}${Math.abs(primary.airFlow - 100)}% flow`,
     roomy: primary.roomy ? '1.5 mm at the feet' : '0.6 mm at the feet',
     edgeLoops: primary.edgeLoops ? `overhangs ${trim(15 * primary.loopSize)} mm` : 'fits inside',
+    patternScale: `${r3(primary.patternScale)}×`,
   };
+}
+
+/**
+ * The pile-height factor a pattern gives each loop: 0.3 where the field is 0 and 1 where it is 1, so no loop
+ * vanishes. Null when no pattern is chosen (every loop keeps the pile height).
+ */
+export function pileLiftFactor(primary) {
+  if (!primary.pattern || primary.pattern === 'none') return null;
+  const field = createField(primary.pattern, { scale: primary.patternScale });
+  return (x, y) => 0.3 + 0.7 * field(x, y);
 }
 
 /**

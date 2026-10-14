@@ -18,14 +18,14 @@ function conflicts(candidate, existing, gap) {
   return false;
 }
 
-function fiberParams(t, jitter) {
+function fiberParams(t, jitter, liftScale = 1) {
   const width = Math.max(0.5, t.loop_width + jitter.width);
   const length = Math.max(t.loop_length + jitter.length, width / 2 + 0.5);
   return {
     shape: t.fiber_shape,
     width,
     length,
-    lift: Math.max(0, t.loop_z_lift + jitter.lift),
+    lift: Math.max(0, t.loop_z_lift * liftScale + jitter.lift),
     dwell: Math.min(t.anchor_dwell, 0.4 * length),
     profile: t.z_profile,
     resolution: t.curve_resolution,
@@ -36,8 +36,11 @@ function fiberParams(t, jitter) {
  * Places fibers on the boundary. Rows have their feet on base lines; alternate rows are staggered;
  * loops that would put a leg closer than `leg_gap` to another leg are nudged sideways.
  * Rows are returned far-to-near ("shingle order") so the nozzle never dives under a raised strand.
+ *
+ * `liftAt(x, y)` (mm, the middle of the loop) gives a 0..1+ factor on the pile height, so a pattern field can raise
+ * some loops and lower others.
  */
-export function tile(cfg, boundary, rng, { rows: rowYs = null } = {}) {
+export function tile(cfg, boundary, rng, { rows: rowYs = null, liftAt = null } = {}) {
   const { t, derived } = cfg;
   const bbox = boundary.bbox();
   const half = t.loop_width / 2;
@@ -59,7 +62,7 @@ export function tile(cfg, boundary, rng, { rows: rowYs = null } = {}) {
     ]);
   }
 
-  const template = t.random_enabled ? null : sampleFiber(fiberParams(t, NO_JITTER));
+  const template = t.random_enabled || liftAt ? null : sampleFiber(fiberParams(t, NO_JITTER));
   const rows = [];
   const counts = { candidates: 0, kept: 0, dropped: 0, unresolvedLegs: 0 };
 
@@ -98,7 +101,8 @@ export function tile(cfg, boundary, rng, { rows: rowYs = null } = {}) {
         dx += rng.symmetric(t.amp_spacing);
       }
 
-      const fp = fiberParams(t, jitter);
+      const liftScale = liftAt ? liftAt(nominalX + shift, footY + t.loop_length / 2) : 1;
+      const fp = fiberParams(t, jitter, liftScale);
       const fiber = template ?? sampleFiber(fp);
       const cx = nominalX + shift + dx;
       const cy = footY + dy;

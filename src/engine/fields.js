@@ -120,6 +120,9 @@ const SPATIAL = {
     return clamp01(n);
   },
 
+  /** Parallel ridges across the fabric: a soft sine in x only, for pleats and ribs. */
+  stripes: ({ cell }) => (x) => 0.5 + 0.5 * Math.sin((2 * Math.PI * x) / cell),
+
   /** Staggered round bumps, the sum of the nearest few so there is no seam between cells. */
   bumps: ({ cell }) => {
     const sigma = 0.3 * cell;
@@ -155,6 +158,7 @@ export const FIELDS = Object.freeze({
   lightningBolts: { id: 'lightningBolts', label: 'Lightning bolts', hint: 'Sparse jagged streaks' },
   noise: { id: 'noise', label: 'Soft noise', hint: 'Organic, uneven patches' },
   bumps: { id: 'bumps', label: 'Bumps', hint: 'Staggered round bobbles' },
+  stripes: { id: 'stripes', label: 'Stripes', hint: 'Parallel ridges, for pleats and ribs' },
 });
 
 export const FIELD_IDS = Object.freeze(Object.keys(FIELDS));

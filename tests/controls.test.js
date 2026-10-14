@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   PRIMARY_DEFAULTS, RANGES, ADVANCED_DEFAULTS, PRIMARY_KEYS, sampleSize, toTextile, sanitizePrimary, describePrimary, overlapPercent,
-  airStrandMm, fitAspect,
+  airStrandMm, fitAspect, pileLiftFactor,
 } from '../src/ui/controls.js';
 import { validateTextile, DEFAULT_TEXTILE } from '../src/engine/params.js';
 
@@ -161,4 +161,16 @@ test('fitAspect keeps the width and sets the height to the shape, within the ran
   assert.deepEqual(fitAspect(60, 0.5, ranges), [60, 120]);
   assert.deepEqual(fitAspect(150, 0.5, ranges), [100, 200], 'too tall: the height caps and the width follows');
   assert.deepEqual(fitAspect(100, 20, ranges), [200, 10], 'too flat: the height floors and the width follows');
+});
+
+test('a pattern raises some loops and lowers others, and "none" leaves every loop alone', () => {
+  assert.equal(pileLiftFactor(PRIMARY_DEFAULTS), null);
+  const f = pileLiftFactor({ ...PRIMARY_DEFAULTS, pattern: 'diamondGrid' });
+  let lo = Infinity, hi = -Infinity;
+  for (let y = 0; y <= 60; y += 1.7) for (let x = 0; x <= 60; x += 1.7) { const v = f(x, y); lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  assert.ok(lo >= 0.3 - 1e-9 && hi <= 1 + 1e-9 && hi - lo > 0.3);
+  assert.equal(sanitizePrimary({ pattern: 'oceanWaves' }).pattern, 'oceanWaves');
+  assert.equal(sanitizePrimary({ pattern: 'nope' }).pattern, 'none');
+  assert.equal(sanitizePrimary({ patternScale: 99 }).patternScale, RANGES.patternScale.max);
+  assert.equal(describePrimary({ ...PRIMARY_DEFAULTS, patternScale: 1.5 }).patternScale, '1.5×');
 });

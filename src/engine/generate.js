@@ -13,7 +13,7 @@ import { writeGcode, bedFitErrors, PreflightError } from './gcode.js';
  * `options.outline`: rings (mm, already fitted inside sample_width x sample_height) to fill instead of the rectangle.
  * Throws ConfigError (bad parameters) or PreflightError (cannot be printed on this machine).
  */
-export function generate(machine, material, textile = {}, { outline = null } = {}) {
+export function generate(machine, material, textile = {}, { outline = null, liftAt = null } = {}) {
   const cfg = resolveConfig(machine, material, textile);
   const fit = bedFitErrors(cfg);
   if (fit.length > 0) throw new PreflightError(fit);
@@ -38,7 +38,7 @@ export function generate(machine, material, textile = {}, { outline = null } = {
   }
 
   const tiled = t.include_loops
-    ? tile(cfg, boundary, createRng(t.random_seed), { rows })
+    ? tile(cfg, boundary, createRng(t.random_seed), { rows, liftAt })
     : { placements: [], warnings: [], counts: { candidates: 0, kept: 0, dropped: 0, unresolvedLegs: 0 } };
 
   const planned = plan(cfg, base, tiled.placements, boundary);
