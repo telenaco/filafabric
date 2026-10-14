@@ -146,6 +146,24 @@ already exists in part:
 | 11. Dip weave | **Weave** is planned (warp arches where the weft passes beneath) | Same idea; the research adds the nozzle-clearance limit (warp gap at least 2.5–3 mm) |
 | Crossing validator | `src/engine/crossings.js` resolves crossings (later strands lift over earlier ones) | A report of crossings per cm², the longest uncrossed strand, the smallest crossing angle and the lift count |
 
+### Built since (later on 2026-10-14)
+
+Every card below states the rule that makes its second layer cross the first, and `tests/` checks it with the crossing
+report (crossings between layers, the usual crossing angle, the longest uncrossed stretch).
+
+| Card | From the shortlist | The layer-2 rule |
+|---|---|---|
+| **Voronoi lace**, **Turing stripes**, **Meander**, **Truchet tiles**, **Ring mail**, **Spiderweb**, **Harmonograph**, **Auxetic mesh** | 5, 12, 8, 10, 7, 6, 9, 1 | As in the recipes above |
+| **Crosshatch: isogrid and kagome** | 3 | The three families lie on one lattice: n(0°)·p − n(60°)·p + n(120°)·p = 0, so three lines meet only where their offsets add up to a whole number of spacings. Offsets (0, ½, 0) give the kagome, where no node stacks three strands |
+| **Flow lines** | 4 | Jobard–Lefer evenly spaced streamlines of a field and of the field turned 90°. Points with no direction (a whirl's eye, a saddle) are found by their index (the doubled angle's turn round each grid cell) and left open. A pattern turns the lines by an angle that is a smooth function, so it can have no such points at all |
+| **Conformal mesh** | 4 | The real and imaginary level lines of an analytic function cross at exactly 90° (Cauchy–Riemann). z + k²/z bends a grid round a hole, log((z − k)/(z + k)) gives a magnet's field, (a + ib)·log z two families of spirals that close after one turn. Lines are cut where they would crowd closer than 1.2 mm, and each hole gets a hem |
+| **Sunflower** | (new) | Vogel's phyllotaxis: a seed's nearest neighbours lie n ± F apart for consecutive Fibonacci numbers F, which turn opposite ways; the parity of F's index picks the layer |
+| **Rosette** | 1, in polar form | The parallel squiggle's rule wrapped round a centre: a whole number of lobes per turn keeps every turn in phase, and a swing of at least spacing/4 + half a strand guarantees the crossings |
+| **Spirograph** | 2 and 9 | Trochoid rings p(t) = ρe^{it} + Ae^{−i(n−1)t}: one layer's rings never touch (A < s/2 − w), the other's lie s/2 further out and reach both neighbours (A ≥ s/4 + w/2) |
+| **Bubbles** | 7 | A saturated packing of mixed circles; the circle orthogonal to three bubbles is centred on their radical centre with radius √power, so a ring in every gap meets each of its three bubbles. The tour of a tree of nearly touching circles is one closed strand |
+| **Parquet** | 3, in blocks | In every block one layer runs along and the other across; neighbouring blocks are turned 90°. The herringbone is the staircase H_k = [k, k+n] × [k, k+1], V_k = [k+n, k+n+1] × [k+1−n, k+1], repeated every (−n, n) |
+| **Star lattice** | (new) | Hankin's polygons-in-contact: straps run straight through edge midpoints and turn where rays from neighbouring edges meet. The strap crossing graph is coloured greedily; squares need two layers, hexagons three, octagons and squares four, and no strap crosses one of its own layer |
+
 ## Other routes noted
 
 - **DefeXtiles** (Forman et al., UIST 2020): controlled under-extrusion turns ordinary paths into tulle-like "glob and
