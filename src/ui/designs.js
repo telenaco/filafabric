@@ -7,6 +7,7 @@
 //   legacy    the loop pile and squiggle keep their hand-written panels and their own state keys
 //             (`primary`, `squiggle`); newer designs keep their state under `designs[id]`
 //   planned   a placeholder tile: visible, not selectable
+//   preset    a tile that opens another design with some settings changed (`opens: { design, patch }`)
 //
 // Newer designs also describe themselves so the studio can build their panel and run them without per-design code:
 //   about, ranges, size(state) / setSize(state, w, h), presets, presetMatch(state), controls (see coil below),
@@ -43,6 +44,14 @@ export const DESIGNS = [
     roles: { base: 'Layer 1', anchored: 'Layer 2' },
     defaults: () => ({ ...SQUIGGLE_DEFAULTS }),
     sanitize: sanitizeSquiggle,
+  },
+  {
+    id: 'zigzag-mesh',
+    name: 'Zigzag mesh',
+    blurb: 'Two anti-phase layers that open into diamonds',
+    file: 'squiggle',
+    status: 'preset',
+    opens: { design: 'squiggle', patch: { shape: 'zigzag', mode: 'parallel' } },
   },
   {
     id: 'coil',
@@ -89,6 +98,12 @@ export const DESIGNS = [
     figure: (result) => ({ value: result.stats.crossings.toLocaleString('en'), unit: '', label: 'Crossings' }),
     summary: (result) => `a coil of ${result.stats.loops} loops`,
   },
+  // placeholders: shown in the column so the whole library is visible; each becomes a design in a later phase
+  { id: 'weave', name: 'Weave', blurb: 'Over and under, plain to satin', file: 'weave', status: 'planned' },
+  { id: 'spiral', name: 'Spiral panel', blurb: 'One strand, no hops, follows an outline', file: 'spiral', status: 'planned' },
+  { id: 'boucle', name: 'Bouclé & picots', blurb: 'Flat rings on a line, for edges', file: 'boucle', status: 'planned' },
+  { id: 'relief', name: 'Relief', blurb: 'Bobbles, seersucker and pleats', file: 'relief', status: 'planned' },
+  { id: 'fringe', name: 'Fringe', blurb: 'Hanging loops with a free end', file: 'fringe', status: 'planned' },
 ];
 
 const BY_ID = new Map(DESIGNS.map((d) => [d.id, d]));

@@ -67,9 +67,11 @@ coherent noise, bell bumps, gradients, uniform. Interface: `FIELDS[id] = { id, l
 | wave | `v = A sin(ks)` | today |
 | **looped** | prolate trochoid `u = (P/2π)θ − R sinθ`, `v = −R cosθ` | loops exist when `R > P/2π`; overlap read-out `1 − P/(2R)` |
 | zigzag | triangle wave with rounded apex | auxetic when layers are anti-phase |
-| helix | trochoid with small `R` | Blender HELIX |
 | figure-8 | `u = R sin 2θ`, `v = R sinθ` | amplitude below lane spacing |
 | rounded square | superellipse wave | corner radius ≥ 1 strand |
+
+There is no separate helix: a helix seen from above is a looped line, and the loop spacing and size give the tight
+version. A two-strand braid (Blender's DOUBLE_HELIX) is a later card.
 
 A field modulates the loop radius (40 to 100 % of its maximum) while the spacing `P` stays fixed, so loops stay in step.
 
@@ -82,7 +84,8 @@ Input: strands in print order, each a polyline at its base Z. Output: the same s
    which is on top. Default `later-over`: the later pass lifts by `lift` (default 0.25 mm).
 3. A `earlier-over` result (weave) makes the **earlier** pass arch up by `arch` (default 1.0 mm) over a span of
    `archSpan` (default 3 mm) so the later pass runs beneath it at bed level.
-4. Bumps are raised cosines of half-width `ramp` (default 1.2 mm); overlapping bumps take the maximum.
+4. Bumps are raised cosines of half-width `ramp` (default 1.6 mm, which keeps a 0.25 mm lift under 17°; an arch uses
+   `archRamp`, default 3 mm); overlapping bumps take the maximum.
 5. Reports `crossings`, `maxLift`, `maxSlope` for the verdict and flags any slope above the limit.
 
 Lifted samples are class `supported` (legend role "Crossing over"). Strand order is unchanged: no extra hops.

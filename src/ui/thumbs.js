@@ -18,7 +18,79 @@ const coilRows = [20, 38, 56, 74]
   .map((y, k) => `<path d="${lanePath('looped', 10, y, 140, 22, 11)}" stroke="var(--role-${k % 2 ? 'anchored' : 'base'})"/>`)
   .join('');
 
+const R = 'var(--role-base)';
+const A = 'var(--role-anchored)';
+const svgTile = (body, extra = '') => `<svg class="design-thumb" viewBox="0 0 160 96" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${extra}>${body}</svg>`;
+const line = (x0, y0, x1, y1, stroke) => `<path d="M${x0} ${y0}L${x1} ${y1}" stroke="${stroke}"/>`;
+
+/** Warp (vertical) and weft (horizontal) with gaps where one passes under the other; over(i, j) is true when the weft is on top. */
+function weaveTile(over) {
+  const X = (i) => 20 + i * 20, Y = (j) => 14 + j * 17, gap = 4;
+  let body = '';
+  for (let i = 0; i < 7; i++) {
+    let from = 6;
+    for (let j = 0; j < 5; j++) if (over(i, j)) { body += line(X(i), from, X(i), Y(j) - gap, R); from = Y(j) + gap; }
+    body += line(X(i), from, X(i), 90, R);
+  }
+  for (let j = 0; j < 5; j++) {
+    let from = 8;
+    for (let i = 0; i < 7; i++) if (!over(i, j)) { body += line(from, Y(j), X(i) - gap, Y(j), A); from = X(i) + gap; }
+    body += line(from, Y(j), 152, Y(j), A);
+  }
+  return svgTile(body);
+}
+
+function spiralTile() {
+  let x0 = 10, y0 = 8, x1 = 150, y1 = 88;
+  const s = 9;
+  const pts = [[x0, y0]];
+  for (;;) {
+    pts.push([x1, y0]); y0 += s; if (y0 >= y1) break;
+    pts.push([x1, y1]); x1 -= s; if (x1 <= x0) break;
+    pts.push([x0, y1]); y1 -= s; if (y1 <= y0) break;
+    pts.push([x0, y0]); x0 += s; if (x0 >= x1) break;
+    pts.push([x0, y0]);
+  }
+  return svgTile(`<path d="${pts.map((p, i) => `${i ? 'L' : 'M'}${p[0]} ${p[1]}`).join('')}" stroke="${R}"/>`);
+}
+
+function boucleTile() {
+  let body = line(8, 48, 152, 48, R);
+  for (let k = 0; k < 6; k++) body += `<circle cx="${22 + k * 24}" cy="${48 + (k % 2 ? 11 : -11)}" r="11" stroke="${A}"/>`;
+  return svgTile(body);
+}
+
+function reliefTile() {
+  const bumps = [30, 64, 98, 132];
+  let d = '';
+  for (let x = 8; x <= 152; x += 2) {
+    const y = 74 - bumps.reduce((m, c) => m + 30 * Math.exp(-((x - c) ** 2) / 110), 0);
+    d += `${d ? 'L' : 'M'}${x} ${y.toFixed(1)}`;
+  }
+  return svgTile(`<path d="${d}" stroke="var(--role-free)"/>` + line(8, 78, 152, 78, R));
+}
+
+function fringeTile() {
+  let body = line(8, 26, 152, 26, R);
+  for (let k = 0; k < 8; k++) {
+    const x = 18 + k * 18, s = k % 2 ? -1 : 1;
+    body += `<path d="M${x} 26C${x} 46 ${x + 9 * s} 58 ${x + 4 * s} 82" stroke="var(--role-free)"/>`;
+  }
+  return svgTile(body);
+}
+
+function zigzagTile() {
+  const row = (y, shape, stroke) => `<path d="${lanePath(shape, 10, y, 140, 20, 9)}" stroke="${stroke}"/>`;
+  return svgTile([22, 46, 70].map((y) => row(y, 'zigzag', R)).join('') + [34, 58, 82].map((y) => row(y, 'zigzag', A)).join(''));
+}
+
 export const THUMBS = {
+  weave: weaveTile((i, j) => (i + j) % 2 === 0),
+  spiral: spiralTile(),
+  boucle: boucleTile(),
+  relief: reliefTile(),
+  fringe: fringeTile(),
+  'zigzag-mesh': zigzagTile(),
   coil: `<svg class="design-thumb" viewBox="0 0 160 96" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${coilRows}</svg>`,
   'loop-pile': `<svg class="design-thumb" viewBox="0 0 160 96" fill="none" aria-hidden="true">
   <g stroke="var(--role-base)" stroke-width="1.4" opacity="0.65"><path d="M8 88H152M8 76H152M8 64H152"/></g>

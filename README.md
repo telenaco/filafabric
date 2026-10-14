@@ -4,8 +4,9 @@ A browser-based toolbox that generates direct G-code for experimental non-planar
 base plus a dense pile of raised, anchored 3D loops. First target: Prusa MK3S, Filaflex Foamy 95, a 100 × 100 mm
 sample. Machine and material profiles are data files, so more machines can be added from G-code you share.
 
-**Status:** the generator and the studio are built for the Prusa MK3S, with two designs (Loop pile, Squiggle &
-Gyroid) and 164 automated tests passing.
+**Status:** the generator and the studio are built for the Prusa MK3S, with three structures (Loop pile, Squiggle &
+Gyroid with a strand-shape and pattern library, Coil) and the Zigzag mesh preset, five more shown as placeholders,
+and the automated tests passing. See `docs/fabric-structures.md` for the library.
 The first physical print has not been done yet; the Foamy material profile stays unverified until then.
 
 **Live site:** https://filafabric.pages.dev (Cloudflare Pages publishes every push to `main`; nothing to install).
@@ -71,6 +72,9 @@ Use the count to compare layouts, not as pass or fail.
 | Path | What |
 |---|---|
 | `docs/original-brief.md` | The original brief (verbatim) and the decisions made while brainstorming |
+| `docs/fabric-structures.md` | The structure library: what each card is, what is on the way, how to keep a swatch library |
+| `docs/blender-ceramics-review-2026-10-14.md` | Which Blender ceramics designs transfer to fabric, and how |
+| `docs/superpowers/specs/2026-10-14-fabric-design-library-design.md`, `docs/superpowers/plans/2026-10-14-fabric-design-library.md` | The structure-library spec and phase 0 to 2 plan |
 | `docs/product-direction-2026-10-14.md` | Where the UI is heading (Plotcaster-style gallery + preconfigured printers) and name candidates |
 | `docs/ux-round-2-2026-10-14.md` | Second UX review: what was still in the way, the reference tools, and what changed |
 | `docs/superpowers/specs/2026-10-14-textile-gcode-generator-design.md` | The v1 design spec (architecture, data model, engine behaviour, tests, first-print plan) |
@@ -97,6 +101,8 @@ Code:
 2. G-code → machine-profile extractor (from G-code you share)
 3. SVG outline boundary with rotate (done, both designs)
 4. Interwoven base + loops as one continuous extrusion path
+   - Structure library, phase 0 to 2 done (registry, pattern/shape/crossing libraries, Coil). Next: Weave, then
+     Spiral panel, Bouclé & picots, Relief, Fringe, and the pattern as pile height on the Loop pile
 5. Bambu Lab A1 mini support (`.gcode.3mf` packaging, Bambu start/end macros)
 6. Product shell: design gallery on the left, settings on the right, preconfigured printer bundles, shareable
    links (see `docs/product-direction-2026-10-14.md`, which also lists candidate names)

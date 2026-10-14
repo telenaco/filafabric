@@ -14,7 +14,13 @@ test('every module is complete', () => {
     assert.equal(ids.has(d.id), false, `duplicate ${d.id}`);
     ids.add(d.id);
     for (const k of ['name', 'blurb', 'file']) assert.ok(d[k], `${d.id}.${k}`);
-    assert.ok(['ready', 'planned'].includes(d.status), d.id);
+    assert.ok(['ready', 'planned', 'preset'].includes(d.status), d.id);
+    if (d.status === 'preset') {
+      assert.ok(isReady(d.opens.design), `${d.id} opens a design that exists`);
+      const target = designById(d.opens.design);
+      const merged = target.sanitize({ ...target.defaults(), ...d.opens.patch });
+      for (const [k, v] of Object.entries(d.opens.patch)) assert.equal(merged[k], v, `${d.id}.${k} survives sanitising`);
+    }
     if (d.status === 'ready') {
       assert.equal(typeof d.defaults, 'function', `${d.id}.defaults`);
       assert.equal(typeof d.sanitize, 'function', `${d.id}.sanitize`);
@@ -29,9 +35,14 @@ test('defaults survive their own sanitiser', () => {
   }
 });
 
-test('planned designs are not selectable, unknown ids are not ready', () => {
+test('planned and preset tiles are not loadable designs, unknown ids are not ready', () => {
   assert.equal(isReady('loop-pile'), true);
   assert.equal(isReady('nope'), false);
-  for (const d of DESIGNS.filter((x) => x.status === 'planned')) assert.equal(isReady(d.id), false, d.id);
+  for (const d of DESIGNS.filter((x) => x.status !== 'ready')) assert.equal(isReady(d.id), false, d.id);
   assert.equal(designById('nope'), undefined);
+});
+
+test('the library shows every structure on the way', () => {
+  const planned = DESIGNS.filter((d) => d.status === 'planned').map((d) => d.id);
+  assert.deepEqual(planned, ['weave', 'spiral', 'boucle', 'relief', 'fringe']);
 });

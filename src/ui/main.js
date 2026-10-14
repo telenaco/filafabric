@@ -10,6 +10,7 @@ import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './pa
 import { readSvgOutline, drawOutlineThumb } from './svg-outline.js';
 import { DESIGNS, designById, isReady } from './designs.js';
 import { THUMBS, shapeThumb } from './thumbs.js';
+import { swatchCode } from './swatch.js';
 import { FIELDS, FIELD_IDS, createField } from '../engine/fields.js';
 import { SHAPES, SHAPE_IDS } from '../engine/shapes.js';
 
@@ -538,6 +539,7 @@ function renderFigures() {
     const item = (k, v) => el('div', {}, el('div', { class: 'k', text: k }), el('div', { class: 'v', text: v }));
     d.replaceChildren(
       item('Swatch', `${t.sample_width} × ${t.sample_height} mm`),
+      item('Swatch code', currentSwatch()),
       item('Filament length', `${Math.round(stats.filamentMm).toLocaleString('en')} mm`),
       item('Strands', String(stats.strands)),
       item('Nozzle lifts', String(stats.hops)),
@@ -685,6 +687,7 @@ function render() {
   renderSliders();
   renderSquiggleChoices();
   renderDesignChoices();
+  renderTilePressed();
   renderAdvancedSummary();
   renderLegend();
 }
@@ -1116,21 +1119,87 @@ function updateDialogNote() {
 function renderTiles() {
   const tiles = DESIGNS.map((d) => {
     const ready = d.status === 'ready';
+    const planned = d.status === 'planned';
     const tile = el('button', {
       type: 'button',
-      class: ready ? 'design-tile' : 'design-tile planned',
+      class: planned ? 'design-tile planned' : 'design-tile',
       'data-design': ready ? d.id : false,
-      'data-planned': ready ? false : d.id,
-      'aria-pressed': ready ? String(d.id === state.design) : false,
-      'aria-disabled': ready ? false : 'true',
-      disabled: !ready,
-      title: ready ? false : `${d.name} is coming soon`,
+      'data-preset-tile': d.status === 'preset' ? d.id : false,
+      'data-planned': planned ? d.id : false,
+      'aria-pressed': planned ? false : 'false',
+      'aria-disabled': planned ? 'true' : false,
+      disabled: planned,
+      title: planned ? `${d.name} is coming soon` : false,
     });
-    tile.innerHTML = `${THUMBS[d.id] ?? ''}<span class="design-text"><span class="design-name">${d.name}${ready ? '' : '<span class="soon">Soon</span>'}</span><span class="design-sub">${d.blurb}</span></span>`;
+    tile.innerHTML = `${THUMBS[d.id] ?? ''}<span class="design-text"><span class="design-name">${d.name}${planned ? '<span class="soon">Soon</span>' : ''}</span><span class="design-sub">${d.blurb}</span></span>`;
     if (ready) tile.addEventListener('click', () => setDesign(d.id));
+    if (d.status === 'preset') tile.addEventListener('click', () => openPresetTile(d));
     return tile;
   });
   $('#design-list').replaceChildren(...tiles);
+  renderTilePressed();
+}
+
+/** The settings object a design keeps its state in (the two older designs keep theirs at the top level). */
+function settingsOf(id) {
+  if (id === 'loop-pile') return state.primary;
+  if (id === 'squiggle') return state.squiggle;
+  return state.designs[id];
+}
+
+/** A preset tile opens another design with some settings changed, for example the zigzag mesh on Squiggle & Gyroid. */
+function openPresetTile(d) {
+  const { design, patch } = d.opens;
+  Object.assign(settingsOf(design), patch);
+  if (state.design === design) {
+    showDesign();
+    syncControls();
+    schedule();
+    commit();
+  } else {
+    setDesign(design);
+    syncControls();
+  }
+}
+
+function renderTilePressed() {
+  for (const d of DESIGNS) {
+    if (d.status === 'ready') {
+      for (const tile of $$(`[data-design="${d.id}"]`)) {
+        // a preset tile of this design takes the highlight when its settings are the ones in use
+        const claimed = DESIGNS.some((p) => p.status === 'preset' && p.opens.design === d.id && matchesPreset(p));
+        tile.setAttribute('aria-pressed', String(d.id === state.design && !claimed));
+      }
+    } else if (d.status === 'preset') {
+      for (const tile of $$(`[data-preset-tile="${d.id}"]`)) tile.setAttribute('aria-pressed', String(matchesPreset(d)));
+    }
+  }
+}
+
+function matchesPreset(d) {
+  if (state.design !== d.opens.design) return false;
+  const own = settingsOf(d.opens.design);
+  return Object.entries(d.opens.patch).every(([k, v]) => own[k] === v);
+}
+
+/** The code that names this swatch: design, preset, size and a fingerprint of every setting. */
+function currentSwatch() {
+  const mod = designById(state.design);
+  let settings, size, preset = null;
+  if (!mod.legacy) {
+    settings = state.designs[mod.id];
+    size = mod.size(settings);
+    preset = mod.presetMatch ? mod.presetMatch(settings) : null;
+  } else if (mod.id === 'squiggle') {
+    settings = state.squiggle;
+    size = [settings.width, settings.height];
+    if (JSON.stringify(settings) === JSON.stringify(mod.defaults())) preset = 'default';
+  } else {
+    settings = { primary: state.primary, advanced: state.advanced };
+    size = sampleSize(state.primary);
+    if (JSON.stringify(settings) === JSON.stringify({ primary: mod.defaults(), advanced: {} })) preset = 'default';
+  }
+  return swatchCode(mod.file, settings, { size, preset, outline: state.outline });
 }
 
 function resetRoles() {
@@ -1139,7 +1208,7 @@ function resetRoles() {
 }
 
 function showDesign() {
-  for (const tile of $$('[data-design]')) tile.setAttribute('aria-pressed', String(tile.dataset.design === state.design));
+  renderTilePressed();
   for (const d of DESIGNS) {
     const panel = $(`#panel-${d.id}`);
     if (panel) panel.hidden = d.id !== state.design;
@@ -1376,9 +1445,11 @@ function download(name, blob) {
 
 function exportGcode() {
   if (!state.result || state.error) return;
-  const t = state.result.cfg.t;
-  const name = `${slug(state.docName)}_${designById(state.design).file}_${t.sample_width}x${t.sample_height}_${state.material}.gcode`;
-  download(name, new Blob([state.result.gcode], { type: 'text/plain' }));
+  const code = currentSwatch();
+  const name = `${slug(state.docName)}_${code}_${state.material}.gcode`;
+  // name the swatch inside the file too, so a printed sample can be matched to its settings from the G-code alone
+  const text = state.result.gcode.replace('; Textile G-code generator v1\n', (head) => `${head}; swatch ${code}\n; name ${state.docName.replace(/[\r\n]+/g, ' ')}\n`);
+  download(name, new Blob([text], { type: 'text/plain' }));
   toast(`Saved ${name}`);
 }
 
