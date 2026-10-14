@@ -47,6 +47,26 @@ export function shapeAt(shape, s, { pitch, size }) {
 /** Whole periods that fit along a lane. */
 export const loopCount = (length, pitch) => Math.max(0, Math.floor(length / pitch + 1e-9));
 
+/** How far a shape swings back and forward along the lane within one period: { lo <= 0 <= hi }. */
+function alongExtent(shape, pitch, size) {
+  let lo = 0, hi = 0;
+  for (let k = 0; k <= 120; k++) {
+    const { du } = shapeAt(shape, (k * pitch) / 120, { pitch, size });
+    if (du < lo) lo = du;
+    if (du > hi) hi = du;
+  }
+  return { lo, hi };
+}
+
+/**
+ * Whole periods that fit along a lane of `length` mm with the strand kept inside it: a looped line swings
+ * forward by up to twice its size at the end of the last loop, so that room is kept free.
+ */
+export function lanePeriods({ shape, length, pitch, size }) {
+  const { lo, hi } = alongExtent(shape, pitch, size);
+  return Math.max(0, Math.floor((length - hi + lo) / pitch + 1e-9));
+}
+
 /** A looped line needs `size > pitch / 2π`; at or below it the strand is only a wavy line. */
 export const loopsClose = (pitch, size) => size <= pitch / (2 * Math.PI);
 
@@ -66,12 +86,13 @@ function arcRate(shape, pitch, size) {
 }
 
 /**
- * Points along one lane as { u, v }: u from 0 to `length`, v the offset from the centre line. Whole periods are
- * centred with a straight lead-in and lead-out, so the strand starts and ends on the centre line. `sizeAt(u)` gives
+ * Points along one lane as { u, v }: u within 0..`length`, v the offset from the centre line. Whole periods are
+ * centred with a straight lead-in and lead-out, so the strand starts and ends on the centre line and never leaves
+ * the lane. `sizeAt(u)` gives
  * a 0..1 factor on the size along the lane (a pattern field). Consecutive points are at most `step` mm apart.
  */
 export function lanePoints({ shape, length, pitch, size, sizeAt = null, step = 0.4 }) {
-  const periods = loopCount(length, pitch);
+  const periods = lanePeriods({ shape, length, pitch, size });
   const pts = [{ u: 0, v: 0 }];
   const straight = (from, to) => {
     const n = Math.max(1, Math.ceil((to - from) / step));
@@ -82,7 +103,8 @@ export function lanePoints({ shape, length, pitch, size, sizeAt = null, step = 0
     return pts;
   }
   const span = periods * pitch;
-  const lead = (length - span) / 2;
+  const { lo, hi } = alongExtent(shape, pitch, size);
+  const lead = -lo + (length - span - hi + lo) / 2;
   if (lead > 1e-9) straight(0, lead);
   const ds = step / arcRate(shape, pitch, size);
   const n = Math.ceil(span / ds);

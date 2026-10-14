@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SHAPES, SHAPE_IDS, shapeAt, lanePoints, loopCount, loopsClose } from '../src/engine/shapes.js';
+import { SHAPES, SHAPE_IDS, shapeAt, lanePoints, lanePeriods, loopCount, loopsClose } from '../src/engine/shapes.js';
 
 const opts = { pitch: 6, size: 3 };
 
@@ -60,4 +60,19 @@ test('a lane shorter than one period is a plain straight line', () => {
   const pts = lanePoints({ shape: 'looped', length: 4, pitch: 6, size: 3 });
   assert.ok(pts.every((p) => Math.abs(p.v) < 1e-9));
   assert.ok(Math.abs(pts[pts.length - 1].u - 4) < 1e-9);
+});
+
+test('the strand never leaves its lane, even where a loop swings forward', () => {
+  for (const id of SHAPE_IDS) {
+    for (const length of [20, 37.5, 50]) {
+      const pts = lanePoints({ shape: id, length, ...opts });
+      for (const p of pts) assert.ok(p.u >= -1e-9 && p.u <= length + 1e-9, `${id} ${length}: u ${p.u}`);
+    }
+  }
+});
+
+test('lanePeriods keeps room for the swing at the end of a looped line', () => {
+  assert.equal(lanePeriods({ shape: 'wave', length: 50, ...opts }), 8);
+  assert.equal(lanePeriods({ shape: 'looped', length: 50, ...opts }), 7);
+  assert.equal(lanePeriods({ shape: 'looped', length: 4, ...opts }), 0);
 });
