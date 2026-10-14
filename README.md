@@ -8,8 +8,7 @@ sample. Machine and material profiles are data files, so more machines can be ad
 Gyroid) and 145 automated tests passing.
 The first physical print has not been done yet; the Foamy material profile stays unverified until then.
 
-**Live site:** https://telenaco.github.io/filafabric/ (published from `main` by `.github/workflows/pages.yml` after
-the tests pass; nothing to install).
+**Live site:** https://filafabric.pages.dev (Cloudflare Pages publishes every push to `main`; nothing to install).
 
 ## Run it
 
@@ -105,10 +104,10 @@ in this folder.
 
 ## Publishing
 
-The site: every push to `main` runs the tests and, if they pass, publishes `index.html`, `src/`, `profiles/` and
-`vendor/` to GitHub Pages (`.github/workflows/pages.yml`). It needs one setting, once: Settings → Pages → Build and
-deployment → Source: **GitHub Actions**. To republish without a code change, run the "Deploy site" workflow from
-the Actions tab.
+The site: Cloudflare Pages is connected to this repository. `main` is the production branch, so every push to
+`main` publishes the live site; any other branch gets its own preview link instead. Work therefore goes straight to
+`main`. The site is static, so there is no build step. GitHub Actions runs `npm test` on every push
+(`.github/workflows/test.yml`) and marks a commit red if a test fails; it does not block the deploy.
 
 The repository:
 
