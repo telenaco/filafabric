@@ -27,7 +27,7 @@ const shapeOptions = () => WAVY.map((id) => ({ id, label: SHAPES[id].label, hint
  * @param def  { id, name, blurb, about, file, c (a defineControls result), controls (panel description),
  *               build(settings, boundary) → { layers, extra? }, verdict?, figure?, summary(result), thumbSize? }
  */
-function layered(def) {
+export function layered(def) {
   const { c } = def;
   const [tw, th] = def.thumbSize ?? [36, 22];
   let thumb = '';
