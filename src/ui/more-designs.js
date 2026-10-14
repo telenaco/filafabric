@@ -287,16 +287,17 @@ MORE_DESIGNS.push(layered({
 }));
 
 const MEANDER = defineControls({
-  ranges: { ...SIZE, cell: { min: 3, max: 14, step: 0.5 }, angle: { min: 15, max: 75, step: 5 }, spacing: { min: 3, max: 10, step: 0.5 } },
-  defaults: { width: 50, height: 50, curve: 'hilbert', cell: 6, angle: 45, spacing: 5, colorChange: false },
+  ranges: { ...SIZE, cell: { min: 3, max: 14, step: 0.5 }, angle: { min: 15, max: 75, step: 5 }, spacing: { min: 3, max: 10, step: 0.5 }, seed: { min: 1, max: 999, step: 1 } },
+  defaults: { width: 50, height: 50, curve: 'hilbert', cell: 6, angle: 45, spacing: 5, seed: 1, colorChange: false },
   enums: { curve: CURVE_IDS },
   bools: ['colorChange'],
   presets: [
     { id: 'hilbert', name: 'Hilbert lace', blurb: 'Tight folds, hatched across', patch: { curve: 'hilbert', cell: 6, angle: 45, spacing: 5 } },
     { id: 'peano', name: 'Peano', blurb: 'Long serpentine folds', patch: { curve: 'peano', cell: 6, angle: 45, spacing: 5 } },
+    { id: 'maze', name: 'Maze', blurb: 'A random walk round a maze', patch: { curve: 'maze', cell: 6, angle: 45, spacing: 5 } },
     { id: 'open', name: 'Open meander', blurb: 'Large cells, wide hatch', patch: { curve: 'hilbert', cell: 10, angle: 60, spacing: 8 } },
   ],
-  describe: (s) => ({ cell: `${r1(s.cell)} mm cells`, angle: `${s.angle}°`, spacing: `${r1(s.spacing)} mm apart` }),
+  describe: (s) => ({ cell: `${r1(s.cell)} mm cells`, angle: `${s.angle}°`, spacing: `${r1(s.spacing)} mm apart`, seed: `#${s.seed}` }),
 });
 
 MORE_DESIGNS.push(layered({
@@ -323,11 +324,12 @@ MORE_DESIGNS.push(layered({
         { key: 'cell', label: 'Fold size', help: 'About how wide each fold of the curve is.', lo: 'Fine', hi: 'Coarse', unit: 'mm', edit: true },
         { key: 'angle', label: 'Hatch angle', help: 'The angle of the lines laid across the curve.', lo: 'Shallow', hi: 'Steep', unit: '°', edit: true },
         { key: 'spacing', label: 'Hatch spacing', help: 'Distance between the hatch lines.', lo: 'Dense', hi: 'Open', unit: 'mm', edit: true },
+        { key: 'seed', label: 'Maze number', help: 'Only the maze curve uses it: each number is a different maze, and the same number repeats it.', lo: '1', hi: '999', unit: '', edit: true },
       ],
     },
     COLOUR,
   ],
-  build: (s, boundary) => meanderLayers(boundary, { curve: s.curve, cell: s.cell, angle: s.angle, spacing: s.spacing }),
+  build: (s, boundary) => meanderLayers(boundary, { curve: s.curve, cell: s.cell, angle: s.angle, spacing: s.spacing, seed: s.seed }),
   summary: (result) => `a meander of ${result.report.crossings} crossings`,
 }));
 

@@ -1,4 +1,5 @@
 import { hatch, clipPolyline } from './layers.js';
+import { createRng } from './rng.js';
 
 /**
  * Meanders: a space-filling curve (Hilbert or Peano) as one continuous strand that never crosses itself, and an
@@ -8,6 +9,7 @@ import { hatch, clipPolyline } from './layers.js';
 export const CURVES = Object.freeze({
   hilbert: { label: 'Hilbert', hint: 'Tight folds of 90°, in a square grid of 2ⁿ cells' },
   peano: { label: 'Peano', hint: 'Long serpentines of 3 x 3 cells, in a grid of 3ⁿ' },
+  maze: { label: 'Maze', hint: 'A random closed meander that walks round a maze, a different one for every seed' },
 });
 export const CURVE_IDS = Object.freeze(Object.keys(CURVES));
 
@@ -52,6 +54,58 @@ export function peanoCells(order) {
   return out;
 }
 
+/**
+ * A random closed meander on a 2ⁿ x 2ⁿ grid: grow a random spanning tree over the 2ⁿ⁻¹ x 2ⁿ⁻¹ blocks of four cells, then
+ * walk round it. Each block starts as a little square of four cells; every tree edge swaps two edges between
+ * neighbouring squares to merge them, so the result is one cycle through every cell and, being the outline of a tree,
+ * it never crosses itself. The same seed gives the same maze.
+ */
+export function mazeCells(order, seed = 1) {
+  const m = 1 << Math.max(0, order - 1); // blocks per side
+  const n = 2 * m;
+  const rng = createRng(seed);
+  const id = (x, y) => y * n + x;
+  const adj = Array.from({ length: n * n }, () => new Set());
+  const link = (a, b) => { adj[a].add(b); adj[b].add(a); };
+  const cut = (a, b) => { adj[a].delete(b); adj[b].delete(a); };
+  for (let by = 0; by < m; by++) {
+    for (let bx = 0; bx < m; bx++) {
+      const x = 2 * bx, y = 2 * by;
+      link(id(x, y), id(x + 1, y)); link(id(x + 1, y), id(x + 1, y + 1)); link(id(x + 1, y + 1), id(x, y + 1)); link(id(x, y + 1), id(x, y));
+    }
+  }
+  // a random depth-first spanning tree of the blocks
+  const seen = new Set([0]);
+  const stack = [0];
+  while (stack.length) {
+    const cur = stack[stack.length - 1];
+    const bx = cur % m, by = Math.floor(cur / m);
+    const options = [[1, 0], [-1, 0], [0, 1], [0, -1]]
+      .map(([dx, dy]) => [bx + dx, by + dy, dx, dy])
+      .filter(([x, y]) => x >= 0 && y >= 0 && x < m && y < m && !seen.has(y * m + x));
+    if (options.length === 0) { stack.pop(); continue; }
+    const [nx, ny, dx, dy] = options[Math.floor(rng.next() * options.length)];
+    seen.add(ny * m + nx);
+    stack.push(ny * m + nx);
+    // merge the two squares: swap the facing edges for two edges that cross between them
+    const ax = 2 * bx, ay = 2 * by, cx = 2 * nx, cy = 2 * ny;
+    if (dx === 1) { cut(id(ax + 1, ay), id(ax + 1, ay + 1)); cut(id(cx, cy), id(cx, cy + 1)); link(id(ax + 1, ay), id(cx, cy)); link(id(ax + 1, ay + 1), id(cx, cy + 1)); }
+    else if (dx === -1) { cut(id(ax, ay), id(ax, ay + 1)); cut(id(cx + 1, cy), id(cx + 1, cy + 1)); link(id(ax, ay), id(cx + 1, cy)); link(id(ax, ay + 1), id(cx + 1, cy + 1)); }
+    else if (dy === 1) { cut(id(ax, ay + 1), id(ax + 1, ay + 1)); cut(id(cx, cy), id(cx + 1, cy)); link(id(ax, ay + 1), id(cx, cy)); link(id(ax + 1, ay + 1), id(cx + 1, cy)); }
+    else { cut(id(ax, ay), id(ax + 1, ay)); cut(id(cx, cy + 1), id(cx + 1, cy + 1)); link(id(ax, ay), id(cx, cy + 1)); link(id(ax + 1, ay), id(cx + 1, cy + 1)); }
+  }
+  // walk the cycle
+  const cells = [];
+  let prev = -1, cur = 0;
+  do {
+    cells.push({ x: cur % n, y: Math.floor(cur / n) });
+    const next = [...adj[cur]].find((v) => v !== prev) ?? [...adj[cur]][0];
+    prev = cur;
+    cur = next;
+  } while (cur !== 0 && cells.length <= n * n);
+  return cells;
+}
+
 /** One round of Chaikin corner cutting on an open polyline (the ends stay put). */
 function chaikin(pts) {
   const out = [pts[0]];
@@ -76,12 +130,12 @@ export function curveOrder(curve, size, cell) {
  * @param angle    angle of the second layer's hatch, degrees
  * @param spacing  spacing of the hatch, mm
  */
-export function meanderLayers(boundary, { curve = 'hilbert', cell = 6, angle = 45, spacing = 5 } = {}) {
+export function meanderLayers(boundary, { curve = 'hilbert', cell = 6, angle = 45, spacing = 5, seed = 1 } = {}) {
   if (!CURVES[curve]) throw new Error(`Unknown meander curve: ${curve}`);
   const box = boundary.bbox();
   const w = box.maxX - box.minX, h = box.maxY - box.minY;
   const order = curveOrder(curve, Math.max(w, h), cell);
-  const cells = curve === 'peano' ? peanoCells(order) : hilbertCells(order);
+  const cells = curve === 'peano' ? peanoCells(order) : curve === 'maze' ? mazeCells(order, seed) : hilbertCells(order);
   const n = curve === 'peano' ? 3 ** order : 1 << order;
   let pts = cells.map((c) => ({ x: box.minX + ((c.x + 0.5) * w) / n, y: box.minY + ((c.y + 0.5) * h) / n }));
   // round the corners so the strand turns instead of stopping dead
