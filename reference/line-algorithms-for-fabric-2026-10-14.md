@@ -131,6 +131,21 @@ Related, for the existing squiggle: layer 2 currently prints at 0.4 mm everywher
 mid-air and drops 0.2 mm to the bed. The "dip weave" idea (rank 11) and rule 6 both point at fixing that: let layer 2
 come down to bed height between crossings, or keep its free spans short.
 
+## How this maps onto the studio's cards (as of 2026-10-14)
+
+The structure library in `docs/fabric-structures.md` landed while this research ran, so some of the shortlist
+already exists in part:
+
+| Research item | In the studio | What is still missing |
+|---|---|---|
+| 1. Row lattice | **Zigzag mesh** (parallel mode with a zigzag strand) and the **square** strand shape | Honeycomb (trapezoid wave whose flats stack on the neighbouring rows) and re-entrant (auxetic) shapes: two more entries in the strand-shape library |
+| 2. Trochoid loop rows | The **looped** strand shape in Squiggle & Gyroid, and the **Coil** card (one layer, lift at crossings) | Nothing structural; the loop ratio and the in-layer crossing questions are for test prints |
+| 3. Crosshatch / isogrid | Crossed mode at 0/90 only | An angle option (for example 60/120), and three-layer isogrids |
+| 4. Orthogonal field pair | **Spiral panel** is planned as one contour strand | A second layer along the outline's normals (or a perpendicular field), so the panel has crossings |
+| 5. CVT Voronoi + Delaunay | Not started | A new card and the graph-to-path router |
+| 11. Dip weave | **Weave** is planned (warp arches where the weft passes beneath) | Same idea; the research adds the nozzle-clearance limit (warp gap at least 2.5–3 mm) |
+| Crossing validator | `src/engine/crossings.js` resolves crossings (later strands lift over earlier ones) | A report of crossings per cm², the longest uncrossed strand, the smallest crossing angle and the lift count |
+
 ## Other routes noted
 
 - **DefeXtiles** (Forman et al., UIST 2020): controlled under-extrusion turns ordinary paths into tulle-like "glob and
