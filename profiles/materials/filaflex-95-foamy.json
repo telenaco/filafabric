@@ -1,0 +1,28 @@
+{
+  "id": "filaflex-95-foamy",
+  "name": "Recreus Filaflex 95A Foamy",
+  "verified": false,
+  "source": "recreus.com/en/products/filaflex-95-foamy (0.4 mm nozzle, 0.2 mm layer)",
+  "filament_diameter": 1.75,
+  "density": 1.22,
+  "temperature": { "first_layer": 248, "print": 248 },
+  "bed_temperature": 50,
+  "flow": {
+    "multiplier": 0.73,
+    "reference_line_width": 0.55,
+    "foam_expansion": 1.5,
+    "max_volumetric_speed_nominal": 5.0
+  },
+  "retraction": {
+    "length": 0,
+    "speed": 75,
+    "deretract_speed": 25,
+    "z_hop": 0.2,
+    "min_travel": 10,
+    "note": "Recreus recommends 2.5-6 mm at 75 mm/s; the user's working Generic FLEX profile uses none. Start with none; raise if stringing hurts."
+  },
+  "fan": { "default": 0 },
+  "travel_speed_hint": 180,
+  "pressure_advance_k": null,
+  "notes": "Dry at 55 C for at least 1 h. Direct-drive extruder recommended. Foams at 245-250 C; lower flow and higher temperature foam more."
+}

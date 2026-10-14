@@ -1,0 +1,28 @@
+{
+  "id": "generic-flex-mk3",
+  "name": "Prusa Generic FLEX (MK3 family, 0.4 mm)",
+  "verified": true,
+  "source": "Shape-Box_0.2mm_FLEX_MK3S_5m.gcode embedded config (PrusaSlicer 2.9.6)",
+  "filament_diameter": 1.75,
+  "density": 1.22,
+  "temperature": { "first_layer": 240, "print": 240 },
+  "bed_temperature": 50,
+  "flow": {
+    "multiplier": 1.15,
+    "reference_line_width": null,
+    "foam_expansion": 1.0,
+    "max_volumetric_speed_nominal": 1.2
+  },
+  "retraction": {
+    "length": 0,
+    "speed": 40,
+    "deretract_speed": 25,
+    "z_hop": 0,
+    "min_travel": 10,
+    "note": "Prusa's Generic FLEX disables retraction on the MK3 family; speed is unused while length is 0."
+  },
+  "fan": { "default": 0 },
+  "travel_speed_hint": 180,
+  "pressure_advance_k": null,
+  "notes": "Prusa stock profile for non-foaming TPU on MK3-family printers."
+}

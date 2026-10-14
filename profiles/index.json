@@ -1,0 +1,4 @@
+{
+  "machines": ["prusa-mk3s"],
+  "materials": ["filaflex-95-foamy", "generic-flex-mk3"]
+}

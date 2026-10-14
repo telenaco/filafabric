@@ -1,0 +1,67 @@
+{
+  "id": "prusa-mk3s",
+  "name": "Original Prusa i3 MK3S / MK3S+",
+  "firmware": "prusa-marlin",
+  "verified": true,
+  "source": "Shape-Box_0.2mm_FLEX_MK3S_5m.gcode (PrusaSlicer 2.9.6, printer profile 2.5.11)",
+  "bed": { "width": 250, "depth": 210, "max_z": 210 },
+  "extrusion": { "relative_e": true },
+  "accel_syntax": "S_T",
+  "output": { "format": "gcode", "extension": ".gcode" },
+  "limits": {
+    "default_mode": "normal",
+    "emit_to_gcode": true,
+    "modes": {
+      "normal": {
+        "max_feedrate": { "x": 200, "y": 200, "z": 12, "e": 120 },
+        "max_accel": { "x": 1000, "y": 1000, "z": 200, "e": 5000 },
+        "accel_extruding": 1250,
+        "accel_retracting": 1250,
+        "accel_travel": 1500,
+        "jerk": { "x": 8, "y": 8, "z": 0.4, "e": 4.5 }
+      },
+      "stealth": {
+        "max_feedrate": { "x": 100, "y": 100, "z": 12, "e": 120 },
+        "max_accel": { "x": 960, "y": 960, "z": 200, "e": 5000 },
+        "accel_extruding": 1250,
+        "accel_retracting": 1250,
+        "accel_travel": 1250,
+        "jerk": { "x": 8, "y": 8, "z": 0.4, "e": 4.5 }
+      }
+    }
+  },
+  "printer_model_check": "MK3S",
+  "start_gcode": [
+    "{machine_limits}",
+    "M862.3 P \"{printer_model_check}\" ; printer model check",
+    "M862.1 P{nozzle_diameter} ; nozzle diameter check",
+    "M115 U3.14.1 ; tell printer latest fw version",
+    "G90 ; absolute coordinates",
+    "M83 ; relative E",
+    "M104 S{first_layer_temp} ; set extruder temp",
+    "M140 S{bed_temp} ; set bed temp",
+    "M190 S{bed_temp} ; wait for bed",
+    "M109 S{first_layer_temp} ; wait for extruder",
+    "G28 W ; home all without mesh bed level",
+    "G80 X{print_min_x} Y{print_min_y} W{print_width} H{print_height} ; mesh bed levelling",
+    "M221 S100 ; flow 100% (Prusa's stock start G-code sets 95%; E is computed exactly by the engine)",
+    "M907 E430 ; extruder motor current, as in the user's MK3S profile",
+    "M900 K0 ; linear advance off",
+    "M107 ; fan off",
+    "{prime_line}",
+    "G92 E0"
+  ],
+  "end_gcode": [
+    "G1 Z{raise_z} F720 ; move print head up",
+    "G1 X0 Y200 F3600 ; park",
+    "G1 Z{park_z} F720 ; move print head further up",
+    "G4 ; wait",
+    "M221 S100 ; reset flow",
+    "M900 K0 ; reset LA",
+    "M907 E538 ; reset extruder motor current",
+    "M104 S0 ; turn off temperature",
+    "M140 S0 ; turn off heatbed",
+    "M107 ; turn off fan",
+    "M84 ; disable motors"
+  ]
+}
