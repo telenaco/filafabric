@@ -10,7 +10,7 @@ import { buildVerdict, buildSquiggleVerdict, formatMinutes } from './verdict.js'
 import { stateToHash, hashToState, sanitizeState } from './share.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
 import { readSvgOutline, drawOutlineThumb } from './svg-outline.js';
-import { DESIGNS, designById, isReady } from './designs.js';
+import { DESIGNS, designById, isReady, baseDesignSettings } from './designs.js';
 import { THUMBS, shapeThumb } from './thumbs.js';
 import { swatchCode } from './swatch.js';
 import { FIELDS, FIELD_IDS, createField } from '../engine/fields.js';
@@ -1201,7 +1201,7 @@ function openPresetTile(d) {
     schedule();
     commit();
   } else {
-    setDesign(design);
+    setDesign(design, { fromPreset: true });
     syncControls();
   }
 }
@@ -1262,8 +1262,15 @@ function showDesign() {
   if (state.design !== 'loop-pile' && state.showTight) setShowTight(false);
 }
 
-function setDesign(id) {
-  if (state.design === id || !isReady(id)) return;
+function setDesign(id, { fromPreset = false } = {}) {
+  if (!isReady(id)) return;
+  let variantChanged = false;
+  if (!fromPreset) {
+    const own = settingsOf(id), next = baseDesignSettings(id, own);
+    variantChanged = Object.keys(next).some((key) => next[key] !== own[key]);
+    Object.assign(own, next);
+  }
+  if (state.design === id && !variantChanged) return;
   stopPlay();
   state.design = id;
   state.fraction = 1;
@@ -1271,6 +1278,7 @@ function setDesign(id) {
   state.why = false;
   resetRoles();
   showDesign();
+  syncControls();
   $('#settings-body').scrollTop = 0;
   schedule();
   commit();

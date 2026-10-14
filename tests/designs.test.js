@@ -1,5 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import * as selection from '../src/ui/designs.js';
+
+test('opening Squiggle from its Zigzag tile restores the base variant and retains custom controls', () => {
+  assert.equal(typeof selection.baseDesignSettings, 'function');
+  const original = { ...selection.DESIGNS.find((d) => d.id === 'squiggle').defaults(), shape: 'zigzag', mode: 'parallel', width: 80, height: 65, spacing: 0.8, amplitude: 6 };
+  const selected = selection.baseDesignSettings('squiggle', original);
+  assert.equal(selected.shape, 'wave');
+  assert.equal(selected.mode, 'cross');
+  assert.equal(selected.width, 80);
+  assert.equal(selected.height, 65);
+  assert.equal(selected.spacing, 0.8);
+  assert.equal(selected.amplitude, 6);
+  assert.equal(original.shape, 'zigzag', 'selection does not mutate saved settings');
+  const custom = { ...original, shape: 'ring' };
+  assert.deepEqual(selection.baseDesignSettings('squiggle', custom), custom, 'unrelated custom variants are preserved');
+});
 import { DESIGNS, designById, READY_IDS, isReady } from '../src/ui/designs.js';
 import { defaultProfiles } from './helpers.js';
 

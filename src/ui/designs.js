@@ -284,3 +284,15 @@ const BY_ID = new Map(DESIGNS.map((d) => [d.id, d]));
 export const designById = (id) => BY_ID.get(id);
 export const READY_IDS = Object.freeze(DESIGNS.filter((d) => d.status === 'ready').map((d) => d.id));
 export const isReady = (id) => READY_IDS.includes(id);
+
+/** A base card exits a matching preset tile, preserving dimensions and unrelated custom controls. */
+export function baseDesignSettings(id, settings) {
+  const out = { ...settings }, defaults = designById(id)?.defaults?.();
+  if (!defaults) return out;
+  for (const tile of DESIGNS) {
+    if (tile.status !== 'preset' || tile.opens.design !== id) continue;
+    if (!Object.entries(tile.opens.patch).every(([key, value]) => settings[key] === value)) continue;
+    for (const key of Object.keys(tile.opens.patch)) out[key] = defaults[key];
+  }
+  return out;
+}
