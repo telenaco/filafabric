@@ -83,3 +83,18 @@ test('an outline survives a link, and anything malformed or oversized is refused
   assert.equal(sanitizeOutline({ rings: [[0, 0, 1, 0, 0.5, 0.8]], rotation: 999 }).rotation, 180);
   assert.equal(sanitizeOutline({ rings: [[0, 0, 1, 0, 0.5, 0.8]], name: 42 }).name, 'Outline');
 });
+
+test('v3 states carry per-design settings; unknown or planned designs fall back to the loop pile', () => {
+  const s = sanitizeState({ v: 3, design: 'weave', designs: { weave: { a: 1 } } }, known);
+  assert.equal(s.design, 'loop-pile');
+  assert.equal(s.v, 3);
+  assert.deepEqual(s.designs, {});
+});
+
+test('a version 2 link (squiggle key, no designs) opens identically', () => {
+  const s = sanitizeState({ v: 2, design: 'squiggle', squiggle: { mode: 'parallel', spacing: 4 } }, known);
+  assert.equal(s.design, 'squiggle');
+  assert.equal(s.squiggle.mode, 'parallel');
+  assert.equal(s.squiggle.spacing, 4);
+  assert.deepEqual(s.designs, {});
+});

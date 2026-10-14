@@ -2,9 +2,10 @@
 import { DEFAULT_TEXTILE } from '../engine/params.js';
 import { ADVANCED_DEFAULTS, PRIMARY_KEYS, sanitizePrimary } from './controls.js';
 import { sanitizeSquiggle } from './squiggle-controls.js';
+import { DESIGNS, READY_IDS } from './designs.js';
 
-/** The designs the studio knows, in gallery order. The first one opens by default. */
-export const DESIGN_IDS = Object.freeze(['loop-pile', 'squiggle']);
+/** The designs a link can open, in gallery order (planned placeholders are not loadable). The first opens by default. */
+export const DESIGN_IDS = READY_IDS;
 
 const toToken = (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const fromToken = (t) => decodeURIComponent(escape(atob(t.replace(/-/g, '+').replace(/_/g, '/'))));
@@ -79,5 +80,11 @@ export function sanitizeState(raw, known) {
       if (ok) advanced[key] = value;
     }
   }
-  return { v: 2, design, machine, material, primary, advanced, squiggle: sanitizeSquiggle(r.squiggle), outline: sanitizeOutline(r.outline) };
+  // the loop pile and squiggle keep their own keys; every newer design keeps its settings under `designs[id]`
+  const saved = r.designs && typeof r.designs === 'object' && !Array.isArray(r.designs) ? r.designs : {};
+  const designs = {};
+  for (const d of DESIGNS) {
+    if (d.status === 'ready' && !d.legacy) designs[d.id] = d.sanitize(saved[d.id]);
+  }
+  return { v: 3, design, machine, material, primary, advanced, squiggle: sanitizeSquiggle(r.squiggle), designs, outline: sanitizeOutline(r.outline) };
 }
