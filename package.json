@@ -1,0 +1,12 @@
+{
+  "name": "fashion-printing-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test",
+    "serve": "node tools/serve.mjs --open",
+    "vendor": "node tools/vendor-three.mjs",
+    "golden": "node tools/update-golden.mjs"
+  }
+}
