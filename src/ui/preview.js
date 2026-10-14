@@ -3,13 +3,24 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
 import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
 import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+import { airStrandDiameter } from '../engine/extrusion.js';
 
 /** Four roles are shown instead of six move classes: what people care about is what hangs in the air. */
 export const ROLES = ['base', 'anchored', 'lifting', 'free'];
 const ROLE_OF = { base: 'base', supported: 'anchored', rising: 'lifting', falling: 'lifting', unsupported: 'free' };
 
-/** Strand widths in mm for the true-thickness layer: base 0.45; free strands about 0.49 once foamed. */
-export const STRAND_WIDTH = { base: 0.45, anchored: 0.45, lifting: 0.49, free: 0.49 };
+/**
+ * Strand widths in mm for the true-thickness layer: the base and feet at the extrusion width, strands in the air
+ * at their foamed diameter including any extra flow (about 0.49 mm on a 0.4 mm nozzle at standard flow).
+ */
+export function strandWidths(cfg) {
+  return {
+    base: cfg.t.extrusion_width,
+    anchored: cfg.t.extrusion_width,
+    lifting: airStrandDiameter('rising', cfg),
+    free: airStrandDiameter('unsupported', cfg),
+  };
+}
 
 // Roles also differ in lightness, not only hue, so they survive colour-vision differences.
 const PALETTES = {
@@ -129,6 +140,7 @@ export function createPreview(container) {
     state.buckets = { ...buckets, travel, hops, viol };
 
     const centreline = state.layers.strand;
+    const widths = strandWidths(cfg);
     for (const role of ROLES) {
       const { pos } = buckets[role];
       // thin path line (the exact nozzle route)
@@ -139,7 +151,7 @@ export function createPreview(container) {
       // strand at true width, in millimetres
       const sg = new LineSegmentsGeometry();
       if (pos.length) sg.setPositions(pos);
-      const sm = new LineMaterial({ color: pal[role], linewidth: STRAND_WIDTH[role], worldUnits: true });
+      const sm = new LineMaterial({ color: pal[role], linewidth: widths[role], worldUnits: true });
       materials.push(sm);
       state.fat[role] = add(new LineSegments2(sg, sm));
     }

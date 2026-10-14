@@ -63,3 +63,13 @@ test('blank UI values (null/undefined/strings) are rejected, not coerced', () =>
 test('DEFAULT_TEXTILE is frozen', () => {
   assert.ok(Object.isFrozen(DEFAULT_TEXTILE));
 });
+
+test('flow in the air defaults to 100 % and must stay between 50 and 300 %', () => {
+  const cfg = resolveConfig(machine, material, {});
+  assert.equal(cfg.t.flow_nonplanar, 100);
+  assert.equal(cfg.t.flow_unsupported, 100);
+  for (const bad of [49, 301, NaN, '120', null]) {
+    assert.throws(() => resolveConfig(machine, material, { flow_unsupported: bad }), (e) => e instanceof ConfigError && /flow_unsupported/.test(e.message), String(bad));
+  }
+  assert.doesNotThrow(() => resolveConfig(machine, material, { flow_nonplanar: 50, flow_unsupported: 300 }));
+});

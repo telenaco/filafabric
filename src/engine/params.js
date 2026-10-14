@@ -54,6 +54,9 @@ export const DEFAULT_TEXTILE = Object.freeze({
   fan_nonplanar: 0,
   fan_unsupported: 0,
   fan_travel: 0,
+  // flow for strands in the air, in % of the nominal round strand (100 = as the material profile says)
+  flow_nonplanar: 100,
+  flow_unsupported: 100,
   print_acceleration: 800,
   nozzle_tip_radius: 0.6,
   nozzle_cone_half_angle: 30,
@@ -83,6 +86,9 @@ const NON_NEGATIVE = [
   'amp_orientation', 'amp_spacing',
 ];
 const PERCENT = ['fan_base', 'fan_supported', 'fan_nonplanar', 'fan_unsupported', 'fan_travel'];
+/** Flow in % for strands in the air: below 50 they break, above 300 the hotend floods and the strand sags. */
+export const FLOW_RANGE = Object.freeze({ min: 50, max: 300 });
+const FLOW = ['flow_nonplanar', 'flow_unsupported'];
 const BOOLEAN = ['include_base', 'include_loops', 'random_enabled'];
 
 const MAX = {
@@ -111,6 +117,9 @@ export function validateTextile(t) {
   for (const k of POSITIVE) if (!num(k) || t[k] <= 0) errors.push(`${k} must be a number greater than 0`);
   for (const k of NON_NEGATIVE) if (!num(k) || t[k] < 0) errors.push(`${k} must be a number of 0 or more`);
   for (const k of PERCENT) if (!num(k) || t[k] < 0 || t[k] > 100) errors.push(`${k} must be a number between 0 and 100`);
+  for (const k of FLOW) {
+    if (!num(k) || t[k] < FLOW_RANGE.min || t[k] > FLOW_RANGE.max) errors.push(`${k} must be a number between ${FLOW_RANGE.min} and ${FLOW_RANGE.max} (%)`);
+  }
   for (const k of BOOLEAN) if (typeof t[k] !== 'boolean') errors.push(`${k} must be true or false`);
   for (const k of ['free_strand_diameter', 'loop_start_z', 'retraction_speed']) {
     if (t[k] !== null && (!num(k) || t[k] <= 0)) errors.push(`${k} must be empty or a number greater than 0`);

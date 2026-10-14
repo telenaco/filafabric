@@ -5,7 +5,7 @@ base plus a dense pile of raised, anchored 3D loops. First target: Prusa MK3S, F
 sample. Machine and material profiles are data files, so more machines can be added from G-code you share.
 
 **Status:** the generator and the studio are built for the Prusa MK3S, with two designs (Loop pile, Squiggle &
-Gyroid) and 138 automated tests passing.
+Gyroid) and 145 automated tests passing.
 The first physical print has not been done yet; the Foamy material profile stays unverified until then.
 
 ## Run it
@@ -15,13 +15,17 @@ http://localhost:5173/ in your browser. Close the window to stop it. From a term
 
 ```bash
 npm run serve     # server + browser
-npm test          # engine and UI-logic tests (138)
+npm test          # engine and UI-logic tests (145)
 npm run golden    # re-record the 20 x 20 golden summary after an intended engine change
 ```
 
 In the page, work left to right: pick a **design**, shape it with the **settings** on the right (swatch size, then a
 few sliders; click a slider's value to type an exact number), and read the **print summary** at the bottom of the
 settings: a check (amber with an "Add room" fix when loops are tight), print time, filament, and **Export G-code**.
+**Strand thickness** adds flow only where the loops are in the air (rising, falling and free-hanging; the base and
+the anchored feet stay at normal flow), from 80 to 200 %, and shows the expected foamed strand diameter. Moves slow
+down on their own if the extra flow would exceed what the hotend can melt, and the clearance check and the
+true-thickness preview both use the thicker strands.
 The preview opens on the strands at their true thickness; drag to turn, scroll to zoom, use Top / Angled / Side,
 and press play to watch the print order. The **View** menu adds the nozzle path, travel moves, lifts, exaggerated
 height and the red tight-spot marks (the clearance model's moves that come too close to printed strands; "Show
@@ -41,7 +45,7 @@ and seed in comment lines.
 4. Full swatch (100 × 100 mm).
 
 Filaflex Foamy 95 values are unverified until the first print; change flow, temperature and the unsupported
-speed one at a time. With the spec defaults the clearance model flags about 40 % of moves on the full sample.
+speed one at a time. If the loops come out thin or break, raise Strand thickness in steps of 10 to 20 %. With the spec defaults the clearance model flags about 40 % of moves on the full sample.
 There are two causes: legs only 0.6 mm apart sit inside the nozzle keep-out, and neighbouring loops' caps cross
 at the same height (normal at 50 % overlap, and not removed by more room). `leg_gap` 1.5 mm with `clearance`
 0.5 mm (the "Roomy" option, or "Give loops more room" on the verdict card) brings the count to about 6 %; with

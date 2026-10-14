@@ -1,3 +1,5 @@
+import { airStrandDiameter } from './extrusion.js';
+
 const Z_MARGIN = 0.05;
 
 /** Coarse grid of the highest printed nozzle Z per cell; used for travels and clearance checks. */
@@ -96,9 +98,10 @@ export function heightMapMargin(cfg) {
 }
 
 export function clearanceModel(cfg) {
-  const { t, derived, material } = cfg;
-  const foam = Math.max(material.flow.foam_expansion ?? 1, 1);
-  const pad = 0.5 * derived.freeDiameter * (Math.sqrt(foam) - 1);
+  const { t, derived } = cfg;
+  // printed strands in the air are wider than the nominal round strand (foam, extra flow): keep that much more room
+  const widest = Math.max(airStrandDiameter('rising', cfg), airStrandDiameter('unsupported', cfg));
+  const pad = 0.5 * (widest - derived.freeDiameter);
   return {
     tipRadius: t.nozzle_tip_radius,
     tanA: Math.tan((t.nozzle_cone_half_angle * Math.PI) / 180),

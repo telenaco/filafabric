@@ -1,7 +1,7 @@
 import { generate } from '../engine/generate.js';
 import { generateSquiggle, SAMPLERS, createImageSampler } from '../engine/squiggle.js';
 import { createPreview, ROLES } from './preview.js';
-import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary } from './controls.js';
+import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airStrandMm } from './controls.js';
 import { SQ_RANGES, SQUIGGLE_DEFAULTS, describeSquiggle, sizeForAspect } from './squiggle-controls.js';
 import { buildVerdict, buildSquiggleVerdict, formatMinutes } from './verdict.js';
 import { stateToHash, hashToState, sanitizeState } from './share.js';
@@ -29,6 +29,7 @@ const ROLE_HEIGHT = { base: 2, anchored: 3, lifting: 3, free: 5 };
 const LOOP_SLIDERS = [
   { key: 'pileHeight', label: 'Pile height', help: 'How far the loops rise above the base.', lo: 'Flat', hi: 'Plush', unit: 'mm', edit: true },
   { key: 'loopSize', label: 'Loop size', help: 'Width and length of each loop, kept in proportion.', lo: 'Small', hi: 'Large' },
+  { key: 'airFlow', label: 'Strand thickness', help: 'Extra flow where the loops are in the air, for thicker, sturdier strands.', lo: 'Thin', hi: 'Thick', unit: '%', edit: true },
   { key: 'loopSpacing', label: 'Loop spacing', help: 'Distance between neighbouring loops in a row.', lo: 'Packed', hi: 'Open', unit: 'mm', edit: true },
   { key: 'baseGap', label: 'Base openness', help: 'Gap between the lines of the backing mesh.', lo: 'Firm', hi: 'Airy', unit: 'mm', edit: true },
   { key: 'variation', label: 'Natural variation', help: 'Random wobble in each loop\'s size, height and angle.', lo: 'Even', hi: 'Wild', unit: '%', edit: true },
@@ -62,7 +63,12 @@ const BINDINGS = {
     range: (key) => RANGES[key],
     readout: (key) => {
       const d = describePrimary(state.primary);
-      return key === 'loopSpacing' ? `${d.loopSpacing} · ${d.overlap}` : d[key];
+      if (key === 'loopSpacing') return `${d.loopSpacing} · ${d.overlap}`;
+      if (key === 'airFlow') {
+        const mm = airStrandMm(state.primary, state.advanced, state.materials.get(state.material));
+        return mm ? `${d.airFlow} · about ${mm.toFixed(2)} mm` : d.airFlow;
+      }
+      return d[key];
     },
     size: {
       host: '#lp-size',
