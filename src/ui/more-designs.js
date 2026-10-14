@@ -9,6 +9,7 @@ import { SHAPES } from '../engine/shapes.js';
 import { crosshatchLayers, DIRECTIONS, DIRECTION_IDS } from '../engine/crosshatch.js';
 import { auxeticLayers, CELLS, CELL_IDS } from '../engine/auxetic.js';
 import { dipweaveLayers, MIN_DIP_PITCH } from '../engine/dipweave.js';
+import { webLayers } from '../engine/web.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const WAVY = ['looped', 'figure8', 'zigzag', 'honeycomb', 'wave', 'square'];
@@ -201,4 +202,42 @@ MORE_DESIGNS.push(layered({
     return buildLayeredVerdict(result);
   },
   summary: (result) => `a dip weave of ${result.report.crossings} crossings`,
+}));
+
+const WEB = defineControls({
+  ranges: { ...SIZE, spacing: { min: 2, max: 8, step: 0.5 }, spokes: { min: 8, max: 48, step: 4 }, hub: { min: 1, max: 10, step: 0.5 }, tooth: { min: 0, max: 2, step: 0.25 } },
+  defaults: { width: 50, height: 50, spacing: 4, spokes: 24, hub: 3, tooth: 0, colorChange: false },
+  bools: ['colorChange'],
+  presets: [
+    { id: 'spiderweb', name: 'Spiderweb', blurb: 'Smooth turns, many spokes', patch: { spacing: 4, spokes: 24, tooth: 0 } },
+    { id: 'toothed', name: 'Toothed', blurb: 'A sawtooth that locks to the spokes', patch: { spacing: 5, spokes: 20, tooth: 1 } },
+    { id: 'wide', name: 'Wide net', blurb: 'Few spokes, open turns', patch: { spacing: 7, spokes: 12, tooth: 0 } },
+  ],
+  describe: (s) => ({ spacing: `${r1(s.spacing)} mm per turn`, spokes: `${s.spokes} spokes`, hub: `${r1(s.hub)} mm`, tooth: s.tooth === 0 ? 'Smooth' : `${r2(s.tooth)} mm` }),
+});
+
+MORE_DESIGNS.push(layered({
+  id: 'web',
+  name: 'Spiderweb',
+  blurb: 'A spiral crossed by a radial zigzag',
+  about: 'One continuous spiral from the middle outwards, crossed by a zigzag that goes out along one spoke and back along the next. Every spoke crosses every turn at about a right angle, so the layers hold each other: soft along the radius, firm around.',
+  file: 'web',
+  c: WEB,
+  controls: [
+    { kind: 'presets', title: 'Start from' },
+    { kind: 'size', title: 'Size and shape' },
+    {
+      kind: 'sliders',
+      title: 'Look and feel',
+      items: [
+        { key: 'spacing', label: 'Turn spacing', help: 'How far the spiral moves outwards each turn.', lo: 'Tight', hi: 'Open', unit: 'mm', edit: true },
+        { key: 'spokes', label: 'Spokes', help: 'How many times the zigzag crosses a turn.', lo: 'Few', hi: 'Many', unit: '', edit: true },
+        { key: 'hub', label: 'Hub hole', help: 'Radius left empty in the middle, where spokes would crowd.', lo: 'Small', hi: 'Large', unit: 'mm', edit: true },
+        { key: 'tooth', label: 'Sawtooth', help: 'A small in-and-out wobble of each turn, lined up with the spokes.', lo: 'Smooth', hi: 'Toothed', unit: 'mm', edit: true },
+      ],
+    },
+    COLOUR,
+  ],
+  build: (s, boundary) => webLayers(boundary, { spacing: s.spacing, spokes: s.spokes, hub: s.hub, tooth: s.tooth }),
+  summary: (result) => `a spiderweb of ${result.report.crossings} crossings`,
 }));
