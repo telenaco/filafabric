@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { encodeState, decodeState, stateToHash, hashToState, sanitizeState, DESIGN_IDS } from '../src/ui/share.js';
+import { encodeState, decodeState, stateToHash, hashToState, sanitizeState, sanitizeOutline, DESIGN_IDS } from '../src/ui/share.js';
 import { SQUIGGLE_DEFAULTS } from '../src/ui/squiggle-controls.js';
 import { PRIMARY_DEFAULTS } from '../src/ui/controls.js';
 
@@ -68,4 +68,18 @@ test('a version 1 link without a design opens the loop pile with default squiggl
   assert.equal(s.primary.pileHeight, 4);
   assert.deepEqual(s.squiggle, SQUIGGLE_DEFAULTS);
   assert.equal(sanitizeState({ design: 'nope' }, known).design, 'loop-pile');
+});
+
+test('an outline survives a link, and anything malformed or oversized is refused', () => {
+  const outline = { name: 'heart.svg', rings: [[0, 0, 1, 0, 0.5, 0.8]], rotation: 30 };
+  const s = sanitizeState({ outline }, known);
+  assert.deepEqual(s.outline, outline);
+  assert.deepEqual(decodeState(encodeState({ outline })).outline, outline);
+  assert.equal(sanitizeState({}, known).outline, null);
+  assert.equal(sanitizeOutline({ rings: [[0, 0, 1, 0]] }), null, 'a ring needs three points');
+  assert.equal(sanitizeOutline({ rings: [[0, 0, 5, 0, 0.5, 0.8]] }), null, 'outside the unit box');
+  assert.equal(sanitizeOutline({ rings: [[0, 0, 1, 0, 0.5, '0.8']] }), null, 'numbers only');
+  assert.equal(sanitizeOutline({ rings: [Array.from({ length: 4002 }, () => 0.5)] }), null, 'too many points');
+  assert.equal(sanitizeOutline({ rings: [[0, 0, 1, 0, 0.5, 0.8]], rotation: 999 }).rotation, 180);
+  assert.equal(sanitizeOutline({ rings: [[0, 0, 1, 0, 0.5, 0.8]], name: 42 }).name, 'Outline');
 });

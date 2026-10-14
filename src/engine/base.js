@@ -1,3 +1,5 @@
+import { serpentineChains } from './fill.js';
+
 function arc(cx, cy, r, a0, a1, resolution) {
   const n = Math.max(2, Math.ceil((Math.abs(a1 - a0) * r) / resolution));
   const pts = [];
@@ -47,4 +49,16 @@ export function buildBase({ bbox, spacing, cornerRadius, z, resolution }) {
   let length = 0;
   for (let i = 1; i < points.length; i++) length += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
   return { points, length };
+}
+
+/**
+ * The base for any outline: lanes `spacing` apart, clipped to the shape and joined into serpentine strands
+ * (one strand per region a single serpentine can cover). Lane ends sit `inset` inside the outline.
+ */
+export function buildOutlineBase({ boundary, lanes, z, inset }) {
+  const strands = serpentineChains(boundary, 'y', lanes, { inset, minLength: 1, maxJog: 3 * (lanes[1] - lanes[0] || 5) })
+    .map((segments) => segments.flatMap((s) => [{ x: s.from, y: s.c, z }, { x: s.to, y: s.c, z }]));
+  let length = 0;
+  for (const pts of strands) for (let i = 1; i < pts.length; i++) length += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+  return { points: strands[0] ?? [], strands, length };
 }

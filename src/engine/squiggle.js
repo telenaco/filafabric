@@ -1,6 +1,8 @@
 import { resolveConfig } from './params.js';
 import { bedFitErrors, PreflightError, writeGcode } from './gcode.js';
 import { computeStats } from './stats.js';
+import { PolygonBoundary } from './boundary.js';
+import { serpentineChains } from './fill.js';
 
 /**
  * Squiggle Textile Generator
@@ -125,6 +127,48 @@ function buildSerpentine({
 }
 
 /**
+ * In parallel mode the second layer runs halfway between the first layer's lines, so each wave must swing at
+ * least a quarter of the line spacing to reach a neighbour, plus half a strand so the two overlap by a full
+ * strand width where they cross. Without that, two layers of parallel lines have nothing holding them together.
+ */
+export function minCrossingAmplitude(spacing, strandWidth = 0.45) {
+  return spacing / 4 + strandWidth / 2;
+}
+
+/**
+ * One layer as printable strands. A rectangle (no outline) is one continuous serpentine; an outline is clipped
+ * lane by lane and joined into as few strands as its shape allows.
+ * Lanes are `lanePitch` apart starting at `firstLane`; `waveFn(laneIdx, s, sNorm, isReverse)` gives the offset.
+ */
+function layerStrands({ boundary, axis, firstLane, laneCount, lanePitch, spanLength, stepSize, waveFn, z }) {
+  if (!boundary || boundary.isRectangle) {
+    return [buildSerpentine({
+      axis: axis === 'y' ? 'horizontal' : 'vertical',
+      spanLength, laneCount, lanePitch, minCoord: firstLane, minSpan: 0, stepSize, waveFn, z,
+    })];
+  }
+  const lanes = Array.from({ length: laneCount }, (_, k) => firstLane + k * lanePitch);
+  const chains = serpentineChains(boundary, axis, lanes, { inset: 0.3, minLength: 1, maxJog: 3 * lanePitch });
+  return chains.map((segments) => {
+    const pts = [];
+    const push = (x, y) => {
+      const last = pts[pts.length - 1];
+      if (!last || Math.hypot(last.x - x, last.y - y) > 1e-6) pts.push({ x, y, z });
+    };
+    for (const seg of segments) {
+      const steps = Math.max(2, Math.ceil(Math.abs(seg.to - seg.from) / stepSize));
+      for (let i = 0; i <= steps; i++) {
+        const sPos = seg.from + ((seg.to - seg.from) * i) / steps;
+        const { coordOffset = 0 } = waveFn(seg.lane, sPos, sPos / spanLength, seg.to < seg.from);
+        if (axis === 'y') push(sPos, seg.c + coordOffset);
+        else push(seg.c + coordOffset, sPos);
+      }
+    }
+    return pts;
+  });
+}
+
+/**
  * Generate 2-layer Squiggle textile toolpath.
  *
  * @param {Object} options
@@ -135,8 +179,10 @@ function buildSerpentine({
  * @param {number} options.amplitude - max wave amplitude in mm (e.g. 1.2)
  * @param {number} options.wavelength - base wave cycle length in mm (e.g. 4.0)
  * @param {number} options.layerHeight - layer height in mm (e.g. 0.2)
+ * @param {number} [options.strandWidth] - printed strand width in mm, for the parallel crossing depth
  * @param {Function} [options.sampler] - (x, y, w, h) => darkness [0..1]
  * @param {boolean} [options.colorChange] - whether M600 filament pause is requested
+ * @param {Object} [options.boundary] - an outline (PolygonBoundary) to fill instead of the full rectangle
  * @returns {{ layer1: Array, layer2: Array, strands: Array }}
  */
 export function generateSquiggleTextile({
@@ -147,17 +193,20 @@ export function generateSquiggleTextile({
   amplitude = 1.2,
   wavelength = 4.0,
   layerHeight = 0.2,
+  strandWidth = 0.45,
   sampler = SAMPLERS.centerSpot,
   colorChange = false,
+  boundary = null,
 }) {
   const z1 = layerHeight;
   const z2 = layerHeight * 2;
   const minAmp = 0.15 * amplitude;
   const ampRange = 0.85 * amplitude;
   const baseFreq = 1 / Math.max(0.5, wavelength);
+  const tone = (x, y) => clamp(sampler(x, y, width, height), 0, 1);
 
-  let layer1Pts = [];
-  let layer2Pts = [];
+  let layer1 = [];
+  let layer2 = [];
 
   if (mode === 'cross') {
     // -------------------------------------------------------------------------
@@ -169,29 +218,19 @@ export function generateSquiggleTextile({
     const pitchX = width / cols;
     const minX = pitchX / 2;
 
-    // Layer 1: Vertical Squiggles
-    layer1Pts = buildSerpentine({
-      axis: 'vertical',
-      spanLength: height,
-      laneCount: cols,
-      lanePitch: pitchX,
-      minCoord: minX,
-      minSpan: 0,
-      stepSize: 0.4,
-      waveFn: (colIdx, y, _yNorm, _isReverse) => {
+    layer1 = layerStrands({
+      boundary, axis: 'x', firstLane: minX, laneCount: cols, lanePitch: pitchX, spanLength: height, stepSize: 0.4, z: z1,
+      waveFn: (colIdx, y) => {
         const xNominal = minX + colIdx * pitchX;
-        const tone = clamp(sampler(xNominal, y, width, height), 0, 1);
-        const amp = minAmp + ampRange * tone;
+        const t = tone(xNominal, y);
+        const amp = minAmp + ampRange * t;
         // Frequency increases in darker areas
-        const freq = baseFreq * (1 + 1.2 * tone);
+        const freq = baseFreq * (1 + 1.2 * t);
         const phase = 2 * Math.PI * freq * y + colIdx * 0.5;
-        const coordOffset = amp * Math.sin(phase);
-        return { coordOffset, spanOffset: 0 };
+        return { coordOffset: amp * Math.sin(phase), spanOffset: 0 };
       },
-      z: z1,
     });
 
-    // Layer 2: Horizontal Gyroid / Sinusoidal Wave
     const rows = Math.max(2, Math.floor(height / spacing));
     const pitchY = height / rows;
     const minY = pitchY / 2;
@@ -199,95 +238,61 @@ export function generateSquiggleTextile({
     const gyroidFreq = 1 / gyroidWavelength;
     const gyroidAmp = Math.min(pitchY * 0.45, amplitude * 0.8);
 
-    layer2Pts = buildSerpentine({
-      axis: 'horizontal',
-      spanLength: width,
-      laneCount: rows,
-      lanePitch: pitchY,
-      minCoord: minY,
-      minSpan: 0,
-      stepSize: 0.4,
-      waveFn: (rowIdx, x, _xNorm, _isReverse) => {
+    layer2 = layerStrands({
+      boundary, axis: 'y', firstLane: minY, laneCount: rows, lanePitch: pitchY, spanLength: width, stepSize: 0.4, z: z2,
+      waveFn: (rowIdx, x) => {
         // Gyroid-like alternating phase per row
         const rowPhase = (rowIdx % 2) * Math.PI;
         const yNominal = minY + rowIdx * pitchY;
-        const tone = clamp(sampler(x, yNominal, width, height), 0, 1);
-        const localAmp = gyroidAmp * (0.6 + 0.4 * tone);
+        const localAmp = gyroidAmp * (0.6 + 0.4 * tone(x, yNominal));
         const phase = 2 * Math.PI * gyroidFreq * x + rowPhase;
-        const coordOffset = localAmp * Math.sin(phase);
-        return { coordOffset, spanOffset: 0 };
+        return { coordOffset: localAmp * Math.sin(phase), spanOffset: 0 };
       },
-      z: z2,
     });
   } else {
     // -------------------------------------------------------------------------
-    // Mode B: Dual Parallel Zigzag Overlap
-    // Both layers run horizontally along X.
-    // Layer 1 and Layer 2 are paired per row, with opposing phase / zigzag offset
-    // so they repeatedly cross each other at nodes (sin = 0) and open eyelets.
+    // Mode B: Parallel, offset by half a line
+    // Both layers run along X. Layer 2's lines sit halfway between layer 1's, in opposite phase, and every wave
+    // is at least deep enough to cross the lines on both sides: each layer-2 line crosses the layer-1 line below
+    // near its peaks and the one above near its troughs, so the two layers form one connected net.
+    // The pattern deepens the waves; their length stays constant so every crossing stays in step.
     // -------------------------------------------------------------------------
     const rows = Math.max(2, Math.floor(height / spacing));
     const pitchY = height / rows;
     const minY = pitchY / 2;
+    const floor = minCrossingAmplitude(pitchY, strandWidth);
+    const k = 2 * Math.PI * baseFreq;
+    const ampAt = (x, y) => Math.max(floor, minAmp + ampRange * tone(x, y));
 
-    // Layer 1: Base Squiggle (phase 0)
-    layer1Pts = buildSerpentine({
-      axis: 'horizontal',
-      spanLength: width,
-      laneCount: rows,
-      lanePitch: pitchY,
-      minCoord: minY,
-      minSpan: 0,
-      stepSize: 0.4,
-      waveFn: (rowIdx, x, _xNorm, _isReverse) => {
+    layer1 = layerStrands({
+      boundary, axis: 'y', firstLane: minY, laneCount: rows, lanePitch: pitchY, spanLength: width, stepSize: 0.4, z: z1,
+      waveFn: (rowIdx, x) => {
         const yNominal = minY + rowIdx * pitchY;
-        const tone = clamp(sampler(x, yNominal, width, height), 0, 1);
-        const amp = minAmp + ampRange * tone;
-        const freq = baseFreq * (1 + 1.2 * tone);
-        const phase = 2 * Math.PI * freq * x + (rowIdx % 2) * (Math.PI / 2);
-        const coordOffset = amp * Math.sin(phase);
-        return { coordOffset, spanOffset: 0 };
+        return { coordOffset: ampAt(x, yNominal) * Math.sin(k * x), spanOffset: 0 };
       },
-      z: z1,
     });
-
-    // Layer 2: Opposing Zigzag / Anti-Phase Squiggle (phase + PI)
-    // Fuses directly on top of Layer 1 at node crossings where sin(phase) = 0!
-    layer2Pts = buildSerpentine({
-      axis: 'horizontal',
-      spanLength: width,
-      laneCount: rows,
-      lanePitch: pitchY,
-      minCoord: minY,
-      minSpan: 0,
-      stepSize: 0.4,
-      waveFn: (rowIdx, x, _xNorm, _isReverse) => {
-        const yNominal = minY + rowIdx * pitchY;
-        const tone = clamp(sampler(x, yNominal, width, height), 0, 1);
-        const amp = minAmp + ampRange * tone;
-        const freq = baseFreq * (1 + 1.2 * tone);
-        // Anti-phase (Math.PI shift) causes waves to mirror and cross at node points
-        const phase = 2 * Math.PI * freq * x + (rowIdx % 2) * (Math.PI / 2) + Math.PI;
-        const coordOffset = amp * Math.sin(phase);
-        return { coordOffset, spanOffset: 0 };
+    layer2 = layerStrands({
+      boundary, axis: 'y', firstLane: minY + pitchY / 2, laneCount: rows - 1, lanePitch: pitchY, spanLength: width, stepSize: 0.4, z: z2,
+      waveFn: (rowIdx, x) => {
+        const yNominal = minY + (rowIdx + 0.5) * pitchY;
+        return { coordOffset: -ampAt(x, yNominal) * Math.sin(k * x), spanOffset: 0 };
       },
-      z: z2,
     });
   }
 
   const strands = [
-    { kind: 'base', id: 'squiggle-l1', pts: layer1Pts, lift: 0, name: 'Layer 1 (Base Squiggle)' },
-    {
+    ...layer1.map((pts, i) => ({ kind: 'base', id: i === 0 ? 'squiggle-l1' : `squiggle-l1-${i + 1}`, pts, lift: 0, name: 'Layer 1 (Base Squiggle)' })),
+    ...layer2.map((pts, i) => ({
       kind: 'supported',
-      id: 'squiggle-l2',
-      pts: layer2Pts,
+      id: i === 0 ? 'squiggle-l2' : `squiggle-l2-${i + 1}`,
+      pts,
       lift: layerHeight,
       name: 'Layer 2 (Interlock / Gyroid)',
-      pauseBefore: colorChange,
-    },
+      pauseBefore: colorChange && i === 0,
+    })),
   ];
 
-  return { layer1: layer1Pts, layer2: layer2Pts, strands };
+  return { layer1: layer1.flat(), layer2: layer2.flat(), strands };
 }
 
 /**
@@ -305,9 +310,12 @@ export function generateSquiggle(machine, material, squiggleParams = {}) {
   const fit = bedFitErrors(cfg);
   if (fit.length > 0) throw new PreflightError(fit);
 
+  const outline = squiggleParams.outline ?? null;
   const res = generateSquiggleTextile({
     width,
     height,
+    boundary: outline ? new PolygonBoundary(outline) : null,
+    strandWidth: cfg.t.extrusion_width,
     mode: squiggleParams.mode ?? 'cross',
     spacing: squiggleParams.spacing ?? 2.5,
     amplitude: squiggleParams.amplitude ?? 1.2,
@@ -341,7 +349,7 @@ export function generateSquiggle(machine, material, squiggleParams = {}) {
       moves.push(travel(first.x, first.y, first.z));
     }
 
-    const moveCls = sIdx === 0 ? 'base' : 'supported';
+    const moveCls = strand.kind === 'base' ? 'base' : 'supported';
     for (let i = 1; i < strand.pts.length; i++) {
       const p = strand.pts[i];
       moves.push({ x: p.x, y: p.y, z: p.z, cls: moveCls, extrude: true, tag: strand.id });
@@ -353,6 +361,7 @@ export function generateSquiggle(machine, material, squiggleParams = {}) {
   stats.loops = 0;
   const gcode = writeGcode(moves, cfg, { stats });
 
-  return { cfg, strands: res.strands, moves, stats, warnings: [], gcode };
+  const warnings = moves.length === 0 ? ['The outline is too small for these lines: nothing to print'] : [];
+  return { cfg, strands: res.strands, moves, stats, warnings, gcode, outline };
 }
 

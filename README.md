@@ -5,7 +5,7 @@ base plus a dense pile of raised, anchored 3D loops. First target: Prusa MK3S, F
 sample. Machine and material profiles are data files, so more machines can be added from G-code you share.
 
 **Status:** the generator and the studio are built for the Prusa MK3S, with two designs (Loop pile, Squiggle &
-Gyroid) and 145 automated tests passing.
+Gyroid) and 164 automated tests passing.
 The first physical print has not been done yet; the Foamy material profile stays unverified until then.
 
 **Live site:** https://filafabric.pages.dev (Cloudflare Pages publishes every push to `main`; nothing to install).
@@ -17,13 +17,22 @@ http://localhost:5173/ in your browser. Close the window to stop it. From a term
 
 ```bash
 npm run serve     # server + browser
-npm test          # engine and UI-logic tests (145)
+npm test          # engine and UI-logic tests (164)
 npm run golden    # re-record the 20 x 20 golden summary after an intended engine change
 ```
 
-In the page, work left to right: pick a **design**, shape it with the **settings** on the right (swatch size, then a
-few sliders; click a slider's value to type an exact number), and read the **print summary** at the bottom of the
+In the page, work left to right: pick a **design**, shape it with the **settings** on the right (a width and height,
+or an **SVG outline** to fill; then a few sliders, and you can click a slider's value to type an exact number), and
+read the **print summary** at the bottom of the
 settings: a check (amber with an "Add room" fix when loops are tight), print time, filament, and **Export G-code**.
+**Outlines:** drop an SVG under Size and shape (paths, polygons, rectangles, circles and ellipses, with curves and
+transforms; text must be converted to paths). The shape fills both designs: holes stay open (even-odd), concave
+parts print as separate strands instead of across the gap, and "Match its shape" sets the height to the outline's
+proportions. Rotate it with the slider. The outline travels in share links and settings files; scripts and links
+inside the SVG are stripped before it is read.
+**Squiggle & Gyroid, Parallel:** layer 2 runs halfway between the layer 1 lines in opposite phase, and every wave is
+kept at least a quarter of the line spacing plus half a strand deep, so each layer 2 line crosses the lines on both
+sides and the two layers form one connected net (two layers of parallel lines that never cross would come apart).
 **Loops at the back edge** decides what happens on the last base lines: a loop reaches one loop length past its
 feet, so "On every line" (the default) gives every line loops and lets the last rows overhang the back edge, while
 "Inside the swatch" keeps whole loops inside and leaves the last lines without loops of their own.
@@ -42,12 +51,12 @@ and seed in comment lines.
 
 ## First prints (spec section 9)
 
-1. Test swatch (30 × 30 mm), Advanced settings → What to print → untick "Print the loops": base only. Check adhesion,
+1. A 30 × 30 mm swatch (the default size), Advanced settings → What to print → untick "Print the loops": base only. Check adhesion,
    flow and corners.
 2. Custom size 30 × 15 mm, base and loops on, Loops at the back edge → **Inside the swatch**: exactly one row of
    loops. Check that the feet bond and the unsupported strands hold their height.
-3. Test swatch (30 × 30 mm) with the defaults: compare the tight-spot markers with real collisions.
-4. Full swatch (100 × 100 mm).
+3. The 30 × 30 mm swatch with the defaults: compare the tight-spot markers with real collisions.
+4. A 100 × 100 mm swatch.
 
 Filaflex Foamy 95 values are unverified until the first print; change flow, temperature and the unsupported
 speed one at a time. If the loops come out thin or break, raise Strand thickness in steps of 10 to 20 %. With the spec defaults the clearance model flags about 40 % of moves on the full sample.
@@ -86,7 +95,7 @@ Code:
 
 1. Textile generator + website + profiles (done, MK3S)
 2. G-code → machine-profile extractor (from G-code you share)
-3. SVG silhouette boundary with rotate-to-fit
+3. SVG outline boundary with rotate (done, both designs)
 4. Interwoven base + loops as one continuous extrusion path
 5. Bambu Lab A1 mini support (`.gcode.3mf` packaging, Bambu start/end macros)
 6. Product shell: design gallery on the left, settings on the right, preconfigured printer bundles, shareable

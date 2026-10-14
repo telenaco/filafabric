@@ -1,11 +1,13 @@
 import { generate } from '../engine/generate.js';
-import { generateSquiggle, SAMPLERS, createImageSampler } from '../engine/squiggle.js';
+import { generateSquiggle, SAMPLERS, createImageSampler, minCrossingAmplitude } from '../engine/squiggle.js';
+import { placeOutline, rotateRings, ringsAspect, unflattenRings } from '../engine/outline.js';
 import { createPreview, ROLES } from './preview.js';
-import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airStrandMm } from './controls.js';
+import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airStrandMm, fitAspect } from './controls.js';
 import { SQ_RANGES, SQUIGGLE_DEFAULTS, describeSquiggle, sizeForAspect } from './squiggle-controls.js';
 import { buildVerdict, buildSquiggleVerdict, formatMinutes } from './verdict.js';
 import { stateToHash, hashToState, sanitizeState } from './share.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
+import { readSvgOutline, drawOutlineThumb } from './svg-outline.js';
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -47,11 +49,6 @@ const PATTERNS = [
   { id: 'uniform', label: 'Even' },
   { id: 'image', label: 'Your picture' },
 ];
-const PRESETS = [
-  { id: 'test', tag: 'Test', w: 30, h: 30 },
-  { id: 'mid', tag: '', w: 50, h: 50 },
-  { id: 'full', tag: 'Full', w: 100, h: 100 },
-];
 
 /** The two designs' controls, wired to the same slider and size components. */
 const BINDINGS = {
@@ -87,7 +84,12 @@ const BINDINGS = {
     get: (key) => state.squiggle[key],
     set: (key, value) => { state.squiggle[key] = value; },
     range: (key) => SQ_RANGES[key],
-    readout: (key) => describeSquiggle(state.squiggle)[key],
+    readout: (key) => {
+      const text = describeSquiggle(state.squiggle)[key];
+      const floor = parallelDepth();
+      if (key === 'amplitude' && floor !== null && state.squiggle.amplitude < floor) return `${text} · raised to ${floor.toFixed(2)} mm`;
+      return text;
+    },
     size: {
       host: '#sq-size',
       ranges: { w: SQ_RANGES.width, h: SQ_RANGES.height },
@@ -111,6 +113,7 @@ const state = {
   squiggle: { ...SQUIGGLE_DEFAULTS },
   image: null, // { data: ImageData, name, px: [w, h], thumb: canvas }: stays on this computer, never in a link
   imageBoxOpen: false,
+  outline: null, // { name, rings (flat, unit box), rotation }: shared by every design, travels in links
   docName: 'Untitled swatch',
   result: null,
   error: null,
@@ -200,6 +203,7 @@ function snapshot() {
     primary: state.primary,
     advanced: state.advanced,
     squiggle: state.squiggle,
+    outline: state.outline,
     name: state.docName,
   };
 }
@@ -226,7 +230,7 @@ const grams = (g) => (g < 1 ? g.toFixed(2) : g.toFixed(1));
 
 /* ---------- history (undo / redo) ---------- */
 function snapshotKey() {
-  return JSON.stringify({ d: state.design, m: state.machine, t: state.material, p: state.primary, a: state.advanced, s: state.squiggle });
+  return JSON.stringify({ d: state.design, m: state.machine, t: state.material, p: state.primary, a: state.advanced, s: state.squiggle, o: state.outline });
 }
 
 function commit() {
@@ -256,6 +260,7 @@ function loadState(data) {
   state.primary = clean.primary;
   state.advanced = clean.advanced;
   state.squiggle = clean.squiggle;
+  state.outline = clean.outline;
   if (typeof data?.name === 'string') state.docName = data.name.slice(0, 60);
   if (designChanged) resetRoles();
   // a picture never travels in a link or a file, so without one loaded the pattern falls back
@@ -305,6 +310,19 @@ function squiggleSampler() {
   return SAMPLERS[s.pattern] ?? SAMPLERS.centerSpot;
 }
 
+/** The outline as it will print for a width x height swatch: rotated, then fitted inside it (mm). */
+function placedOutline(width, height) {
+  if (!state.outline) return null;
+  return placeOutline(unflattenRings(state.outline.rings), { rotation: state.outline.rotation, width, height });
+}
+
+/** In parallel mode, the least wave depth that still lets each line cross its neighbours (mm). */
+function parallelDepth() {
+  const s = state.squiggle;
+  if (s.mode !== 'parallel') return null;
+  return minCrossingAmplitude(s.height / Math.max(2, Math.floor(s.height / s.spacing)));
+}
+
 function regenerate() {
   const machine = state.machines.get(state.machine);
   const material = state.materials.get(state.material);
@@ -321,9 +339,11 @@ function regenerate() {
         wavelength: s.wavelength,
         sampler: squiggleSampler(),
         colorChange: s.colorChange,
+        outline: placedOutline(s.width, s.height),
       });
     } else {
-      result = generate(machine, material, toTextile(state.primary, state.advanced));
+      const [w, h] = sampleSize(state.primary);
+      result = generate(machine, material, toTextile(state.primary, state.advanced), { outline: placedOutline(w, h) });
     }
     state.result = result;
     state.error = null;
@@ -531,10 +551,8 @@ function renderSizes() {
     const hi = $(`#${id}-h`);
     if (wi && document.activeElement !== wi && wi.getAttribute('aria-invalid') !== 'true') wi.value = String(w);
     if (hi && document.activeElement !== hi && hi.getAttribute('aria-invalid') !== 'true') hi.value = String(h);
-    for (const btn of $$(`#${id}-presets button`)) {
-      btn.setAttribute('aria-pressed', String(Number(btn.dataset.w) === w && Number(btn.dataset.h) === h));
-    }
   }
+  renderOutline();
 }
 
 function renderSliders() {
@@ -556,6 +574,13 @@ function renderSliders() {
 
 function renderSquiggleChoices() {
   const s = state.squiggle;
+  const floor = parallelDepth();
+  $('#sq-mode-note').textContent = floor === null
+    ? 'Layer 1 runs in columns and layer 2 in rows, so the two cross everywhere.'
+    : `Layer 2 runs halfway between the layer 1 lines, in opposite phase. Waves stay at least ${floor.toFixed(2)} mm deep so every line crosses the lines on both sides.`;
+  $('#sq-pattern-hint').textContent = floor === null
+    ? 'Darker parts of the pattern get deeper, tighter waves.'
+    : 'Darker parts of the pattern get deeper waves.';
   for (const btn of $$('[data-sqmode]')) btn.setAttribute('aria-pressed', String(btn.dataset.sqmode === s.mode));
   for (const btn of $$('[data-pattern]')) btn.setAttribute('aria-pressed', String(btn.dataset.pattern === s.pattern));
   $('#sq-color-change').checked = s.colorChange;
@@ -730,25 +755,133 @@ function buildSize(id) {
     f.input.addEventListener('input', onInput);
     f.input.addEventListener('change', commit);
   }
-  const presets = el('div', { class: 'size-presets', id: `${id}-presets`, role: 'group', 'aria-label': 'Quick sizes' });
-  for (const p of PRESETS) {
-    const btn = el('button', { type: 'button', class: 'preset', 'data-w': p.w, 'data-h': p.h, 'aria-pressed': 'false' },
-      p.tag ? el('span', { class: 'preset-tag', text: p.tag }) : null,
-      `${p.w} × ${p.h}`);
-    btn.addEventListener('click', () => {
-      for (const f of [wf, hf]) f.input.removeAttribute('aria-invalid');
-      error.hidden = true;
-      b.set(p.w, p.h, p.id);
-      renderSizes();
-      schedule();
-      commit();
-    });
-    presets.append(btn);
-  }
   $(b.host).replaceChildren(
     el('div', { class: 'size-inputs' }, wf.field, el('span', { class: 'times', 'aria-hidden': 'true', text: '×' }), hf.field),
-    presets,
-    error);
+    error,
+    buildOutlineBox(id));
+}
+
+/* ---------- outline (an SVG the pattern fills) ---------- */
+function bindDrop(zone, onFile) {
+  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    if (e.dataTransfer?.files?.[0]) onFile(e.dataTransfer.files[0]);
+  });
+}
+
+function svgInput(id) {
+  const input = el('input', { type: 'file', accept: '.svg,image/svg+xml', class: 'visually-hidden' });
+  input.addEventListener('change', () => {
+    if (input.files?.[0]) loadOutline(input.files[0], id);
+    input.value = '';
+  });
+  return input;
+}
+
+/** Built once per design; renderOutline() only updates it, so the rotate slider keeps working while dragged. */
+function buildOutlineBox(id) {
+  const drop = el('label', { class: 'dropzone compact', 'data-outline': 'empty' },
+    icon('M9 2.5l2 4.2 4.5.6-3.3 3.1.8 4.5L9 12.8l-4 2.1.8-4.5-3.3-3.1 4.5-.6z'),
+    el('span', { class: 'small strong', text: 'Fill an outline instead' }),
+    el('span', { class: 'small muted', text: 'Drop an SVG here, or browse. The pattern fills the shape.' }),
+    svgInput(id));
+  bindDrop(drop, (file) => loadOutline(file, id));
+
+  const match = el('button', { type: 'button', class: 'link small', 'data-outline': 'match', text: 'Match its shape' });
+  match.addEventListener('click', () => { matchOutline(id); renderSizes(); schedule(); commit(); });
+  const remove = el('button', { type: 'button', class: 'link small', text: 'Remove' });
+  remove.addEventListener('click', () => {
+    state.outline = null;
+    renderOutline();
+    schedule();
+    commit();
+  });
+  const replace = el('label', { class: 'link small file-link' }, 'Replace', svgInput(id));
+
+  const rotateId = `${id}-outline-rotate`;
+  const rotate = el('input', { id: rotateId, type: 'range', min: -180, max: 180, step: 5, value: 0 });
+  rotate.addEventListener('input', () => {
+    if (!state.outline) return;
+    state.outline.rotation = Number(rotate.value);
+    renderOutline();
+    schedule();
+  });
+  rotate.addEventListener('change', commit);
+
+  const card = el('div', { class: 'outline-loaded', 'data-outline': 'loaded', hidden: true },
+    el('div', { class: 'img-info' },
+      el('canvas', { class: 'outline-thumb', width: 112, height: 112, 'aria-hidden': 'true' }),
+      el('div', { class: 'img-text' },
+        el('div', { class: 'img-name', 'data-outline': 'name' }),
+        el('div', { class: 'small muted', 'data-outline': 'info' }),
+        el('div', { class: 'img-actions' }, match, replace, remove))),
+    el('div', { class: 'ctl' },
+      el('div', { class: 'ctl-top' }, el('label', { class: 'ctl-label', for: rotateId, text: 'Rotate outline' }), el('span', { class: 'ctl-readout', 'data-outline': 'angle' })),
+      rotate,
+      el('div', { class: 'ctl-ends', 'aria-hidden': 'true' }, el('span', { text: '−180°' }), el('span', { text: '180°' }))));
+  bindDrop(card, (file) => loadOutline(file, id));
+  return el('div', { class: 'outline-box', id: `${id}-outline` }, drop, card);
+}
+
+function outlineAspect() {
+  return ringsAspect(rotateRings(unflattenRings(state.outline.rings), state.outline.rotation));
+}
+
+function matchOutline(id) {
+  const b = BINDINGS[id].size;
+  const [w, h] = fitAspect(b.get()[0], outlineAspect(), b.ranges);
+  b.set(w, h, null);
+}
+
+function renderOutline() {
+  const o = state.outline;
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#34469a';
+  for (const id of Object.keys(BINDINGS)) {
+    const box = $(`#${id}-outline`);
+    if (!box) continue;
+    box.querySelector('[data-outline="empty"]').hidden = !!o;
+    box.querySelector('[data-outline="loaded"]').hidden = !o;
+    if (!o) continue;
+    const parts = o.rings.length;
+    box.querySelector('[data-outline="name"]').textContent = o.name;
+    const b = BINDINGS[id].size;
+    const [w, h] = b.get();
+    const [mw, mh] = fitAspect(w, outlineAspect(), b.ranges);
+    const matched = mw === w && mh === h;
+    box.querySelector('[data-outline="info"]').textContent = `${parts === 1 ? 'One shape' : `${parts} shapes and holes`} · fitted inside ${w} × ${h} mm${matched ? '' : ' (with room to spare)'}`;
+    box.querySelector('[data-outline="match"]').hidden = matched;
+    box.querySelector('[data-outline="angle"]').textContent = `${o.rotation}°`;
+    const rotate = $(`#${id}-outline-rotate`);
+    if (document.activeElement !== rotate) rotate.value = String(o.rotation);
+    const thumb = box.querySelector('.outline-thumb');
+    const key = `${o.name}:${o.rotation}:${o.rings.length}:${o.rings[0].length}:${accent}`;
+    if (thumb.dataset.key !== key) {
+      drawOutlineThumb(thumb, rotateRings(unflattenRings(o.rings), o.rotation), accent);
+      thumb.dataset.key = key;
+    }
+  }
+}
+
+async function loadOutline(file, id) {
+  if (!/\.svg$/i.test(file.name) && file.type !== 'image/svg+xml') {
+    toast('Use an SVG file for the outline.');
+    return;
+  }
+  try {
+    const o = await readSvgOutline(file);
+    state.outline = { name: o.name, rings: o.rings, rotation: 0 };
+    matchOutline(id);
+    renderSizes();
+    schedule();
+    commit();
+    const [w, h] = BINDINGS[id].size.get();
+    toast(`Filling ${o.name}: the swatch is ${w} × ${h} mm to match its shape`);
+  } catch (e) {
+    toast(`Could not use that outline: ${e.message}`);
+  }
 }
 
 function fieldValue(key) {

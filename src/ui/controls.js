@@ -130,3 +130,19 @@ export function airStrandMm(primary, advanced, material) {
   const d = airStrandDiameter('unsupported', { t, material, derived: { freeDiameter } });
   return Number.isFinite(d) && d > 0 ? d : null;
 }
+
+/**
+ * A width x height with the given proportions (width / height), keeping the width where it can and staying
+ * inside the ranges, for "Match its shape".
+ */
+export function fitAspect(width, aspect, ranges) {
+  const clampTo = (n, r) => Math.min(r.max, Math.max(r.min, Math.round(n)));
+  if (!(aspect > 0)) return [width, width];
+  let w = clampTo(width, ranges.w);
+  let h = w / aspect;
+  if (h > ranges.h.max || h < ranges.h.min) {
+    h = clampTo(h, ranges.h);
+    w = clampTo(h * aspect, ranges.w);
+  }
+  return [w, clampTo(h, ranges.h)];
+}

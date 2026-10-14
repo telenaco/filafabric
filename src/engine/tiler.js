@@ -37,11 +37,12 @@ function fiberParams(t, jitter) {
  * loops that would put a leg closer than `leg_gap` to another leg are nudged sideways.
  * Rows are returned far-to-near ("shingle order") so the nozzle never dives under a raised strand.
  */
-export function tile(cfg, boundary, rng) {
+export function tile(cfg, boundary, rng, { rows: rowYs = null } = {}) {
   const { t, derived } = cfg;
   const bbox = boundary.bbox();
   const half = t.loop_width / 2;
-  const rowCount = Math.floor((bbox.maxY - bbox.minY) / derived.rowPitch + EPS) + 1;
+  // rows sit on the base lines: by default every row pitch from the bottom edge; an outline passes its own lines
+  const rowCount = rowYs ? rowYs.length : Math.floor((bbox.maxY - bbox.minY) / derived.rowPitch + EPS) + 1;
   const perRow = Math.max(0, Math.floor((bbox.maxX - bbox.minX - t.loop_width) / t.loop_pitch + EPS) + 1);
   if (perRow * rowCount > MAX_LOOPS) {
     throw new ConfigError([
@@ -63,7 +64,7 @@ export function tile(cfg, boundary, rng) {
   const counts = { candidates: 0, kept: 0, dropped: 0, unresolvedLegs: 0 };
 
   for (let k = 0; k < rowCount; k++) {
-    const footY = bbox.minY + k * derived.rowPitch;
+    const footY = rowYs ? rowYs[k] : bbox.minY + k * derived.rowPitch;
     const stagger = k % 2 === 1 ? t.row_stagger * t.loop_pitch : 0;
     const legs = [];
     const row = [];

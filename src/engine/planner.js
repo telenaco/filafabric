@@ -128,7 +128,8 @@ export function plan(cfg, base, placements, boundary) {
   const model = clearanceModel(cfg);
   const moves = [];
   const strands = [];
-  if (base) strands.push({ kind: 'base', id: 'base', pts: base.points, lift: 0 });
+  // an outline can need several base strands (one per region a single serpentine can cover)
+  if (base) (base.strands ?? [base.points]).forEach((pts, i) => strands.push({ kind: 'base', id: i === 0 ? 'base' : `base-${i + 1}`, pts, lift: 0 }));
   for (const p of placements) {
     strands.push({
       kind: 'loop',

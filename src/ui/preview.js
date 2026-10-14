@@ -190,7 +190,20 @@ export function createPreview(container) {
     );
     plate.position.set(bed.width / 2 - o.x, bed.depth / 2 - o.y, -0.05);
     add(plate);
-    add(rectangle(0, 0, cfg.t.sample_width, cfg.t.sample_height, pal.sample));
+    if (result.outline) {
+      for (const ring of result.outline) {
+        const pts = [];
+        ring.forEach((p, i) => {
+          const q = ring[(i + 1) % ring.length];
+          pts.push(p.x, p.y, 0, q.x, q.y, 0);
+        });
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+        add(new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: pal.sample })));
+      }
+    } else {
+      add(rectangle(0, 0, cfg.t.sample_width, cfg.t.sample_height, pal.sample));
+    }
     resize();
   }
 

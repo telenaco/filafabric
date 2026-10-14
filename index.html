@@ -122,7 +122,7 @@
         </header>
 
         <section class="group" aria-labelledby="lp-size-title">
-          <h2 class="eyebrow" id="lp-size-title">Swatch size</h2>
+          <h2 class="eyebrow" id="lp-size-title">Size and shape</h2>
           <div id="lp-size"></div>
           <div class="ctl edge-ctl">
             <div class="ctl-top"><span class="ctl-label" id="edge-label">Loops at the back edge</span><span class="ctl-readout" id="edge-value"></span></div>
@@ -163,7 +163,7 @@
         </header>
 
         <section class="group" aria-labelledby="sq-size-title">
-          <h2 class="eyebrow" id="sq-size-title">Swatch size</h2>
+          <h2 class="eyebrow" id="sq-size-title">Size and shape</h2>
           <div id="sq-size"></div>
         </section>
 
@@ -175,15 +175,16 @@
               <span class="seg-main">Crossed</span><span class="seg-sub">Columns, then rows</span>
             </button>
             <button type="button" data-sqmode="parallel" aria-pressed="false">
-              <svg width="44" height="28" viewBox="0 0 44 28" fill="none" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path stroke="var(--role-base)" d="M4 10Q6.5 4 9 10T14 10T19 10T24 10T29 10T34 10T39 10M4 20Q6.5 14 9 20T14 20T19 20T24 20T29 20T34 20T39 20"/><path stroke="var(--role-anchored)" d="M4 10Q6.5 16 9 10T14 10T19 10T24 10T29 10T34 10T39 10M4 20Q6.5 26 9 20T14 20T19 20T24 20T29 20T34 20T39 20"/></svg>
-              <span class="seg-main">Parallel</span><span class="seg-sub">Mirrored rows</span>
+              <svg width="44" height="28" viewBox="0 0 44 28" fill="none" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path stroke="var(--role-base)" d="M4 7Q6.5 0.6 9 7T14 7T19 7T24 7T29 7T34 7T39 7M4 21Q6.5 14.6 9 21T14 21T19 21T24 21T29 21T34 21T39 21"/><path stroke="var(--role-anchored)" d="M4 14Q6.5 20.4 9 14T14 14T19 14T24 14T29 14T34 14T39 14"/></svg>
+              <span class="seg-main">Parallel</span><span class="seg-sub">Offset rows that cross</span>
             </button>
           </div>
+          <p class="group-hint after" id="sq-mode-note"></p>
         </section>
 
         <section class="group" aria-labelledby="sq-pattern-title">
           <h2 class="eyebrow" id="sq-pattern-title">Pattern</h2>
-          <p class="group-hint">Darker parts of the pattern get deeper, tighter waves.</p>
+          <p class="group-hint" id="sq-pattern-hint">Darker parts of the pattern get deeper, tighter waves.</p>
           <div class="patterns" role="group" aria-labelledby="sq-pattern-title" id="sq-patterns"></div>
           <div id="sq-image-box" class="image-box" hidden>
             <div id="sq-img-info" class="img-info" hidden>
@@ -250,7 +251,7 @@
     <h2 id="help-title">Getting started</h2>
     <ol class="steps">
       <li><strong>Pick a design</strong> on the left. Each one is a different kind of printed fabric.</li>
-      <li><strong>Shape it</strong> with the controls on the right. The preview updates as you go: drag it to turn, scroll to zoom, and press play to watch the print order.</li>
+      <li><strong>Shape it</strong> with the controls on the right: type a width and height, or drop an SVG outline and the pattern fills that shape. The preview updates as you go: drag it to turn, scroll to zoom, and press play to watch the print order.</li>
       <li><strong>Check the summary</strong> above the Export button: print time, filament, and anything worth a second look.</li>
       <li><strong>Export the G-code</strong> and print it from your printer's SD card or USB. No slicer is needed.</li>
     </ol>

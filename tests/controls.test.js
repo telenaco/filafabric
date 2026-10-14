@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   PRIMARY_DEFAULTS, RANGES, ADVANCED_DEFAULTS, PRIMARY_KEYS, sampleSize, toTextile, sanitizePrimary, describePrimary, overlapPercent,
-  airStrandMm,
+  airStrandMm, fitAspect,
 } from '../src/ui/controls.js';
 import { validateTextile, DEFAULT_TEXTILE } from '../src/engine/params.js';
 
@@ -153,4 +153,12 @@ test('loops start on every base line by default; "inside the swatch" keeps whole
   assert.equal(describePrimary(PRIMARY_DEFAULTS).edgeLoops, 'overhangs 15 mm');
   assert.equal(describePrimary({ ...PRIMARY_DEFAULTS, loopSize: 1.4 }).edgeLoops, 'overhangs 21 mm');
   assert.equal(describePrimary({ ...PRIMARY_DEFAULTS, edgeLoops: false }).edgeLoops, 'fits inside');
+});
+
+test('fitAspect keeps the width and sets the height to the shape, within the ranges', () => {
+  const ranges = { w: { min: 10, max: 240 }, h: { min: 10, max: 200 } };
+  assert.deepEqual(fitAspect(60, 2, ranges), [60, 30]);
+  assert.deepEqual(fitAspect(60, 0.5, ranges), [60, 120]);
+  assert.deepEqual(fitAspect(150, 0.5, ranges), [100, 200], 'too tall: the height caps and the width follows');
+  assert.deepEqual(fitAspect(100, 20, ranges), [200, 10], 'too flat: the height floors and the width follows');
 });
