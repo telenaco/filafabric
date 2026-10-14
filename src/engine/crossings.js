@@ -95,6 +95,8 @@ export function findCrossings(strands, { strandWidth = 0.5, cell = 1 } = {}) {
         const arcA = arcs[A.si][A.i] + hit[0] * (arcs[A.si][A.i + 1] - arcs[A.si][A.i]);
         const arcB = arcs[B.si][B.i] + hit[1] * (arcs[B.si][B.i + 1] - arcs[B.si][B.i]);
         if (A.si === B.si && Math.abs(arcB - arcA) < minArc) continue;
+        // the end of a closed strand meeting its own start is the closing joint, not a crossing
+        if (A.si === B.si && A.i === 0 && B.i === strands[B.si].pts.length - 2 && hit[0] < 1e-9 && hit[1] > 1 - 1e-9) continue;
         const key = `${A.si}|${B.si}`;
         const near = recent.get(key);
         if (near && near.some((c) => Math.abs(c.arcA - arcA) < strandWidth && Math.abs(c.arcB - arcB) < strandWidth)) continue;

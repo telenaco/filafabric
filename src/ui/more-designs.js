@@ -287,14 +287,15 @@ MORE_DESIGNS.push(layered({
 }));
 
 const MEANDER = defineControls({
-  ranges: { ...SIZE, cell: { min: 3, max: 14, step: 0.5 }, angle: { min: 15, max: 75, step: 5 }, spacing: { min: 3, max: 10, step: 0.5 }, seed: { min: 1, max: 999, step: 1 } },
-  defaults: { width: 50, height: 50, curve: 'hilbert', cell: 6, angle: 45, spacing: 5, seed: 1, colorChange: false },
-  enums: { curve: CURVE_IDS },
+  ranges: { ...SIZE, cell: { min: 3, max: 14, step: 0.5 }, angle: { min: 15, max: 75, step: 5 }, spacing: { min: 3, max: 10, step: 0.5 }, seed: { min: 1, max: 999, step: 1 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
+  defaults: { width: 50, height: 50, curve: 'hilbert', cell: 6, angle: 45, spacing: 5, seed: 1, pattern: 'none', patternScale: 1, colorChange: false },
+  enums: { curve: CURVE_IDS, pattern: ['none', ...FIELD_IDS] },
   bools: ['colorChange'],
   presets: [
     { id: 'hilbert', name: 'Hilbert lace', blurb: 'Tight folds, hatched across', patch: { curve: 'hilbert', cell: 6, angle: 45, spacing: 5 } },
     { id: 'peano', name: 'Peano', blurb: 'Long serpentine folds', patch: { curve: 'peano', cell: 6, angle: 45, spacing: 5 } },
     { id: 'maze', name: 'Maze', blurb: 'A random walk round a maze', patch: { curve: 'maze', cell: 6, angle: 45, spacing: 5 } },
+    { id: 'stipple', name: 'Stipple tour', blurb: 'One loop through graded dots', patch: { curve: 'tsp', cell: 6, angle: 45, spacing: 5, pattern: 'noise' } },
     { id: 'open', name: 'Open meander', blurb: 'Large cells, wide hatch', patch: { curve: 'hilbert', cell: 10, angle: 60, spacing: 8 } },
   ],
   describe: (s) => ({ cell: `${r1(s.cell)} mm cells`, angle: `${s.angle}°`, spacing: `${r1(s.spacing)} mm apart`, seed: `#${s.seed}` }),
@@ -304,9 +305,10 @@ MORE_DESIGNS.push(layered({
   id: 'meander',
   name: 'Meander',
   blurb: 'A space-filling curve crossed by a hatch',
-  about: 'One continuous strand that folds across the fabric (a Hilbert or Peano curve) and never crosses itself, held by a straight hatch laid over it at an angle. The folds give hidden slack, so it stretches by unfolding and reads as lace.',
+  about: 'One continuous strand that folds across the fabric and never crosses itself, held by a straight hatch laid over it at an angle: a Hilbert or Peano curve, a random maze, or one loop through scattered dots (denser where a pattern is bright). The folds give hidden slack, so it stretches by unfolding and reads as lace.',
   file: 'meander',
   c: MEANDER,
+  patterns: ['none', ...FIELD_IDS],
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
@@ -324,12 +326,13 @@ MORE_DESIGNS.push(layered({
         { key: 'cell', label: 'Fold size', help: 'About how wide each fold of the curve is.', lo: 'Fine', hi: 'Coarse', unit: 'mm', edit: true },
         { key: 'angle', label: 'Hatch angle', help: 'The angle of the lines laid across the curve.', lo: 'Shallow', hi: 'Steep', unit: '°', edit: true },
         { key: 'spacing', label: 'Hatch spacing', help: 'Distance between the hatch lines.', lo: 'Dense', hi: 'Open', unit: 'mm', edit: true },
-        { key: 'seed', label: 'Maze number', help: 'Only the maze curve uses it: each number is a different maze, and the same number repeats it.', lo: '1', hi: '999', unit: '', edit: true },
+        { key: 'seed', label: 'Pattern number', help: 'Used by the maze and stipple curves: each number is different, and the same number repeats it.', lo: '1', hi: '999', unit: '', edit: true },
       ],
     },
+    { kind: 'pattern', key: 'pattern', title: 'Grade the dots', hint: 'Only the stipple tour uses it: dots are denser where the pattern is bright.', scale: { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false } },
     COLOUR,
   ],
-  build: (s, boundary) => meanderLayers(boundary, { curve: s.curve, cell: s.cell, angle: s.angle, spacing: s.spacing, seed: s.seed }),
+  build: (s, boundary) => meanderLayers(boundary, { curve: s.curve, cell: s.cell, angle: s.angle, spacing: s.spacing, seed: s.seed, tone: s.pattern === 'none' ? null : createField(s.pattern, { scale: s.patternScale }) }),
   summary: (result) => `a meander of ${result.report.crossings} crossings`,
 }));
 

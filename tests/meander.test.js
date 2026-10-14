@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { hilbertCells, peanoCells, mazeCells, meanderLayers, curveOrder, CURVE_IDS } from '../src/engine/meander.js';
+import { hilbertCells, peanoCells, mazeCells, tspTour, meanderLayers, curveOrder, CURVE_IDS } from '../src/engine/meander.js';
 import { boundaryFor, crossingReport, layeredResult } from '../src/engine/layers.js';
+import { findCrossings } from '../src/engine/crossings.js';
+import { sites } from '../src/engine/voronoi.js';
 import { defaultProfiles } from './helpers.js';
 
 const { machine, material } = defaultProfiles();
@@ -67,5 +69,25 @@ test('the maze never crosses itself and prints', () => {
   const single = crossingReport(layers[0].map((pts) => ({ pts, layer: 0 })), 1728);
   assert.equal(single.crossings, 0);
   const r = layeredResult(machine, material, { width: 48, height: 36, layers });
+  assert.ok(r.moves.some((m) => m.extrude));
+});
+
+test('the stipple tour visits every dot once and never crosses itself', () => {
+  const dots = sites({ minX: 0, minY: 0, maxX: 50, maxY: 40 }, { spacing: 7, relax: 2, seed: 2 });
+  const tour = tspTour(dots);
+  assert.equal(tour.length, dots.length);
+  assert.equal(new Set(tour.map((p) => `${p.x},${p.y}`)).size, dots.length);
+  const closed = [...tour, tour[0]];
+  assert.equal(findCrossings([{ pts: closed }], { strandWidth: 0.001 }).found.length, 0);
+});
+
+test('the tsp meander is one loop, denser where the tone is bright, and refuses too many dots', () => {
+  const b = boundaryFor(60, 40);
+  const bright = (x) => (x < 30 ? 1 : 0);
+  const { layers } = meanderLayers(b, { curve: 'tsp', cell: 6, seed: 3, tone: bright });
+  const pts = layers[0].flat();
+  assert.ok(pts.filter((p) => p.x < 30).length > pts.length * 0.55);
+  assert.throws(() => meanderLayers(boundaryFor(240, 200), { curve: 'tsp', cell: 4 }), (e) => e.name === 'ConfigError');
+  const r = layeredResult(machine, material, { width: 60, height: 40, layers });
   assert.ok(r.moves.some((m) => m.extrude));
 });

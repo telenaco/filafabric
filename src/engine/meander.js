@@ -1,5 +1,7 @@
 import { hatch, clipPolyline } from './layers.js';
 import { createRng } from './rng.js';
+import { sites } from './voronoi.js';
+import { ConfigError } from './params.js';
 
 /**
  * Meanders: a space-filling curve (Hilbert or Peano) as one continuous strand that never crosses itself, and an
@@ -10,6 +12,7 @@ export const CURVES = Object.freeze({
   hilbert: { label: 'Hilbert', hint: 'Tight folds of 90°, in a square grid of 2ⁿ cells' },
   peano: { label: 'Peano', hint: 'Long serpentines of 3 x 3 cells, in a grid of 3ⁿ' },
   maze: { label: 'Maze', hint: 'A random closed meander that walks round a maze, a different one for every seed' },
+  tsp: { label: 'Stipple tour', hint: 'One loop through scattered dots, denser where a pattern is bright' },
 });
 export const CURVE_IDS = Object.freeze(Object.keys(CURVES));
 
@@ -106,6 +109,45 @@ export function mazeCells(order, seed = 1) {
   return cells;
 }
 
+/**
+ * One closed tour through the points: nearest neighbour first, then 2-opt until no swap shortens it. A tour that
+ * cannot be shortened by swapping two edges does not cross itself.
+ */
+export function tspTour(points) {
+  const n = points.length;
+  if (n < 3) return points.map((p) => ({ x: p.x, y: p.y }));
+  const d = (a, b) => Math.hypot(points[a].x - points[b].x, points[a].y - points[b].y);
+  const left = new Set(Array.from({ length: n }, (_, i) => i));
+  let start = 0;
+  for (let i = 1; i < n; i++) if (points[i].x < points[start].x) start = i;
+  const tour = [start];
+  left.delete(start);
+  while (left.size) {
+    const cur = tour[tour.length - 1];
+    let best = -1, bd = Infinity;
+    for (const i of left) {
+      const di = d(cur, i);
+      if (di < bd) { bd = di; best = i; }
+    }
+    tour.push(best);
+    left.delete(best);
+  }
+  for (let pass = 0, improved = true; improved && pass < 100; pass++) {
+    improved = false;
+    for (let i = 0; i < n - 1; i++) {
+      for (let j = i + 2; j < n; j++) {
+        if (i === 0 && j === n - 1) continue;
+        const a = tour[i], b = tour[i + 1], c = tour[j], e = tour[(j + 1) % n];
+        if (d(a, c) + d(b, e) < d(a, b) + d(c, e) - 1e-9) {
+          for (let lo = i + 1, hi = j; lo < hi; lo++, hi--) [tour[lo], tour[hi]] = [tour[hi], tour[lo]];
+          improved = true;
+        }
+      }
+    }
+  }
+  return tour.map((i) => ({ x: points[i].x, y: points[i].y }));
+}
+
 /** One round of Chaikin corner cutting on an open polyline (the ends stay put). */
 function chaikin(pts) {
   const out = [pts[0]];
@@ -130,9 +172,21 @@ export function curveOrder(curve, size, cell) {
  * @param angle    angle of the second layer's hatch, degrees
  * @param spacing  spacing of the hatch, mm
  */
-export function meanderLayers(boundary, { curve = 'hilbert', cell = 6, angle = 45, spacing = 5, seed = 1 } = {}) {
+export const MAX_TOUR_POINTS = 600;
+
+export function meanderLayers(boundary, { curve = 'hilbert', cell = 6, angle = 45, spacing = 5, seed = 1, tone = null } = {}) {
   if (!CURVES[curve]) throw new Error(`Unknown meander curve: ${curve}`);
   const box = boundary.bbox();
+  if (curve === 'tsp') {
+    const estimate = Math.ceil(((box.maxX - box.minX) * (box.maxY - box.minY)) / (cell * cell));
+    if (estimate > MAX_TOUR_POINTS) {
+      throw new ConfigError([`This would need about ${estimate} dots; the limit is ${MAX_TOUR_POINTS}. Use larger cells or a smaller swatch.`]);
+    }
+    const dots = sites(box, { spacing: cell, relax: 2, seed, tone });
+    const tour = tspTour(dots);
+    tour.push({ ...tour[0] });
+    return { layers: [clipPolyline(chaikin(tour), boundary), hatch(boundary, { angle, spacing })], extra: { dots: dots.length } };
+  }
   const w = box.maxX - box.minX, h = box.maxY - box.minY;
   const order = curveOrder(curve, Math.max(w, h), cell);
   const cells = curve === 'peano' ? peanoCells(order) : curve === 'maze' ? mazeCells(order, seed) : hilbertCells(order);
