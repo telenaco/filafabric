@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { proportionPhrase, buildVerdict, formatMinutes, shareLabel } from '../src/ui/verdict.js';
+import { proportionPhrase, buildVerdict, buildSquiggleVerdict, formatMinutes, shareLabel } from '../src/ui/verdict.js';
 
 const stats = (over) => ({ loops: 567, violations: 19206, extrudingMoves: 47800, ...over });
 
@@ -56,4 +56,12 @@ test('minutes and share labels read well', () => {
   assert.equal(formatMinutes(50.6), '51');
   assert.equal(formatMinutes(0), '0.0');
   assert.equal(shareLabel(0.402), 'about 4 in 10');
+});
+
+test('the squiggle verdict says what will happen, with or without a colour change', () => {
+  const plain = buildSquiggleVerdict({ hops: 1 }, { colorChange: false });
+  assert.equal(plain.level, 'ok');
+  assert.equal(plain.action, null);
+  assert.match(plain.body, /one lift/);
+  assert.match(buildSquiggleVerdict({ hops: 2 }, { colorChange: true }).body, /2 lifts.*second colour/);
 });

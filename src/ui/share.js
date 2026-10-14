@@ -1,6 +1,10 @@
 // Shareable state: the design and its settings, encoded into the URL hash. Pure, tested in Node.
 import { DEFAULT_TEXTILE } from '../engine/params.js';
 import { ADVANCED_DEFAULTS, PRIMARY_KEYS, sanitizePrimary } from './controls.js';
+import { sanitizeSquiggle } from './squiggle-controls.js';
+
+/** The designs the studio knows, in gallery order. The first one opens by default. */
+export const DESIGN_IDS = Object.freeze(['loop-pile', 'squiggle']);
 
 const toToken = (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const fromToken = (t) => decodeURIComponent(escape(atob(t.replace(/-/g, '+').replace(/_/g, '/'))));
@@ -28,9 +32,13 @@ export function hashToState(hash) {
   return m ? decodeState(m[1]) : null;
 }
 
-/** Accept only what the app understands: known profiles, clamped primary values, known advanced keys. */
+/**
+ * Accept only what the app understands: a known design and profiles, clamped primary and squiggle values,
+ * known advanced keys. Version 1 links (before designs were saved) open as the loop pile.
+ */
 export function sanitizeState(raw, known) {
   const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const design = DESIGN_IDS.includes(r.design) ? r.design : DESIGN_IDS[0];
   const machine = known.machines.includes(r.machine) ? r.machine : known.machines[0];
   const material = known.materials.includes(r.material) ? r.material : known.materials[0];
   const primary = sanitizePrimary(r.primary);
@@ -44,5 +52,5 @@ export function sanitizeState(raw, known) {
       if (ok) advanced[key] = value;
     }
   }
-  return { v: 1, machine, material, primary, advanced };
+  return { v: 2, design, machine, material, primary, advanced, squiggle: sanitizeSquiggle(r.squiggle) };
 }

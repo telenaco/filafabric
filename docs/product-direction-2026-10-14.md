@@ -98,3 +98,9 @@ left, the preview with Path / Strand / Travel / Hops layers in the centre, and t
 five sliders and the Advanced drawer on the right, with undo/redo, share link, reset, plain-language field errors
 and a phone layout. Not built: a second design, curated printer bundles beyond the two profiles, and the
 overlapping-line path (shown as "Planned").
+
+## Round 2 (added 2026-10-14)
+
+A second design (Squiggle & Gyroid) now sits in the gallery, and the shell was rebuilt so every design shares the
+same components, history, share link and print summary. Findings, references and changes are in
+`ux-round-2-2026-10-14.md`.

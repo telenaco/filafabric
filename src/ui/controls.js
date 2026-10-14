@@ -88,13 +88,22 @@ export function sanitizePrimary(raw) {
   return out;
 }
 
+/** How much neighbouring loops in a row overlap, as a whole percentage of the loop width (0 when they don't). */
+export function overlapPercent(primary) {
+  const width = 6 * primary.loopSize;
+  return Math.max(0, Math.round((1 - primary.loopSpacing / width) * 100));
+}
+
 /** Plain-language read-outs shown beside the sliders. */
 export function describePrimary(primary) {
+  const overlap = overlapPercent(primary);
   return {
     pileHeight: `${trim(primary.pileHeight)} mm`,
     loopSize: `${trim(6 * primary.loopSize)} × ${trim(15 * primary.loopSize)} mm`,
     loopSpacing: `${trim(primary.loopSpacing)} mm apart`,
+    overlap: overlap > 0 ? `${overlap}% overlap` : 'loops don\'t touch',
     baseGap: `${trim(primary.baseGap)} mm`,
     variation: primary.variation === 0 ? 'Off' : `${primary.variation}%`,
+    roomy: primary.roomy ? '1.5 mm at the feet' : '0.6 mm at the feet',
   };
 }

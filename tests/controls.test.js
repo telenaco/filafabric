@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  PRIMARY_DEFAULTS, RANGES, ADVANCED_DEFAULTS, PRIMARY_KEYS, sampleSize, toTextile, sanitizePrimary, describePrimary,
+  PRIMARY_DEFAULTS, RANGES, ADVANCED_DEFAULTS, PRIMARY_KEYS, sampleSize, toTextile, sanitizePrimary, describePrimary, overlapPercent,
 } from '../src/ui/controls.js';
 import { validateTextile, DEFAULT_TEXTILE } from '../src/engine/params.js';
 
@@ -109,4 +109,12 @@ test('PRIMARY_KEYS lists every engine key the primary controls own', () => {
   for (const k of ['sample_width', 'sample_height', 'loop_z_lift', 'loop_width', 'loop_length', 'loop_pitch', 'leg_gap', 'clearance', 'base_spacing', 'random_enabled']) {
     assert.ok(PRIMARY_KEYS.includes(k), k);
   }
+});
+
+test('the spacing read-out says how much neighbouring loops overlap', () => {
+  assert.equal(overlapPercent(PRIMARY_DEFAULTS), 50);
+  assert.equal(describePrimary(PRIMARY_DEFAULTS).overlap, '50% overlap');
+  assert.equal(overlapPercent({ ...PRIMARY_DEFAULTS, loopSize: 0.6, loopSpacing: 6 }), 0);
+  assert.equal(describePrimary({ ...PRIMARY_DEFAULTS, loopSize: 0.6, loopSpacing: 6 }).overlap, 'loops don\'t touch');
+  assert.equal(describePrimary({ ...PRIMARY_DEFAULTS, roomy: true }).roomy, '1.5 mm at the feet');
 });

@@ -15,11 +15,11 @@ export const STRAND_WIDTH = { base: 0.45, anchored: 0.45, lifting: 0.49, free: 0
 const PALETTES = {
   light: {
     base: 0x27366b, anchored: 0x1f8179, lifting: 0xb87400, free: 0xb0316f,
-    centreline: 0x12161e, travel: 0x566074, hop: 0xa04b00, violation: 0xd32f2f, bed: 0x9aa3b2, sample: 0x34469a,
+    centreline: 0x12161e, travel: 0x566074, hop: 0xa04b00, violation: 0xd32f2f, bed: 0xd3d7de, sample: 0x34469a,
   },
   dark: {
     base: 0x8fa6f5, anchored: 0x4fc3b8, lifting: 0xe8b04a, free: 0xf07ab0,
-    centreline: 0xf2f3f0, travel: 0x9aa4b5, hop: 0xffa060, violation: 0xff6b6b, bed: 0x5b6577, sample: 0x7ba3ff,
+    centreline: 0xf2f3f0, travel: 0x9aa4b5, hop: 0xffa060, violation: 0xff6b6b, bed: 0x2f3746, sample: 0x7ba3ff,
   },
 };
 
@@ -54,9 +54,10 @@ export function createPreview(container) {
     objects: [],
     thin: {}, fat: {}, buckets: {}, travel: null, hops: null, violations: null,
     roleVisible: { base: true, anchored: true, lifting: true, free: true },
-    layers: { path: true, strand: false, travel: false, hops: false },
+    // Open on what the fabric will look like: strands at their true thickness, at true scale.
+    layers: { path: false, strand: true, travel: false, hops: false },
     showViolations: false,
-    exaggerate: true,
+    exaggerate: false,
     moveIndex: Infinity,
     camera: 'angled',
     framedFor: '',
@@ -160,7 +161,13 @@ export function createPreview(container) {
 
     const o = cfg.derived.origin;
     const bed = cfg.machine.bed;
-    add(rectangle(-o.x, -o.y, bed.width - o.x, bed.depth - o.y, pal.bed));
+    // the bed as a faint plane rather than an outline, so its far edges never cut across the view
+    const plate = new THREE.Mesh(
+      new THREE.PlaneGeometry(bed.width, bed.depth),
+      new THREE.MeshBasicMaterial({ color: pal.bed, transparent: true, opacity: 0.3, depthWrite: false })
+    );
+    plate.position.set(bed.width / 2 - o.x, bed.depth / 2 - o.y, -0.05);
+    add(plate);
     add(rectangle(0, 0, cfg.t.sample_width, cfg.t.sample_height, pal.sample));
     resize();
   }
@@ -197,10 +204,11 @@ export function createPreview(container) {
     const size = Math.max(w, h);
     const cx = w / 2, cy = h / 2;
     controls.target.set(cx, cy, 2);
-    // distance that fits the swatch's bounding sphere in the vertical field of view, with some air
-    const radius = Math.hypot(w, h) / 2 + 4;
-    const distance = (radius / Math.sin((camera.fov * Math.PI) / 360)) * 1.05;
-    const dir = state.camera === 'top' ? [0, -0.01, 1] : state.camera === 'side' ? [0, -1, 0.1] : [0, -0.72, 0.69];
+    // distance that fits the swatch's bounding sphere in the vertical field of view, with a little air
+    const radius = Math.hypot(w, h) / 2 + 2;
+    const distance = (radius / Math.sin((camera.fov * Math.PI) / 360)) * 0.92;
+    // 'angled' is a three-quarter view from the front right, so rows and loop heights both read
+    const dir = state.camera === 'top' ? [0, -0.01, 1] : state.camera === 'side' ? [0, -1, 0.12] : [0.42, -0.78, 0.62];
     const len = Math.hypot(...dir);
     camera.position.set(cx + (dir[0] / len) * distance, cy + (dir[1] / len) * distance, 2 + (dir[2] / len) * distance);
     controls.update();
@@ -227,6 +235,8 @@ export function createPreview(container) {
 
   return {
     update,
+    /** Roles that have at least one move in the current result, in legend order. */
+    presentRoles() { return ROLES.filter((role) => state.buckets[role]?.idx.length > 0); },
     setCamera(name) { state.camera = name; if (state.result) frame(true); },
     setLayers(layers) { state.layers = { ...state.layers, ...layers }; if (state.result) { build(state.result); applyVisibility(); applyRange(); } },
     setRoles(roles) { state.roleVisible = { ...state.roleVisible, ...roles }; applyVisibility(); },
