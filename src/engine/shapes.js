@@ -47,24 +47,29 @@ export function shapeAt(shape, s, { pitch, size }) {
 /** Whole periods that fit along a lane. */
 export const loopCount = (length, pitch) => Math.max(0, Math.floor(length / pitch + 1e-9));
 
-/** How far a shape swings back and forward along the lane within one period: { lo <= 0 <= hi }. */
-function alongExtent(shape, pitch, size) {
-  let lo = 0, hi = 0;
-  for (let k = 0; k <= 120; k++) {
-    const { du } = shapeAt(shape, (k * pitch) / 120, { pitch, size });
-    if (du < lo) lo = du;
-    if (du > hi) hi = du;
+/**
+ * How far along the lane one period of the shape reaches, measured from the start of the period: the furthest
+ * forward (`uMax`, never less than one pitch) and the furthest back (`uMin`, never more than 0).
+ */
+function periodExtent(shape, pitch, size) {
+  let uMin = 0, uMax = pitch;
+  for (let k = 0; k <= 240; k++) {
+    const s = (k * pitch) / 240;
+    const u = s + shapeAt(shape, s, { pitch, size }).du;
+    if (u < uMin) uMin = u;
+    if (u > uMax) uMax = u;
   }
-  return { lo, hi };
+  return { uMin, uMax };
 }
 
 /**
- * Whole periods that fit along a lane of `length` mm with the strand kept inside it: a looped line swings
- * forward by up to twice its size at the end of the last loop, so that room is kept free.
+ * Whole periods that fit along a lane of `length` mm with the strand kept inside it: the last loop of a looped
+ * line bulges forward past the end of its period, and that room is kept free.
  */
 export function lanePeriods({ shape, length, pitch, size }) {
-  const { lo, hi } = alongExtent(shape, pitch, size);
-  return Math.max(0, Math.floor((length - hi + lo) / pitch + 1e-9));
+  const { uMin, uMax } = periodExtent(shape, pitch, size);
+  if (length < uMax - uMin) return 0;
+  return Math.max(0, Math.floor((length - uMax + uMin) / pitch + 1e-9) + 1);
 }
 
 /** A looped line needs `size > pitch / 2π`; at or below it the strand is only a wavy line. */
@@ -103,8 +108,8 @@ export function lanePoints({ shape, length, pitch, size, sizeAt = null, step = 0
     return pts;
   }
   const span = periods * pitch;
-  const { lo, hi } = alongExtent(shape, pitch, size);
-  const lead = -lo + (length - span - hi + lo) / 2;
+  const { uMin, uMax } = periodExtent(shape, pitch, size);
+  const lead = -uMin + (length - ((periods - 1) * pitch + uMax - uMin)) / 2;
   if (lead > 1e-9) straight(0, lead);
   const ds = step / arcRate(shape, pitch, size);
   const n = Math.ceil(span / ds);

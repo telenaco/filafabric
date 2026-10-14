@@ -422,3 +422,8 @@ dialog p { margin: 6px 0; }
 .design-tile.planned { opacity: 0.55; cursor: default; }
 .design-tile.planned:hover { border-color: var(--line); }
 .soon { margin-left: 8px; padding: 1px 7px; border: 1px solid var(--line-2); border-radius: 999px; font-size: 11px; font-weight: 600; color: var(--muted); vertical-align: 2px; }
+
+/* newer designs: shape and pattern pickers share the pattern grid */
+.pattern .shape-thumb { display: block; }
+.pattern-scale { margin-top: 14px; }
+.pattern-scale[hidden] { display: none; }

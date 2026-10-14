@@ -1,7 +1,25 @@
 // Tile thumbnails for the design column, as SVG strings keyed by design id. Static markup, no user input.
 // Colours come from the preview role variables so they follow light and dark themes.
 
+import { lanePoints } from '../engine/shapes.js';
+
+/** An SVG path for one strand shape along a lane (mm in the design's own units), at x0, y0. */
+function lanePath(shape, x0, y0, length, pitch, size) {
+  const pts = lanePoints({ shape, length, pitch, size, step: 0.8 });
+  return pts.map((p, i) => `${i ? 'L' : 'M'}${(x0 + p.u).toFixed(1)} ${(y0 + p.v).toFixed(1)}`).join('');
+}
+
+/** A 48 x 28 picture of a strand shape, for the shape picker. */
+export function shapeThumb(shape) {
+  return `<svg class="shape-thumb" width="48" height="28" viewBox="0 0 48 28" fill="none" aria-hidden="true"><path d="${lanePath(shape, 2, 14, 44, 11, 5.5)}" stroke="var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+const coilRows = [20, 38, 56, 74]
+  .map((y, k) => `<path d="${lanePath('looped', 10, y, 140, 22, 11)}" stroke="var(--role-${k % 2 ? 'anchored' : 'base'})"/>`)
+  .join('');
+
 export const THUMBS = {
+  coil: `<svg class="design-thumb" viewBox="0 0 160 96" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${coilRows}</svg>`,
   'loop-pile': `<svg class="design-thumb" viewBox="0 0 160 96" fill="none" aria-hidden="true">
   <g stroke="var(--role-base)" stroke-width="1.4" opacity="0.65"><path d="M8 88H152M8 76H152M8 64H152"/></g>
   <g stroke="var(--role-free)" stroke-width="2.2" stroke-linecap="round">

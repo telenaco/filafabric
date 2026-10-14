@@ -9,7 +9,9 @@ import { stateToHash, hashToState, sanitizeState } from './share.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
 import { readSvgOutline, drawOutlineThumb } from './svg-outline.js';
 import { DESIGNS, designById, isReady } from './designs.js';
-import { THUMBS } from './thumbs.js';
+import { THUMBS, shapeThumb } from './thumbs.js';
+import { FIELDS, createField } from '../engine/fields.js';
+import { SHAPES } from '../engine/shapes.js';
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -102,7 +104,8 @@ const state = {
   primary: { ...PRIMARY_DEFAULTS },
   advanced: {},
   squiggle: { ...SQUIGGLE_DEFAULTS },
-  designs: {}, // settings of every design newer than the loop pile and squiggle, by design id
+  // settings of every design newer than the loop pile and squiggle, by design id
+  designs: Object.fromEntries(DESIGNS.filter((d) => d.status === 'ready' && !d.legacy).map((d) => [d.id, d.defaults()])),
   image: null, // { data: ImageData, name, px: [w, h], thumb: canvas }: stays on this computer, never in a link
   imageBoxOpen: false,
   outline: null, // { name, rings (flat, unit box), rotation }: shared by every design, travels in links
@@ -117,6 +120,38 @@ const state = {
   showTight: false,
   roles: {},
 };
+/**
+ * A newer design describes its sliders and size in the registry; the studio wires them to the same slider and
+ * size components as the two older designs. `sliders` is everything whose value is shown; `build` is what goes in
+ * the sliders group (a pattern's size slider sits with the pattern picker instead).
+ */
+function bindingFor(mod) {
+  const items = mod.controls.filter((c) => c.kind === 'sliders').flatMap((c) => c.items);
+  const scale = mod.controls.find((c) => c.kind === 'pattern')?.scale;
+  const sliders = scale ? [...items, scale] : items;
+  const own = () => state.designs[mod.id];
+  return {
+    sliders,
+    build: items,
+    host: `#${mod.id}-sliders`,
+    get: (key) => own()[key],
+    set: (key, value) => { own()[key] = value; },
+    range: (key) => mod.ranges[key],
+    readout: (key) => {
+      const def = sliders.find((d) => d.key === key);
+      const d = mod.describe(own());
+      return def.readout ? def.readout(d) : d[key];
+    },
+    size: {
+      host: `#${mod.id}-size`,
+      ranges: { w: mod.ranges.width, h: mod.ranges.height },
+      get: () => mod.size(own()),
+      set: (w, h) => mod.setSize(own(), w, h),
+    },
+  };
+}
+for (const mod of DESIGNS) if (mod.status === 'ready' && !mod.legacy) BINDINGS[mod.id] = bindingFor(mod);
+
 let preview = null;
 let rafId = 0;
 let lastFrame = 0;
@@ -322,7 +357,12 @@ function regenerate() {
   const material = state.materials.get(state.material);
   try {
     let result;
-    if (state.design === 'squiggle') {
+    const mod = designById(state.design);
+    if (!mod.legacy) {
+      const own = state.designs[mod.id];
+      const [w, h] = mod.size(own);
+      result = mod.generate(machine, material, own, { outline: placedOutline(w, h) });
+    } else if (state.design === 'squiggle') {
       const s = state.squiggle;
       result = generateSquiggle(machine, material, {
         width: s.width,
@@ -409,6 +449,8 @@ function renderErrors() {
 
 function currentVerdict() {
   if (!state.result || state.error) return null;
+  const mod = designById(state.design);
+  if (!mod.legacy) return mod.verdict(state.result, state.designs[mod.id]);
   return state.design === 'squiggle'
     ? buildSquiggleVerdict(state.result.stats, { colorChange: state.squiggle.colorChange })
     : buildVerdict(state.result.stats, { roomy: state.primary.roomy });
@@ -473,6 +515,7 @@ function renderFigures() {
   const { stats, cfg } = state.result;
   const t = cfg.t;
   const isSq = state.design === 'squiggle';
+  const mod = designById(state.design);
   const fig = (value, unit, label) => el('div', { class: 'figure' },
     el('div', { class: 'fig-value' }, value, unit ? el('span', { class: 'fig-unit', text: ` ${unit}` }) : null),
     el('div', { class: 'fig-label', text: label }));
@@ -480,7 +523,9 @@ function renderFigures() {
   host.replaceChildren(
     fig(formatMinutes(stats.timeSec / 60), 'min', 'Print time'),
     fig(grams(stats.filamentGrams), 'g', 'Filament'),
-    isSq ? fig('2', '', 'Layers') : fig(stats.loops.toLocaleString('en'), '', 'Loops'),
+    !mod.legacy
+      ? (() => { const f = mod.figure(state.result); return fig(f.value, f.unit, f.label); })()
+      : isSq ? fig('2', '', 'Layers') : fig(stats.loops.toLocaleString('en'), '', 'Loops'),
   );
   toggle.textContent = state.details ? 'Hide details' : 'Details';
   toggle.setAttribute('aria-expanded', String(state.details));
@@ -500,7 +545,7 @@ function renderFigures() {
       el('p', { class: 'note', text: 'Time ignores acceleration. Each lift ends one strand and starts the next, which is where blobs and strings come from.' })
     );
   }
-  const what = isSq ? 'a two-layer squiggle mesh' : `${stats.loops} loops`;
+  const what = !mod.legacy ? mod.summary(state.result) : isSq ? 'a two-layer squiggle mesh' : `${stats.loops} loops`;
   $('#preview').setAttribute('aria-label', `3D preview: ${what} on a ${t.sample_width} by ${t.sample_height} millimetre swatch, about ${formatMinutes(stats.timeSec / 60)} minutes.`);
 }
 
@@ -636,6 +681,7 @@ function render() {
   renderSizes();
   renderSliders();
   renderSquiggleChoices();
+  renderDesignChoices();
   renderAdvancedSummary();
   renderLegend();
 }
@@ -715,7 +761,7 @@ function editValue(id, def, readout) {
 
 function buildSliders(id) {
   const b = BINDINGS[id];
-  $(b.host).replaceChildren(...b.sliders.map((def) => buildSlider(id, def)));
+  $(b.host).replaceChildren(...(b.build ?? b.sliders).map((def) => buildSlider(id, def)));
 }
 
 function buildSize(id) {
@@ -1020,6 +1066,7 @@ function syncControls() {
   renderSliders();
   renderSizes();
   renderSquiggleChoices();
+  renderDesignChoices();
   $('#doc-name').value = state.docName;
   fillDialogSelects();
 }
@@ -1075,8 +1122,10 @@ function resetRoles() {
 
 function showDesign() {
   for (const tile of $$('[data-design]')) tile.setAttribute('aria-pressed', String(tile.dataset.design === state.design));
-  $('#panel-loop-pile').hidden = state.design !== 'loop-pile';
-  $('#panel-squiggle').hidden = state.design !== 'squiggle';
+  for (const d of DESIGNS) {
+    const panel = $(`#panel-${d.id}`);
+    if (panel) panel.hidden = d.id !== state.design;
+  }
   $('#tight-option').hidden = state.design !== 'loop-pile';
   if (state.design !== 'loop-pile' && state.showTight) setShowTight(false);
 }
@@ -1093,6 +1142,117 @@ function setDesign(id) {
   $('#settings-body').scrollTop = 0;
   schedule();
   commit();
+}
+
+/* ---------- panels for the newer designs, built from their registry entry ---------- */
+function afterDesignChange() {
+  renderDesignChoices();
+  renderSliders();
+  schedule();
+  commit();
+}
+
+/** A little heat map of a pattern field, drawn in the accent colour: bright where the field is high. */
+function drawFieldThumb(canvas) {
+  const field = canvas.dataset.field;
+  const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  const size = 48;
+  canvas.width = size * ratio;
+  canvas.height = size * ratio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(ratio, ratio);
+  ctx.clearRect(0, 0, size, size);
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#34469a';
+  if (field === 'none') {
+    ctx.strokeStyle = accent;
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(10 + i * 14, 24, 5, 0, Math.PI * 2); ctx.stroke(); }
+    return;
+  }
+  const sampler = createField(field);
+  const cells = 24;
+  ctx.fillStyle = accent;
+  for (let j = 0; j < cells; j++) {
+    for (let i = 0; i < cells; i++) {
+      ctx.globalAlpha = 0.08 + 0.92 * sampler(((i + 0.5) / cells) * 100, ((cells - j - 0.5) / cells) * 100, 100, 100);
+      ctx.fillRect(i * 2, j * 2, 2, 2);
+    }
+  }
+}
+
+function buildDesignPanel(mod) {
+  const id = mod.id;
+  const panel = el('div', { id: `panel-${id}`, class: 'panel', hidden: true },
+    el('header', { class: 'panel-head' },
+      el('h1', { class: 'title', text: mod.name }),
+      el('p', { class: 'muted', text: mod.about })));
+  mod.controls.forEach((c, n) => {
+    const titleId = `${id}-group-${n}-title`;
+    const group = (...kids) => el('section', { class: 'group', 'aria-labelledby': titleId },
+      el('h2', { class: 'eyebrow', id: titleId, text: c.title }), ...kids);
+    if (c.kind === 'presets') {
+      const grid = el('div', { class: 'patterns', role: 'group', 'aria-labelledby': titleId, id: `${id}-presets` });
+      for (const p of mod.presets) {
+        const btn = el('button', { type: 'button', class: 'pattern', 'data-preset': p.id, 'aria-pressed': 'false', title: p.blurb },
+          el('span', { text: p.name }));
+        btn.addEventListener('click', () => { Object.assign(state.designs[id], p.patch); afterDesignChange(); });
+        grid.append(btn);
+      }
+      panel.append(group(grid));
+    } else if (c.kind === 'size') {
+      panel.append(group(el('div', { id: `${id}-size` })));
+    } else if (c.kind === 'shape') {
+      const grid = el('div', { class: 'patterns', role: 'group', 'aria-labelledby': titleId });
+      for (const shape of mod.shapes) {
+        const btn = el('button', { type: 'button', class: 'pattern', 'data-choice': `${id}:${c.key}:${shape}`, 'aria-pressed': 'false', title: SHAPES[shape].hint });
+        btn.innerHTML = `${shapeThumb(shape)}<span>${SHAPES[shape].label}</span>`;
+        btn.addEventListener('click', () => { state.designs[id][c.key] = shape; afterDesignChange(); });
+        grid.append(btn);
+      }
+      panel.append(group(c.hint ? el('p', { class: 'group-hint', text: c.hint }) : null, grid));
+    } else if (c.kind === 'sliders') {
+      panel.append(group(el('div', { id: `${id}-sliders`, class: 'controls' })));
+    } else if (c.kind === 'pattern') {
+      const grid = el('div', { class: 'patterns', role: 'group', 'aria-labelledby': titleId });
+      for (const field of mod.patterns) {
+        const btn = el('button', { type: 'button', class: 'pattern', 'data-choice': `${id}:${c.key}:${field}`, 'aria-pressed': 'false', title: field === 'none' ? 'Every loop the same size' : FIELDS[field].hint },
+          el('canvas', { class: 'pattern-thumb', 'data-field': field, 'aria-hidden': 'true' }),
+          el('span', { text: field === 'none' ? 'Plain' : FIELDS[field].label }));
+        btn.addEventListener('click', () => { state.designs[id][c.key] = field; afterDesignChange(); });
+        grid.append(btn);
+      }
+      const scaleBox = el('div', { id: `${id}-pattern-scale`, class: 'pattern-scale' });
+      panel.append(group(c.hint ? el('p', { class: 'group-hint', text: c.hint }) : null, grid, scaleBox));
+    }
+  });
+  $('#settings-body').append(panel);
+}
+
+/** After the panels exist: the pattern size slider, which lives beside the pattern picker. */
+function buildPatternScale(mod) {
+  const c = mod.controls.find((x) => x.kind === 'pattern');
+  if (c?.scale) $(`#${mod.id}-pattern-scale`).replaceChildren(buildSlider(mod.id, c.scale));
+}
+
+function drawFieldThumbs() {
+  for (const canvas of $$('canvas[data-field]')) drawFieldThumb(canvas);
+}
+
+/** Press states for the presets, shape and pattern pickers; the pattern size shows only when a pattern is chosen. */
+function renderDesignChoices() {
+  for (const mod of DESIGNS) {
+    if (mod.status !== 'ready' || mod.legacy) continue;
+    const s = state.designs[mod.id];
+    for (const btn of $$(`[data-choice^="${mod.id}:"]`)) {
+      const [, key, value] = btn.dataset.choice.split(':');
+      btn.setAttribute('aria-pressed', String(String(s[key]) === value));
+    }
+    const active = mod.presetMatch ? mod.presetMatch(s) : null;
+    for (const btn of $$(`#${mod.id}-presets [data-preset]`)) btn.setAttribute('aria-pressed', String(btn.dataset.preset === active));
+    const scale = $(`#${mod.id}-pattern-scale`);
+    if (scale) scale.hidden = s.pattern === 'none';
+  }
 }
 
 /* ---------- pictures for the squiggle pattern ---------- */
@@ -1236,7 +1396,10 @@ async function openFile(file) {
 }
 
 function resetDesign() {
-  if (state.design === 'squiggle') {
+  const mod = designById(state.design);
+  if (!mod.legacy) {
+    state.designs[mod.id] = mod.defaults();
+  } else if (state.design === 'squiggle') {
     state.squiggle = { ...SQUIGGLE_DEFAULTS };
     state.image = null;
     state.imageBoxOpen = false;
@@ -1371,7 +1534,7 @@ function bindStatic() {
     else if (e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
   });
 
-  window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', buildPatterns);
+  window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', () => { buildPatterns(); drawFieldThumbs(); });
 
   bindSquiggle();
 }
@@ -1389,10 +1552,13 @@ async function init() {
   let pictureDropped = false;
   if (initial) pictureDropped = loadState(initial);
 
+  for (const mod of DESIGNS) if (mod.status === 'ready' && !mod.legacy) buildDesignPanel(mod);
   for (const id of Object.keys(BINDINGS)) {
     buildSize(id);
     buildSliders(id);
   }
+  for (const mod of DESIGNS) if (mod.status === 'ready' && !mod.legacy) buildPatternScale(mod);
+  drawFieldThumbs();
   buildAdvanced();
   buildPatterns();
   fillDialogSelects();

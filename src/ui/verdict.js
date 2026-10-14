@@ -95,6 +95,34 @@ export function buildSquiggleVerdict(stats, { colorChange }) {
   };
 }
 
+/**
+ * The Coil design is one continuous strand per outline piece that lifts over itself at crossings, so the verdict
+ * says how many crossings there are and how steep the lifts are, or that the loops cannot form.
+ * @param stats  engine stats ({ crossings, maxLift, maxSlopeDeg, hops })
+ * @param opts   { loopsClose } the size is too small for the spacing, so the line only waves
+ */
+export function buildCoilVerdict(stats, { loopsClose = false } = {}) {
+  const none = { action: null, actionLabel: '', share: 0 };
+  if (loopsClose) {
+    return {
+      ...none,
+      level: 'heads-up',
+      title: 'The loops close up',
+      body: 'At this size and spacing the line only waves. Make the loops larger or the spacing smaller so it circles over itself.',
+    };
+  }
+  const lifts = stats.hops === 0 ? 'one unbroken strand with no lifts' : stats.hops === 1 ? 'one lift between strands' : `${stats.hops} lifts between strands`;
+  if (!stats.crossings) {
+    return { ...none, level: 'ok', title: 'Ready to print', body: `A single flat layer: nothing crosses, so loops and rows only touch. It prints as ${lifts}.` };
+  }
+  return {
+    ...none,
+    level: 'ok',
+    title: 'Ready to print',
+    body: `${stats.crossings.toLocaleString('en')} crossings, one layer thick: where strands cross, the later one lifts by up to ${stats.maxLift.toFixed(2)} mm (steepest rise ${Math.round(stats.maxSlopeDeg)}°). It prints as ${lifts}.`,
+  };
+}
+
 function capitalise(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }

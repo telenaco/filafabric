@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { proportionPhrase, buildVerdict, buildSquiggleVerdict, formatMinutes, shareLabel } from '../src/ui/verdict.js';
+import { proportionPhrase, buildVerdict, buildSquiggleVerdict, buildCoilVerdict, formatMinutes, shareLabel } from '../src/ui/verdict.js';
 
 const stats = (over) => ({ loops: 567, violations: 19206, extrudingMoves: 47800, ...over });
 
@@ -64,4 +64,18 @@ test('the squiggle verdict says what will happen, with or without a colour chang
   assert.equal(plain.action, null);
   assert.match(plain.body, /one lift/);
   assert.match(buildSquiggleVerdict({ hops: 2 }, { colorChange: true }).body, /2 lifts.*second colour/);
+});
+
+test('the coil verdict says what crosses, how far it lifts, and warns when loops cannot form', () => {
+  const ok = buildCoilVerdict({ crossings: 412, maxLift: 0.25, maxSlopeDeg: 13.4, hops: 0 });
+  assert.equal(ok.level, 'ok');
+  assert.match(ok.body, /412 crossings/);
+  assert.match(ok.body, /0.25 mm/);
+  assert.match(ok.body, /13°/);
+  assert.match(ok.body, /no lifts/);
+  assert.match(buildCoilVerdict({ crossings: 3, maxLift: 0.25, maxSlopeDeg: 9, hops: 2 }).body, /2 lifts between strands/);
+  assert.match(buildCoilVerdict({ crossings: 0, maxLift: 0, maxSlopeDeg: 0, hops: 0 }).body, /nothing crosses/);
+  const closed = buildCoilVerdict({ crossings: 0, maxLift: 0, maxSlopeDeg: 0, hops: 0 }, { loopsClose: true });
+  assert.equal(closed.level, 'heads-up');
+  assert.match(closed.title, /close up/);
 });
