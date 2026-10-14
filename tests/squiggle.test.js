@@ -209,3 +209,12 @@ test('the pattern field library is available as tone samplers', () => {
     assert.ok(v >= 0 && v <= 1);
   }
 });
+
+test('a big swatch of tight loops is refused plainly instead of building millions of moves', () => {
+  const started = Date.now();
+  assert.throws(
+    () => generateSquiggle(machine, material, { width: 240, height: 200, shape: 'looped', amplitude: 3, wavelength: 2, spacing: 1.5 }),
+    (e) => e.name === 'ConfigError' && /moves; the limit is/.test(e.message),
+  );
+  assert.ok(Date.now() - started < 5000, 'and it says so quickly');
+});

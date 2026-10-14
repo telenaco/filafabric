@@ -1,4 +1,5 @@
-import { resolveConfig } from './params.js';
+import { resolveConfig, ConfigError } from './params.js';
+import { MAX_MOVES } from './tiler.js';
 import { bedFitErrors, PreflightError, writeGcode } from './gcode.js';
 import { computeStats } from './stats.js';
 import { PolygonBoundary } from './boundary.js';
@@ -217,7 +218,7 @@ export function generateSquiggleTextile({
   // Shapes other than the sine wave come from the strand-shape library. A looped line also swings back along the
   // lane, so the lane is sampled more finely, and a strand that crosses itself lifts over its earlier pass.
   const shaped = shape !== 'wave';
-  const step = shaped ? shapeStep(shape, Math.max(0.5, wavelength), amplitude, 0.4) : 0.4;
+  const step = shaped ? shapeStep(shape, Math.max(0.5, wavelength), amplitude, 0.6) : 0.4;
   const offsets = (travelled, size, isReverse, flip = 1) => {
     const { v, du } = shapeAt(shape, travelled, { pitch: Math.max(0.5, wavelength), size });
     return { coordOffset: flip * v, spanOffset: isReverse ? -du : du };
@@ -300,6 +301,14 @@ export function generateSquiggleTextile({
         return { coordOffset: -ampAt(x, yNominal) * Math.sin(k * x), spanOffset: 0 };
       },
     });
+  }
+
+  // loops need fine sampling, so a big swatch of tight loops can run to millions of points: refuse it plainly
+  const points = layer1.reduce((n, p) => n + p.length, 0) + layer2.reduce((n, p) => n + p.length, 0);
+  if (points > MAX_MOVES) {
+    throw new ConfigError([
+      `This layout would need about ${points.toLocaleString('en')} moves; the limit is ${MAX_MOVES.toLocaleString('en')}. Use wider line spacing, longer or shallower waves, a plainer strand shape or a smaller swatch.`,
+    ]);
   }
 
   if (shaped) {
