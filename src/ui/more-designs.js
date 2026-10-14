@@ -14,6 +14,8 @@ import { chainmailLayers } from '../engine/chainmail.js';
 import { meanderLayers, CURVES, CURVE_IDS } from '../engine/meander.js';
 import { lissajousLayers } from '../engine/lissajous.js';
 import { truchetLayers, TILES, TILE_IDS } from '../engine/truchet.js';
+import { voronoiLayers } from '../engine/voronoi.js';
+import { FIELD_IDS, createField } from '../engine/fields.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const WAVY = ['looped', 'figure8', 'zigzag', 'honeycomb', 'wave', 'square'];
@@ -49,6 +51,7 @@ function layered(def) {
     describe: c.describe,
     size: (s) => [s.width, s.height],
     setSize: (s, w, h) => { s.width = w; s.height = h; },
+    patterns: def.patterns,
     controls: def.controls,
     generate: (machine, material, s, { outline = null } = {}) => {
       const built = def.build(s, boundaryFor(s.width, s.height, outline));
@@ -407,4 +410,44 @@ MORE_DESIGNS.push(layered({
   ],
   build: (s, boundary) => truchetLayers(boundary, { tile: s.tile, size: s.size, seed: s.seed }),
   summary: (result) => `a Truchet pattern of ${result.report.crossings} crossings`,
+}));
+
+const VORONOI = defineControls({
+  ranges: { ...SIZE, spacing: { min: 4, max: 14, step: 0.5 }, relax: { min: 0, max: 8, step: 1 }, seed: { min: 1, max: 999, step: 1 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
+  defaults: { width: 50, height: 50, spacing: 8, relax: 5, seed: 11, pattern: 'none', patternScale: 1, colorChange: false },
+  enums: { pattern: ['none', ...FIELD_IDS] },
+  bools: ['colorChange'],
+  presets: [
+    { id: 'lace', name: 'Lace', blurb: 'Even, round cells', patch: { spacing: 8, relax: 5, pattern: 'none' } },
+    { id: 'scatter', name: 'Scatter', blurb: 'Random cells, no relaxing', patch: { spacing: 8, relax: 0, pattern: 'none' } },
+    { id: 'graded', name: 'Graded', blurb: 'Smaller cells where a pattern is bright', patch: { spacing: 8, relax: 5, pattern: 'noise' } },
+  ],
+  describe: (s) => ({ spacing: `${r1(s.spacing)} mm cells`, relax: s.relax === 0 ? 'Random' : `${s.relax} passes`, seed: `#${s.seed}`, patternScale: `${r2(s.patternScale)}×` }),
+});
+
+MORE_DESIGNS.push(layered({
+  id: 'voronoi',
+  name: 'Voronoi lace',
+  blurb: 'Even cells with their triangulation across',
+  about: 'A relaxed Voronoi tessellation of round, even cells, with its Delaunay triangulation as the second layer. Every cell wall is the perpendicular bisector of a triangle edge, so the layers cross at about a right angle: lace-like, close to the same in every direction, and it can be graded with a pattern so the cells are smaller where it is bright.',
+  file: 'voronoi',
+  c: VORONOI,
+  patterns: ['none', ...FIELD_IDS],
+  controls: [
+    { kind: 'presets', title: 'Start from' },
+    { kind: 'size', title: 'Size and shape' },
+    {
+      kind: 'sliders',
+      title: 'Look and feel',
+      items: [
+        { key: 'spacing', label: 'Cell size', help: 'About how far apart neighbouring cell centres are.', lo: 'Fine', hi: 'Coarse', unit: 'mm', edit: true },
+        { key: 'relax', label: 'Evenness', help: 'How many times the cells are nudged towards a regular lace. Zero is a random scatter.', lo: 'Random', hi: 'Even', unit: '', edit: true },
+        { key: 'seed', label: 'Pattern number', help: 'Each number is a different arrangement; the same number always repeats it.', lo: '1', hi: '999', unit: '', edit: true },
+      ],
+    },
+    { kind: 'pattern', key: 'pattern', title: 'Grade with a pattern', hint: 'Cells are smaller where the pattern is bright and larger where it is dark.', scale: { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false } },
+    COLOUR,
+  ],
+  build: (s, boundary) => voronoiLayers(boundary, { spacing: s.spacing, relax: s.relax, seed: s.seed, tone: s.pattern === 'none' ? null : createField(s.pattern, { scale: s.patternScale }) }),
+  summary: (result) => `a Voronoi lace of ${result.sites} cells and ${result.report.crossings} crossings`,
 }));
