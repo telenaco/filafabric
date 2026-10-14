@@ -5,8 +5,14 @@ import { defineControls, r1, r2 } from './structure-controls.js';
 import { conformalLayers, MAPS, MAP_IDS } from '../engine/conformal.js';
 import { sunflowerLayers } from '../engine/sunflower.js';
 import { rosetteLayers } from '../engine/rosette.js';
+import { flowLayers, FLOWS, FLOW_IDS } from '../engine/flowlines.js';
+import { bubblesLayers } from '../engine/bubbles.js';
+import { parquetLayers, TILINGS, TILING_IDS } from '../engine/parquet.js';
+import { FIELD_IDS, createField } from '../engine/fields.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
+const PATTERN_SCALE = { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false };
+const toneFor = (s) => (s.pattern === 'none' ? null : createField(s.pattern, { scale: s.patternScale }));
 const COLOUR = { kind: 'switch', key: 'colorChange', label: 'Two colours', help: 'Pause after the first layer so you can load a second filament (M600).' };
 
 export const LINE_DESIGNS = [];
@@ -124,4 +130,128 @@ LINE_DESIGNS.push(layered({
   ],
   build: (s, boundary) => rosetteLayers(boundary, { spacing: s.spacing, lobes: s.lobes, depth: s.depth, hub: s.hub }),
   summary: (result) => `a rosette of ${Math.round(result.turns)} turns and ${result.report.crossings} crossings`,
+}));
+
+const FLOW = defineControls({
+  ranges: { ...SIZE, spacing: { min: 2, max: 8, step: 0.5 }, scale: { min: 10, max: 80, step: 5 }, bend: { min: 0.1, max: 1, step: 0.05 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
+  defaults: { width: 50, height: 50, flow: 'waves', spacing: 3, scale: 25, bend: 0.6, pattern: 'noise', patternScale: 1, colorChange: false },
+  enums: { flow: FLOW_IDS, pattern: ['none', ...FIELD_IDS] },
+  bools: ['colorChange'],
+  presets: [
+    { id: 'ripples', name: 'Ripples', blurb: 'A grid that ripples both ways', patch: { flow: 'waves', scale: 25, bend: 0.6 } },
+    { id: 'whirlpool', name: 'Whirlpool', blurb: 'Rings and spokes round the centre', patch: { flow: 'swirl', bend: 0.6 } },
+    { id: 'eddies', name: 'Eddies', blurb: 'A grid of whirls', patch: { flow: 'vortices', scale: 40 } },
+    { id: 'marble', name: 'Marble', blurb: 'Lines turned by a noise pattern', patch: { flow: 'pattern', pattern: 'noise', bend: 0.5 } },
+  ],
+  describe: (s) => ({ spacing: `${r1(s.spacing)} mm apart`, scale: `${s.scale} mm`, bend: `${Math.round(s.bend * 100)}%`, patternScale: `${r2(s.patternScale)}×` }),
+});
+
+LINE_DESIGNS.push(layered({
+  id: 'flowlines',
+  name: 'Flow lines',
+  blurb: 'Evenly spaced lines along a flow, crossed at 90°',
+  about: 'Each layer is a set of evenly spaced lines that follow a flow: ripples, a whirlpool, a grid of eddies, or a pattern that turns the lines. The second layer follows the same flow turned a quarter turn, so at every point it runs at a right angle to the first, however the lines bend. Lines are spaced by growing each one until it comes too close to another and starting the next one a spacing to the side (Jobard and Lefer). Where a flow has no direction, at the eye of a whirl, a small hole is left open.',
+  file: 'flowlines',
+  c: FLOW,
+  patterns: ['none', ...FIELD_IDS],
+  controls: [
+    { kind: 'presets', title: 'Start from' },
+    { kind: 'size', title: 'Size and shape' },
+    { kind: 'choice', key: 'flow', title: 'Flow', hint: 'What the lines follow.', options: FLOW_IDS.map((id) => ({ id, label: FLOWS[id].label, hint: FLOWS[id].hint })) },
+    {
+      kind: 'sliders',
+      title: 'Look and feel',
+      items: [
+        { key: 'spacing', label: 'Line spacing', help: 'Distance between neighbouring lines of one layer.', lo: 'Dense', hi: 'Open', unit: 'mm', edit: true },
+        { key: 'scale', label: 'Wave size', help: 'Ripples and eddies: how large one ripple or whirl is.', lo: 'Small', hi: 'Large', unit: 'mm', edit: true },
+        { key: 'bend', label: 'Bend', help: 'How far the lines lean: the ripple depth, the twist of the whirlpool, or how far a pattern turns them.', lo: 'Gentle', hi: 'Strong', unit: '', edit: false },
+      ],
+    },
+    { kind: 'pattern', key: 'pattern', title: 'Turn with a pattern', hint: 'Only the pattern flow uses it: the lines turn one way where it is bright, the other where it is dark.', scale: PATTERN_SCALE },
+    COLOUR,
+  ],
+  build: (s, boundary) => flowLayers(boundary, { flow: s.flow, spacing: s.spacing, scale: s.scale, bend: s.bend, tone: toneFor(s) }),
+  summary: (result) => `flow lines with ${result.report.crossings} right-angle crossings`,
+}));
+
+const BUBBLES = defineControls({
+  ranges: { ...SIZE, size: { min: 2.5, max: 10, step: 0.5 }, seed: { min: 1, max: 999, step: 1 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
+  defaults: { width: 50, height: 50, size: 4, seed: 1, link: true, pattern: 'none', patternScale: 1, colorChange: false },
+  enums: { pattern: ['none', ...FIELD_IDS] },
+  bools: ['link', 'colorChange'],
+  presets: [
+    { id: 'foam', name: 'Foam', blurb: 'Mixed bubbles, joined in clusters', patch: { size: 4, link: true, pattern: 'none' } },
+    { id: 'froth', name: 'Froth', blurb: 'Small and close', patch: { size: 2.5, link: true, pattern: 'none' } },
+    { id: 'big', name: 'Big bubbles', blurb: 'Large rings', patch: { size: 7, link: true, pattern: 'none' } },
+    { id: 'graded', name: 'Graded', blurb: 'Smaller where a pattern is bright', patch: { size: 6, link: true, pattern: 'noise' } },
+  ],
+  describe: (s) => ({ size: `up to ${r1(s.size)} mm`, seed: `#${s.seed}`, patternScale: `${r2(s.patternScale)}×` }),
+});
+
+LINE_DESIGNS.push(layered({
+  id: 'bubbles',
+  name: 'Bubbles',
+  blurb: 'Packed rings, held by a ring in every gap',
+  about: 'Rings of mixed sizes packed until no gap would take another. Neighbouring rings are joined where they nearly touch by a short double bridge, so one strand tours a whole cluster. The second layer puts a small ring in each gap between three bubbles, centred where it meets all three at a right angle (their radical centre), so every bubble is held by the rings in the gaps round it. Reads as foam or lace.',
+  file: 'bubbles',
+  c: BUBBLES,
+  patterns: ['none', ...FIELD_IDS],
+  controls: [
+    { kind: 'presets', title: 'Start from' },
+    { kind: 'size', title: 'Size and shape' },
+    {
+      kind: 'sliders',
+      title: 'Look and feel',
+      items: [
+        { key: 'size', label: 'Bubble size', help: 'Radius of the largest bubbles; smaller ones fill the gaps.', lo: 'Small', hi: 'Large', unit: 'mm', edit: true },
+        { key: 'seed', label: 'Pattern number', help: 'Each number packs the bubbles differently; the same number repeats it.', lo: '1', hi: '999', unit: '', edit: true },
+      ],
+    },
+    { kind: 'switch', key: 'link', label: 'Join bubbles into clusters', help: 'One strand tours each cluster of touching bubbles, with fewer starts and stops. Off: every bubble is its own ring.' },
+    { kind: 'pattern', key: 'pattern', title: 'Grade with a pattern', hint: 'Bubbles are smaller where the pattern is bright.', scale: PATTERN_SCALE },
+    COLOUR,
+  ],
+  build: (s, boundary) => bubblesLayers(boundary, { size: s.size, seed: s.seed, link: s.link, tone: toneFor(s) }),
+  summary: (result) => `${result.bubbles} bubbles held by ${result.gaps} rings`,
+}));
+
+const PARQUET = defineControls({
+  ranges: { ...SIZE, block: { min: 4, max: 20, step: 0.5 }, ratio: { min: 2, max: 4, step: 1 }, spacing: { min: 1.5, max: 5, step: 0.25 }, turn: { min: 0, max: 90, step: 15 } },
+  defaults: { width: 50, height: 50, tiling: 'herringbone', block: 8, ratio: 2, spacing: 2, turn: 45, colorChange: false },
+  enums: { tiling: TILING_IDS },
+  bools: ['colorChange'],
+  presets: [
+    { id: 'herringbone', name: 'Herringbone', blurb: 'Planks in a zigzag, turned 45°', patch: { tiling: 'herringbone', block: 8, ratio: 2, turn: 45 } },
+    { id: 'long-planks', name: 'Long planks', blurb: 'Herringbone of planks three long', patch: { tiling: 'herringbone', block: 5, ratio: 3, turn: 0 } },
+    { id: 'basket', name: 'Basket weave', blurb: 'Square blocks, alternating', patch: { tiling: 'basket', block: 8, turn: 0 } },
+    { id: 'chevron', name: 'Chevron', blurb: 'Slanted bands meeting in points', patch: { tiling: 'chevron', block: 8, turn: 0 } },
+  ],
+  describe: (s) => ({ block: `${r1(s.block)} mm`, ratio: `${s.ratio} long`, spacing: `${r2(s.spacing)} mm apart`, turn: `${s.turn}°` }),
+});
+
+LINE_DESIGNS.push(layered({
+  id: 'parquet',
+  name: 'Parquet',
+  blurb: 'Blocks of 90° mesh, each turned from the next',
+  about: 'The fabric is cut into blocks or planks like a parquet floor. In every block the first layer runs one way and the second the other, so every part of it is a plain right-angle mesh; neighbouring blocks are turned a quarter turn, so the layer on top changes direction from block to block. Printed in two colours it shows a basket weave, a herringbone or chevron bands. Each block is one serpentine strand per layer.',
+  file: 'parquet',
+  c: PARQUET,
+  controls: [
+    { kind: 'presets', title: 'Start from' },
+    { kind: 'size', title: 'Size and shape' },
+    { kind: 'choice', key: 'tiling', title: 'Floor', hint: 'How the blocks are laid.', options: TILING_IDS.map((id) => ({ id, label: TILINGS[id].label, hint: TILINGS[id].hint })) },
+    {
+      kind: 'sliders',
+      title: 'Look and feel',
+      items: [
+        { key: 'block', label: 'Block size', help: 'The side of a block, or the width of a plank or band.', lo: 'Small', hi: 'Large', unit: 'mm', edit: true },
+        { key: 'ratio', label: 'Plank length', help: 'Herringbone only: how many widths long each plank is.', lo: '2', hi: '4', unit: '', edit: false },
+        { key: 'spacing', label: 'Line spacing', help: 'Distance between neighbouring lines within a block.', lo: 'Dense', hi: 'Open', unit: 'mm', edit: true },
+        { key: 'turn', label: 'Turn', help: 'Turns the whole floor.', lo: '0°', hi: '90°', unit: '°', edit: true },
+      ],
+    },
+    COLOUR,
+  ],
+  build: (s, boundary) => parquetLayers(boundary, { tiling: s.tiling, block: s.block, ratio: s.ratio, spacing: s.spacing, turn: s.turn }),
+  summary: (result) => `a ${TILINGS[result.tiling]?.label.toLowerCase() ?? 'parquet'} of ${result.report.crossings} crossings`,
 }));
