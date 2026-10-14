@@ -90,6 +90,11 @@ function arcRate(shape, pitch, size) {
   return worst;
 }
 
+/** Progress step (mm along the lane) that keeps consecutive points at most `base` mm apart along the strand. */
+export function shapeStep(shape, pitch, size, base = 0.4) {
+  return base / arcRate(shape, pitch, size);
+}
+
 /**
  * Points along one lane as { u, v }: u within 0..`length`, v the offset from the centre line. Whole periods are
  * centred with a straight lead-in and lead-out, so the strand starts and ends on the centre line and never leaves

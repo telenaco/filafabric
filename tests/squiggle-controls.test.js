@@ -33,3 +33,11 @@ test('sizeForAspect keeps a picture\'s proportions with an 80 mm long side', () 
   assert.deepEqual(sizeForAspect(4000, 10), [80, 15], 'a thin strip is clamped to a printable height');
   assert.deepEqual(sizeForAspect(0, 10), [SQUIGGLE_DEFAULTS.width, SQUIGGLE_DEFAULTS.height]);
 });
+
+test('the strand shape and the field patterns are accepted; unknown ones fall back', () => {
+  assert.equal(sanitizeSquiggle({ shape: 'looped' }).shape, 'looped');
+  assert.equal(sanitizeSquiggle({ shape: 'spiral' }).shape, SQUIGGLE_DEFAULTS.shape);
+  assert.equal(SQUIGGLE_DEFAULTS.shape, 'wave', 'older links keep the sine wave');
+  assert.equal(sanitizeSquiggle({ pattern: 'oceanWaves' }).pattern, 'oceanWaves');
+  assert.equal(sanitizeSquiggle({ pattern: 'nope' }).pattern, SQUIGGLE_DEFAULTS.pattern);
+});

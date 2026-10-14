@@ -177,3 +177,35 @@ test('squiggle in an outline: both layers stay within reach of the shape and a c
   assert.equal(paused.strands.filter((s) => s.pauseBefore).length, 1, 'one colour change, before the first layer 2 strand');
   assert.equal((paused.gcode.match(/^M600/gm) ?? []).length, 1);
 });
+
+test('a looped shape makes each line cross itself, lifted over its own earlier pass, and stays in the swatch', () => {
+  const plain = generateSquiggleTextile({ width: 40, height: 30, mode: 'cross', spacing: 3, amplitude: 1.4, wavelength: 4 });
+  const looped = generateSquiggleTextile({ width: 40, height: 30, mode: 'cross', spacing: 3, amplitude: 1.4, wavelength: 4, shape: 'looped' });
+  assert.ok(plain.layer1.every((p) => p.z === 0.2), 'a wave stays flat');
+  assert.ok(looped.layer1.some((p) => p.z > 0.2 + 1e-9), 'loops lift over their own earlier pass');
+  assert.ok(looped.layer1.every((p) => p.z <= 0.2 + 0.25 + 1e-9), 'by about a layer');
+  assert.ok(looped.layer1.every((p) => p.cls === undefined), 'the layer keeps its own colour role');
+  for (const p of [...looped.layer1, ...looped.layer2]) {
+    assert.ok(p.x > -3 && p.x < 43 && p.y > -3 && p.y < 33, `point ${p.x.toFixed(1)}, ${p.y.toFixed(1)} is far outside`);
+  }
+  assert.ok(looped.layer1.length > plain.layer1.length, 'loops need finer sampling');
+});
+
+test('every shape generates in both modes, with a field pattern, and with an outline', () => {
+  const ring = [{ x: 4, y: 2 }, { x: 36, y: 2 }, { x: 36, y: 26 }, { x: 4, y: 26 }];
+  for (const shape of ['looped', 'figure8', 'zigzag', 'wave', 'square']) {
+    for (const mode of ['cross', 'parallel']) {
+      const r = generateSquiggle(machine, material, { width: 40, height: 30, mode, shape, sampler: SAMPLERS.diamondGrid, outline: [ring] });
+      assert.ok(r.moves.some((m) => m.extrude), `${shape} ${mode}`);
+      assert.ok(r.stats.timeSec > 0);
+    }
+  }
+});
+
+test('the pattern field library is available as tone samplers', () => {
+  for (const id of ['deepSpiral', 'brick', 'oceanWaves', 'lightningBolts', 'bumps']) {
+    assert.equal(typeof SAMPLERS[id], 'function', id);
+    const v = SAMPLERS[id](12, 7, 50, 50);
+    assert.ok(v >= 0 && v <= 1);
+  }
+});

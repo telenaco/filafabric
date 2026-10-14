@@ -4,6 +4,9 @@ import { computeStats } from './stats.js';
 import { PolygonBoundary } from './boundary.js';
 import { serpentineChains } from './fill.js';
 import { emitStrands } from './emit.js';
+import { createField, FIELD_IDS } from './fields.js';
+import { shapeAt, shapeStep } from './shapes.js';
+import { resolveCrossings } from './crossings.js';
 
 /**
  * Squiggle Textile Generator
@@ -33,6 +36,9 @@ export const SAMPLERS = {
   },
   uniform: () => 0.6,
 };
+
+// every pattern field of the library is also a tone sampler
+for (const id of FIELD_IDS) SAMPLERS[id] = createField(id);
 
 /**
  * Creates an image-based tone sampler from Canvas ImageData (grayscale darkness 0..1).
@@ -160,9 +166,9 @@ function layerStrands({ boundary, axis, firstLane, laneCount, lanePitch, spanLen
       const steps = Math.max(2, Math.ceil(Math.abs(seg.to - seg.from) / stepSize));
       for (let i = 0; i <= steps; i++) {
         const sPos = seg.from + ((seg.to - seg.from) * i) / steps;
-        const { coordOffset = 0 } = waveFn(seg.lane, sPos, sPos / spanLength, seg.to < seg.from);
-        if (axis === 'y') push(sPos, seg.c + coordOffset);
-        else push(seg.c + coordOffset, sPos);
+        const { coordOffset = 0, spanOffset = 0 } = waveFn(seg.lane, sPos, sPos / spanLength, seg.to < seg.from);
+        if (axis === 'y') push(sPos + spanOffset, seg.c + coordOffset);
+        else push(seg.c + coordOffset, sPos + spanOffset);
       }
     }
     return pts;
@@ -176,6 +182,7 @@ function layerStrands({ boundary, axis, firstLane, laneCount, lanePitch, spanLen
  * @param {number} options.width - swatch width in mm
  * @param {number} options.height - swatch height in mm
  * @param {string} options.mode - 'cross' | 'parallel'
+ * @param {string} [options.shape] - strand shape (see shapes.js); 'wave' is the original sine wave
  * @param {number} options.spacing - line spacing in mm (e.g. 2.5)
  * @param {number} options.amplitude - max wave amplitude in mm (e.g. 1.2)
  * @param {number} options.wavelength - base wave cycle length in mm (e.g. 4.0)
@@ -190,6 +197,7 @@ export function generateSquiggleTextile({
   width = 50,
   height = 50,
   mode = 'cross',
+  shape = 'wave',
   spacing = 2.5,
   amplitude = 1.2,
   wavelength = 4.0,
@@ -206,6 +214,15 @@ export function generateSquiggleTextile({
   const baseFreq = 1 / Math.max(0.5, wavelength);
   const tone = (x, y) => clamp(sampler(x, y, width, height), 0, 1);
 
+  // Shapes other than the sine wave come from the strand-shape library. A looped line also swings back along the
+  // lane, so the lane is sampled more finely, and a strand that crosses itself lifts over its earlier pass.
+  const shaped = shape !== 'wave';
+  const step = shaped ? shapeStep(shape, Math.max(0.5, wavelength), amplitude, 0.4) : 0.4;
+  const offsets = (travelled, size, isReverse, flip = 1) => {
+    const { v, du } = shapeAt(shape, travelled, { pitch: Math.max(0.5, wavelength), size });
+    return { coordOffset: flip * v, spanOffset: isReverse ? -du : du };
+  };
+
   let layer1 = [];
   let layer2 = [];
 
@@ -220,11 +237,12 @@ export function generateSquiggleTextile({
     const minX = pitchX / 2;
 
     layer1 = layerStrands({
-      boundary, axis: 'x', firstLane: minX, laneCount: cols, lanePitch: pitchX, spanLength: height, stepSize: 0.4, z: z1,
-      waveFn: (colIdx, y) => {
+      boundary, axis: 'x', firstLane: minX, laneCount: cols, lanePitch: pitchX, spanLength: height, stepSize: step, z: z1,
+      waveFn: (colIdx, y, _n, isReverse) => {
         const xNominal = minX + colIdx * pitchX;
         const t = tone(xNominal, y);
         const amp = minAmp + ampRange * t;
+        if (shaped) return offsets(isReverse ? height - y : y, amp, isReverse);
         // Frequency increases in darker areas
         const freq = baseFreq * (1 + 1.2 * t);
         const phase = 2 * Math.PI * freq * y + colIdx * 0.5;
@@ -240,12 +258,13 @@ export function generateSquiggleTextile({
     const gyroidAmp = Math.min(pitchY * 0.45, amplitude * 0.8);
 
     layer2 = layerStrands({
-      boundary, axis: 'y', firstLane: minY, laneCount: rows, lanePitch: pitchY, spanLength: width, stepSize: 0.4, z: z2,
-      waveFn: (rowIdx, x) => {
+      boundary, axis: 'y', firstLane: minY, laneCount: rows, lanePitch: pitchY, spanLength: width, stepSize: step, z: z2,
+      waveFn: (rowIdx, x, _n, isReverse) => {
         // Gyroid-like alternating phase per row
         const rowPhase = (rowIdx % 2) * Math.PI;
         const yNominal = minY + rowIdx * pitchY;
         const localAmp = gyroidAmp * (0.6 + 0.4 * tone(x, yNominal));
+        if (shaped) return offsets((isReverse ? width - x : x) + (rowIdx % 2) * (wavelength / 2), localAmp, isReverse);
         const phase = 2 * Math.PI * gyroidFreq * x + rowPhase;
         return { coordOffset: localAmp * Math.sin(phase), spanOffset: 0 };
       },
@@ -266,19 +285,31 @@ export function generateSquiggleTextile({
     const ampAt = (x, y) => Math.max(floor, minAmp + ampRange * tone(x, y));
 
     layer1 = layerStrands({
-      boundary, axis: 'y', firstLane: minY, laneCount: rows, lanePitch: pitchY, spanLength: width, stepSize: 0.4, z: z1,
-      waveFn: (rowIdx, x) => {
+      boundary, axis: 'y', firstLane: minY, laneCount: rows, lanePitch: pitchY, spanLength: width, stepSize: step, z: z1,
+      waveFn: (rowIdx, x, _n, isReverse) => {
         const yNominal = minY + rowIdx * pitchY;
+        if (shaped) return offsets(isReverse ? width - x : x, ampAt(x, yNominal), isReverse);
         return { coordOffset: ampAt(x, yNominal) * Math.sin(k * x), spanOffset: 0 };
       },
     });
     layer2 = layerStrands({
-      boundary, axis: 'y', firstLane: minY + pitchY / 2, laneCount: rows - 1, lanePitch: pitchY, spanLength: width, stepSize: 0.4, z: z2,
-      waveFn: (rowIdx, x) => {
+      boundary, axis: 'y', firstLane: minY + pitchY / 2, laneCount: rows - 1, lanePitch: pitchY, spanLength: width, stepSize: step, z: z2,
+      waveFn: (rowIdx, x, _n, isReverse) => {
         const yNominal = minY + (rowIdx + 0.5) * pitchY;
+        if (shaped) return offsets(isReverse ? width - x : x, ampAt(x, yNominal), isReverse, -1);
         return { coordOffset: -ampAt(x, yNominal) * Math.sin(k * x), spanOffset: 0 };
       },
     });
+  }
+
+  if (shaped) {
+    const lift = layerHeight * 1.25;
+    const settle = (layer, prefix) => resolveCrossings(
+      layer.map((pts, i) => ({ id: `${prefix}${i}`, kind: 'base', pts })),
+      { lift, strandWidth },
+    ).strands.map((s) => s.pts.map(({ cls, ...p }) => p)); // layers keep their own colour role
+    layer1 = settle(layer1, 'l1-');
+    layer2 = settle(layer2, 'l2-');
   }
 
   const strands = [
@@ -318,6 +349,7 @@ export function generateSquiggle(machine, material, squiggleParams = {}) {
     boundary: outline ? new PolygonBoundary(outline) : null,
     strandWidth: cfg.t.extrusion_width,
     mode: squiggleParams.mode ?? 'cross',
+    shape: squiggleParams.shape ?? 'wave',
     spacing: squiggleParams.spacing ?? 2.5,
     amplitude: squiggleParams.amplitude ?? 1.2,
     wavelength: squiggleParams.wavelength ?? 4.0,

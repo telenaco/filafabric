@@ -9,13 +9,20 @@ export const SQ_RANGES = Object.freeze({
   wavelength: { min: 2, max: 10, step: 0.5 },
 });
 
+import { SHAPE_IDS } from '../engine/shapes.js';
+import { FIELD_IDS } from '../engine/fields.js';
+
 export const SQ_MODES = Object.freeze(['cross', 'parallel']);
 
+/** How each line wanders: the sine wave it always was, or a shape from the strand-shape library. */
+export const SQ_SHAPES = SHAPE_IDS;
+
 /** Procedural patterns plus 'image' (a picture the person drops in; it never travels in a link). */
-export const SQ_PATTERNS = Object.freeze(['centerSpot', 'gradientX', 'gradientY', 'waves', 'uniform', 'image']);
+export const SQ_PATTERNS = Object.freeze(['centerSpot', 'gradientX', 'gradientY', 'waves', 'uniform', ...FIELD_IDS, 'image']);
 
 export const SQUIGGLE_DEFAULTS = Object.freeze({
   mode: 'cross',
+  shape: 'wave',
   width: 50,
   height: 50,
   pattern: 'centerSpot',
@@ -38,6 +45,7 @@ export function sanitizeSquiggle(raw) {
     }
   }
   if (SQ_MODES.includes(raw.mode)) out.mode = raw.mode;
+  if (SQ_SHAPES.includes(raw.shape)) out.shape = raw.shape;
   if (SQ_PATTERNS.includes(raw.pattern)) out.pattern = raw.pattern;
   if (typeof raw.colorChange === 'boolean') out.colorChange = raw.colorChange;
   return out;

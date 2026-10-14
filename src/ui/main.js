@@ -10,8 +10,8 @@ import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './pa
 import { readSvgOutline, drawOutlineThumb } from './svg-outline.js';
 import { DESIGNS, designById, isReady } from './designs.js';
 import { THUMBS, shapeThumb } from './thumbs.js';
-import { FIELDS, createField } from '../engine/fields.js';
-import { SHAPES } from '../engine/shapes.js';
+import { FIELDS, FIELD_IDS, createField } from '../engine/fields.js';
+import { SHAPES, SHAPE_IDS } from '../engine/shapes.js';
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -40,6 +40,7 @@ const PATTERNS = [
   { id: 'gradientY', label: 'Fade up' },
   { id: 'waves', label: 'Ripples' },
   { id: 'uniform', label: 'Even' },
+  ...FIELD_IDS.map((id) => ({ id, label: FIELDS[id].label })),
   { id: 'image', label: 'Your picture' },
 ];
 
@@ -368,6 +369,7 @@ function regenerate() {
         width: s.width,
         height: s.height,
         mode: s.mode,
+        shape: s.shape,
         spacing: s.spacing,
         amplitude: s.amplitude,
         wavelength: s.wavelength,
@@ -621,6 +623,7 @@ function renderSquiggleChoices() {
     ? 'Darker parts of the pattern get deeper, tighter waves.'
     : 'Darker parts of the pattern get deeper waves.';
   for (const btn of $$('[data-sqmode]')) btn.setAttribute('aria-pressed', String(btn.dataset.sqmode === s.mode));
+  for (const btn of $$('[data-sqshape]')) btn.setAttribute('aria-pressed', String(btn.dataset.sqshape === s.shape));
   for (const btn of $$('[data-pattern]')) btn.setAttribute('aria-pressed', String(btn.dataset.pattern === s.pattern));
   $('#sq-color-change').checked = s.colorChange;
 
@@ -1020,6 +1023,21 @@ function drawPatternThumb(canvas, sampler) {
     }
     ctx.stroke();
   }
+}
+
+/** The strand-shape picker of the squiggle panel: the same shapes the Coil card offers. */
+function buildSquiggleShapes() {
+  $('#sq-shapes').replaceChildren(...SHAPE_IDS.map((shape) => {
+    const btn = el('button', { type: 'button', class: 'pattern', 'data-sqshape': shape, 'aria-pressed': 'false', title: SHAPES[shape].hint });
+    btn.innerHTML = `${shapeThumb(shape)}<span>${SHAPES[shape].label === 'Wave' ? 'Wave (default)' : SHAPES[shape].label}</span>`;
+    btn.addEventListener('click', () => {
+      state.squiggle.shape = shape;
+      renderSquiggleChoices();
+      schedule();
+      commit();
+    });
+    return btn;
+  }));
 }
 
 function buildPatterns() {
@@ -1560,6 +1578,7 @@ async function init() {
   for (const mod of DESIGNS) if (mod.status === 'ready' && !mod.legacy) buildPatternScale(mod);
   drawFieldThumbs();
   buildAdvanced();
+  buildSquiggleShapes();
   buildPatterns();
   fillDialogSelects();
   renderTiles();
