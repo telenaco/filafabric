@@ -68,9 +68,10 @@ const rotate = (p, c, s) => ({ x: p.x * c - p.y * s, y: p.x * s + p.y * c });
  * Parallel lines at `angle` (degrees) `spacing` apart, clipped to the boundary and joined into as few serpentine
  * strands as its shape allows. `shape` / `size` / `pitch` make each line wavy (see shapes.js); `offset` slides the
  * lines sideways by a fraction of the spacing so two layers can interleave. With an `anchor` point the lines lie on a
- * lattice through it (otherwise they are centred in the outline).
+ * lattice through it (otherwise they are centred in the outline). `maxJog` is the longest connector joining one line
+ * to the next (default three spacings); a negative value leaves every line a strand of its own.
  */
-export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = null, size = 0, pitch = 4, inset = 0.3, anchor = null } = {}) {
+export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = null, size = 0, pitch = 4, inset = 0.3, anchor = null, maxJog = null } = {}) {
   const a = (angle * Math.PI) / 180;
   const c = Math.cos(a), s = Math.sin(a);
   const turned = new PolygonBoundary(boundary.rings.map((ring) => ring.map((p) => rotate(p, c, -s))));
@@ -90,7 +91,7 @@ export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = nu
   } else {
     lanes = [(box.minY + box.maxY) / 2];
   }
-  const chains = serpentineChains(turned, 'y', lanes, { inset, minLength: 1, maxJog: 3 * spacing });
+  const chains = serpentineChains(turned, 'y', lanes, { inset, minLength: 1, maxJog: maxJog ?? 3 * spacing });
   return chains.map((segments) => {
     const pts = [];
     for (const seg of segments) {
