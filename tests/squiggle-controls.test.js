@@ -9,9 +9,9 @@ test('every procedural pattern the picker offers exists in the engine', () => {
   for (const p of SQ_PATTERNS) if (p !== 'image') assert.equal(typeof SAMPLERS[p], 'function', p);
 });
 
-test('sanitizeSquiggle clamps, coerces and drops unknown keys', () => {
+test('sanitizeSquiggle preserves exact values, coerces and drops unknown keys', () => {
   const s = sanitizeSquiggle({ width: 999, spacing: '3', amplitude: NaN, mode: 'spiral', pattern: 'waves', colorChange: 'yes', evil: 1 });
-  assert.equal(s.width, SQ_RANGES.width.max);
+  assert.equal(s.width, 999);
   assert.equal(s.spacing, 3);
   assert.equal(s.amplitude, SQUIGGLE_DEFAULTS.amplitude);
   assert.equal(s.mode, SQUIGGLE_DEFAULTS.mode);

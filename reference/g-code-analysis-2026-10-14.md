@@ -131,4 +131,4 @@ End: `M104 S0`, park at `G1 X-13 Y180`, `M400`, motor current and bed lowering, 
 
 ## 3. Sources
 
-- `Shape-Box_0.2mm_FLEX_MK3S_5m.gcode` and `bambu lab a1 mini.gcode.3mf` in this folder (user-provided).
+- `Shape-Box_0.2mm_FLEX_MK3S_5m.gcode` and `bambu lab a1 mini.gcode.3mf` in `reference/local-samples/` (user-provided, ignored by Git).

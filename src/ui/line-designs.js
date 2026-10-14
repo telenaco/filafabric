@@ -20,8 +20,8 @@ const COLOUR = { kind: 'switch', key: 'colorChange', label: 'Two colours', help:
 export const LINE_DESIGNS = [];
 
 const CONFORMAL = defineControls({
-  ranges: { ...SIZE, spacing: { min: 2, max: 8, step: 0.5 }, feature: { min: 0.15, max: 0.6, step: 0.05 }, arms: { min: 8, max: 55, step: 1 }, twist: { min: 3, max: 34, step: 1 } },
-  defaults: { width: 50, height: 50, map: 'hole', spacing: 3, feature: 0.35, arms: 21, twist: 13, colorChange: false },
+  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, feature: { min: 0.15, max: 0.6, step: 0.05 }, arms: { min: 8, max: 55, step: 1 }, twist: { min: 3, max: 34, step: 1 } },
+  defaults: { width: 100, height: 100, map: 'hole', spacing: 3, feature: 0.35, arms: 21, twist: 13, colorChange: false },
   enums: { map: MAP_IDS },
   bools: ['colorChange'],
   presets: [
@@ -61,8 +61,8 @@ LINE_DESIGNS.push(layered({
 }));
 
 const SUNFLOWER = defineControls({
-  ranges: { ...SIZE, spacing: { min: 2.5, max: 8, step: 0.5 }, hub: { min: 0, max: 15, step: 0.5 } },
-  defaults: { width: 50, height: 50, spacing: 4, hub: 3, colorChange: false },
+  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, hub: { min: 0, max: 15, step: 0.5 } },
+  defaults: { width: 100, height: 100, spacing: 4, hub: 3, colorChange: false },
   bools: ['colorChange'],
   presets: [
     { id: 'sunflower', name: 'Sunflower', blurb: 'Even seeds, a small centre', patch: { spacing: 4, hub: 3 } },
@@ -97,8 +97,8 @@ LINE_DESIGNS.push(layered({
 }));
 
 const ROSETTE = defineControls({
-  ranges: { ...SIZE, spacing: { min: 2.5, max: 8, step: 0.5 }, lobes: { min: 6, max: 48, step: 1 }, depth: { min: 0.5, max: 3, step: 0.1 }, hub: { min: 0, max: 20, step: 0.5 } },
-  defaults: { width: 50, height: 50, spacing: 4, lobes: 18, depth: 1.4, hub: 4, colorChange: false },
+  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, lobes: { min: 6, max: 48, step: 1 }, depth: { min: 0.5, max: 3, step: 0.1 }, hub: { min: 0, max: 20, step: 0.5 } },
+  defaults: { width: 100, height: 100, spacing: 4, lobes: 18, depth: 1.4, hub: 4, colorChange: false },
   bools: ['colorChange'],
   presets: [
     { id: 'rosette', name: 'Rosette', blurb: 'Eighteen lobes a turn', patch: { spacing: 4, lobes: 18, depth: 1.4 } },
@@ -135,8 +135,8 @@ LINE_DESIGNS.push(layered({
 }));
 
 const FLOW = defineControls({
-  ranges: { ...SIZE, spacing: { min: 2, max: 8, step: 0.5 }, scale: { min: 10, max: 80, step: 5 }, bend: { min: 0.1, max: 1, step: 0.05 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
-  defaults: { width: 50, height: 50, flow: 'waves', spacing: 3, scale: 25, bend: 0.6, pattern: 'noise', patternScale: 1, colorChange: false },
+  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, scale: { min: 10, max: 80, step: 5 }, bend: { min: 0.1, max: 1, step: 0.05 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
+  defaults: { width: 100, height: 100, flow: 'waves', spacing: 3, scale: 25, bend: 0.6, pattern: 'noise', patternScale: 1, colorChange: false },
   enums: { flow: FLOW_IDS, pattern: ['none', ...FIELD_IDS] },
   bools: ['colorChange'],
   presets: [
@@ -177,13 +177,13 @@ LINE_DESIGNS.push(layered({
 }));
 
 const BUBBLES = defineControls({
-  ranges: { ...SIZE, size: { min: 2.5, max: 10, step: 0.5 }, seed: { min: 1, max: 999, step: 1 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
-  defaults: { width: 50, height: 50, size: 4, seed: 1, link: true, pattern: 'none', patternScale: 1, colorChange: false },
+  ranges: { ...SIZE, size: { min: 0.8, max: 10, step: 0.1 }, seed: { min: 1, max: 999, step: 1 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
+  defaults: { width: 100, height: 100, size: 4, seed: 1, link: true, pattern: 'none', patternScale: 1, colorChange: false },
   enums: { pattern: ['none', ...FIELD_IDS] },
   bools: ['link', 'colorChange'],
   presets: [
     { id: 'foam', name: 'Foam', blurb: 'Mixed bubbles, joined in clusters', patch: { size: 4, link: true, pattern: 'none' } },
-    { id: 'froth', name: 'Froth', blurb: 'Small and close', patch: { size: 2.5, link: true, pattern: 'none' } },
+    { id: 'froth', name: 'Froth', blurb: 'Small and close', patch: { size: 3.5, link: true, pattern: 'none' } },
     { id: 'big', name: 'Big bubbles', blurb: 'Large rings', patch: { size: 7, link: true, pattern: 'none' } },
     { id: 'graded', name: 'Graded', blurb: 'Smaller where a pattern is bright', patch: { size: 6, link: true, pattern: 'noise' } },
   ],
@@ -218,8 +218,8 @@ LINE_DESIGNS.push(layered({
 }));
 
 const PARQUET = defineControls({
-  ranges: { ...SIZE, block: { min: 4, max: 20, step: 0.5 }, ratio: { min: 2, max: 4, step: 1 }, spacing: { min: 1.5, max: 5, step: 0.25 }, turn: { min: 0, max: 90, step: 15 } },
-  defaults: { width: 50, height: 50, tiling: 'herringbone', block: 8, ratio: 2, spacing: 2, turn: 45, colorChange: false },
+  ranges: { ...SIZE, block: { min: 0.8, max: 20, step: 0.1 }, ratio: { min: 2, max: 4, step: 1 }, spacing: { min: 0.8, max: 5, step: 0.1 }, turn: { min: 0, max: 90, step: 15 } },
+  defaults: { width: 100, height: 100, tiling: 'herringbone', block: 8, ratio: 2, spacing: 2, turn: 45, colorChange: false },
   enums: { tiling: TILING_IDS },
   bools: ['colorChange'],
   presets: [
@@ -259,8 +259,8 @@ LINE_DESIGNS.push(layered({
 }));
 
 const SPIRO = defineControls({
-  ranges: { ...SIZE, spacing: { min: 2.5, max: 8, step: 0.5 }, loop: { min: 0.6, max: 2.5, step: 0.1 }, hub: { min: 0, max: 15, step: 0.5 } },
-  defaults: { width: 50, height: 50, spacing: 4, loop: 1.5, hub: 3, colorChange: false },
+  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, loop: { min: 0.6, max: 2.5, step: 0.1 }, hub: { min: 0, max: 15, step: 0.5 } },
+  defaults: { width: 100, height: 100, spacing: 4, loop: 1.5, hub: 3, colorChange: false },
   bools: ['colorChange'],
   presets: [
     { id: 'loops', name: 'Loops', blurb: 'Rings of small curls', patch: { spacing: 4, loop: 1.5 } },
@@ -297,8 +297,8 @@ LINE_DESIGNS.push(layered({
 }));
 
 const STAR = defineControls({
-  ranges: { ...SIZE, size: { min: 4, max: 20, step: 0.5 }, angle: { min: 50, max: 80, step: 2.5 } },
-  defaults: { width: 50, height: 50, tiling: 'square', size: 8, angle: 67.5, colorChange: false },
+  ranges: { ...SIZE, size: { min: 0.8, max: 20, step: 0.1 }, angle: { min: 50, max: 80, step: 2.5 } },
+  defaults: { width: 100, height: 100, tiling: 'square', size: 8, angle: 67.5, colorChange: false },
   enums: { tiling: STAR_TILING_IDS },
   bools: ['colorChange'],
   presets: [

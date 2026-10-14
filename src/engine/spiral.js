@@ -5,6 +5,7 @@ import { PolygonBoundary } from './boundary.js';
 import { emitStrands } from './emit.js';
 import { chainPolylines, layeredResult } from './layers.js';
 import { MAX_MOVES } from './tiler.js';
+import { finishFabric } from './fabric-result.js';
 
 /**
  * Spiral panel: nested rings that follow the edge of the panel, joined into as few strands as the shape allows.
@@ -245,8 +246,8 @@ export function normalLines(field, boundary, { spacing = 3, inset = 0.4 } = {}) 
  * `params`: width, height, spacing (mm between rings), outline (rings in mm) or null.
  */
 export function generateSpiral(machine, material, params = {}) {
-  const width = params.width ?? 50;
-  const height = params.height ?? 50;
+  const width = params.width ?? 100;
+  const height = params.height ?? 100;
   const cfg = resolveConfig(machine, material, { sample_width: width, sample_height: height });
   const fit = bedFitErrors(cfg);
   if (fit.length > 0) throw new PreflightError(fit);
@@ -277,5 +278,5 @@ export function generateSpiral(machine, material, params = {}) {
   const gcode = writeGcode(moves, cfg, { stats });
   const warnings = [...spiral.warnings];
   if (moves.length === 0 && warnings.length === 0) warnings.push('Nothing to print');
-  return { cfg, strands: spiral.strands, moves, stats, warnings, gcode, outline, spiral };
+  return finishFabric({ cfg, strands: spiral.strands, moves, stats, warnings, gcode, outline, spiral }, { flat: true, reinforce: true });
 }

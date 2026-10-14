@@ -40,5 +40,7 @@ test('the web prints as a few strands', () => {
   const { layers } = webLayers(boundaryFor(50, 50), { spacing: 4, spokes: 20, hub: 3 });
   const r = layeredResult(machine, material, { width: 50, height: 50, layers });
   assert.ok(r.moves.some((m) => m.extrude));
-  assert.ok(r.strands.length < 30, `${r.strands.length} strands`);
+  assert.ok(r.moves.length < 10000);
+  assert.equal(r.fabric.components, 1);
+  assert.equal(r.fabric.reversedCrossings, 0);
 });

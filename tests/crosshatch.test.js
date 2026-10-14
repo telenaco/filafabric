@@ -57,11 +57,14 @@ test('an outline is respected and the result prints', () => {
   assert.ok(r.moves.some((m) => m.extrude));
 });
 
-test('three ways prints three layers one layer height apart', () => {
+test('three ways settles onto existing crossings in print order', () => {
   const { layers } = crosshatchLayers(boundaryFor(30, 30), { directions: '0-60-120', spacing: 5 });
   const r = layeredResult(machine, material, { width: 30, height: 30, layers });
   const zs = [...new Set(r.strands.map((s) => Number(s.pts[0].z.toFixed(3))))];
-  assert.deepEqual(zs, [0.2, 0.4, 0.6]);
+  assert.equal(Math.min(...zs), 0.2);
+  assert.ok(Math.max(...r.strands.flatMap((s) => s.pts.map((p) => p.z))) >= 0.6 - 1e-6);
+  assert.equal(r.fabric.components, 1);
+  assert.equal(r.fabric.reversedCrossings, 0);
 });
 
 test('the isogrid meets three ways at its nodes; the kagome never stacks three strands', () => {

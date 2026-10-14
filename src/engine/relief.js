@@ -5,6 +5,8 @@ import { plan } from './planner.js';
 import { PolygonBoundary, RectBoundary } from './boundary.js';
 import { serpentineChains, centredLanes } from './fill.js';
 import { MAX_MOVES } from './tiler.js';
+import { crossBase } from './base.js';
+import { finishFabric } from './fabric-result.js';
 
 /**
  * Relief: one strand per piece of fabric, row after row, that follows a pattern field up and down. Where the field is
@@ -106,7 +108,7 @@ export function reliefPlacements({ width, height, field = null, relief = 2, rowP
         const turns = 6;
         for (let i = 1; i < turns; i++) {
           const t = i / turns;
-          pts.push({ x: prev.x + (forward ? -1 : 1) * Math.sin(Math.PI * t) * bulge, y: prev.y + (next.y - prev.y) * t, z: 0 });
+          pts.push({ x: prev.x + (forward ? 1 : -1) * Math.sin(Math.PI * t) * bulge, y: prev.y + (next.y - prev.y) * t, z: 0 });
         }
       }
       pts.push(...row);
@@ -165,8 +167,8 @@ export function reliefPlacements({ width, height, field = null, relief = 2, rowP
  * `params`: width, height, relief (mm), rowPitch (mm), field (sampler or null), outline (rings in mm).
  */
 export function generateRelief(machine, material, params = {}) {
-  const width = params.width ?? 50;
-  const height = params.height ?? 50;
+  const width = params.width ?? 100;
+  const height = params.height ?? 100;
   const relief = params.relief ?? 2;
   const cfg = resolveConfig(machine, material, {
     sample_width: width,
@@ -186,10 +188,13 @@ export function generateRelief(machine, material, params = {}) {
     throw new ConfigError([`This layout would need about ${estimate.toLocaleString('en')} moves; the limit is ${MAX_MOVES.toLocaleString('en')}. Use wider rows or a smaller swatch.`]);
   }
   const r = reliefPlacements({ width, height, field: params.field ?? null, relief, rowPitch, floor: params.floor ?? 0.3, boundary });
-  const planned = plan(cfg, null, r.placements, boundary);
+  cfg.derived.loopBaseZ = 3 * cfg.t.layer_height;
+  const box = boundary.bbox(), lanes = centredLanes(box.minY, box.maxY, rowPitch);
+  const base = crossBase({ boundary, lanes, spacing: rowPitch, z: cfg.t.layer_height, inset: outline ? cfg.t.extrusion_width / 2 : 0 });
+  const planned = plan(cfg, base, r.placements, boundary);
   const stats = computeStats(planned.moves, cfg, r.placements);
   const warnings = [...r.warnings, ...planned.warnings];
   if (planned.moves.length === 0 && warnings.length === 0) warnings.push('Nothing to print');
   const gcode = writeGcode(planned.moves, cfg, { stats });
-  return { cfg, placements: r.placements, moves: planned.moves, stats, warnings, gcode, outline, relief: { rows: r.rows, peak: r.peak, longestSpan: r.longestSpan, maxSlopeDeg: r.maxSlopeDeg } };
+  return finishFabric({ cfg, base, placements: r.placements, moves: planned.moves, stats, warnings, gcode, outline, relief: { rows: r.rows, peak: r.peak, longestSpan: r.longestSpan, maxSlopeDeg: r.maxSlopeDeg } }, { boundary });
 }

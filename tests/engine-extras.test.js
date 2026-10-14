@@ -25,8 +25,8 @@ test('stats count hops, travel length, strands and extruding moves', () => {
   assert.equal(r.stats.extrudingMoves, extruding);
   assert.equal(r.stats.strands, tags.size);
   assert.ok(Math.abs(r.stats.travelMm - travel) < 1e-6);
-  assert.equal(r.stats.hops, r.stats.loops, 'one hop to start each loop after the base');
-  assert.equal(r.stats.strands, r.stats.loops + 1, 'the base is one strand');
+  assert.equal(r.stats.hops, r.stats.loops + r.base.strands.length - 1, 'one hop between each backing pass and each loop');
+  assert.equal(r.stats.strands, r.stats.loops + r.base.strands.length, 'both backing passes are counted');
 });
 
 test('a loops-only print starts on the bed layer instead of floating above a missing base', () => {

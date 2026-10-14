@@ -4,6 +4,7 @@ import { computeStats } from './stats.js';
 import { PolygonBoundary } from './boundary.js';
 import { emitStrands } from './emit.js';
 import { MAX_MOVES } from './tiler.js';
+import { finishFabric } from './fabric-result.js';
 
 /**
  * Weave: warp lines (columns) and weft lines (rows) that pass over and under each other, two layers thick.
@@ -165,8 +166,8 @@ export function generateWeaveTextile({ width, height, pitch = 4, binding = 'plai
  * `params`: width, height, pitch (mm), binding, outline (rings in mm) or null.
  */
 export function generateWeave(machine, material, params = {}) {
-  const width = params.width ?? 50;
-  const height = params.height ?? 50;
+  const width = params.width ?? 100;
+  const height = params.height ?? 100;
   const cfg = resolveConfig(machine, material, { sample_width: width, sample_height: height });
   const fit = bedFitErrors(cfg);
   if (fit.length > 0) throw new PreflightError(fit);
@@ -188,5 +189,5 @@ export function generateWeave(machine, material, params = {}) {
   const gcode = writeGcode(moves, cfg, { stats });
   const warnings = [...weave.warnings];
   if (moves.length === 0 && warnings.length === 0) warnings.push('Nothing to print');
-  return { cfg, strands: weave.strands, moves, stats, warnings, gcode, outline, weave };
+  return finishFabric({ cfg, strands: weave.strands, moves, stats, warnings, gcode, outline, weave });
 }

@@ -3,6 +3,7 @@ import { DEFAULT_TEXTILE } from '../engine/params.js';
 import { ADVANCED_DEFAULTS, PRIMARY_KEYS, sanitizePrimary } from './controls.js';
 import { sanitizeSquiggle } from './squiggle-controls.js';
 import { DESIGNS, READY_IDS } from './designs.js';
+import { sanitizeSvgLines } from '../engine/svg-lines.js';
 
 /** The designs a link can open, in gallery order (planned placeholders are not loadable). The first opens by default. */
 export const DESIGN_IDS = READY_IDS;
@@ -86,5 +87,5 @@ export function sanitizeState(raw, known) {
   for (const d of DESIGNS) {
     if (d.status === 'ready' && !d.legacy) designs[d.id] = d.sanitize(saved[d.id]);
   }
-  return { v: 3, design, machine, material, primary, advanced, squiggle: sanitizeSquiggle(r.squiggle), designs, outline: sanitizeOutline(r.outline) };
+  return { v: 3, design, machine, material, primary, advanced, squiggle: sanitizeSquiggle(r.squiggle), designs, outline: sanitizeOutline(r.outline), vector: sanitizeSvgLines(r.vector) };
 }

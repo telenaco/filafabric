@@ -10,6 +10,7 @@ export function emitStrands(strands, { startLift = 5, travelLift = 3, retraction
   let pendingUnretract = false;
   const travel = (x, y, z, customGcode, comment) => ({ x, y, z, cls: 'travel', extrude: false, customGcode, comment });
   let cur = null;
+  let printedMaxZ = -Infinity;
   for (const strand of strands) {
     if (strand.pts.length < 2) continue;
     const first = strand.pts[0];
@@ -17,7 +18,7 @@ export function emitStrands(strands, { startLift = 5, travelLift = 3, retraction
       moves.push(travel(first.x, first.y, first.z + startLift));
       moves.push(travel(first.x, first.y, first.z));
     } else {
-      const safeZ = Math.max(cur.z, first.z) + travelLift;
+      const safeZ = Math.max(printedMaxZ, cur.z, first.z) + travelLift;
       const lift = travel(cur.x, cur.y, safeZ);
       // a long enough travel retracts first and primes again at the start of the next strand (as the loop pile does)
       if (retraction && retraction.length > 0 && Math.hypot(first.x - cur.x, first.y - cur.y) >= retraction.minTravel) {
@@ -42,6 +43,7 @@ export function emitStrands(strands, { startLift = 5, travelLift = 3, retraction
       moves.push(move);
     }
     cur = strand.pts[strand.pts.length - 1];
+    for (const p of strand.pts) printedMaxZ = Math.max(printedMaxZ, p.z);
   }
   return moves;
 }

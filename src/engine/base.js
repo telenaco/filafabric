@@ -62,3 +62,15 @@ export function buildOutlineBase({ boundary, lanes, z, inset }) {
   for (const pts of strands) for (let i = 1; i < pts.length; i++) length += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
   return { points: strands[0] ?? [], strands, length };
 }
+
+/** Vertical pass, then the horizontal anchoring rows, one layer above. */
+export function crossBase({ boundary, lanes, spacing, z, inset = 0 }) {
+  const box = boundary.bbox(), xs = [];
+  for (let x = box.minX + spacing / 2; x < box.maxX; x += spacing) xs.push(x);
+  const vertical = serpentineChains(boundary, 'x', xs, { inset, minLength: 1, maxJog: 3 * spacing }).map((segments) => segments.flatMap((s) => [{ x: s.c, y: s.from, z }, { x: s.c, y: s.to, z }]));
+  const horizontal = buildOutlineBase({ boundary, lanes, z: z * 2, inset });
+  const strands = [...vertical, ...(horizontal.strands ?? [])];
+  let length = 0;
+  for (const pts of strands) for (let i = 1; i < pts.length; i++) length += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+  return { strands, points: strands[0] ?? [], length };
+}

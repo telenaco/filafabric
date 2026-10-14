@@ -1,3 +1,5 @@
+import { PRINTABILITY } from './printability-data.js';
+import { validNumber } from './numeric.js';
 import { generate } from '../engine/generate.js';
 import { generateSquiggle, SAMPLERS, createImageSampler, minCrossingAmplitude } from '../engine/squiggle.js';
 import { placeOutline, rotateRings, ringsAspect, unflattenRings } from '../engine/outline.js';
@@ -13,6 +15,9 @@ import { THUMBS, shapeThumb } from './thumbs.js';
 import { swatchCode } from './swatch.js';
 import { FIELDS, FIELD_IDS, createField } from '../engine/fields.js';
 import { SHAPES, SHAPE_IDS } from '../engine/shapes.js';
+import { readSvgLines } from './svg-lines.js';
+import { composeSvgLines } from '../engine/svg-lines.js';
+import { bindPanelExport } from './panel-ui.js';
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -113,6 +118,7 @@ const state = {
   image: null, // { data: ImageData, name, px: [w, h], thumb: canvas }: stays on this computer, never in a link
   imageBoxOpen: false,
   outline: null, // { name, rings (flat, unit box), rotation }: shared by every design, travels in links
+  vector: null,
   docName: 'Untitled swatch',
   result: null,
   error: null,
@@ -229,6 +235,7 @@ function known() {
 function snapshot() {
   return {
     v: 3,
+    sampleDefaults: 100,
     design: state.design,
     machine: state.machine,
     material: state.material,
@@ -237,6 +244,7 @@ function snapshot() {
     squiggle: state.squiggle,
     designs: state.designs,
     outline: state.outline,
+    vector: state.vector,
     name: state.docName,
   };
 }
@@ -263,7 +271,7 @@ const grams = (g) => (g < 1 ? g.toFixed(2) : g.toFixed(1));
 
 /* ---------- history (undo / redo) ---------- */
 function snapshotKey() {
-  return JSON.stringify({ d: state.design, m: state.machine, t: state.material, p: state.primary, a: state.advanced, s: state.squiggle, g: state.designs, o: state.outline });
+  return JSON.stringify({ d: state.design, m: state.machine, t: state.material, p: state.primary, a: state.advanced, s: state.squiggle, g: state.designs, o: state.outline, v: state.vector });
 }
 
 function commit() {
@@ -295,6 +303,7 @@ function loadState(data) {
   state.squiggle = clean.squiggle;
   state.designs = clean.designs;
   state.outline = clean.outline;
+  state.vector = clean.vector;
   if (typeof data?.name === 'string') state.docName = data.name.slice(0, 60);
   if (designChanged) resetRoles();
   // a picture never travels in a link or a file, so without one loaded the pattern falls back
@@ -366,12 +375,13 @@ function regenerate() {
     if (!mod.legacy) {
       const own = state.designs[mod.id];
       const [w, h] = mod.size(own);
-      result = mod.generate(machine, material, own, { outline: mod.outline === false ? null : placedOutline(w, h) });
+      const previewState = { ...own, width: Math.min(w, 100), height: Math.min(h, 100) };
+      result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height) });
     } else if (state.design === 'squiggle') {
       const s = state.squiggle;
       result = generateSquiggle(machine, material, {
-        width: s.width,
-        height: s.height,
+        width: Math.min(s.width, 100),
+        height: Math.min(s.height, 100),
         mode: s.mode,
         shape: s.shape,
         spacing: s.spacing,
@@ -379,11 +389,17 @@ function regenerate() {
         wavelength: s.wavelength,
         sampler: squiggleSampler(),
         colorChange: s.colorChange,
-        outline: placedOutline(s.width, s.height),
+        outline: placedOutline(Math.min(s.width, 100), Math.min(s.height, 100)),
       });
     } else {
       const [w, h] = sampleSize(state.primary);
-      result = generate(machine, material, toTextile(state.primary, state.advanced), { outline: placedOutline(w, h), liftAt: pileLiftFactor(state.primary) });
+      const textile = toTextile(state.primary, state.advanced);
+      textile.sample_width = Math.min(w, 100); textile.sample_height = Math.min(h, 100);
+      result = generate(machine, material, textile, { outline: placedOutline(textile.sample_width, textile.sample_height), liftAt: pileLiftFactor(state.primary) });
+    }
+    if (state.vector) {
+      const [fullWidth, fullHeight] = BINDINGS[state.design].size.get();
+      result = composeSvgLines(result, state.vector, { fullWidth, fullHeight });
     }
     state.result = result;
     state.error = null;
@@ -455,11 +471,14 @@ function renderErrors() {
 
 function currentVerdict() {
   if (!state.result || state.error) return null;
+  const fabric = state.result.fabric;
+  if (fabric && !fabric.exportable) return { level: 'error', title: 'Structure needs attention', body: fabric.issues.join('. ') || 'Nothing fits inside this shape.', action: null };
   const mod = designById(state.design);
   if (!mod.legacy) return mod.verdict(state.result, state.designs[mod.id]);
   return state.design === 'squiggle'
     ? buildSquiggleVerdict(state.result.stats, { colorChange: state.squiggle.colorChange })
     : buildVerdict(state.result.stats, { roomy: state.primary.roomy });
+  return verdict.level === 'ready' || verdict.level === 'ok' ? { ...verdict, title: 'Geometry checked · test a swatch', body: `${fabric?.components === 1 ? 'One connected fabric region. ' : ''}${verdict.body} Physical print testing is still pending.` } : verdict;
 }
 
 function renderCheck() {
@@ -557,6 +576,8 @@ function renderFigures() {
       item('Strands', String(stats.strands)),
       item('Nozzle lifts', String(stats.hops)),
       item('Travel', `${Math.round(stats.travelMm).toLocaleString('en')} mm`),
+      ...(state.result.fabric ? [item('Fabric regions', String(state.result.fabric.components)), item('Longest free span', `${state.result.fabric.longestUnsupported.toFixed(1)} mm`)] : []),
+      ...(state.result.routing ? [item('Between paths', `${Math.round(state.result.routing.beforeMm)} → ${Math.round(state.result.routing.afterMm)} mm`)] : []),
       item('G-code moves', stats.moves.toLocaleString('en')),
       item('Steepest slope', `${stats.maxSlopeDeg.toFixed(1)}°`),
       ...(state.result.report ? reportItems(state.result.report, item) : []),
@@ -577,10 +598,14 @@ function renderPlayback() {
 
 function renderExport() {
   const btn = $('#btn-export');
-  const ok = !!state.result && !state.error && state.result.moves.length > 0;
+  const ok = !!state.result && !state.error && state.result.moves.length > 0 && state.result.fabric?.exportable !== false;
   btn.disabled = !ok;
   const bytes = state.result ? state.result.gcode.length : 0;
   $('#export-size').textContent = ok ? (bytes > 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`) : '';
+  $('#svg-lines-info').textContent = state.vector ? `${state.vector.name} · ${state.vector.width.toFixed(1)} × ${state.vector.height.toFixed(1)} mm · ${state.vector.paths.length} paths` : 'Print SVG strokes first, with this pattern above.';
+  $('#svg-lines-remove').hidden = !state.vector;
+  $('#svg-preview-note').hidden = !state.vector;
+  if (state.vector) $('#svg-preview-note').textContent = `Preview sample: ${state.result?.cfg.t.sample_width ?? 100} × ${state.result?.cfg.t.sample_height ?? 100} mm. Full SVG: ${state.vector.width.toFixed(1)} × ${state.vector.height.toFixed(1)} mm.`;
 }
 
 const shortMachine = (name) => name.replace('Original ', '').replace(' i3', '').replace(' / MK3S+', '');
@@ -618,8 +643,9 @@ function renderSliders() {
     for (const def of b.sliders) {
       const input = $(`#${id}-${def.key}`);
       if (input && document.activeElement !== input) input.value = String(b.get(def.key));
+      if (input) input.setAttribute('aria-valuetext', b.readout(def.key));
       const out = $(`#${id}-${def.key}-out`);
-      if (out) out.textContent = b.readout(def.key);
+      if (out) { out.textContent = b.readout(def.key); const r = b.range(def.key), manual = b.get(def.key) < r.min || b.get(def.key) > r.max; out.classList.toggle('manual-value', manual); out.title = manual ? 'Manual value outside the slider range. Click to edit.' : 'Click to type an exact value'; }
     }
   }
   const d = describePrimary(state.primary);
@@ -734,10 +760,8 @@ function buildSlider(id, def) {
   input.addEventListener('input', () => { b.set(def.key, Number(input.value)); afterControl(); });
   input.addEventListener('change', commit);
 
-  const readout = def.edit
-    ? el('button', { type: 'button', class: 'ctl-readout editable', id: `${inputId}-out`, title: 'Click to type a value', 'aria-label': `${def.label}: type an exact value` })
-    : el('span', { class: 'ctl-readout', id: `${inputId}-out` });
-  if (def.edit) readout.addEventListener('click', () => editValue(id, def, readout));
+  const readout = el('button', { type: 'button', class: 'ctl-readout editable', id: `${inputId}-out`, title: 'Click to type a value', 'aria-label': `${def.label}: type an exact value` });
+  readout.addEventListener('click', () => editValue(id, def, readout));
 
   return el('div', { class: 'ctl' },
     el('div', { class: 'ctl-top' }, el('label', { class: 'ctl-label', for: inputId, text: def.label }), readout),
@@ -750,7 +774,7 @@ function buildSlider(id, def) {
 function editValue(id, def, readout) {
   const b = BINDINGS[id];
   const range = b.range(def.key);
-  const field = el('input', { type: 'number', class: 'ctl-edit', min: range.min, max: range.max, step: range.step, inputmode: 'decimal', 'aria-label': `${def.label} in ${def.unit}` });
+  const field = el('input', { type: 'number', class: 'ctl-edit', step: 'any', inputmode: 'decimal', 'aria-label': `${def.label}${def.unit ? ` in ${def.unit}` : ''}` });
   field.value = String(b.get(def.key));
   let done = false;
   const finish = (apply) => {
@@ -759,9 +783,13 @@ function editValue(id, def, readout) {
     const raw = field.value.trim();
     const n = Number(raw);
     if (apply && raw !== '' && Number.isFinite(n)) {
-      const v = Math.min(range.max, Math.max(range.min, n));
-      if (v !== n) toast(`${def.label} goes from ${range.min} to ${range.max} ${def.unit}, so it is set to ${v} ${def.unit}.`);
-      b.set(def.key, v);
+      if (!validNumber(def.key, n, range)) {
+        toast(`${def.label}: enter a valid ${range.min === 0 ? 'non-negative' : 'positive'} value.`);
+        field.replaceWith(readout);
+        readout.focus();
+        return;
+      }
+      b.set(def.key, n);
       afterControl();
       commit();
     }
@@ -1131,7 +1159,8 @@ function updateDialogNote() {
 /* ---------- designs ---------- */
 /** One tile per registry module; planned designs are visible placeholders that cannot be selected. */
 function renderTiles() {
-  const tiles = DESIGNS.map((d) => {
+  const ranking = new Map(PRINTABILITY.map((p, i) => [p.id, { ...p, rank: i + 1 }]));
+  const tiles = [...DESIGNS].sort((a, b) => (ranking.get(a.id)?.rank ?? 1000) - (ranking.get(b.id)?.rank ?? 1000)).map((d) => {
     const ready = d.status === 'ready';
     const planned = d.status === 'planned';
     const tile = el('button', {
@@ -1145,7 +1174,9 @@ function renderTiles() {
       disabled: planned,
       title: planned ? `${d.name} is coming soon` : false,
     });
-    tile.innerHTML = `${d.thumb ?? THUMBS[d.id] ?? ''}<span class="design-text"><span class="design-name">${d.name}${planned ? '<span class="soon">Soon</span>' : ''}</span><span class="design-sub">${d.blurb}</span></span>`;
+    const assessment = ranking.get(d.id);
+    tile.title = `${d.blurb}${assessment ? ` · Estimated printability ${assessment.rank} of ${PRINTABILITY.length}. ${assessment.longestUnsupported.toFixed(1)} mm longest free span; ${assessment.maxSlopeDeg.toFixed(1)}° maximum slope. Default 100 × 100 mm geometry; physical testing pending.` : ''}`;
+    tile.innerHTML = `${d.thumb ?? THUMBS[d.id] ?? ''}<span class="design-text"><span class="design-name">${d.name}${planned ? '<span class="soon">Soon</span>' : ''}</span></span>`;
     if (ready) tile.addEventListener('click', () => setDesign(d.id));
     if (d.status === 'preset') tile.addEventListener('click', () => openPresetTile(d));
     return tile;
@@ -1213,7 +1244,8 @@ function currentSwatch() {
     size = sampleSize(state.primary);
     if (JSON.stringify(settings) === JSON.stringify({ primary: mod.defaults(), advanced: {} })) preset = 'default';
   }
-  return swatchCode(mod.file, settings, { size, preset, outline: state.outline });
+  if (state.result) size = [state.result.cfg.t.sample_width, state.result.cfg.t.sample_height];
+  return swatchCode(mod.file, { ...settings, vector: state.vector }, { size, preset, outline: state.outline });
 }
 
 function resetRoles() {
@@ -1300,7 +1332,7 @@ function buildDesignPanel(mod) {
   const panel = el('div', { id: `panel-${id}`, class: 'panel', hidden: true },
     el('header', { class: 'panel-head' },
       el('h1', { class: 'title', text: mod.name }),
-      el('p', { class: 'muted', text: mod.about })));
+      el('details', { class: 'pattern-about' }, el('summary', { text: 'About this pattern' }), el('p', { class: 'muted', text: mod.about }))));
   mod.controls.forEach((c, n) => {
     const titleId = `${id}-group-${n}-title`;
     const group = (...kids) => el('section', { class: 'group', 'aria-labelledby': titleId },
@@ -1476,7 +1508,7 @@ function download(name, blob) {
 }
 
 function exportGcode() {
-  if (!state.result || state.error) return;
+  if (!state.result || state.error || state.result.fabric?.exportable === false) return;
   const code = currentSwatch();
   const name = `${slug(state.docName)}_${code}_${state.material}.gcode`;
   // name the swatch inside the file too, so a printed sample can be matched to its settings from the G-code alone
@@ -1486,10 +1518,10 @@ function exportGcode() {
 }
 
 async function shareLink() {
-  const hash = stateToHash(snapshot());
+  const hash = stateToHash({ ...snapshot(), vector: null });
   const url = `${location.origin}${location.pathname}${hash}`;
   const picture = state.design === 'squiggle' && state.squiggle.pattern === 'image';
-  const note = picture ? ' Your picture stays on this computer, so the link opens with the centre spot pattern.' : '';
+  const note = state.vector ? ' SVG paths stay in your saved settings file; the link shares the pattern settings.' : picture ? ' Your picture stays on this computer, so the link opens with the centre spot pattern.' : '';
   try {
     await navigator.clipboard.writeText(url);
     toast(`Link copied.${note}`);
@@ -1663,6 +1695,7 @@ function bindStatic() {
 async function init() {
   await loadProfiles();
   preview = createPreview($('#preview'));
+  buildSvgLayerControl();
 
   // start from: a shared link, then the last session, then the defaults
   const fromLink = hashToState(location.hash);
@@ -1671,6 +1704,10 @@ async function init() {
     try { initial = JSON.parse(store.get(STORAGE_KEY) ?? 'null'); } catch { initial = null; }
   }
   let pictureDropped = false;
+  if (initial && !fromLink && initial.sampleDefaults !== 100) {
+    for (const settings of [initial.squiggle, ...Object.values(initial.designs ?? {})]) if (settings && settings.width === settings.height && [50, 200].includes(settings.width)) { settings.width = 100; settings.height = 100; }
+    if (initial.primary && initial.primary.swatch !== 'custom') initial.primary.swatch = 'full';
+  }
   if (initial) pictureDropped = loadState(initial);
 
   for (const mod of DESIGNS) if (mod.status === 'ready' && !mod.legacy) buildDesignPanel(mod);
@@ -1691,11 +1728,42 @@ async function init() {
   fillDialogSelects();
   renderTiles();
   bindStatic();
+  bindPanelExport({
+    options: (width = 100, height = 100) => ({ machine: state.machines.get(state.machine), material: state.materials.get(state.material), design: state.design, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : state.design === 'squiggle' ? state.squiggle : state.designs[state.design], outline: placedOutline(width, height), vector: state.vector, image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale, panelSize: state.design === 'loop-pile' ? sampleSize(state.primary) : [settingsOf(state.design).width, settingsOf(state.design).height] }),
+    machines: () => state.machines, machineId: () => state.machine,
+    selectMachine: (id) => { state.machine = id; schedule(); commit(); },
+    download, filename: (w, h) => `${slug(state.docName)}_${state.design}_${w}x${h}mm.gcode`, toast,
+  });
   showDesign();
   $('#doc-name').value = state.docName;
   regenerate();
   commit();
   if (pictureDropped && fromLink) toast('This link was made with a picture, which links can\'t carry, so it opens with the centre spot pattern.');
+}
+
+function buildSvgLayerControl() {
+  const input = el('input', { type: 'file', accept: '.svg,image/svg+xml', class: 'visually-hidden', id: 'svg-lines-input' });
+  const remove = el('button', { type: 'button', id: 'svg-lines-remove', class: 'link small', text: 'Remove SVG', hidden: true });
+  const label = el('label', { class: 'btn svg-import', for: 'svg-lines-input', text: 'Import printable SVG lines' }); label.append(input);
+  const card = el('section', { class: 'svg-layer-control', 'aria-label': 'Printable SVG first layer' },
+    el('div', { class: 'svg-layer-actions' }, label, remove),
+    el('p', { id: 'svg-lines-info', class: 'small muted', text: 'Print SVG strokes first, with this pattern above.' }),
+    el('p', { id: 'svg-preview-note', class: 'small muted', hidden: true }));
+  $('#settings-body').prepend(card);
+  const importFile = async (file) => {
+    try {
+      const vector = await readSvgLines(file); state.vector = vector;
+      const b = BINDINGS[state.design].size; b.set(vector.width, vector.height, 'custom');
+      state.docName = file.name.replace(/\.svg$/i, '').slice(0, 60); $('#doc-name').value = state.docName;
+      $('#panel-width').value = vector.width; $('#panel-height').value = vector.height;
+      syncControls(); schedule(); commit(); toast(`Imported ${vector.paths.length} printable paths at ${vector.width.toFixed(1)} × ${vector.height.toFixed(1)} mm`);
+    } catch (e) { toast(`Could not import SVG lines: ${e.message}`); }
+  };
+  input.addEventListener('change', (e) => { if (e.target.files[0]) void importFile(e.target.files[0]); e.target.value = ''; });
+  card.addEventListener('dragover', (e) => { e.preventDefault(); card.classList.add('dragover'); });
+  card.addEventListener('dragleave', () => card.classList.remove('dragover'));
+  card.addEventListener('drop', (e) => { e.preventDefault(); card.classList.remove('dragover'); if (e.dataTransfer.files[0]) void importFile(e.dataTransfer.files[0]); });
+  remove.addEventListener('click', () => { state.vector = null; schedule(); commit(); });
 }
 
 init().catch((e) => {

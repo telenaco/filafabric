@@ -1,3 +1,4 @@
+import { validNumber } from './numeric.js';
 // The few creative controls people see, and how they map onto engine parameters.
 // Pure functions: no DOM, so they are tested in Node like the engine.
 import { DEFAULT_TEXTILE } from '../engine/params.js';
@@ -7,19 +8,19 @@ import { FIELD_IDS, createField } from '../engine/fields.js';
 export const RANGES = Object.freeze({
   pileHeight: { min: 1, max: 6, step: 0.5 },
   loopSize: { min: 0.6, max: 1.4, step: 0.1 },
-  loopSpacing: { min: 2, max: 6, step: 0.5 },
-  baseGap: { min: 3, max: 10, step: 0.5 },
+  loopSpacing: { min: 0.8, max: 6, step: 0.1 },
+  baseGap: { min: 0.8, max: 10, step: 0.1 },
   variation: { min: 0, max: 100, step: 10 },
   airFlow: { min: 80, max: 200, step: 5 },
-  customWidth: { min: 10, max: 240, step: 5 },
-  customHeight: { min: 10, max: 200, step: 5 },
+  customWidth: { min: 10, max: 1000, step: 5 },
+  customHeight: { min: 10, max: 1000, step: 5 },
   patternScale: { min: 0.5, max: 2, step: 0.25 },
 });
 
 export const PRIMARY_DEFAULTS = Object.freeze({
-  swatch: 'test', // 'test' | 'full' | 'custom'
-  customWidth: 60,
-  customHeight: 60,
+  swatch: 'full', // 'test' | 'full' | 'custom'
+  customWidth: 100,
+  customHeight: 100,
   pileHeight: 3, // mm of lift
   loopSize: 1, // 1 = 6 x 15 mm
   loopSpacing: 3, // mm between loop centres
@@ -27,7 +28,7 @@ export const PRIMARY_DEFAULTS = Object.freeze({
   baseGap: 5, // mm between base lines (and rows)
   variation: 0, // 0 = off, 100 = full amplitudes
   airFlow: 100, // % flow for the strands in the air (rising, falling, free-hanging)
-  edgeLoops: true, // true: loops on every base line, the last rows reach past the back edge; false: keep inside
+  edgeLoops: false, // garment samples keep the entire pile inside their boundary
   pattern: 'none', // a pattern field that raises some loops and lowers others ('none': every loop the same height)
   patternScale: 1, // stretches the pattern across the fabric
 });
@@ -92,8 +93,8 @@ export function sanitizePrimary(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
   for (const [key, range] of Object.entries(RANGES)) {
     const n = Number(raw[key]);
-    if (raw[key] !== undefined && raw[key] !== null && raw[key] !== '' && Number.isFinite(n)) {
-      out[key] = Math.min(range.max, Math.max(range.min, n));
+    if (raw[key] !== undefined && raw[key] !== null && raw[key] !== '' && validNumber(key, n, range)) {
+      out[key] = n;
     }
   }
   if (SWATCHES.includes(raw.swatch)) out.swatch = raw.swatch;

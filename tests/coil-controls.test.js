@@ -17,10 +17,10 @@ test('shapes and patterns come from the engine libraries', () => {
   assert.deepEqual(COIL_PATTERNS, ['none', ...FIELD_IDS]);
 });
 
-test('sanitizeCoil clamps, coerces and drops unknown keys', () => {
+test('sanitizeCoil preserves exact values, coerces and drops unknown keys', () => {
   const c = sanitizeCoil({ size: 99, pitch: -1, rowOverlap: '30', width: NaN, shape: 'spiral', pattern: 'nope', hacked: 1, lift: 0.3 });
-  assert.equal(c.size, COIL_RANGES.size.max);
-  assert.equal(c.pitch, COIL_RANGES.pitch.min);
+  assert.equal(c.size, 99);
+  assert.equal(c.pitch, COIL_DEFAULTS.pitch);
   assert.equal(c.rowOverlap, 30);
   assert.equal(c.width, COIL_DEFAULTS.width);
   assert.equal(c.shape, COIL_DEFAULTS.shape);

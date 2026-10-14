@@ -1,6 +1,6 @@
 # Fashion Printing Tools — Textile G-code Generator
 
-A browser-based toolbox that generates direct G-code for experimental non-planar FDM textile: a sparse serpentine
+A browser-based toolbox that generates direct G-code for experimental non-planar FDM textile: a crossed supporting
 base plus a dense pile of raised, anchored 3D loops. First target: Prusa MK3S, Filaflex Foamy 95, a 100 × 100 mm
 sample. Machine and material profiles are data files, so more machines can be added from G-code you share.
 
@@ -35,14 +35,15 @@ http://localhost:5173/ in your browser. Close the window to stop it. From a term
 
 ```bash
 npm run serve     # server + browser
-npm test          # engine and UI-logic tests (164)
+npm test          # engine and UI-logic regression tests
+node tools/audit-printability.mjs # regenerate the default-swatch gallery ranking
 npm run golden    # re-record the 20 x 20 golden summary after an intended engine change
 ```
 
 In the page, work left to right: pick a **design**, shape it with the **settings** on the right (a width and height,
 or an **SVG outline** to fill; then a few sliders, and you can click a slider's value to type an exact number), and
 read the **print summary** at the bottom of the
-settings: a check (amber with an "Add room" fix when loops are tight), print time, filament, and **Export G-code**.
+settings: a check (amber with an "Add room" fix when loops are tight), print time, filament, and **Export swatch**. Every design starts at **100 × 100 mm**; saved custom dimensions remain available.
 **Outlines:** drop an SVG under Size and shape (paths, polygons, rectangles, circles and ellipses, with curves and
 transforms; text must be converted to paths). The shape fills both designs: holes stay open (even-odd), concave
 parts print as separate strands instead of across the gap, and "Match its shape" sets the height to the outline's
@@ -52,8 +53,8 @@ inside the SVG are stripped before it is read.
 kept at least a quarter of the line spacing plus half a strand deep, so each layer 2 line crosses the lines on both
 sides and the two layers form one connected net (two layers of parallel lines that never cross would come apart).
 **Loops at the back edge** decides what happens on the last base lines: a loop reaches one loop length past its
-feet, so "On every line" (the default) gives every line loops and lets the last rows overhang the back edge, while
-"Inside the swatch" keeps whole loops inside and leaves the last lines without loops of their own.
+feet, so "On every line" gives every line loops and lets the last rows overhang the back edge, while
+"Inside the swatch" (the default) keeps whole loops inside and leaves the last lines without loops of their own.
 **Strand thickness** adds flow only where the loops are in the air (rising, falling and free-hanging; the base and
 the anchored feet stay at normal flow), from 80 to 200 %, and shows the expected foamed strand diameter. Moves slow
 down on their own if the extra flow would exceed what the hotend can melt, and the clearance check and the
@@ -67,9 +68,23 @@ settings in groups that show what you changed). The printer chip in the header o
 reopens the design and its settings) work for every design. Every exported file records its full parameter set
 and seed in comment lines.
 
+## Printable SVG and garment panels
+
+**Import printable SVG lines** sits above the pattern settings. SVG strokes become actual extruded first-layer paths, with the selected pattern above them. Open subpaths stay open. Physical document dimensions, margins and transforms are retained; resizing the design scales the drawing too. This is separate from **Fill an outline instead**, which only defines the garment boundary. Save/Open settings includes the imported paths; share links omit them to keep links small.
+
+The live preview and **Export swatch** are bounded to 100 × 100 mm. **Full panel…** exports the selected texture as repeated sections over one continuous crossed backing, with the SVG drawing printed once across the full document. Radial motifs repeat per section. It runs in a worker with progress and cancellation, streams to a file in supported browsers, and limits the download fallback to 128 MB. Full panels currently use one filament. Select a printer that actually fits the panel. The generic 1000 × 1000 × 300 mm profile is an unverified template: configure homing, levelling and priming for the real machine.
+
+The gallery lists estimated easier prints first, using the default 100 mm geometry: connection faults, unsupported spans, slopes, starts and loop-pile clearance flags. This is a comparative screen, not physical qualification. Details show the actual geometry and between-path travel for the current settings. Flat patterns start near the lower-left corner and choose the nearest remaining endpoint or closed-loop seam within each pass; raised pile and fringe preserve safe row order. Short structural ties connect isolated motifs, and crossing heights follow the previously printed material.
+
+Spacing sliders reach 0.8 mm. Click any slider value to enter an exact value beyond its range; valid manual values survive saving and reopening. Invalid geometry, machine limits and generation budgets produce errors instead of silently changing the requested value.
+
+## Local files
+
+The original printer samples now live in ignored `reference/local-samples/`. They are retained as profile provenance, outside the deployable source. There were no STL files in this project. Engine modules, tests, vendored preview code and reference documentation remain in use.
+
 ## First prints (spec section 9)
 
-1. A 30 × 30 mm swatch (the default size), Advanced settings → What to print → untick "Print the loops": base only. Check adhesion,
+1. Choose a 30 × 30 mm test swatch, Advanced settings → What to print → untick "Print the loops": base only. Check adhesion,
    flow and corners.
 2. Custom size 30 × 15 mm, base and loops on, Loops at the back edge → **Inside the swatch**: exactly one row of
    loops. Check that the feet bond and the unsupported strands hold their height.
@@ -99,8 +114,8 @@ Use the count to compare layouts, not as pass or fail.
 | `reference/research-notes-2026-10-14.md` | MK3S limits, PrusaSlicer Generic FLEX values, Recreus Foamy parameters, sources |
 | `reference/line-algorithms-for-fabric-2026-10-14.md` | Research: which plotter line styles can become two-layer printed fabric, with a recipe for layer 2 and the next three designs to build |
 | `reference/g-code-analysis-2026-10-14.md` | What the user's own MK3S G-code and Bambu A1 mini 3MF contain (verified values, start/end blocks, Bambu notes) |
-| `Shape-Box_0.2mm_FLEX_MK3S_5m.gcode` | The user's sliced MK3S sample (PrusaSlicer 2.9.6, Generic FLEX): ground truth for the MK3S profile. **Local only, not published** |
-| `bambu lab a1 mini.gcode.3mf` | The user's Bambu Studio sample for the A1 mini (future sub-project 5). **Local only, not published** |
+| `reference/local-samples/Shape-Box_0.2mm_FLEX_MK3S_5m.gcode` | The user's sliced MK3S sample (PrusaSlicer 2.9.6, Generic FLEX): ground truth for the MK3S profile. **Local only, not published** |
+| `reference/local-samples/bambu lab a1 mini.gcode.3mf` | The user's Bambu Studio sample for the A1 mini (future sub-project 5). **Local only, not published** |
 
 Code:
 

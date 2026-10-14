@@ -215,6 +215,9 @@ export function buildLayeredVerdict(result) {
   if (!r || r.strands === 0) {
     return { ...NONE, level: 'info', title: 'Nothing to print', body: 'These settings leave nothing inside the swatch or outline. Use a larger swatch or finer settings.' };
   }
+  if (r.components > 1) {
+    return { ...NONE, level: 'heads-up', title: 'Separate pieces remain', body: `${r.components} disconnected regions remain after the geometric checks. Change the spacing or outline before exporting freestanding fabric.` };
+  }
   if (result.layerCount > 1 && r.between === 0) {
     return { ...NONE, level: 'heads-up', title: 'The layers never cross', body: 'Lines that never cross anything can simply be peeled apart. Change an angle or an offset so the layers cross each other.' };
   }

@@ -99,91 +99,61 @@ function fanFor(cls, t) {
   return t[`fan_${cls === 'rising' || cls === 'falling' ? 'nonplanar' : cls}`];
 }
 
-export function writeGcode(moves, cfg, info = {}) {
-  const errors = preflight(moves, cfg);
-  if (errors.length > 0) throw new PreflightError(errors);
-
-  const { machine, material, t, derived } = cfg;
-  const o = derived.origin;
-  const r = derived.retraction;
-  const out = [];
-
-  out.push('; Textile G-code generator v1');
-  out.push(`; machine: ${machine.id}${machine.verified ? '' : ' (unverified profile)'}`);
-  out.push(`; material: ${material.id}${material.verified ? '' : ' (unverified profile)'}`);
-  if (info.stats) {
-    out.push(`; estimated time (no acceleration): ${fmt(info.stats.timeSec / 60, 1)} min`);
-    out.push(`; filament: ${fmt(info.stats.filamentMm, 1)} mm, loops: ${info.stats.loops}`);
+/** Stateful writer: no move list, line list or scrub-time array is retained. */
+export class GcodeWriter {
+  constructor(cfg) {
+    const errors = preflight([], cfg); if (errors.length) throw new PreflightError(errors);
+    this.cfg=cfg; this.pos=startPosition(cfg); this.outX=null; this.outY=null; this.outZ=null; this.outF=null;
+    this.emittedE=0; this.cumE=0; this.fan=0; this.maxZ=0; this.timeSec=0; this.moves=0; this.extrudingMoves=0;
   }
-  for (const key of Object.keys(t).sort()) out.push(`; param ${key} = ${JSON.stringify(t[key])}`);
-
-  let maxZ = 0;
-  for (const m of moves) if (m.z > maxZ) maxZ = m.z;
-  const vars = {
-    printer_model_check: machine.printer_model_check,
-    nozzle_diameter: fmt(t.nozzle_diameter, 2),
-    first_layer_temp: derived.temperatures.first,
-    bed_temp: derived.temperatures.bed,
-    print_min_x: fmt(Math.max(0, o.x - MESH_MARGIN), 1),
-    print_min_y: fmt(Math.max(0, o.y - MESH_MARGIN), 1),
-    print_width: fmt(Math.min(machine.bed.width, t.sample_width + 2 * MESH_MARGIN), 1),
-    print_height: fmt(Math.min(machine.bed.depth, t.sample_height + 2 * MESH_MARGIN), 1),
-    machine_limits: limitsBlock(cfg),
-    prime_line: primeBlock(cfg),
-    raise_z: fmt(Math.min(maxZ + 1, machine.bed.max_z), 2),
-    park_z: fmt(Math.min(maxZ + 49, machine.bed.max_z), 2),
-  };
-
-  out.push(...fillTemplate(machine.start_gcode, vars));
-  out.push('; BODY START');
-
-  let pos = startPosition(cfg);
-  let outX = null, outY = null, outZ = null, outF = null;
-  let emittedE = 0, cumE = 0;
-  let fan = 0;
-
-  for (const m of moves) {
-    if (m.comment) out.push(`; ${m.comment}`);
-    if (m.customGcode) out.push(m.customGcode);
-
-    if (m.retract === 'retract') {
-      const f = Math.round(r.speed * 60);
-      out.push(`G1 E-${fmt(r.length, 5)} F${f}`);
-      outF = f;
-    } else if (m.retract === 'unretract') {
-      const f = Math.round(r.deretractSpeed * 60);
-      out.push(`G1 E${fmt(r.length, 5)} F${f}`);
-      outF = f;
-    }
-
-    const want = fanFor(m.cls, t);
-    if (want !== fan) {
-      out.push(want === 0 ? 'M107 ; fan off' : `M106 S${Math.round((want * 255) / 100)} ; fan ${want}%`);
-      fan = want;
-    }
-
-    const dx = m.x - pos.x, dy = m.y - pos.y, dz = m.z - pos.z;
-    const ds = Math.hypot(dx, dy, dz);
-    pos = { x: m.x, y: m.y, z: m.z };
-    if (ds < 1e-9) continue;
-
-    const parts = ['G1'];
-    const X = fmt(m.x + o.x, 3), Y = fmt(m.y + o.y, 3), Z = fmt(m.z, 3);
-    if (X !== outX) { parts.push(`X${X}`); outX = X; }
-    if (Y !== outY) { parts.push(`Y${Y}`); outY = Y; }
-    if (Z !== outZ) { parts.push(`Z${Z}`); outZ = Z; }
-    if (m.extrude) {
-      cumE += segmentE(ds, m.cls, cfg);
-      const target = roundTo(cumE, 5);
-      parts.push(`E${fmt(target - emittedE, 5)}`);
-      emittedE = target;
-    }
-    const F = Math.round(moveSpeed(m.cls, dx, dy, dz, cfg) * 60);
-    if (F !== outF) { parts.push(`F${F}`); outF = F; }
-    if (parts.length > 1) out.push(parts.join(' '));
+  vars() {
+    const {machine,t,derived}=this.cfg, o=derived.origin;
+    return {
+      printer_model_check: machine.printer_model_check, nozzle_diameter: fmt(t.nozzle_diameter,2),
+      first_layer_temp: derived.temperatures.first, bed_temp: derived.temperatures.bed,
+      print_min_x: fmt(Math.max(0,o.x-MESH_MARGIN),1), print_min_y: fmt(Math.max(0,o.y-MESH_MARGIN),1),
+      print_width: fmt(Math.min(machine.bed.width,t.sample_width+2*MESH_MARGIN),1),
+      print_height: fmt(Math.min(machine.bed.depth,t.sample_height+2*MESH_MARGIN),1),
+      machine_limits: limitsBlock(this.cfg), prime_line: primeBlock(this.cfg),
+      raise_z: fmt(Math.min(this.maxZ+1,machine.bed.max_z),2), park_z: fmt(Math.min(this.maxZ+49,machine.bed.max_z),2),
+    };
   }
+  header(info={}) {
+    const {machine,material,t}=this.cfg;
+    const out=['; Textile G-code generator v1', '; machine: '+machine.id+(machine.verified?'':' (unverified profile)'), '; material: '+material.id+(material.verified?'':' (unverified profile)')];
+    if(info.stats) {
+      out.push('; estimated time (no acceleration): '+fmt(info.stats.timeSec/60,1)+' min');
+      out.push('; filament: '+fmt(info.stats.filamentMm,1)+' mm, loops: '+info.stats.loops);
+    }
+    for(const key of Object.keys(t).sort()) out.push('; param '+key+' = '+JSON.stringify(t[key]));
+    for(const comment of info.comments??[]) out.push('; '+String(comment).replace(/[\r\n]+/g,' '));
+    out.push(...fillTemplate(machine.start_gcode,this.vars()),'; BODY START');
+    return out;
+  }
+  move(m) {
+    const {t,machine,derived}=this.cfg, o=derived.origin, r=derived.retraction;
+    if(![m.x,m.y,m.z].every(Number.isFinite) || m.x+o.x < -1e-6 || m.x+o.x > machine.bed.width+1e-6 || m.y+o.y < -1e-6 || m.y+o.y > machine.bed.depth+1e-6 || m.z < -1e-6 || m.z > machine.bed.max_z+1e-6) throw new PreflightError(['A streamed move leaves the printable volume or is not finite']);
+    const out=[];this.moves++;this.maxZ=Math.max(this.maxZ,m.z);
+    if(m.comment) out.push('; '+m.comment); if(m.customGcode) out.push(m.customGcode);
+    if(m.retract==='retract') {const f=Math.round(r.speed*60);out.push('G1 E-'+fmt(r.length,5)+' F'+f);this.outF=f;this.timeSec+=r.length/r.speed;}
+    else if(m.retract==='unretract') {const f=Math.round(r.deretractSpeed*60);out.push('G1 E'+fmt(r.length,5)+' F'+f);this.outF=f;this.timeSec+=r.length/r.deretractSpeed;}
+    const want=fanFor(m.cls,t);
+    if(want!==this.fan) {out.push(want===0?'M107 ; fan off':'M106 S'+Math.round(want*255/100)+' ; fan '+want+'%');this.fan=want;}
+    const dx=m.x-this.pos.x,dy=m.y-this.pos.y,dz=m.z-this.pos.z,ds=Math.hypot(dx,dy,dz);this.pos={x:m.x,y:m.y,z:m.z};
+    if(ds<1e-9)return out;
+    const parts=['G1'],X=fmt(m.x+o.x,3),Y=fmt(m.y+o.y,3),Z=fmt(m.z,3);
+    if(X!==this.outX){parts.push('X'+X);this.outX=X;} if(Y!==this.outY){parts.push('Y'+Y);this.outY=Y;} if(Z!==this.outZ){parts.push('Z'+Z);this.outZ=Z;}
+    if(m.extrude){this.extrudingMoves++;this.cumE+=segmentE(ds,m.cls,this.cfg);const target=roundTo(this.cumE,5);parts.push('E'+fmt(target-this.emittedE,5));this.emittedE=target;}
+    const speed=moveSpeed(m.cls,dx,dy,dz,this.cfg),F=Math.round(speed*60);this.timeSec+=ds/speed;
+    if(F!==this.outF){parts.push('F'+F);this.outF=F;}
+    if(parts.length>1)out.push(parts.join(' '));return out;
+  }
+  footer() {return ['; BODY END',...fillTemplate(this.cfg.machine.end_gcode,this.vars())];}
+}
 
-  out.push('; BODY END');
-  out.push(...fillTemplate(machine.end_gcode, vars));
-  return out.join('\n') + '\n';
+export function writeGcode(moves,cfg,info={}) {
+  const errors=preflight(moves,cfg);if(errors.length)throw new PreflightError(errors);
+  const writer=new GcodeWriter(cfg),out=writer.header(info);
+  for(const m of moves)out.push(...writer.move(m));
+  out.push(...writer.footer());return out.join('\n')+'\n';
 }

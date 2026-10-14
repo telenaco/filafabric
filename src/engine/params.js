@@ -200,5 +200,6 @@ export function resolveConfig(machine, material, overrides = {}) {
 
 export function startPosition(cfg) {
   const o = cfg.derived.origin;
+  if (cfg.machine.start_position) return { x: cfg.machine.start_position.x - o.x, y: cfg.machine.start_position.y - o.y, z: cfg.machine.start_position.z };
   return { x: PRIME.x1 - o.x, y: PRIME.y - o.y, z: PRIME.liftZ };
 }

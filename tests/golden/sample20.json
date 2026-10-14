@@ -1,8 +1,8 @@
 {
   "loops": 10,
-  "moves": 913,
-  "violations": 226,
-  "filamentMm": 14.592,
-  "timeSec": 59.9,
-  "sha256": "e109518abb84f9c058cb280d0598baa2e640671646163c7166ab9dda58e41ae5"
+  "moves": 891,
+  "violations": 235,
+  "filamentMm": 17.026,
+  "timeSec": 66.5,
+  "sha256": "58d0fa2ea80f4f42605c40f3bfdb12db449317d2fcba29738b291041ebb90f80"
 }

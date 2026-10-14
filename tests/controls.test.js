@@ -8,10 +8,10 @@ import { validateTextile, DEFAULT_TEXTILE } from '../src/engine/params.js';
 
 const near = (a, b, tol = 1e-9) => assert.ok(Math.abs(a - b) <= tol, `${a} vs ${b}`);
 
-test('the defaults open on a 30 x 30 test swatch with the specified loop geometry', () => {
+test('the defaults open on a 100 x 100 sample with the specified loop geometry', () => {
   const t = toTextile(PRIMARY_DEFAULTS);
-  assert.equal(t.sample_width, 30);
-  assert.equal(t.sample_height, 30);
+  assert.equal(t.sample_width, 100);
+  assert.equal(t.sample_height, 100);
   assert.equal(t.loop_z_lift, 3);
   assert.equal(t.loop_width, 6);
   assert.equal(t.loop_length, 15);
@@ -58,7 +58,7 @@ test('advanced settings pass through but can never override a primary control', 
   const t = toTextile(PRIMARY_DEFAULTS, { speed_base: 9, loop_z_lift: 99, sample_width: 5, leg_gap: 7 });
   assert.equal(t.speed_base, 9);
   assert.equal(t.loop_z_lift, 3);
-  assert.equal(t.sample_width, 30);
+  assert.equal(t.sample_width, 100);
   assert.equal(t.leg_gap, 0.6);
 });
 
@@ -85,10 +85,10 @@ test('every combination of slider extremes is a valid engine configuration', () 
   }
 });
 
-test('sanitizePrimary clamps, coerces and drops unknown keys', () => {
+test('sanitizePrimary preserves exact values, coerces and drops unknown keys', () => {
   const p = sanitizePrimary({ pileHeight: 99, loopSize: -4, loopSpacing: '4', baseGap: NaN, variation: 'lots', swatch: 'huge', roomy: 'yes', hacked: 1 });
-  assert.equal(p.pileHeight, RANGES.pileHeight.max);
-  assert.equal(p.loopSize, RANGES.loopSize.min);
+  assert.equal(p.pileHeight, 99);
+  assert.equal(p.loopSize, PRIMARY_DEFAULTS.loopSize);
   assert.equal(p.loopSpacing, 4);
   assert.equal(p.baseGap, PRIMARY_DEFAULTS.baseGap);
   assert.equal(p.variation, PRIMARY_DEFAULTS.variation);
@@ -131,7 +131,7 @@ test('strand thickness sets the flow of every strand in the air and reads out pl
   assert.equal(describePrimary(PRIMARY_DEFAULTS).airFlow, 'Standard flow');
   assert.equal(describePrimary({ ...PRIMARY_DEFAULTS, airFlow: 120 }).airFlow, '+20% flow');
   assert.equal(describePrimary({ ...PRIMARY_DEFAULTS, airFlow: 90 }).airFlow, '−10% flow');
-  assert.equal(sanitizePrimary({ airFlow: 999 }).airFlow, RANGES.airFlow.max);
+  assert.equal(sanitizePrimary({ airFlow: 999 }).airFlow, 999);
   assert.equal(sanitizePrimary({}).airFlow, 100, 'older links open at standard flow');
 });
 
@@ -143,15 +143,15 @@ test('the strand thickness read-out follows the nozzle, the foam and the flow', 
   assert.equal(airStrandMm(PRIMARY_DEFAULTS, { nozzle_diameter: NaN }, foamy), null);
 });
 
-test('loops start on every base line by default; "inside the swatch" keeps whole loops inside', () => {
-  assert.equal(PRIMARY_DEFAULTS.edgeLoops, true);
-  assert.equal(toTextile(PRIMARY_DEFAULTS).boundary_policy, 'feet-only');
+test('loops stay inside the swatch by default; edge overhang remains an explicit option', () => {
+  assert.equal(PRIMARY_DEFAULTS.edgeLoops, false);
+  assert.equal(toTextile(PRIMARY_DEFAULTS).boundary_policy, 'footprint');
   assert.equal(toTextile({ ...PRIMARY_DEFAULTS, edgeLoops: false }).boundary_policy, 'footprint');
-  assert.equal(toTextile(PRIMARY_DEFAULTS, { boundary_policy: 'footprint' }).boundary_policy, 'feet-only', 'Advanced cannot override it');
+  assert.equal(toTextile(PRIMARY_DEFAULTS, { boundary_policy: 'feet-only' }).boundary_policy, 'footprint', 'Advanced cannot override it');
   assert.equal(sanitizePrimary({ edgeLoops: false }).edgeLoops, false);
-  assert.equal(sanitizePrimary({ edgeLoops: 'no' }).edgeLoops, true);
-  assert.equal(describePrimary(PRIMARY_DEFAULTS).edgeLoops, 'overhangs 15 mm');
-  assert.equal(describePrimary({ ...PRIMARY_DEFAULTS, loopSize: 1.4 }).edgeLoops, 'overhangs 21 mm');
+  assert.equal(sanitizePrimary({ edgeLoops: 'no' }).edgeLoops, false);
+  assert.equal(describePrimary(PRIMARY_DEFAULTS).edgeLoops, 'fits inside');
+  assert.equal(describePrimary({ ...PRIMARY_DEFAULTS, edgeLoops: true, loopSize: 1.4 }).edgeLoops, 'overhangs 21 mm');
   assert.equal(describePrimary({ ...PRIMARY_DEFAULTS, edgeLoops: false }).edgeLoops, 'fits inside');
 });
 
@@ -171,6 +171,6 @@ test('a pattern raises some loops and lowers others, and "none" leaves every loo
   assert.ok(lo >= 0.3 - 1e-9 && hi <= 1 + 1e-9 && hi - lo > 0.3);
   assert.equal(sanitizePrimary({ pattern: 'oceanWaves' }).pattern, 'oceanWaves');
   assert.equal(sanitizePrimary({ pattern: 'nope' }).pattern, 'none');
-  assert.equal(sanitizePrimary({ patternScale: 99 }).patternScale, RANGES.patternScale.max);
+  assert.equal(sanitizePrimary({ patternScale: 99 }).patternScale, 99);
   assert.equal(describePrimary({ ...PRIMARY_DEFAULTS, patternScale: 1.5 }).patternScale, '1.5×');
 });

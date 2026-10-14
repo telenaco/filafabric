@@ -1,13 +1,14 @@
+import { validNumber } from './numeric.js';
 // The Coil design's controls: ranges, defaults, sanitising, presets and read-outs.
 // Pure functions: no DOM, so they are tested in Node like the engine.
 import { SHAPE_IDS, loopsClose } from '../engine/shapes.js';
 import { FIELD_IDS, createField } from '../engine/fields.js';
 
 export const COIL_RANGES = Object.freeze({
-  width: { min: 10, max: 240, step: 5 },
-  height: { min: 10, max: 200, step: 5 },
-  size: { min: 1.5, max: 6, step: 0.5 },
-  pitch: { min: 3, max: 14, step: 0.5 },
+  width: { min: 10, max: 1000, step: 5 },
+  height: { min: 10, max: 1000, step: 5 },
+  size: { min: 0.8, max: 6, step: 0.1 },
+  pitch: { min: 0.8, max: 14, step: 0.1 },
   rowOverlap: { min: 0, max: 60, step: 5 },
   lift: { min: 0.1, max: 0.6, step: 0.05 },
   patternScale: { min: 0.5, max: 2, step: 0.25 },
@@ -20,8 +21,8 @@ export const COIL_PATTERNS = Object.freeze(['none', ...FIELD_IDS]);
 
 export const COIL_DEFAULTS = Object.freeze({
   shape: 'looped',
-  width: 50,
-  height: 50,
+  width: 100,
+  height: 100,
   size: 3, // mm: how far the strand swings to each side (the loop radius)
   pitch: 5, // mm along the row per loop
   rowOverlap: 25, // percent: how far each row reaches into the one before
@@ -46,8 +47,8 @@ export function sanitizeCoil(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
   for (const [key, range] of Object.entries(COIL_RANGES)) {
     const n = Number(raw[key]);
-    if (raw[key] !== undefined && raw[key] !== null && raw[key] !== '' && Number.isFinite(n)) {
-      out[key] = Math.min(range.max, Math.max(range.min, n));
+    if (raw[key] !== undefined && raw[key] !== null && raw[key] !== '' && validNumber(key, n, range)) {
+      out[key] = n;
     }
   }
   if (COIL_SHAPES.includes(raw.shape)) out.shape = raw.shape;

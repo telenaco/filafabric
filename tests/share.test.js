@@ -36,14 +36,14 @@ test('decodeState returns null for garbage rather than throwing', () => {
   assert.equal(decodeState(encodeState(42)), null);
 });
 
-test('sanitizeState keeps only known profiles, clamped primary values and known advanced keys', () => {
+test('sanitizeState keeps only known profiles, exact primary values and known advanced keys', () => {
   const s = sanitizeState(
     { v: 1, machine: 'nope', material: 'generic-flex-mk3', primary: { pileHeight: 50, evil: 1 }, advanced: { speed_base: 9, not_a_param: 1, loop_z_lift: 99 } },
     known
   );
   assert.equal(s.machine, 'prusa-mk3s');
   assert.equal(s.material, 'generic-flex-mk3');
-  assert.equal(s.primary.pileHeight, 6);
+  assert.equal(s.primary.pileHeight, 50);
   assert.equal('evil' in s.primary, false);
   assert.equal(s.advanced.speed_base, 9);
   assert.equal('not_a_param' in s.advanced, false);
@@ -62,7 +62,7 @@ test('sanitizeState keeps the design and the squiggle settings', () => {
   const s = sanitizeState({ design: 'squiggle', squiggle: { mode: 'parallel', spacing: 99 } }, known);
   assert.equal(s.design, 'squiggle');
   assert.equal(s.squiggle.mode, 'parallel');
-  assert.equal(s.squiggle.spacing, 6);
+  assert.equal(s.squiggle.spacing, 99);
 });
 
 test('a version 1 link without a design opens the loop pile with default squiggle settings', () => {
@@ -108,7 +108,7 @@ test('coil settings travel in a link and are sanitised', () => {
   const s = sanitizeState({ v: 3, design: 'coil', designs: { coil: { size: 4, rowOverlap: 999, shape: 'figure8', evil: 1 } } }, known);
   assert.equal(s.design, 'coil');
   assert.equal(s.designs.coil.size, 4);
-  assert.equal(s.designs.coil.rowOverlap, 60);
+  assert.equal(s.designs.coil.rowOverlap, COIL_DEFAULTS.rowOverlap);
   assert.equal(s.designs.coil.shape, 'figure8');
   assert.equal('evil' in s.designs.coil, false);
   const round = decodeState(encodeState({ v: 3, design: 'coil', designs: { coil: s.designs.coil } }));

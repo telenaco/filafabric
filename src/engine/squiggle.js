@@ -8,6 +8,7 @@ import { emitStrands } from './emit.js';
 import { createField, FIELD_IDS } from './fields.js';
 import { shapeAt, shapeStep } from './shapes.js';
 import { resolveCrossings } from './crossings.js';
+import { finishFabric } from './fabric-result.js';
 
 /**
  * Squiggle Textile Generator
@@ -195,8 +196,8 @@ function layerStrands({ boundary, axis, firstLane, laneCount, lanePitch, spanLen
  * @returns {{ layer1: Array, layer2: Array, strands: Array }}
  */
 export function generateSquiggleTextile({
-  width = 50,
-  height = 50,
+  width = 100,
+  height = 100,
   mode = 'cross',
   shape = 'wave',
   spacing = 2.5,
@@ -322,9 +323,10 @@ export function generateSquiggleTextile({
   }
 
   const strands = [
-    ...layer1.map((pts, i) => ({ kind: 'base', id: i === 0 ? 'squiggle-l1' : `squiggle-l1-${i + 1}`, pts, lift: 0, name: 'Layer 1 (Base Squiggle)' })),
+    ...layer1.map((pts, i) => ({ kind: 'base', layer: 0, id: i === 0 ? 'squiggle-l1' : `squiggle-l1-${i + 1}`, pts, lift: 0, name: 'Layer 1 (Base Squiggle)' })),
     ...layer2.map((pts, i) => ({
       kind: 'supported',
+      layer: 1,
       id: i === 0 ? 'squiggle-l2' : `squiggle-l2-${i + 1}`,
       pts,
       lift: layerHeight,
@@ -341,8 +343,8 @@ export function generateSquiggleTextile({
  * converts machine, material and squiggle parameters into moves, stats, and G-code.
  */
 export function generateSquiggle(machine, material, squiggleParams = {}) {
-  const width = squiggleParams.width ?? 50;
-  const height = squiggleParams.height ?? 50;
+  const width = squiggleParams.width ?? 100;
+  const height = squiggleParams.height ?? 100;
   const cfg = resolveConfig(machine, material, {
     sample_width: width,
     sample_height: height,
@@ -374,6 +376,6 @@ export function generateSquiggle(machine, material, squiggleParams = {}) {
   const gcode = writeGcode(moves, cfg, { stats });
 
   const warnings = moves.length === 0 ? ['The outline is too small for these lines: nothing to print'] : [];
-  return { cfg, strands: res.strands, moves, stats, warnings, gcode, outline };
+  return finishFabric({ cfg, strands: res.strands, moves, stats, warnings, gcode, outline }, { flat: true });
 }
 

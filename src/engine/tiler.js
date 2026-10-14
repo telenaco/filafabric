@@ -116,6 +116,8 @@ export function tile(cfg, boundary, rng, { rows: rowYs = null, liftAt = null } =
         part: p.part,
       }));
 
+      // Variation may move the body, but both feet must remain on their printed anchoring row.
+      if (t.include_base && points.length) { points[0].y = footY; points.at(-1).y = footY; }
       if (!boundary.containsPolyline(points, t.boundary_policy)) {
         counts.dropped++;
         continue;

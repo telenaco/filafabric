@@ -1,10 +1,11 @@
+import { validNumber } from './numeric.js';
 // The Squiggle & Gyroid design's controls: ranges, defaults, sanitising and read-outs.
 // Pure functions: no DOM, so they are tested in Node like the engine.
 
 export const SQ_RANGES = Object.freeze({
-  width: { min: 10, max: 240, step: 5 },
-  height: { min: 10, max: 200, step: 5 },
-  spacing: { min: 1.5, max: 6, step: 0.5 },
+  width: { min: 10, max: 1000, step: 5 },
+  height: { min: 10, max: 1000, step: 5 },
+  spacing: { min: 0.8, max: 6, step: 0.1 },
   amplitude: { min: 0.4, max: 3, step: 0.1 },
   wavelength: { min: 2, max: 10, step: 0.5 },
 });
@@ -23,8 +24,8 @@ export const SQ_PATTERNS = Object.freeze(['centerSpot', 'gradientX', 'gradientY'
 export const SQUIGGLE_DEFAULTS = Object.freeze({
   mode: 'cross',
   shape: 'wave',
-  width: 50,
-  height: 50,
+  width: 100,
+  height: 100,
   pattern: 'centerSpot',
   spacing: 2.5, // mm between neighbouring wavy lines
   amplitude: 1.2, // mm of side-to-side swing
@@ -40,8 +41,8 @@ export function sanitizeSquiggle(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
   for (const [key, range] of Object.entries(SQ_RANGES)) {
     const n = Number(raw[key]);
-    if (raw[key] !== undefined && raw[key] !== null && raw[key] !== '' && Number.isFinite(n)) {
-      out[key] = Math.min(range.max, Math.max(range.min, n));
+    if (raw[key] !== undefined && raw[key] !== null && raw[key] !== '' && validNumber(key, n, range)) {
+      out[key] = n;
     }
   }
   if (SQ_MODES.includes(raw.mode)) out.mode = raw.mode;

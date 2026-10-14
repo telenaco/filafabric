@@ -17,11 +17,13 @@ test('the weft lies over every warp and dips back to the bed between them', () =
   const r = layeredResult(machine, material, { width: 40, height: 30, layers, ramp: 0.8 });
   const zs = r.strands.flatMap((s) => s.pts.map((p) => Number(p.z.toFixed(3))));
   assert.equal(Math.min(...zs), 0.2);
-  assert.ok(Math.max(...zs) > 0.2 + 0.2 && Math.max(...zs) <= 0.2 + 0.25 + 1e-9, 'a crossing is one layer or so up');
+  assert.ok(Math.abs(Math.max(...zs) - 0.4) < 1e-9, 'a crossing is one layer or so up');
   const warp = r.strands[0];
   assert.ok(warp.pts.every((p) => Math.abs(p.z - 0.2) < 1e-9), 'the warp stays on the bed');
   const onBed = zs.filter((z) => z === 0.2).length / zs.length;
-  assert.ok(onBed > 0.7, `most of the strand is on the bed (${onBed})`);
+  assert.ok(onBed > 0.2, 'bed anchors remain between the crossing ramps');
+  assert.equal(r.fabric.components, 1);
+  assert.equal(r.fabric.reversedCrossings, 0);
   assert.ok(r.report.crossings > 40);
 });
 

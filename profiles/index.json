@@ -1,4 +1,4 @@
 {
-  "machines": ["prusa-mk3s"],
+  "machines": ["prusa-mk3s", "large-gantry-1000"],
   "materials": ["filaflex-95-foamy", "generic-flex-mk3"]
 }

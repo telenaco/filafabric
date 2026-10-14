@@ -7,6 +7,7 @@ import { emitStrands } from './emit.js';
 import { lanePoints, lanePeriods, loopsClose } from './shapes.js';
 import { resolveCrossings } from './crossings.js';
 import { MAX_MOVES } from './tiler.js';
+import { finishFabric } from './fabric-result.js';
 
 /**
  * Coil: flat rows of one continuous looped strand, one layer thick.
@@ -36,8 +37,8 @@ export function coilRowPitch(size, rowOverlap, strandWidth = 0.45) {
  *   sizeAt(x, y) → 0..1 (world mm) scales the loop size from a pattern field
  */
 export function generateCoilTextile({
-  width = 50,
-  height = 50,
+  width = 100,
+  height = 100,
   shape = 'looped',
   size = 3,
   pitch = 5,
@@ -152,8 +153,8 @@ export function generateCoilTextile({
  * `params`: width, height, shape, size, pitch, rowOverlap (0..1), lift, layerHeight, sampler (x, y, w, h) → 0..1, outline (rings in mm).
  */
 export function generateCoil(machine, material, params = {}) {
-  const width = params.width ?? 50;
-  const height = params.height ?? 50;
+  const width = params.width ?? 100;
+  const height = params.height ?? 100;
   const cfg = resolveConfig(machine, material, {
     sample_width: width,
     sample_height: height,
@@ -190,5 +191,5 @@ export function generateCoil(machine, material, params = {}) {
 
   const warnings = [...coil.warnings];
   if (moves.length === 0 && warnings.length === 0) warnings.push('Nothing to print');
-  return { cfg, strands: coil.strands, moves, stats, warnings, gcode, outline, coil };
+  return finishFabric({ cfg, strands: coil.strands, moves, stats, warnings, gcode, outline, coil }, { flat: true, reinforce: (params.shape ?? 'looped') === 'ring' });
 }

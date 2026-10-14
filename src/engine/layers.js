@@ -7,6 +7,8 @@ import { emitStrands } from './emit.js';
 import { resolveCrossings, findCrossings } from './crossings.js';
 import { lanePoints } from './shapes.js';
 import { MAX_MOVES } from './tiler.js';
+import { contactGraph, clipStrands, connectStrands, orderStrands, travelDistance, simplifyStrands } from './fabric.js';
+import { finishFabric } from './fabric-result.js';
 
 /**
  * Helpers shared by every design that is a few layers of plotted lines: ordered layers of polylines in mm in, moves,
@@ -193,6 +195,7 @@ export function crossingReport(items, areaMm2, strandWidth = 0.45) {
     longest = Math.max(longest, total - prev);
   });
   return {
+    ...contactGraph(items.map((it) => ({ pts: it.pts.map((p) => ({ ...p, z: p.z ?? 0.2 * (it.layer + 1) })) })), { strandWidth }),
     crossings: found.length,
     between,
     perCm2: areaMm2 > 0 ? (found.length / areaMm2) * 100 : 0,
@@ -206,12 +209,23 @@ export function crossingReport(items, areaMm2, strandWidth = 0.45) {
  * Layers of polylines to strands: layer k at (k + 1) layer heights, a self-crossing strand lifts over its own earlier
  * pass, and the first strand of every layer after the first can pause for a filament change.
  */
-export function layersToStrands(layers, { layerHeight = 0.2, strandWidth = 0.45, colorChange = false, ramp = 1.6 } = {}) {
+export function layersToStrands(layers, { layerHeight = 0.2, strandWidth = 0.45, colorChange = false, ramp = 1.6, boundary = null, coherent = false } = {}) {
+  if (coherent) {
+    let flat = layers.flatMap((list, k) => list.filter((p) => p.length >= 2).map((p, i) => ({ id: `l${k + 1}-${i + 1}`, layer: k, kind: k ? 'supported' : 'base', name: `Layer ${k + 1}`, pauseBefore: colorChange && k > 0 && i === 0, pts: p.map((q) => ({ x: q.x, y: q.y, z: layerHeight })) })));
+    flat = simplifyStrands(flat);
+    if (boundary) flat = clipStrands(flat, boundary, strandWidth / 2);
+    if (boundary) flat = connectStrands(flat, boundary, { strandWidth }).strands;
+    const beforeMm = travelDistance(flat);
+    flat = orderStrands(flat.map((s) => ({ ...s, layer: s.layer === -1 ? layers.length : s.layer })));
+    const out = resolveCrossings(flat, { follow: true, lift: layerHeight, strandWidth, ramp }).strands;
+    out.routing = { beforeMm, afterMm: travelDistance(out) };
+    return out;
+  }
   const strands = [];
   layers.forEach((polylines, k) => {
     const flat = polylines
       .filter((p) => p.length >= 2)
-      .map((p, i) => ({ id: `l${k + 1}-${i + 1}`, kind: k === 0 ? 'base' : 'supported', name: `Layer ${k + 1}`, pts: p.map((q) => ({ x: q.x, y: q.y, z: layerHeight * (k + 1) })) }));
+      .map((p, i) => ({ id: `l${k + 1}-${i + 1}`, layer: k, kind: k === 0 ? 'base' : 'supported', name: `Layer ${k + 1}`, pts: p.map((q) => ({ x: q.x, y: q.y, z: layerHeight * (k + 1) })) }));
     // a strand crosses its own earlier pass in the layer: lift over it by a little more than a layer
     const settled = resolveCrossings(flat, { lift: layerHeight * 1.25, strandWidth, ramp }).strands;
     settled.forEach((s, i) => {
@@ -235,17 +249,17 @@ export function layeredResult(machine, material, { width, height, layers, colorC
   if (points > MAX_MOVES) {
     throw new ConfigError([`This layout would need about ${points.toLocaleString('en')} moves; the limit is ${MAX_MOVES.toLocaleString('en')}. Use wider spacing, larger cells or a smaller swatch.`]);
   }
-  const strands = layersToStrands(layers, { layerHeight: cfg.t.layer_height, strandWidth: cfg.t.extrusion_width, colorChange, ramp });
+  const strands = layersToStrands(layers, { layerHeight: cfg.t.layer_height, strandWidth: cfg.t.extrusion_width, colorChange, ramp, boundary: boundaryFor(width, height, outline), coherent: true });
   const moves = emitStrands(strands, { retraction: cfg.derived.retraction });
   const stats = computeStats(moves, cfg, []);
   stats.loops = 0;
   const items = [];
-  layers.forEach((layer, k) => layer.forEach((p) => { if (p.length >= 2) items.push({ pts: p, layer: k }); }));
+  strands.forEach((s) => items.push({ pts: s.pts, layer: s.kind === 'base' ? 0 : 1 }));
   const area = outline ? boundaryArea(new PolygonBoundary(outline)) : width * height;
   const report = crossingReport(items, area, cfg.t.extrusion_width);
   stats.crossings = report.crossings;
   const gcode = writeGcode(moves, cfg, { stats });
   const warnings = [];
   if (moves.length === 0) warnings.push('Nothing to print: the outline is too small for these settings');
-  return { cfg, strands, moves, stats, warnings, gcode, outline, report, ...extra };
+  return finishFabric({ cfg, strands, moves, stats, warnings, gcode, outline, report, routing: strands.routing, ...extra });
 }

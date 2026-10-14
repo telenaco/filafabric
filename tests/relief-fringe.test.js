@@ -75,7 +75,8 @@ test('generateRelief returns moves in the air classes, stats and G-code, determi
   assert.ok(classes.has('supported'), 'flat parts');
   assert.ok(classes.has('rising') || classes.has('unsupported'), 'raised parts');
   assert.ok(r.stats.timeSec > 0);
-  assert.equal(r.stats.hops, 0, 'one strand, no lifts');
+  assert.equal(r.stats.hops, 2, 'two crossed backing passes, then the relief');
+  assert.equal(r.fabric.components, 1);
   assert.equal(generateRelief(machine, material, params).gcode, r.gcode);
 });
 
@@ -102,7 +103,10 @@ test('fringe variation is seeded: the same seed repeats, another seed differs', 
   const c = fringePlacements({ width: 30, height: 20, variation: 60, seed: 5 });
   assert.deepEqual(a, b);
   assert.notDeepEqual(a.placements.map((h) => h.lift), c.placements.map((h) => h.lift));
-  assert.deepEqual(fringePlacements({ width: 30, height: 20, variation: 0 }).placements.map((h) => h.lift).filter((v, i, arr) => v !== arr[0]), []);
+  const even = fringePlacements({ width: 30, height: 20, variation: 0 }).placements;
+  for (const row of new Set(even.map((p) => p.row))) assert.equal(new Set(even.filter((p) => p.row === row).map((p) => p.lift)).size, 1);
+  assert.ok(even.every((p) => p.lift <= 3));
+  assert.ok(even.some((p) => p.lift < even.at(-1).lift), 'edge-shortened hairs also become lower');
 });
 
 test('generateFringe returns a base, hairs, moves and G-code', () => {

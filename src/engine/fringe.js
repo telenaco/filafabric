@@ -2,7 +2,9 @@ import { resolveConfig, ConfigError } from './params.js';
 import { bedFitErrors, PreflightError, writeGcode } from './gcode.js';
 import { computeStats } from './stats.js';
 import { plan } from './planner.js';
-import { buildBase } from './base.js';
+import { crossBase } from './base.js';
+import { finishFabric } from './fabric-result.js';
+import { orderPlacements, travelDistance } from './fabric.js';
 import { RectBoundary } from './boundary.js';
 import { createRng } from './rng.js';
 import { MAX_LOOPS, MAX_MOVES } from './tiler.js';
@@ -44,7 +46,8 @@ export function fringePlacements({ width, height, length = 15, lift = 3, spacing
       const drift = rng.symmetric(1);
       const L = Math.min(length * (1 + v * wobbleLength), height - y0);
       if (L < 2) continue;
-      const h = Math.max(0.2, lift * (1 + v * wobbleLift));
+      // A hair shortened by the panel edge must also become lower; smoothstep's peak derivative is 3h/L.
+      const h = Math.min(Math.max(0.2, lift * (1 + v * wobbleLift)), L * Math.tan(25 * Math.PI / 180) / 3);
       const n = Math.max(2, Math.ceil(L / STEP));
       const points = [];
       for (let m = 0; m <= n; m++) {
@@ -64,8 +67,8 @@ export function fringePlacements({ width, height, length = 15, lift = 3, spacing
  * `params`: width, height, length, lift, spacing, rowGap, variation (0..100), seed.
  */
 export function generateFringe(machine, material, params = {}) {
-  const width = params.width ?? 50;
-  const height = params.height ?? 50;
+  const width = params.width ?? 100;
+  const height = params.height ?? 100;
   const rowGap = params.rowGap ?? 5;
   const length = params.length ?? 15;
   const cfg = resolveConfig(machine, material, {
@@ -80,9 +83,14 @@ export function generateFringe(machine, material, params = {}) {
   if (fit.length > 0) throw new PreflightError(fit);
 
   const t = cfg.t;
+  cfg.derived.loopBaseZ = 3 * t.layer_height;
   const boundary = new RectBoundary(width, height);
-  const base = buildBase({ bbox: boundary.bbox(), spacing: rowGap, cornerRadius: t.corner_radius, z: t.layer_height, resolution: t.curve_resolution });
+  const lanes = Array.from({ length: Math.floor(height / rowGap + 1e-9) + 1 }, (_, k) => k * rowGap);
+  const base = crossBase({ boundary, lanes, spacing: rowGap, z: t.layer_height });
   const f = fringePlacements({ width, height, length, lift: params.lift ?? 3, spacing: params.spacing ?? 3, rowGap, variation: params.variation ?? 0, seed: params.seed ?? 1 });
+  const beforeMm = travelDistance(f.placements.map((p) => ({ pts: p.points })));
+  f.placements = orderPlacements(f.placements);
+  const routing = { beforeMm, afterMm: travelDistance(f.placements.map((p) => ({ pts: p.points }))) };
   const estimate = Math.ceil((f.hairs * length) / STEP);
   if (estimate > MAX_MOVES) {
     throw new ConfigError([`This layout would need about ${estimate.toLocaleString('en')} moves; the limit is ${MAX_MOVES.toLocaleString('en')}. Use fewer or shorter hairs.`]);
@@ -92,5 +100,5 @@ export function generateFringe(machine, material, params = {}) {
   const warnings = [...planned.warnings];
   if (f.hairs === 0) warnings.push('No hairs fit: the swatch is shorter than one hair, so only the base will print');
   const gcode = writeGcode(planned.moves, cfg, { stats });
-  return { cfg, base, placements: f.placements, moves: planned.moves, stats, warnings, gcode, outline: null, fringe: { rows: f.rows, hairs: f.hairs } };
+  return finishFabric({ cfg, base, placements: f.placements, moves: planned.moves, stats, warnings, gcode, outline: null, routing, fringe: { rows: f.rows, hairs: f.hairs } }, { boundary });
 }

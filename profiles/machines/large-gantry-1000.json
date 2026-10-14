@@ -1,0 +1,29 @@
+{
+  "id": "large-gantry-1000",
+  "name": "Generic gantry 1000 mm (unverified)",
+  "firmware": "generic-marlin",
+  "verified": false,
+  "source": "Geometry/export template. Configure homing, levelling, priming and motion limits for the actual machine before printing.",
+  "bed": { "width": 1000, "depth": 1000, "max_z": 300 },
+  "extrusion": { "relative_e": true },
+  "accel_syntax": "P_R_T",
+  "printer_model_check": "",
+  "start_position": { "x": 0, "y": 0, "z": 5 },
+  "output": { "format": "gcode", "extension": ".gcode" },
+  "limits": {
+    "default_mode": "normal", "emit_to_gcode": false,
+    "modes": { "normal": {
+      "max_feedrate": { "x": 100, "y": 100, "z": 3, "e": 20 },
+      "max_accel": { "x": 300, "y": 300, "z": 50, "e": 500 },
+      "accel_extruding": 300, "accel_retracting": 300, "accel_travel": 300,
+      "jerk": { "x": 3, "y": 3, "z": 0.2, "e": 2 }
+    } }
+  },
+  "start_gcode": [
+    "; UNVERIFIED GENERIC PROFILE: configure machine-specific startup and priming before printing",
+    "G90", "M83", "G28",
+    "M104 S{first_layer_temp}", "M140 S{bed_temp}", "M190 S{bed_temp}", "M109 S{first_layer_temp}",
+    "G1 Z5 F180", "G1 X0 Y0 F1200", "G92 E0", "M221 S100", "M107"
+  ],
+  "end_gcode": ["G1 Z{raise_z} F180", "G1 X0 Y0 F1200", "M104 S0", "M140 S0", "M107", "M84"]
+}

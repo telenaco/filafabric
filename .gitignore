@@ -1,4 +1,5 @@
 node_modules/
+.claude/
 *.log
 
 # personal sample files from the printers (kept locally, not published)

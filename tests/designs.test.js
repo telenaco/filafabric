@@ -73,6 +73,7 @@ test('every newer design prints its defaults, and again from every preset, with 
       const r = d.generate(machine, material, s, { outline: null });
       assert.ok(r.moves.some((m) => m.extrude), `${d.id} prints something`);
       assert.ok(r.gcode.includes('G1'));
+      assert.equal(r.fabric.exportable, true, `${d.id}: ${JSON.stringify(s)}: ${r.fabric.issues.join('; ')}`);
       assert.ok(['ok', 'info', 'heads-up'].includes(d.verdict(r, s).level), `${d.id} verdict`);
       const f = d.figure(r);
       assert.ok(f.label && f.value !== undefined, `${d.id} figure`);

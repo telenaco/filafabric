@@ -1,3 +1,4 @@
+import { validNumber } from './numeric.js';
 // Controls for the newer structures (Relief, Fringe, Bouclé, Spiral, Weave): ranges, defaults, sanitising, presets and
 // read-outs, built from one small description each. Pure: no DOM, so it is tested in Node like the engine.
 
@@ -14,14 +15,15 @@ export { r1, r2 };
  * @param describe  (settings) => { key: 'plain-language read-out' }
  */
 export function defineControls({ ranges, defaults, enums = {}, bools = [], presets = [], describe }) {
+  if (ranges.width && ranges.height) ranges = { ...ranges, width: { ...ranges.width, max: 1000 }, height: { ...ranges.height, max: 1000 } };
   const frozen = Object.freeze({ ...defaults });
   const sanitize = (raw) => {
     const out = { ...frozen };
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
     for (const [key, range] of Object.entries(ranges)) {
       const n = Number(raw[key]);
-      if (raw[key] !== undefined && raw[key] !== null && raw[key] !== '' && Number.isFinite(n)) {
-        out[key] = Math.min(range.max, Math.max(range.min, n));
+      if (raw[key] !== undefined && raw[key] !== null && raw[key] !== '' && validNumber(key, n, range)) {
+        out[key] = n;
       }
     }
     for (const [key, allowed] of Object.entries(enums)) if (allowed.includes(raw[key])) out[key] = raw[key];
@@ -38,8 +40,8 @@ export function defineControls({ ranges, defaults, enums = {}, bools = [], prese
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 
 export const RELIEF_CONTROLS = defineControls({
-  ranges: { ...SIZE, relief: { min: 0.5, max: 3, step: 0.25 }, rowPitch: { min: 2, max: 6, step: 0.5 }, patternScale: { min: 0.25, max: 2, step: 0.05 } },
-  defaults: { width: 50, height: 50, relief: 2, rowPitch: 3, pattern: 'bumps', patternScale: 0.5 },
+  ranges: { ...SIZE, relief: { min: 0.5, max: 3, step: 0.25 }, rowPitch: { min: 0.8, max: 6, step: 0.1 }, patternScale: { min: 0.25, max: 2, step: 0.05 } },
+  defaults: { width: 100, height: 100, relief: 2, rowPitch: 3, pattern: 'bumps', patternScale: 0.5 },
   presets: [
     { id: 'seersucker', name: 'Seersucker', blurb: 'Fine puckered stripes', patch: { pattern: 'stripes', patternScale: 0.3, relief: 1, rowPitch: 2.5 } },
     { id: 'bobbles', name: 'Bobbles', blurb: 'Round bumps', patch: { pattern: 'bumps', patternScale: 0.5, relief: 2.5, rowPitch: 3 } },
@@ -49,8 +51,8 @@ export const RELIEF_CONTROLS = defineControls({
 });
 
 export const FRINGE_CONTROLS = defineControls({
-  ranges: { ...SIZE, length: { min: 6, max: 25, step: 1 }, lift: { min: 0.5, max: 5, step: 0.5 }, spacing: { min: 2, max: 8, step: 0.5 }, rowGap: { min: 3, max: 10, step: 0.5 }, variation: { min: 0, max: 100, step: 10 } },
-  defaults: { width: 50, height: 50, length: 15, lift: 3, spacing: 4, rowGap: 5, variation: 0 },
+  ranges: { ...SIZE, length: { min: 6, max: 25, step: 1 }, lift: { min: 0.5, max: 5, step: 0.5 }, spacing: { min: 0.8, max: 8, step: 0.1 }, rowGap: { min: 0.8, max: 10, step: 0.1 }, variation: { min: 0, max: 100, step: 10 } },
+  defaults: { width: 100, height: 100, length: 15, lift: 3, spacing: 4, rowGap: 5, variation: 0 },
   presets: [
     { id: 'fringe', name: 'Fringe', blurb: 'Even, medium hairs', patch: { length: 15, lift: 3, spacing: 4, rowGap: 5, variation: 0 } },
     { id: 'shag', name: 'Shag', blurb: 'Long and uneven', patch: { length: 25, lift: 4, spacing: 3, rowGap: 6, variation: 40 } },
@@ -66,8 +68,8 @@ export const FRINGE_CONTROLS = defineControls({
 });
 
 export const BOUCLE_CONTROLS = defineControls({
-  ranges: { ...SIZE, size: { min: 2, max: 8, step: 0.5 }, pitch: { min: 5, max: 16, step: 0.5 }, rowPitch: { min: 4, max: 16, step: 0.5 }, lift: { min: 0.1, max: 0.6, step: 0.05 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
-  defaults: { width: 50, height: 50, size: 4, pitch: 8, rowPitch: 7, lift: 0.25, pattern: 'none', patternScale: 1 },
+  ranges: { ...SIZE, size: { min: 0.8, max: 8, step: 0.1 }, pitch: { min: 0.8, max: 16, step: 0.1 }, rowPitch: { min: 0.8, max: 16, step: 0.1 }, lift: { min: 0.1, max: 0.6, step: 0.05 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
+  defaults: { width: 100, height: 100, size: 4, pitch: 8, rowPitch: 7, lift: 0.25, pattern: 'none', patternScale: 1 },
   presets: [
     { id: 'picot-trim', name: 'Picot trim', blurb: 'Small rings, wide rows', patch: { size: 3, pitch: 6, rowPitch: 8 } },
     { id: 'boucle', name: 'Bouclé', blurb: 'Big rings on every row', patch: { size: 5, pitch: 8, rowPitch: 7 } },
@@ -77,8 +79,8 @@ export const BOUCLE_CONTROLS = defineControls({
 });
 
 export const SPIRAL_CONTROLS = defineControls({
-  ranges: { ...SIZE, spacing: { min: 1.5, max: 8, step: 0.5 } },
-  defaults: { width: 50, height: 50, spacing: 3, second: 'none', colorChange: false },
+  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 } },
+  defaults: { width: 100, height: 100, spacing: 3, second: 'none', colorChange: false },
   enums: { second: ['none', 'normals'] },
   bools: ['colorChange'],
   presets: [
@@ -91,8 +93,8 @@ export const SPIRAL_CONTROLS = defineControls({
 });
 
 export const WEAVE_CONTROLS = (bindingIds) => defineControls({
-  ranges: { ...SIZE, pitch: { min: 2.5, max: 8, step: 0.5 } },
-  defaults: { width: 50, height: 50, pitch: 4, binding: 'plain' },
+  ranges: { ...SIZE, pitch: { min: 0.8, max: 8, step: 0.1 } },
+  defaults: { width: 100, height: 100, pitch: 4, binding: 'plain' },
   enums: { binding: bindingIds },
   describe: (s) => ({ pitch: `${r1(s.pitch)} mm between lines` }),
 });

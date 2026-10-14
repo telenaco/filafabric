@@ -59,7 +59,8 @@ test('a panel narrower than one ring gives a plain message', () => {
 test('generateSpiral returns moves, stats and G-code', () => {
   const r = generateSpiral(machine, material, { width: 40, height: 30, spacing: 3 });
   assert.ok(r.moves.some((m) => m.extrude));
-  assert.equal(r.stats.hops, 0);
+  assert.ok(r.stats.hops > 0, 'crossed backing reinforces the spiral');
+  assert.equal(r.fabric.components, 1);
   assert.ok(r.stats.timeSec > 0);
   assert.equal(generateSpiral(machine, material, { width: 40, height: 30, spacing: 3 }).gcode, r.gcode);
 });
