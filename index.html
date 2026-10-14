@@ -124,6 +124,14 @@
         <section class="group" aria-labelledby="lp-size-title">
           <h2 class="eyebrow" id="lp-size-title">Swatch size</h2>
           <div id="lp-size"></div>
+          <div class="ctl edge-ctl">
+            <div class="ctl-top"><span class="ctl-label" id="edge-label">Loops at the back edge</span><span class="ctl-readout" id="edge-value"></span></div>
+            <p class="ctl-help">Each loop reaches one loop length past its feet, so the last base lines either get loops that overhang the edge or none.</p>
+            <div class="seg two" role="group" aria-labelledby="edge-label" id="edge-seg">
+              <button type="button" data-edge="every" aria-pressed="true"><span class="seg-main">On every line</span><span class="seg-sub">The pile overhangs</span></button>
+              <button type="button" data-edge="inside" aria-pressed="false"><span class="seg-main">Inside the swatch</span><span class="seg-sub">Last lines bare</span></button>
+            </div>
+          </div>
         </section>
 
         <section class="group" aria-labelledby="lp-look-title">
@@ -250,7 +258,7 @@
     <p class="muted">The filament profile is new, so build up in small steps and change one thing at a time.</p>
     <ol class="steps small">
       <li>A 30 × 30 mm test swatch with the loops switched off (Advanced settings › What to print), to check adhesion and flow.</li>
-      <li>A 30 × 15 mm swatch with loops: one row, to check the feet bond and the loops hold their height.</li>
+      <li>A 30 × 15 mm swatch with loops and <em>Loops at the back edge</em> set to Inside the swatch: one row, to check the feet bond and the loops hold their height.</li>
       <li>The 30 × 30 mm test swatch with the defaults. Turn on <em>Tight spots</em> in View to compare with what you see.</li>
       <li>The full 100 × 100 mm swatch.</li>
     </ol>

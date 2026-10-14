@@ -1,4 +1,4 @@
-// The Advanced drawer: every engine setting that is NOT one of the primary controls (39 of them),
+// The Advanced drawer: every engine setting that is NOT one of the primary controls (38 of them),
 // grouped by purpose. Primary controls live in controls.js.
 import { DEFAULT_TEXTILE } from '../engine/params.js';
 import { ADVANCED_DEFAULTS } from './controls.js';
@@ -36,7 +36,6 @@ export const ADVANCED_GROUPS = [
   { id: 'pattern', title: 'Pattern and resolution', hint: 'Rows, stagger, curve detail', fields: [
     num('row_pitch_multiple', 'Row spacing (× base spacing)', '', 1, 1),
     num('row_stagger', 'Row stagger', '× pitch', 0.1, 0),
-    sel('boundary_policy', 'Edge handling', ['footprint', 'feet-only']),
     num('curve_resolution', 'Curve detail (step length)', 'mm', 0.05, 0.05),
   ] },
   { id: 'clearance', title: 'Nozzle clearance model', hint: 'Tip radius and cone angle', fields: [
@@ -73,7 +72,8 @@ export const ADVANCED_GROUPS = [
 export const FIELD_LABELS = Object.freeze({
   sample_width: 'Width', sample_height: 'Height', loop_z_lift: 'Pile height', loop_width: 'Loop width',
   loop_length: 'Loop length', loop_pitch: 'Loop density', leg_gap: 'Room between loops', clearance: 'Room between loops',
-  base_spacing: 'Base openness', random_enabled: 'Natural variation',
+  base_spacing: 'Base openness', random_enabled: 'Natural variation', boundary_policy: 'Loops at the back edge',
+  flow_nonplanar: 'Strand thickness', flow_unsupported: 'Strand thickness',
   ...Object.fromEntries(ADVANCED_GROUPS.flatMap((g) => g.fields.map((f) => [f.key, f.label]))),
 });
 

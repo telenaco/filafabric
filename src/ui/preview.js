@@ -72,6 +72,7 @@ export function createPreview(container) {
     moveIndex: Infinity,
     camera: 'angled',
     framedFor: '',
+    extent: null, // bounding box of everything printed: loops can reach past the swatch edge
   };
 
   const dark = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
@@ -138,6 +139,15 @@ export function createPreview(container) {
       if (b.violation) { viol.pos.push(b.x, b.y, b.z); viol.idx.push(i); }
     }
     state.buckets = { ...buckets, travel, hops, viol };
+    const ext = { minX: 0, minY: 0, maxX: cfg.t.sample_width, maxY: cfg.t.sample_height };
+    for (const m of moves) {
+      if (!m.extrude) continue;
+      if (m.x < ext.minX) ext.minX = m.x;
+      if (m.x > ext.maxX) ext.maxX = m.x;
+      if (m.y < ext.minY) ext.minY = m.y;
+      if (m.y > ext.maxY) ext.maxY = m.y;
+    }
+    state.extent = ext;
 
     const centreline = state.layers.strand;
     const widths = strandWidths(cfg);
@@ -209,12 +219,11 @@ export function createPreview(container) {
   }
 
   function frame(force) {
-    const { cfg } = state.result;
-    const key = `${cfg.t.sample_width}x${cfg.t.sample_height}:${state.camera}`;
+    const e = state.extent;
+    const key = `${e.minX.toFixed(1)},${e.minY.toFixed(1)},${e.maxX.toFixed(1)},${e.maxY.toFixed(1)}:${state.camera}`;
     if (!force && state.framedFor === key) return;
-    const w = cfg.t.sample_width, h = cfg.t.sample_height;
-    const size = Math.max(w, h);
-    const cx = w / 2, cy = h / 2;
+    const w = e.maxX - e.minX, h = e.maxY - e.minY;
+    const cx = (e.minX + e.maxX) / 2, cy = (e.minY + e.maxY) / 2;
     controls.target.set(cx, cy, 2);
     // distance that fits the swatch's bounding sphere in the vertical field of view, with a little air
     const radius = Math.hypot(w, h) / 2 + 2;

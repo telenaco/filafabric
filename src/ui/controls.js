@@ -25,6 +25,7 @@ export const PRIMARY_DEFAULTS = Object.freeze({
   baseGap: 5, // mm between base lines (and rows)
   variation: 0, // 0 = off, 100 = full amplitudes
   airFlow: 100, // % flow for the strands in the air (rising, falling, free-hanging)
+  edgeLoops: true, // true: loops on every base line, the last rows reach past the back edge; false: keep inside
 });
 
 export const SWATCH_SIZES = Object.freeze({ test: [30, 30], mid: [50, 50], full: [100, 100] });
@@ -42,7 +43,7 @@ export const ADVANCED_DEFAULTS = Object.freeze({
 /** Engine parameters owned by the primary controls; Advanced can never override these. */
 export const PRIMARY_KEYS = Object.freeze([
   'sample_width', 'sample_height', 'loop_z_lift', 'loop_width', 'loop_length', 'loop_pitch',
-  'leg_gap', 'clearance', 'base_spacing', 'random_enabled', 'flow_nonplanar', 'flow_unsupported',
+  'leg_gap', 'clearance', 'base_spacing', 'random_enabled', 'flow_nonplanar', 'flow_unsupported', 'boundary_policy',
 ]);
 
 const SWATCHES = ['test', 'mid', 'full', 'custom'];
@@ -74,6 +75,8 @@ export function toTextile(primary, advanced = {}) {
     random_enabled: f > 0,
     flow_nonplanar: primary.airFlow,
     flow_unsupported: primary.airFlow,
+    // a loop extends one loop length past its feet: 'feet-only' keeps the rows rooted on the last lines
+    boundary_policy: primary.edgeLoops ? 'feet-only' : 'footprint',
   });
   for (const key of Object.keys(ADVANCED_DEFAULTS)) out[key] = r3((advanced[key] ?? ADVANCED_DEFAULTS[key]) * f);
   return out;
@@ -91,6 +94,7 @@ export function sanitizePrimary(raw) {
   }
   if (SWATCHES.includes(raw.swatch)) out.swatch = raw.swatch;
   if (typeof raw.roomy === 'boolean') out.roomy = raw.roomy;
+  if (typeof raw.edgeLoops === 'boolean') out.edgeLoops = raw.edgeLoops;
   return out;
 }
 
@@ -112,6 +116,7 @@ export function describePrimary(primary) {
     variation: primary.variation === 0 ? 'Off' : `${primary.variation}%`,
     airFlow: primary.airFlow === 100 ? 'Standard flow' : `${primary.airFlow > 100 ? '+' : '−'}${Math.abs(primary.airFlow - 100)}% flow`,
     roomy: primary.roomy ? '1.5 mm at the feet' : '0.6 mm at the feet',
+    edgeLoops: primary.edgeLoops ? `overhangs ${trim(15 * primary.loopSize)} mm` : 'fits inside',
   };
 }
 

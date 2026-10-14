@@ -66,3 +66,18 @@ test('thicker strands in the air use more filament and count as closer to their 
   assert.ok(thick.stats.violations >= plain.stats.violations);
   assert.match(thick.gcode, /; param flow_unsupported = 150/);
 });
+
+test('feet-only puts a row of loops on every base line; the last rows reach past the back edge', () => {
+  const size = { sample_width: 30, sample_height: 30 };
+  const inside = generate(machine, material, { ...size, boundary_policy: 'footprint' });
+  const every = generate(machine, material, { ...size, boundary_policy: 'feet-only' });
+  const rows = (r) => new Set(r.placements.map((p) => p.footY)).size;
+  assert.equal(rows(inside), 4, 'a 15 mm loop fits on only the first 4 of 7 lines');
+  assert.equal(rows(every), 7, 'every base line carries loops');
+  const maxY = (r) => Math.max(...r.moves.filter((m) => m.extrude).map((m) => m.y));
+  assert.ok(Math.abs(maxY(inside) - 30) < 1e-6);
+  assert.ok(Math.abs(maxY(every) - 45) < 1e-6, 'the overhang is one loop length');
+  for (const p of every.placements) {
+    assert.ok(p.points[0].y >= -1e-9 && p.points[0].y <= 30 + 1e-9, 'feet stay on the swatch');
+  }
+});

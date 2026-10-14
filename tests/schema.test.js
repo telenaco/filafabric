@@ -6,8 +6,8 @@ import { DEFAULT_TEXTILE } from '../src/engine/params.js';
 
 const fields = ADVANCED_GROUPS.flatMap((g) => g.fields);
 
-test('the Advanced drawer holds the 39 settings that are not primary controls', () => {
-  assert.equal(fields.length, 39);
+test('the Advanced drawer holds the 38 settings that are not primary controls', () => {
+  assert.equal(fields.length, 38);
 });
 
 test('no Advanced field duplicates a primary control', () => {

@@ -547,8 +547,11 @@ function renderSliders() {
       if (out) out.textContent = b.readout(def.key);
     }
   }
-  $('#room-value').textContent = describePrimary(state.primary).roomy;
+  const d = describePrimary(state.primary);
+  $('#room-value').textContent = d.roomy;
   for (const btn of $$('[data-room]')) btn.setAttribute('aria-pressed', String((btn.dataset.room === 'roomy') === state.primary.roomy));
+  $('#edge-value').textContent = d.edgeLoops;
+  for (const btn of $$('[data-edge]')) btn.setAttribute('aria-pressed', String((btn.dataset.edge === 'every') === state.primary.edgeLoops));
 }
 
 function renderSquiggleChoices() {
@@ -1174,6 +1177,13 @@ function bindStatic() {
   $('#exaggerate').addEventListener('change', (e) => preview.setExaggerate(e.target.checked));
   $('#show-violations').addEventListener('change', (e) => setShowTight(e.target.checked));
   for (const b of $$('[data-room]')) b.addEventListener('click', () => setRoomy(b.dataset.room === 'roomy'));
+  for (const b of $$('[data-edge]')) {
+    b.addEventListener('click', () => {
+      state.primary.edgeLoops = b.dataset.edge === 'every';
+      afterControl();
+      commit();
+    });
+  }
 
   $('#scrub').addEventListener('input', (e) => {
     stopPlay();

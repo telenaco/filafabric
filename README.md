@@ -25,6 +25,9 @@ npm run golden    # re-record the 20 x 20 golden summary after an intended engin
 In the page, work left to right: pick a **design**, shape it with the **settings** on the right (swatch size, then a
 few sliders; click a slider's value to type an exact number), and read the **print summary** at the bottom of the
 settings: a check (amber with an "Add room" fix when loops are tight), print time, filament, and **Export G-code**.
+**Loops at the back edge** decides what happens on the last base lines: a loop reaches one loop length past its
+feet, so "On every line" (the default) gives every line loops and lets the last rows overhang the back edge, while
+"Inside the swatch" keeps whole loops inside and leaves the last lines without loops of their own.
 **Strand thickness** adds flow only where the loops are in the air (rising, falling and free-hanging; the base and
 the anchored feet stay at normal flow), from 80 to 200 %, and shows the expected foamed strand diameter. Moves slow
 down on their own if the extra flow would exceed what the hotend can melt, and the clearance check and the
@@ -32,7 +35,7 @@ true-thickness preview both use the thicker strands.
 The preview opens on the strands at their true thickness; drag to turn, scroll to zoom, use Top / Angled / Side,
 and press play to watch the print order. The **View** menu adds the nozzle path, travel moves, lifts, exaggerated
 height and the red tight-spot marks (the clearance model's moves that come too close to printed strands; "Show
-where" in the check turns them on too). For the loop pile, everything else lives under Advanced settings (39
+where" in the check turns them on too). For the loop pile, everything else lives under Advanced settings (38
 settings in groups that show what you changed). The printer chip in the header opens the printer setup; the
 **···** menu has Getting started, Save/Open settings file and Reset this design. Undo/redo and **Share** (a link that
 reopens the design and its settings) work for every design. Every exported file records its full parameter set
@@ -42,8 +45,8 @@ and seed in comment lines.
 
 1. Test swatch (30 × 30 mm), Advanced settings → What to print → untick "Print the loops": base only. Check adhesion,
    flow and corners.
-2. Custom size 30 × 15 mm, base and loops on: exactly one row of loops. Check that the feet bond and the
-   unsupported strands hold their height.
+2. Custom size 30 × 15 mm, base and loops on, Loops at the back edge → **Inside the swatch**: exactly one row of
+   loops. Check that the feet bond and the unsupported strands hold their height.
 3. Test swatch (30 × 30 mm) with the defaults: compare the tight-spot markers with real collisions.
 4. Full swatch (100 × 100 mm).
 

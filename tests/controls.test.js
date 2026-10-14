@@ -142,3 +142,15 @@ test('the strand thickness read-out follows the nozzle, the foam and the flow', 
   near(airStrandMm(PRIMARY_DEFAULTS, { free_strand_diameter: 0.6 }, { flow: { foam_expansion: 1 } }), 0.6, 1e-9);
   assert.equal(airStrandMm(PRIMARY_DEFAULTS, { nozzle_diameter: NaN }, foamy), null);
 });
+
+test('loops start on every base line by default; "inside the swatch" keeps whole loops inside', () => {
+  assert.equal(PRIMARY_DEFAULTS.edgeLoops, true);
+  assert.equal(toTextile(PRIMARY_DEFAULTS).boundary_policy, 'feet-only');
+  assert.equal(toTextile({ ...PRIMARY_DEFAULTS, edgeLoops: false }).boundary_policy, 'footprint');
+  assert.equal(toTextile(PRIMARY_DEFAULTS, { boundary_policy: 'footprint' }).boundary_policy, 'feet-only', 'Advanced cannot override it');
+  assert.equal(sanitizePrimary({ edgeLoops: false }).edgeLoops, false);
+  assert.equal(sanitizePrimary({ edgeLoops: 'no' }).edgeLoops, true);
+  assert.equal(describePrimary(PRIMARY_DEFAULTS).edgeLoops, 'overhangs 15 mm');
+  assert.equal(describePrimary({ ...PRIMARY_DEFAULTS, loopSize: 1.4 }).edgeLoops, 'overhangs 21 mm');
+  assert.equal(describePrimary({ ...PRIMARY_DEFAULTS, edgeLoops: false }).edgeLoops, 'fits inside');
+});
