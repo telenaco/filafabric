@@ -11,6 +11,7 @@ import { auxeticLayers, CELLS, CELL_IDS } from '../engine/auxetic.js';
 import { dipweaveLayers, MIN_DIP_PITCH } from '../engine/dipweave.js';
 import { webLayers } from '../engine/web.js';
 import { chainmailLayers } from '../engine/chainmail.js';
+import { meanderLayers, CURVES, CURVE_IDS } from '../engine/meander.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const WAVY = ['looped', 'figure8', 'zigzag', 'honeycomb', 'wave', 'square'];
@@ -277,4 +278,49 @@ MORE_DESIGNS.push(layered({
   ],
   build: (s, boundary) => chainmailLayers(boundary, { spacing: s.spacing, ratio: s.ratio }),
   summary: (result) => `a ring mail of ${result.report.crossings} crossings`,
+}));
+
+const MEANDER = defineControls({
+  ranges: { ...SIZE, cell: { min: 3, max: 14, step: 0.5 }, angle: { min: 15, max: 75, step: 5 }, spacing: { min: 3, max: 10, step: 0.5 } },
+  defaults: { width: 50, height: 50, curve: 'hilbert', cell: 6, angle: 45, spacing: 5, colorChange: false },
+  enums: { curve: CURVE_IDS },
+  bools: ['colorChange'],
+  presets: [
+    { id: 'hilbert', name: 'Hilbert lace', blurb: 'Tight folds, hatched across', patch: { curve: 'hilbert', cell: 6, angle: 45, spacing: 5 } },
+    { id: 'peano', name: 'Peano', blurb: 'Long serpentine folds', patch: { curve: 'peano', cell: 6, angle: 45, spacing: 5 } },
+    { id: 'open', name: 'Open meander', blurb: 'Large cells, wide hatch', patch: { curve: 'hilbert', cell: 10, angle: 60, spacing: 8 } },
+  ],
+  describe: (s) => ({ cell: `${r1(s.cell)} mm cells`, angle: `${s.angle}°`, spacing: `${r1(s.spacing)} mm apart` }),
+});
+
+MORE_DESIGNS.push(layered({
+  id: 'meander',
+  name: 'Meander',
+  blurb: 'A space-filling curve crossed by a hatch',
+  about: 'One continuous strand that folds across the fabric (a Hilbert or Peano curve) and never crosses itself, held by a straight hatch laid over it at an angle. The folds give hidden slack, so it stretches by unfolding and reads as lace.',
+  file: 'meander',
+  c: MEANDER,
+  controls: [
+    { kind: 'presets', title: 'Start from' },
+    { kind: 'size', title: 'Size and shape' },
+    {
+      kind: 'choice',
+      key: 'curve',
+      title: 'Curve',
+      hint: 'The fold of the first layer.',
+      options: CURVE_IDS.map((id) => ({ id, label: CURVES[id].label, hint: CURVES[id].hint })),
+    },
+    {
+      kind: 'sliders',
+      title: 'Look and feel',
+      items: [
+        { key: 'cell', label: 'Fold size', help: 'About how wide each fold of the curve is.', lo: 'Fine', hi: 'Coarse', unit: 'mm', edit: true },
+        { key: 'angle', label: 'Hatch angle', help: 'The angle of the lines laid across the curve.', lo: 'Shallow', hi: 'Steep', unit: '°', edit: true },
+        { key: 'spacing', label: 'Hatch spacing', help: 'Distance between the hatch lines.', lo: 'Dense', hi: 'Open', unit: 'mm', edit: true },
+      ],
+    },
+    COLOUR,
+  ],
+  build: (s, boundary) => meanderLayers(boundary, { curve: s.curve, cell: s.cell, angle: s.angle, spacing: s.spacing }),
+  summary: (result) => `a meander of ${result.report.crossings} crossings`,
 }));
