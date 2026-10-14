@@ -15,6 +15,7 @@ import { meanderLayers, CURVES, CURVE_IDS } from '../engine/meander.js';
 import { lissajousLayers } from '../engine/lissajous.js';
 import { truchetLayers, TILES, TILE_IDS } from '../engine/truchet.js';
 import { voronoiLayers } from '../engine/voronoi.js';
+import { turingLayers } from '../engine/turing.js';
 import { FIELD_IDS, createField } from '../engine/fields.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
@@ -450,4 +451,42 @@ MORE_DESIGNS.push(layered({
   ],
   build: (s, boundary) => voronoiLayers(boundary, { spacing: s.spacing, relax: s.relax, seed: s.seed, tone: s.pattern === 'none' ? null : createField(s.pattern, { scale: s.patternScale }) }),
   summary: (result) => `a Voronoi lace of ${result.sites} cells and ${result.report.crossings} crossings`,
+}));
+
+const TURING = defineControls({
+  ranges: { ...SIZE, wavelength: { min: 4, max: 14, step: 0.5 }, seed: { min: 1, max: 999, step: 1 }, angle: { min: 15, max: 75, step: 5 }, spacing: { min: 3, max: 10, step: 0.5 } },
+  defaults: { width: 50, height: 50, wavelength: 7, seed: 5, angle: 45, spacing: 5, colorChange: false },
+  bools: ['colorChange'],
+  presets: [
+    { id: 'fine', name: 'Fine stripes', blurb: 'Close, thin worms', patch: { wavelength: 5, spacing: 4 } },
+    { id: 'coral', name: 'Coral', blurb: 'A balanced pattern', patch: { wavelength: 8, spacing: 5 } },
+    { id: 'bold', name: 'Bold', blurb: 'Wide stripes, open hatch', patch: { wavelength: 12, spacing: 8 } },
+  ],
+  describe: (s) => ({ wavelength: `${r1(s.wavelength)} mm between stripes`, seed: `#${s.seed}`, angle: `${s.angle}°`, spacing: `${r1(s.spacing)} mm apart` }),
+});
+
+MORE_DESIGNS.push(layered({
+  id: 'turing',
+  name: 'Turing stripes',
+  blurb: 'Grown stripes, crossed by a hatch',
+  about: 'The same chemistry that makes animal stripes and coral: a reaction-diffusion field grown from a few specks until it settles into winding stripes about one wavelength apart, whose edges are the first layer. A straight hatch across them is the second. Organic and near the same in every direction. Each number is a different pattern, and the same number always grows the same one.',
+  file: 'turing',
+  c: TURING,
+  controls: [
+    { kind: 'presets', title: 'Start from' },
+    { kind: 'size', title: 'Size and shape' },
+    {
+      kind: 'sliders',
+      title: 'Look and feel',
+      items: [
+        { key: 'wavelength', label: 'Stripe spacing', help: 'About how far apart neighbouring stripes are.', lo: 'Fine', hi: 'Bold', unit: 'mm', edit: true },
+        { key: 'seed', label: 'Pattern number', help: 'Each number grows a different pattern; the same number always grows the same one.', lo: '1', hi: '999', unit: '', edit: true },
+        { key: 'angle', label: 'Hatch angle', help: 'The angle of the lines laid across the stripes.', lo: 'Shallow', hi: 'Steep', unit: '°', edit: true },
+        { key: 'spacing', label: 'Hatch spacing', help: 'Distance between the hatch lines.', lo: 'Dense', hi: 'Open', unit: 'mm', edit: true },
+      ],
+    },
+    COLOUR,
+  ],
+  build: (s, boundary) => turingLayers(boundary, { wavelength: s.wavelength, seed: s.seed, angle: s.angle, spacing: s.spacing }),
+  summary: (result) => `Turing stripes of ${result.loops} loops and ${result.report.crossings} crossings`,
 }));
