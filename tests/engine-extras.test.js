@@ -1,0 +1,45 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { generate } from '../src/engine/generate.js';
+import { resolveConfig } from '../src/engine/params.js';
+import { heightMapMargin } from '../src/engine/planner.js';
+import { defaultProfiles } from './helpers.js';
+
+const { machine, material } = defaultProfiles();
+
+test('stats count hops, travel length, strands and extruding moves', () => {
+  const r = generate(machine, material, { sample_width: 20, sample_height: 20 });
+  // independent recount straight from the moves
+  let hops = 0, travel = 0, extruding = 0, prev = null, prevExtrude = false;
+  const tags = new Set();
+  for (const m of r.moves) {
+    if (m.extrude) { extruding++; tags.add(m.tag); }
+    if (prev && !m.extrude) {
+      travel += Math.hypot(m.x - prev.x, m.y - prev.y);
+      if (prevExtrude) hops++;
+    }
+    prevExtrude = m.extrude;
+    prev = m;
+  }
+  assert.equal(r.stats.hops, hops);
+  assert.equal(r.stats.extrudingMoves, extruding);
+  assert.equal(r.stats.strands, tags.size);
+  assert.ok(Math.abs(r.stats.travelMm - travel) < 1e-6);
+  assert.equal(r.stats.hops, r.stats.loops, 'one hop to start each loop after the base');
+  assert.equal(r.stats.strands, r.stats.loops + 1, 'the base is one strand');
+});
+
+test('a loops-only print starts on the bed layer instead of floating above a missing base', () => {
+  const withBase = resolveConfig(machine, material, {});
+  const loopsOnly = resolveConfig(machine, material, { include_base: false });
+  assert.equal(withBase.derived.loopBaseZ, 0.4);
+  assert.equal(loopsOnly.derived.loopBaseZ, 0.2);
+  const explicit = resolveConfig(machine, material, { include_base: false, loop_start_z: 0.6 });
+  assert.equal(explicit.derived.loopBaseZ, 0.6);
+});
+
+test('the clearance height map reaches as far out as a loop can lean', () => {
+  const cfg = resolveConfig(machine, material, { loop_length: 30 });
+  assert.ok(heightMapMargin(cfg) >= 30);
+  assert.ok(heightMapMargin(resolveConfig(machine, material, {})) >= 10);
+});

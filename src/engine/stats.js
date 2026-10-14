@@ -9,11 +9,27 @@ export function computeStats(moves, cfg, placements) {
   const lengthByClass = { base: 0, supported: 0, rising: 0, falling: 0, unsupported: 0, travel: 0 };
   const r = cfg.derived.retraction;
   let violations = 0;
+  let hops = 0;
+  let travelMm = 0;
+  let extrudingMoves = 0;
+  const strandTags = new Set();
+  let previous = null;
+  let previousExtruded = false;
 
   for (const m of moves) {
     const dx = m.x - pos.x, dy = m.y - pos.y, dz = m.z - pos.z;
     const ds = Math.hypot(dx, dy, dz);
     pos = { x: m.x, y: m.y, z: m.z };
+    if (m.extrude) {
+      extrudingMoves++;
+      strandTags.add(m.tag);
+    } else if (previous) {
+      // travel between strands only: the approach from the prime line is not a hop
+      travelMm += Math.hypot(m.x - previous.x, m.y - previous.y);
+      if (previousExtruded) hops++;
+    }
+    previous = m;
+    previousExtruded = m.extrude;
     if (m.retract === 'retract') timeSec += r.length / r.speed;
     if (m.retract === 'unretract') timeSec += r.length / r.deretractSpeed;
     if (m.violation) violations++;
@@ -42,5 +58,9 @@ export function computeStats(moves, cfg, placements) {
     violations,
     lengthByClass,
     moves: moves.length,
+    extrudingMoves,
+    strands: strandTags.size,
+    hops,
+    travelMm,
   };
 }

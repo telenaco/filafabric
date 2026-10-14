@@ -90,6 +90,11 @@ export class HeightMap {
   }
 }
 
+/** How far outside the sample the height map must reach: a loop can lean past the edge by its length. */
+export function heightMapMargin(cfg) {
+  return Math.max(10, cfg.t.loop_length + 2);
+}
+
 export function clearanceModel(cfg) {
   const { t, derived, material } = cfg;
   const foam = Math.max(material.flow.foam_expansion ?? 1, 1);
@@ -116,7 +121,7 @@ function classify(strand, a, b, cfg) {
  */
 export function plan(cfg, base, placements, boundary) {
   const { t, derived } = cfg;
-  const map = new HeightMap(boundary.bbox());
+  const map = new HeightMap(boundary.bbox(), 0.5, heightMapMargin(cfg));
   const model = clearanceModel(cfg);
   const moves = [];
   const strands = [];

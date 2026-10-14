@@ -165,7 +165,8 @@ export function resolveConfig(machine, material, overrides = {}) {
     maxVolActual: material.flow.max_volumetric_speed_nominal * multiplier,
     freeDiameter: t.free_strand_diameter ?? t.nozzle_diameter,
     rowPitch: t.row_pitch_multiple * t.base_spacing,
-    loopBaseZ: t.loop_start_z ?? 2 * t.layer_height,
+    // loops sit one layer above the base strand; with no base they start on the bed layer
+    loopBaseZ: t.loop_start_z ?? (t.include_base ? 2 * t.layer_height : t.layer_height),
     limits: machine.limits.modes[mode],
     limitsMode: mode,
     retraction: {
