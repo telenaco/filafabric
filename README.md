@@ -8,6 +8,9 @@ sample. Machine and material profiles are data files, so more machines can be ad
 Gyroid) and 145 automated tests passing.
 The first physical print has not been done yet; the Foamy material profile stays unverified until then.
 
+**Live site:** https://telenaco.github.io/filafabric/ (published from `main` by `.github/workflows/pages.yml` after
+the tests pass; nothing to install).
+
 ## Run it
 
 Double-click `Run Textile Tool.bat` (needs Node 20 or newer). It starts a small local server and opens
@@ -98,6 +101,13 @@ in this folder.
 - [Bubaki Design](https://github.com/bubakiDesign)
 
 ## Publishing
+
+The site: every push to `main` runs the tests and, if they pass, publishes `index.html`, `src/`, `profiles/` and
+`vendor/` to GitHub Pages (`.github/workflows/pages.yml`). It needs one setting, once: Settings → Pages → Build and
+deployment → Source: **GitHub Actions**. To republish without a code change, run the "Deploy site" workflow from
+the Actions tab.
+
+The repository:
 
 This folder lives inside a larger local repository that also holds other sites, so only this folder is published,
 to https://github.com/telenaco/filafabric (branch `main`). From the parent repository:
