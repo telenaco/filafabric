@@ -197,14 +197,14 @@ export function crossingReport(items, areaMm2, strandWidth = 0.45) {
  * Layers of polylines to strands: layer k at (k + 1) layer heights, a self-crossing strand lifts over its own earlier
  * pass, and the first strand of every layer after the first can pause for a filament change.
  */
-export function layersToStrands(layers, { layerHeight = 0.2, strandWidth = 0.45, colorChange = false } = {}) {
+export function layersToStrands(layers, { layerHeight = 0.2, strandWidth = 0.45, colorChange = false, ramp = 1.6 } = {}) {
   const strands = [];
   layers.forEach((polylines, k) => {
     const flat = polylines
       .filter((p) => p.length >= 2)
       .map((p, i) => ({ id: `l${k + 1}-${i + 1}`, kind: k === 0 ? 'base' : 'supported', name: `Layer ${k + 1}`, pts: p.map((q) => ({ x: q.x, y: q.y, z: layerHeight * (k + 1) })) }));
     // a strand crosses its own earlier pass in the layer: lift over it by a little more than a layer
-    const settled = resolveCrossings(flat, { lift: layerHeight * 1.25, strandWidth }).strands;
+    const settled = resolveCrossings(flat, { lift: layerHeight * 1.25, strandWidth, ramp }).strands;
     settled.forEach((s, i) => {
       s.pts = s.pts.map(({ cls, ...p }) => p); // the layer keeps its own colour role
       if (colorChange && k > 0 && i === 0) s.pauseBefore = true;
@@ -218,7 +218,7 @@ export function layersToStrands(layers, { layerHeight = 0.2, strandWidth = 0.45,
  * End to end for a layered design: machine, material and layers of polylines in, moves, stats, G-code and report out.
  * @param layers  array of layers, each an array of polylines of { x, y } in mm
  */
-export function layeredResult(machine, material, { width, height, layers, colorChange = false, outline = null, extra = {} }) {
+export function layeredResult(machine, material, { width, height, layers, colorChange = false, outline = null, extra = {}, ramp = 1.6 }) {
   const cfg = resolveConfig(machine, material, { sample_width: width, sample_height: height });
   const fit = bedFitErrors(cfg);
   if (fit.length > 0) throw new PreflightError(fit);
@@ -226,7 +226,7 @@ export function layeredResult(machine, material, { width, height, layers, colorC
   if (points > MAX_MOVES) {
     throw new ConfigError([`This layout would need about ${points.toLocaleString('en')} moves; the limit is ${MAX_MOVES.toLocaleString('en')}. Use wider spacing, larger cells or a smaller swatch.`]);
   }
-  const strands = layersToStrands(layers, { layerHeight: cfg.t.layer_height, strandWidth: cfg.t.extrusion_width, colorChange });
+  const strands = layersToStrands(layers, { layerHeight: cfg.t.layer_height, strandWidth: cfg.t.extrusion_width, colorChange, ramp });
   const moves = emitStrands(strands, { retraction: cfg.derived.retraction });
   const stats = computeStats(moves, cfg, []);
   stats.loops = 0;

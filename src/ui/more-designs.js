@@ -8,6 +8,7 @@ import { boundaryFor, layeredResult } from '../engine/layers.js';
 import { SHAPES } from '../engine/shapes.js';
 import { crosshatchLayers, DIRECTIONS, DIRECTION_IDS } from '../engine/crosshatch.js';
 import { auxeticLayers, CELLS, CELL_IDS } from '../engine/auxetic.js';
+import { dipweaveLayers, MIN_DIP_PITCH } from '../engine/dipweave.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const WAVY = ['looped', 'figure8', 'zigzag', 'honeycomb', 'wave', 'square'];
@@ -53,6 +54,7 @@ function layered(def) {
         colorChange: !!s.colorChange,
         outline,
         extra: { layerCount: built.layers.length, ...(built.extra ?? {}) },
+        ramp: def.ramp ?? 1.6,
       });
     },
     verdict: (result, s) => (def.verdict ? def.verdict(result, s) : buildLayeredVerdict(result)),
@@ -153,4 +155,50 @@ MORE_DESIGNS.push(layered({
   ],
   build: (s, boundary) => auxeticLayers(boundary, { rowPitch: s.rowPitch, period: s.period, amplitude: s.amplitude, cell: s.cell }),
   summary: (result) => `an auxetic mesh of ${result.report.crossings} crossings`,
+}));
+
+const DIPWEAVE = defineControls({
+  ranges: { ...SIZE, warpPitch: { min: 2, max: 8, step: 0.5 }, weftPitch: { min: 2, max: 8, step: 0.5 } },
+  defaults: { width: 50, height: 50, warpPitch: 3.5, weftPitch: 3.5 },
+  presets: [
+    { id: 'fine', name: 'Fine', blurb: 'Close lines, many crossings', patch: { warpPitch: 3, weftPitch: 3 } },
+    { id: 'open', name: 'Open', blurb: 'Airy mesh', patch: { warpPitch: 5, weftPitch: 5 } },
+    { id: 'ribbed', name: 'Ribbed', blurb: 'Close warp, wide weft', patch: { warpPitch: 2.5, weftPitch: 6 } },
+  ],
+  describe: (s) => ({ warpPitch: `${r1(s.warpPitch)} mm apart`, weftPitch: `${r1(s.weftPitch)} mm apart` }),
+});
+
+MORE_DESIGNS.push(layered({
+  id: 'dipweave',
+  name: 'Dip weave',
+  blurb: 'Weft rides over each warp, dips between',
+  about: 'Warp lines straight on the bed and weft lines printed after them that ride over each warp and dip back to the bed between, so the fabric is one layer thick except at the crossings. Nothing is printed in mid-air, but the nozzle tip needs room to drop between warps.',
+  file: 'dipweave',
+  ramp: 0.8, // a short ramp, so the weft really is back on the bed between warps
+  c: DIPWEAVE,
+  controls: [
+    { kind: 'presets', title: 'Start from' },
+    { kind: 'size', title: 'Size and shape' },
+    {
+      kind: 'sliders',
+      title: 'Look and feel',
+      items: [
+        { key: 'warpPitch', label: 'Warp spacing', help: 'Distance between the lines that run up the fabric.', lo: 'Close', hi: 'Open', unit: 'mm', edit: true },
+        { key: 'weftPitch', label: 'Weft spacing', help: 'Distance between the lines that run across and ride over the warp.', lo: 'Close', hi: 'Open', unit: 'mm', edit: true },
+      ],
+    },
+  ],
+  build: (s, boundary) => dipweaveLayers(boundary, { warpPitch: s.warpPitch, weftPitch: s.weftPitch }),
+  verdict: (result, s) => {
+    if (Math.min(s.warpPitch, s.weftPitch) < MIN_DIP_PITCH) {
+      return {
+        level: 'heads-up',
+        title: 'Tight for the nozzle',
+        body: `The nozzle tip needs about ${MIN_DIP_PITCH} mm between lines to drop to the bed between two warps. At this spacing the weft will be laid on top of the warp instead of dipping, and the fabric gets thicker.`,
+        action: null, actionLabel: '', share: 0,
+      };
+    }
+    return buildLayeredVerdict(result);
+  },
+  summary: (result) => `a dip weave of ${result.report.crossings} crossings`,
 }));
