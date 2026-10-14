@@ -204,6 +204,33 @@ export function buildWeaveVerdict(stats) {
   };
 }
 
+/**
+ * Any design made of a few layers of plotted lines. Says how well the layers hold together (crossings between them,
+ * per cm², the longest strand with nothing crossing it) and warns about the one failure that matters: layers that
+ * never cross.
+ * @param result  { report, layerCount, stats }
+ */
+export function buildLayeredVerdict(result) {
+  const r = result.report;
+  if (!r || r.strands === 0) {
+    return { ...NONE, level: 'info', title: 'Nothing to print', body: 'These settings leave nothing inside the swatch or outline. Use a larger swatch or finer settings.' };
+  }
+  if (result.layerCount > 1 && r.between === 0) {
+    return { ...NONE, level: 'heads-up', title: 'The layers never cross', body: 'Lines that never cross anything can simply be peeled apart. Change an angle or an offset so the layers cross each other.' };
+  }
+  if (r.longestUncrossed > 30) {
+    return { ...NONE, level: 'heads-up', title: 'Long free strands', body: `One strand runs ${Math.round(r.longestUncrossed)} mm without crossing anything, so it can sag or pull away. Use closer lines or add a direction.` };
+  }
+  const lifts = result.stats.hops === 0 ? 'one unbroken strand with no lifts' : result.stats.hops === 1 ? 'one lift' : `${result.stats.hops} lifts`;
+  const between = result.layerCount > 1 ? `, ${r.between.toLocaleString('en')} between layers` : '';
+  return {
+    ...NONE,
+    level: 'ok',
+    title: 'Ready to print',
+    body: `${r.crossings.toLocaleString('en')} crossings (${r.perCm2.toFixed(1)} per cm²${between}); the longest stretch with nothing crossing it is ${Math.round(r.longestUncrossed)} mm. It prints as ${lifts}.`,
+  };
+}
+
 function capitalise(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }

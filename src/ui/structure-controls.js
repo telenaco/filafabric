@@ -9,10 +9,11 @@ export { r1, r2 };
  * @param ranges    { key: { min, max, step } } for every number, including width and height
  * @param defaults  every setting with its default
  * @param enums     { key: [allowed values] } for choices (a value outside the list falls back to the default)
+ * @param bools     keys that are on/off switches
  * @param presets   [{ id, name, blurb, patch }] named variants
  * @param describe  (settings) => { key: 'plain-language read-out' }
  */
-export function defineControls({ ranges, defaults, enums = {}, presets = [], describe }) {
+export function defineControls({ ranges, defaults, enums = {}, bools = [], presets = [], describe }) {
   const frozen = Object.freeze({ ...defaults });
   const sanitize = (raw) => {
     const out = { ...frozen };
@@ -24,6 +25,7 @@ export function defineControls({ ranges, defaults, enums = {}, presets = [], des
       }
     }
     for (const [key, allowed] of Object.entries(enums)) if (allowed.includes(raw[key])) out[key] = raw[key];
+    for (const key of bools) if (typeof raw[key] === 'boolean') out[key] = raw[key];
     return out;
   };
   const presetMatch = (s) => {

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DESIGNS, designById, READY_IDS, isReady } from '../src/ui/designs.js';
+import { defaultProfiles } from './helpers.js';
 
 test('loop pile and squiggle come first and are ready', () => {
   assert.deepEqual(READY_IDS.slice(0, 2), ['loop-pile', 'squiggle']);
@@ -44,7 +45,7 @@ test('planned and preset tiles are not loadable designs, unknown ids are not rea
 
 test('the library holds every structure of the catalogue, all of them ready', () => {
   const ready = DESIGNS.filter((d) => d.status === 'ready').map((d) => d.id);
-  assert.deepEqual(ready, ['loop-pile', 'squiggle', 'coil', 'weave', 'spiral', 'boucle', 'relief', 'fringe']);
+  assert.deepEqual(ready.slice(0, 8), ['loop-pile', 'squiggle', 'coil', 'weave', 'spiral', 'boucle', 'relief', 'fringe']);
   assert.deepEqual(DESIGNS.filter((d) => d.status === 'planned'), []);
 });
 
@@ -56,10 +57,26 @@ test('every newer design describes itself completely, so the studio needs no per
     assert.ok(w > 0 && h > 0);
     d.setSize(s, 60, 40);
     assert.deepEqual(d.size(s), [60, 40]);
-    for (const c of d.controls) assert.ok(['presets', 'size', 'shape', 'choice', 'sliders', 'pattern'].includes(c.kind), `${d.id} control ${c.kind}`);
+    for (const c of d.controls) assert.ok(['presets', 'size', 'shape', 'choice', 'sliders', 'pattern', 'switch'].includes(c.kind), `${d.id} control ${c.kind}`);
     for (const c of d.controls.filter((x) => x.kind === 'sliders')) {
       for (const item of c.items) assert.ok(d.ranges[item.key], `${d.id} slider ${item.key} has a range`);
     }
     for (const c of d.controls.filter((x) => x.kind === 'pattern')) assert.ok(Array.isArray(d.patterns) && d.patterns.length > 0, `${d.id} patterns`);
+  }
+});
+
+test('every newer design prints its defaults, and again from every preset, with a verdict and a figure', () => {
+  const { machine, material } = defaultProfiles();
+  for (const d of DESIGNS.filter((x) => x.status === 'ready' && !x.legacy)) {
+    const runs = [d.defaults(), ...(d.presets ?? []).map((p) => d.sanitize({ ...d.defaults(), ...p.patch }))];
+    for (const s of runs) {
+      const r = d.generate(machine, material, s, { outline: null });
+      assert.ok(r.moves.some((m) => m.extrude), `${d.id} prints something`);
+      assert.ok(r.gcode.includes('G1'));
+      assert.ok(['ok', 'info', 'heads-up'].includes(d.verdict(r, s).level), `${d.id} verdict`);
+      const f = d.figure(r);
+      assert.ok(f.label && f.value !== undefined, `${d.id} figure`);
+      assert.ok(typeof d.summary(r) === 'string' && d.summary(r).length > 5);
+    }
   }
 });

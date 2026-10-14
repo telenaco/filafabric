@@ -132,19 +132,25 @@ export function trailsFromEdges(edges) {
 /**
  * How well a set of plotted layers holds together. `items` are { pts, layer }.
  * @returns { crossings, between, perCm2, minAngle, longestUncrossed, strands }: `between` counts crossings of
- *          different layers; `longestUncrossed` is the longest stretch (mm) of any strand without a crossing
+ *          different layers; `minAngle` is the smallest usual crossing angle (10th percentile, degrees);
+ *          `longestUncrossed` is the longest stretch (mm) of any strand without a crossing
  */
 export function crossingReport(items, areaMm2, strandWidth = 0.45) {
   const { found, arcs } = findCrossings(items.map((it) => ({ pts: it.pts })), { strandWidth });
   let between = 0;
-  let minAngle = 90;
+  const angles = [];
   const marks = items.map(() => []);
   for (const c of found) {
-    if (items[c.sa].layer !== items[c.sb].layer) between++;
-    if (c.angle < minAngle) minAngle = c.angle;
+    const across = items[c.sa].layer !== items[c.sb].layer;
+    if (across) between++;
+    angles.push({ across, angle: c.angle });
     marks[c.sa].push(c.arcA);
     marks[c.sb].push(c.arcB);
   }
+  // the 10th percentile of the crossings between layers (all of them for a single layer): the short jogs that join
+  // one line to the next cross at odd angles and would otherwise decide the number
+  const pool = (angles.some((a) => a.across) ? angles.filter((a) => a.across) : angles).map((a) => a.angle).sort((p, q) => p - q);
+  const minAngle = pool.length ? pool[Math.floor(pool.length * 0.1)] : 0;
   let longest = 0;
   items.forEach((it, i) => {
     const total = arcs[i][arcs[i].length - 1] ?? 0;
@@ -157,7 +163,7 @@ export function crossingReport(items, areaMm2, strandWidth = 0.45) {
     crossings: found.length,
     between,
     perCm2: areaMm2 > 0 ? (found.length / areaMm2) * 100 : 0,
-    minAngle: found.length ? minAngle : 0,
+    minAngle,
     longestUncrossed: longest,
     strands: items.length,
   };

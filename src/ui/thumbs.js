@@ -35,6 +35,20 @@ export function bindingThumb(over) {
   return `<svg class="shape-thumb" width="48" height="28" viewBox="0 0 48 28" fill="none" stroke-width="2" stroke-linecap="round" aria-hidden="true">${body}</svg>`;
 }
 
+/**
+ * A tile picture drawn from a design's own geometry: layers of polylines in a width x height mm area, layer 1 in the
+ * base colour and the rest in the second colour.
+ */
+export function thumbFromLayers(layers, width, height) {
+  const scale = Math.min(140 / width, 80 / height);
+  const ox = (160 - width * scale) / 2, oy = (96 - height * scale) / 2;
+  const paths = layers.map((polylines, k) => {
+    const d = polylines.map((pts) => pts.map((p, i) => `${i ? 'L' : 'M'}${(ox + p.x * scale).toFixed(1)} ${(oy + (height - p.y) * scale).toFixed(1)}`).join('')).join('');
+    return `<path d="${d}" stroke="var(--role-${k === 0 ? 'base' : 'anchored'})"/>`;
+  }).join('');
+  return `<svg class="design-thumb" viewBox="0 0 160 96" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+}
+
 const R = 'var(--role-base)';
 const A = 'var(--role-anchored)';
 const svgTile = (body, extra = '') => `<svg class="design-thumb" viewBox="0 0 160 96" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${extra}>${body}</svg>`;

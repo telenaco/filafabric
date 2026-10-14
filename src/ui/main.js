@@ -513,6 +513,16 @@ function renderCheck() {
   box.replaceChildren(...children);
 }
 
+/** The crossing report of a layered design, as Details rows. */
+function reportItems(r, item) {
+  return [
+    item('Crossings', `${r.crossings.toLocaleString('en')} (${r.perCm2.toFixed(1)} per cm²)`),
+    item('Between layers', r.between.toLocaleString('en')),
+    item('Smallest usual angle', r.crossings ? `${Math.round(r.minAngle)}°` : 'none'),
+    item('Longest uncrossed', `${Math.round(r.longestUncrossed)} mm`),
+  ];
+}
+
 function renderFigures() {
   const host = $('#figures');
   const toggle = $('#btn-details');
@@ -549,6 +559,7 @@ function renderFigures() {
       item('Travel', `${Math.round(stats.travelMm).toLocaleString('en')} mm`),
       item('G-code moves', stats.moves.toLocaleString('en')),
       item('Steepest slope', `${stats.maxSlopeDeg.toFixed(1)}°`),
+      ...(state.result.report ? reportItems(state.result.report, item) : []),
       el('p', { class: 'note', text: 'Time ignores acceleration. Each lift ends one strand and starts the next, which is where blobs and strings come from.' })
     );
   }
@@ -1134,7 +1145,7 @@ function renderTiles() {
       disabled: planned,
       title: planned ? `${d.name} is coming soon` : false,
     });
-    tile.innerHTML = `${THUMBS[d.id] ?? ''}<span class="design-text"><span class="design-name">${d.name}${planned ? '<span class="soon">Soon</span>' : ''}</span><span class="design-sub">${d.blurb}</span></span>`;
+    tile.innerHTML = `${d.thumb ?? THUMBS[d.id] ?? ''}<span class="design-text"><span class="design-name">${d.name}${planned ? '<span class="soon">Soon</span>' : ''}</span><span class="design-sub">${d.blurb}</span></span>`;
     if (ready) tile.addEventListener('click', () => setDesign(d.id));
     if (d.status === 'preset') tile.addEventListener('click', () => openPresetTile(d));
     return tile;
@@ -1323,6 +1334,10 @@ function buildDesignPanel(mod) {
         grid.append(btn);
       }
       panel.append(group(c.hint ? el('p', { class: 'group-hint', text: c.hint }) : null, grid));
+    } else if (c.kind === 'switch') {
+      const input = el('input', { type: 'checkbox', role: 'switch', 'data-switch': `${id}:${c.key}` });
+      input.addEventListener('change', () => { state.designs[id][c.key] = input.checked; afterDesignChange(); });
+      panel.append(group(el('label', { class: 'switch-row' }, input, el('span', {}, el('strong', { text: c.label }), el('small', { text: c.help })))));
     } else if (c.kind === 'sliders') {
       panel.append(group(el('div', { id: `${id}-sliders`, class: 'controls' })));
     } else if (c.kind === 'pattern') {
@@ -1351,6 +1366,7 @@ function renderDesignChoices() {
       const [, key, value] = btn.dataset.choice.split(':');
       btn.setAttribute('aria-pressed', String(String(s[key]) === value));
     }
+    for (const box of $$(`[data-switch^="${mod.id}:"]`)) box.checked = !!s[box.dataset.switch.split(':')[1]];
     const active = mod.presetMatch ? mod.presetMatch(s) : null;
     for (const btn of $$(`#${mod.id}-presets [data-preset]`)) btn.setAttribute('aria-pressed', String(btn.dataset.preset === active));
     const scale = $(`#${mod.id}-pattern-scale`);

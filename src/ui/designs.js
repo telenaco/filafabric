@@ -29,6 +29,7 @@ import { generateFringe } from '../engine/fringe.js';
 import { generateSpiral } from '../engine/spiral.js';
 import { generateWeave, WEAVE_BINDINGS, WEAVE_BINDING_IDS } from '../engine/weave.js';
 import { bindingThumb } from './thumbs.js';
+import { MORE_DESIGNS } from './more-designs.js';
 import {
   RELIEF_CONTROLS, FRINGE_CONTROLS, BOUCLE_CONTROLS, SPIRAL_CONTROLS, WEAVE_CONTROLS,
 } from './structure-controls.js';
@@ -262,6 +263,9 @@ export const DESIGNS = [
     summary: (result) => `a fringe of ${result.fringe.hairs} hairs`,
   },
 ];
+
+// the line-algorithm library joins the column after the original structures
+DESIGNS.push(...MORE_DESIGNS);
 
 const BY_ID = new Map(DESIGNS.map((d) => [d.id, d]));
 
