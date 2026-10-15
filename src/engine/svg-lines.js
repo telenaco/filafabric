@@ -1,6 +1,7 @@
 import { clipStrands, connectStrands, orderStrands, analyzeFabric, travelDistance } from './fabric.js';
 import { resolveCrossings } from './crossings.js';
 import { PolygonBoundary } from './boundary.js';
+import { simplifyRing, flattenRings } from './outline.js';
 import { emitStrands } from './emit.js';
 import { computeStats } from './stats.js';
 import { writeGcode } from './gcode.js';
@@ -57,11 +58,58 @@ export function sanitizeSvgLines(raw) {
   return { name: String(raw.name ?? 'SVG lines').slice(0, 100), width: raw.width, height: raw.height, paths: raw.paths.map((path) => path.map(({ x, y }) => ({ x, y }))) };
 }
 
-/** Imported open strokes print first, with the currently selected structure above them. */
-export function composeSvgLines(result, vector, { fullWidth = vector.width, fullHeight = vector.height, offsetX = 0, offsetY = 0 } = {}) {
+/**
+ * Closed shapes and open lines of a drawing's paths (points in mm): a path whose end is back at its start is a shape,
+ * unless it is a speck. Shapes come back without the repeated end point.
+ */
+export function classifyPaths(paths, { closeTolerance = 0.35, minArea = 0.5 } = {}) {
+  const closed = [], open = [];
+  for (const path of paths) {
+    if (path.length < 2) continue;
+    const a = path[0], b = path[path.length - 1];
+    if (path.length >= 4 && Math.hypot(a.x - b.x, a.y - b.y) <= closeTolerance) {
+      let area = 0;
+      for (let i = 1; i < path.length; i++) area += path[i - 1].x * path[i].y - path[i].x * path[i - 1].y;
+      if (Math.abs(area) / 2 >= minArea) { closed.push(path.slice(0, -1)); continue; }
+    }
+    open.push(path);
+  }
+  return { closed, open };
+}
+
+/**
+ * The closed shapes of a drawing as an outline that stays registered to the drawing's own lines: rings measured in the
+ * drawing's longer side (so every number is 0 to 1, as a saved outline needs), with the drawing's size in `page`.
+ * Simplified until it is small enough to save. Null when the drawing has no closed shape.
+ */
+export function outlineFromVector(vector, { maxPoints = 1800, maxRings = 64 } = {}) {
+  const { closed } = classifyPaths(vector.paths);
+  if (closed.length === 0) return null;
+  const long = Math.max(vector.width, vector.height);
+  let rings = closed;
+  for (let tolerance = 0.05; tolerance <= 3.3; tolerance *= 2) {
+    rings = closed.map((ring) => simplifyRing(ring, tolerance)).filter((ring) => ring.length >= 3);
+    if (rings.reduce((n, ring) => n + ring.length, 0) <= maxPoints) break;
+  }
+  const unit = (n) => Math.max(0, Math.min(1, n / long));
+  rings = rings.slice(0, maxRings).map((ring) => ring.map((p) => ({ x: unit(p.x), y: unit(p.y) })));
+  if (rings.length === 0) return null;
+  return { name: `${vector.name} shapes`, rings: flattenRings(rings), rotation: 0, page: [vector.width, vector.height] };
+}
+
+/**
+ * Imported open strokes print first, with the currently selected structure above them. `clipLines: false` is for a
+ * drawing that is also the outline: its closed shapes lie on the boundary itself, so they are kept whole (and are not
+ * checked against it), while its open lines are still trimmed to what is inside.
+ */
+export function composeSvgLines(result, vector, { fullWidth = vector.width, fullHeight = vector.height, offsetX = 0, offsetY = 0, clipLines = true } = {}) {
   const { cfg } = result, h = cfg.t.layer_height, w = cfg.t.extrusion_width;
   const boundary = new PolygonBoundary(result.outline ?? [[{ x: 0, y: 0 }, { x: cfg.t.sample_width, y: 0 }, { x: cfg.t.sample_width, y: cfg.t.sample_height }, { x: 0, y: cfg.t.sample_height }]]);
-  const imported = clipStrands(vector.paths.map((path, i) => ({ id: `svg-${i}`, name: 'Imported SVG lines', kind: 'base', layer: 0, fixed: true, pts: path.map((p) => ({ x: p.x * fullWidth / vector.width - offsetX, y: p.y * fullHeight / vector.height - offsetY, z: h })) })), boundary, w / 2);
+  const shapeSet = new Set(classifyPaths(vector.paths).closed.map((ring) => ring[0]));
+  const drawn = vector.paths.map((path, i) => ({ id: `svg-${i}`, name: 'Imported SVG lines', kind: 'base', layer: 0, fixed: true, shape: shapeSet.has(path[0]), pts: path.map((p) => ({ x: p.x * fullWidth / vector.width - offsetX, y: p.y * fullHeight / vector.height - offsetY, z: h })) }));
+  const imported = clipLines
+    ? clipStrands(drawn, boundary, w / 2)
+    : [...drawn.filter((s) => s.shape).map((s) => ({ ...s, onBoundary: true })), ...clipStrands(drawn.filter((s) => !s.shape), boundary, w / 2)];
   const body = result.strands.map((s) => ({ ...s, id: `pattern-${s.id}`, layer: (s.layer ?? 0) + 1, pts: s.pts.map(({ cls, ...p }) => ({ ...p, z: result.placements ? p.z + h : 2 * h, ...(result.placements && cls ? { cls } : {}) })) }));
   let strands = [...imported, ...body];
   const beforeMm = travelDistance(strands);

@@ -1,6 +1,7 @@
 import { PolygonBoundary } from './boundary.js';
 import { densify } from './layers.js';
 import { infillLines, INFILL_IDS } from './infill.js';
+import { classifyPaths } from './svg-lines.js';
 
 /**
  * SVG design: a drawing becomes a printable textile, with one or two backing layers on top.
@@ -47,20 +48,7 @@ export function sampleVector() {
 /** The drawing's paths scaled to a width x height swatch, as closed rings and open strokes. */
 export function splitPaths(vector, width, height) {
   const sx = width / vector.width, sy = height / vector.height;
-  const closed = [], open = [];
-  for (const path of vector.paths) {
-    const pts = path.map((p) => ({ x: p.x * sx, y: p.y * sy }));
-    if (pts.length < 2) continue;
-    const a = pts[0], b = pts[pts.length - 1];
-    const isClosed = pts.length >= 4 && Math.hypot(a.x - b.x, a.y - b.y) <= 0.35;
-    if (isClosed) {
-      let area = 0;
-      for (let i = 1; i < pts.length; i++) area += pts[i - 1].x * pts[i].y - pts[i].x * pts[i - 1].y;
-      if (Math.abs(area) / 2 >= 0.5) { closed.push(pts.slice(0, -1)); continue; }
-    }
-    open.push(pts);
-  }
-  return { closed, open };
+  return classifyPaths(vector.paths.map((path) => path.map((p) => ({ x: p.x * sx, y: p.y * sy }))));
 }
 
 const bboxOf = (paths) => {

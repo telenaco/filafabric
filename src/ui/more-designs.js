@@ -17,7 +17,7 @@ import { truchetLayers, TILES, TILE_IDS } from '../engine/truchet.js';
 import { voronoiLayers } from '../engine/voronoi.js';
 import { turingLayers } from '../engine/turing.js';
 import { FIELD_IDS, createField } from '../engine/fields.js';
-import { BACKING_STYLES } from '../engine/backing.js';
+import { BACKING_STYLES, BACKING_LAYER_COUNTS } from '../engine/backing.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const WAVY = ['looped', 'figure8', 'zigzag', 'honeycomb', 'wave', 'square'];
@@ -62,7 +62,7 @@ export function layered(def) {
     file: def.file,
     status: 'ready',
     thumb,
-    roles: { base: 'Layer 1', anchored: 'Later layers' },
+    roles: def.roles ?? { base: 'Layer 1', anchored: 'Later layers' },
     defaults: () => ({ ...c.defaults }),
     sanitize: c.sanitize,
     ranges: c.ranges,
@@ -73,6 +73,8 @@ export function layered(def) {
     setSize: (s, w, h) => { s.width = w; s.height = h; },
     patterns: def.patterns,
     controls,
+    // kept in the code and left out of the list
+    hidden: !!def.hidden,
     // a design that works from the imported drawing says so, and then the studio hands it the drawing and the real size
     usesVector: !!def.usesVector,
     fullSize: !!def.fullSize,
@@ -113,9 +115,16 @@ const CROSSHATCH = defineControls({
   describe: (s) => ({ spacing: `${r1(s.spacing)} mm apart`, size: s.size === 0 ? 'Straight' : `${r2(s.size)} mm`, pitch: `${r1(s.pitch)} mm` }),
 });
 
+const BACKING_LABELS = {
+  wave: { label: 'Wave', hint: 'Sine-wave lines whose depth and length you set' },
+  gyroid: { label: 'Gyroid', hint: 'The wavy lines of a gyroid slice, fixed in shape' },
+  straight: { label: 'Straight', hint: 'Parallel straight lines' },
+};
+
 export const MORE_DESIGNS = [
   layered({
     id: 'crosshatch',
+    hidden: true, // out of the list for now; the design and its tests stay
     name: 'Crosshatch & isogrid',
     blurb: 'Straight lines at the angles you choose, layer on layer',
     about: 'The angle is the design here: layers of parallel lines, each layer at its own angle, so every pair of layers crosses. Square drapes like woven cloth on the bias; three directions 60° apart are close to the same in every direction. Give the lines a wave so they can stretch along their length.',
@@ -316,9 +325,9 @@ MORE_DESIGNS.push(layered({
 }));
 
 const MEANDER = defineControls({
-  ranges: { ...SIZE, cell: { min: 0.8, max: 14, step: 0.1 }, angle: { min: 15, max: 75, step: 5 }, spacing: { min: 0.8, max: 10, step: 0.1 }, seed: { min: 1, max: 999, step: 1 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
-  defaults: { width: 100, height: 100, curve: 'hilbert', cell: 6, backing: 'gyroid', angle: 45, spacing: 5, seed: 1, pattern: 'none', patternScale: 1, colorChange: false },
-  enums: { curve: CURVE_IDS, backing: BACKING_STYLES, pattern: ['none', ...FIELD_IDS] },
+  ranges: { ...SIZE, cell: { min: 0.8, max: 14, step: 0.1 }, angle: { min: 15, max: 75, step: 5 }, spacing: { min: 0.8, max: 10, step: 0.1 }, seed: { min: 1, max: 999, step: 1 }, patternScale: { min: 0.5, max: 2, step: 0.25 }, backingDepth: { min: 0.2, max: 10, step: 0.1 }, backingLength: { min: 3, max: 40, step: 0.5 } },
+  defaults: { width: 100, height: 100, curve: 'hilbert', cell: 6, backing: 'wave', backingDepth: 2, backingLength: 10, backingLayers: 'one', angle: 45, spacing: 5, seed: 1, pattern: 'none', patternScale: 1, colorChange: false },
+  enums: { curve: CURVE_IDS, backing: BACKING_STYLES, backingLayers: BACKING_LAYER_COUNTS, pattern: ['none', ...FIELD_IDS] },
   bools: ['colorChange'],
   presets: [
     { id: 'hilbert', name: 'Hilbert lace', blurb: 'Tight folds, hatched across', patch: { curve: 'hilbert', cell: 6, angle: 45, spacing: 5 } },
@@ -330,7 +339,7 @@ const MEANDER = defineControls({
     { id: 'flowsnake', name: 'Flowsnake', blurb: 'Gosper folds, like fish scales', patch: { curve: 'gosper', cell: 3.5, angle: 60, spacing: 5 } },
     { id: 'open', name: 'Open meander', blurb: 'Large cells, wide hatch', patch: { curve: 'hilbert', cell: 10, angle: 60, spacing: 8 } },
   ],
-  describe: (s) => ({ cell: `${r1(s.cell)} mm cells`, angle: `${s.angle}°`, spacing: `${r1(s.spacing)} mm apart`, seed: `#${s.seed}` }),
+  describe: (s) => ({ cell: `${r1(s.cell)} mm cells`, angle: `${s.angle}°`, spacing: `${r1(s.spacing)} mm apart`, seed: `#${s.seed}`, backingDepth: `${r1(s.backingDepth)} mm each way`, backingLength: `${r1(s.backingLength)} mm per wave` }),
 });
 
 MORE_DESIGNS.push(layered({
@@ -362,11 +371,19 @@ MORE_DESIGNS.push(layered({
         { key: 'seed', label: 'Pattern number', help: 'Used by the maze and stipple curves: each number is different, and the same number repeats it.', lo: '1', hi: '999', unit: '', edit: true },
       ],
     },
-    { kind: 'choice', key: 'backing', title: 'Backing', hint: 'The lines laid across the curve.', options: BACKING_STYLES.map((id) => ({ id, label: id === 'gyroid' ? 'Gyroid' : 'Straight', hint: id === 'gyroid' ? 'The wavy lines of a gyroid slice' : 'Parallel straight lines' })) },
+    { kind: 'choice', key: 'backing', title: 'Backing', hint: 'The lines laid across the curve.', options: BACKING_STYLES.map((id) => ({ id, label: BACKING_LABELS[id].label, hint: BACKING_LABELS[id].hint })) },
+    { kind: 'sliders', title: 'Backing wave', when: (s) => s.backing === 'wave', items: [
+      { key: 'backingDepth', label: 'Wave depth', help: 'How far the backing lines swing to either side of their centre line.', lo: 'Shallow', hi: 'Deep', unit: 'mm', edit: true },
+      { key: 'backingLength', label: 'Wave length', help: 'Length of one full wave of the backing.', lo: 'Tight', hi: 'Long', unit: 'mm', edit: true },
+    ] },
+    { kind: 'choice', key: 'backingLayers', title: 'Backing layers', hint: 'One backing makes two layers with the first; a second backing, turned across the first, is a third.', options: [
+      { id: 'one', label: 'One', hint: 'The first layer and one backing: two layers' },
+      { id: 'two', label: 'Two', hint: 'A third layer: a second backing turned across the first' },
+    ] },
     { kind: 'pattern', key: 'pattern', title: 'Grade the dots', hint: 'Only the stipple tour uses it: dots are denser where the pattern is bright.', scale: { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false } },
     COLOUR,
   ],
-  build: (s, boundary) => meanderLayers(boundary, { curve: s.curve, cell: s.cell, angle: s.angle, spacing: s.spacing, seed: s.seed, backing: s.backing, tone: s.pattern === 'none' ? null : createField(s.pattern, { scale: s.patternScale }) }),
+  build: (s, boundary) => meanderLayers(boundary, { curve: s.curve, cell: s.cell, angle: s.angle, spacing: s.spacing, seed: s.seed, backing: s.backing, backingDepth: s.backingDepth, backingLength: s.backingLength, backingLayers: s.backingLayers, tone: s.pattern === 'none' ? null : createField(s.pattern, { scale: s.patternScale }) }),
   summary: (result) => `a meander of ${result.report.crossings} crossings`,
 }));
 
@@ -494,16 +511,16 @@ MORE_DESIGNS.push(layered({
 }));
 
 const TURING = defineControls({
-  ranges: { ...SIZE, wavelength: { min: 4, max: 14, step: 0.5 }, seed: { min: 1, max: 999, step: 1 }, angle: { min: 15, max: 75, step: 5 }, spacing: { min: 0.8, max: 10, step: 0.1 } },
-  defaults: { width: 100, height: 100, wavelength: 7, seed: 5, backing: 'gyroid', angle: 45, spacing: 5, colorChange: false },
-  enums: { backing: BACKING_STYLES },
+  ranges: { ...SIZE, wavelength: { min: 4, max: 14, step: 0.5 }, seed: { min: 1, max: 999, step: 1 }, angle: { min: 15, max: 75, step: 5 }, spacing: { min: 0.8, max: 10, step: 0.1 }, backingDepth: { min: 0.2, max: 10, step: 0.1 }, backingLength: { min: 3, max: 40, step: 0.5 } },
+  defaults: { width: 100, height: 100, wavelength: 7, seed: 5, backing: 'wave', backingDepth: 2, backingLength: 10, backingLayers: 'one', angle: 45, spacing: 5, colorChange: false },
+  enums: { backing: BACKING_STYLES, backingLayers: BACKING_LAYER_COUNTS },
   bools: ['colorChange'],
   presets: [
     { id: 'fine', name: 'Fine stripes', blurb: 'Close, thin worms', patch: { wavelength: 5, spacing: 4 } },
     { id: 'coral', name: 'Coral', blurb: 'A balanced pattern', patch: { wavelength: 8, spacing: 5 } },
     { id: 'bold', name: 'Bold', blurb: 'Wide stripes, open hatch', patch: { wavelength: 12, spacing: 8 } },
   ],
-  describe: (s) => ({ wavelength: `${r1(s.wavelength)} mm between stripes`, seed: `#${s.seed}`, angle: `${s.angle}°`, spacing: `${r1(s.spacing)} mm apart` }),
+  describe: (s) => ({ wavelength: `${r1(s.wavelength)} mm between stripes`, seed: `#${s.seed}`, angle: `${s.angle}°`, spacing: `${r1(s.spacing)} mm apart`, backingDepth: `${r1(s.backingDepth)} mm each way`, backingLength: `${r1(s.backingLength)} mm per wave` }),
 });
 
 MORE_DESIGNS.push(layered({
@@ -516,7 +533,15 @@ MORE_DESIGNS.push(layered({
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
-    { kind: 'choice', key: 'backing', title: 'Backing', hint: 'The lines laid across the stripes.', options: BACKING_STYLES.map((id) => ({ id, label: id === 'gyroid' ? 'Gyroid' : 'Straight', hint: id === 'gyroid' ? 'The wavy lines of a gyroid slice' : 'Parallel straight lines' })) },
+    { kind: 'choice', key: 'backing', title: 'Backing', hint: 'The lines laid across the stripes.', options: BACKING_STYLES.map((id) => ({ id, label: BACKING_LABELS[id].label, hint: BACKING_LABELS[id].hint })) },
+    { kind: 'sliders', title: 'Backing wave', when: (s) => s.backing === 'wave', items: [
+      { key: 'backingDepth', label: 'Wave depth', help: 'How far the backing lines swing to either side of their centre line.', lo: 'Shallow', hi: 'Deep', unit: 'mm', edit: true },
+      { key: 'backingLength', label: 'Wave length', help: 'Length of one full wave of the backing.', lo: 'Tight', hi: 'Long', unit: 'mm', edit: true },
+    ] },
+    { kind: 'choice', key: 'backingLayers', title: 'Backing layers', hint: 'One backing makes two layers with the first; a second backing, turned across the first, is a third.', options: [
+      { id: 'one', label: 'One', hint: 'The first layer and one backing: two layers' },
+      { id: 'two', label: 'Two', hint: 'A third layer: a second backing turned across the first' },
+    ] },
     {
       kind: 'sliders',
       title: 'Look and feel',
@@ -529,6 +554,6 @@ MORE_DESIGNS.push(layered({
     },
     COLOUR,
   ],
-  build: (s, boundary) => turingLayers(boundary, { wavelength: s.wavelength, seed: s.seed, angle: s.angle, spacing: s.spacing, backing: s.backing }),
+  build: (s, boundary) => turingLayers(boundary, { wavelength: s.wavelength, seed: s.seed, angle: s.angle, spacing: s.spacing, backing: s.backing, backingDepth: s.backingDepth, backingLength: s.backingLength, backingLayers: s.backingLayers }),
   summary: (result) => `Turing stripes of ${result.loops} loops and ${result.report.crossings} crossings`,
 }));

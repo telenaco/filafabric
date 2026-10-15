@@ -6,6 +6,7 @@ import { GcodeWriter, bedFitErrors, PreflightError } from './gcode.js';
 import { PolygonBoundary } from './boundary.js';
 import { clipStrands, contactGraph, segmentInside, orderStrands } from './fabric.js';
 import { createField } from './fields.js';
+import { classifyPaths } from './svg-lines.js';
 
 const rectangle = (w, h, x = 0, y = 0) => [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];
 const bounds = (s) => ({ minX: Math.min(s.pts[0].x, s.pts.at(-1).x), maxX: Math.max(s.pts[0].x, s.pts.at(-1).x), minY: Math.min(s.pts[0].y, s.pts.at(-1).y), maxY: Math.max(s.pts[0].y, s.pts.at(-1).y) });
@@ -67,7 +68,7 @@ function textureResult(options, repeat) {
 
 /** Bounded-memory panel export. Texture repeats per section; full-document SVG strokes never repeat. */
 export async function exportPanel(options, { write, progress = () => {}, signal = null } = {}) {
-  const { machine, material, width, height, repeat = 50, outline = null, vector = null, backingSpacing = 5 } = options;
+  const { machine, material, width, height, repeat = 50, outline = null, vector = null, backingSpacing = 5, shapeOutline = false } = options;
   if (![width, height].every((v) => Number.isFinite(v) && v >= 10 && v <= 1000) || !Number.isFinite(repeat) || repeat < 20 || repeat > 100 || !Number.isFinite(backingSpacing) || backingSpacing < 0.8 || backingSpacing > 8) throw new ConfigError(['Panel dimensions must be 10–1000 mm; repeat 20–100 mm; backing spacing 0.8–8 mm.']);
   if (typeof write !== 'function') throw new Error('A writable output is required');
   const initialCfg = resolveConfig(machine, material, { sample_width: width, sample_height: height }), fit = bedFitErrors(initialCfg);
@@ -102,7 +103,10 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   const basis = backingLines(boundary, backingSpacing, h, vector ? h : 0, bead);
   if (!basis.length || contactGraph(basis, { strandWidth: bead, layerHeight: h, cellSize: Math.max(5, backingSpacing) }).components !== 1) throw new ConfigError(['The backing is disconnected in this outline. Use finer spacing or export separate garment pieces.']);
   if (vector) {
-    const source = clipStrands(vector.paths.map((path, i) => ({ id: `svg-${i}`, layer: 0, kind: 'base', pts: path.map((p) => ({ x: p.x * width / vector.width, y: p.y * height / vector.height, z: h })) })), boundary, bead / 2);
+    // a drawing that is also the outline keeps its closed shapes whole: they lie on the boundary they define
+    const shapeSet = shapeOutline ? new Set(classifyPaths(vector.paths).closed.map((ring) => ring[0])) : new Set();
+    const drawn = vector.paths.map((path, i) => ({ id: `svg-${i}`, layer: 0, kind: 'base', shape: shapeSet.has(path[0]), pts: path.map((p) => ({ x: p.x * width / vector.width, y: p.y * height / vector.height, z: h })) }));
+    const source = [...drawn.filter((s) => s.shape), ...clipStrands(drawn.filter((s) => !s.shape), boundary, bead / 2)];
     progress({ phase: 'svg', done: 0, total }); await emit(orderStrands(source));
     const vertical = basis.filter((s) => s.layer === 0);
     await emit(vertical); await emit(anchorTexture(vertical, source, boundary, h, bead, true));

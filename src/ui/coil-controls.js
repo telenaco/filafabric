@@ -36,6 +36,7 @@ export const COIL_PRESETS = Object.freeze([
   { id: 'open-chain', name: 'Open chain', blurb: 'Separate loops, rows only touching', patch: { shape: 'looped', size: 3, pitch: 8, rowOverlap: 0 } },
   { id: 'overlapping', name: 'Overlapping', blurb: 'Loops and rows lie on each other', patch: { shape: 'looped', size: 3, pitch: 5, rowOverlap: 30 } },
   { id: 'dense', name: 'Dense', blurb: 'Small, packed loops', patch: { shape: 'looped', size: 2.5, pitch: 4, rowOverlap: 50 } },
+  { id: 'zigzag-cells', name: 'Zigzag cells', blurb: 'Zigzag rows whose peaks meet and close into diamonds, one layer', patch: { shape: 'zigzag', size: 1.5, pitch: 6, rowOverlap: 10 } },
 ]);
 
 const r2 = (n) => Math.round(n * 100) / 100;

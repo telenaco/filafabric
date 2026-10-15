@@ -86,65 +86,44 @@ export const PRINTABILITY = [
   },
   {
     "id": "meander",
-    "score": 18.577736406282447,
-    "components": 1,
-    "joints": 21,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 3.260733957566977,
-    "maxSlopeDeg": 11.006268491148493,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 21,
-    "moves": 3358,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 1635.4032724130936,
-      "afterMm": 265.5965056218429
-    }
-  },
-  {
-    "id": "zigzag-single",
-    "score": 21.203958354856887,
-    "components": 1,
-    "joints": 50,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 3.9051248848458613,
-    "maxSlopeDeg": 10.893708585165166,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 50,
-    "moves": 4533,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 138.02097114006307,
-      "afterMm": 138.02097114006307
-    }
-  },
-  {
-    "id": "turing",
-    "score": 21.845287489379967,
+    "score": 19.583475033802525,
     "components": 1,
     "joints": 29,
     "reversedCrossings": 0,
     "separatedCrossings": 0,
-    "longestUnsupported": 4.65265041641797,
-    "maxSlopeDeg": 11.089986656544026,
+    "longestUnsupported": 3.521779181105387,
+    "maxSlopeDeg": 11.089916671591753,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
     "hops": 29,
-    "moves": 4508,
+    "moves": 5917,
     "clearanceFlags": 0,
     "routing": {
-      "beforeMm": 1809.28642915247,
-      "afterMm": 477.36944758252486
+      "beforeMm": 118.17275834360687,
+      "afterMm": 118.17275834360687
+    }
+  },
+  {
+    "id": "turing",
+    "score": 21.71415370570739,
+    "components": 1,
+    "joints": 39,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 4.444545173089637,
+    "maxSlopeDeg": 10.875063359528117,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 39,
+    "moves": 7157,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 495.8760576155328,
+      "afterMm": 546.5302790733715
     }
   },
   {

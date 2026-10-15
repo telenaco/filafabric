@@ -54,10 +54,13 @@ export function sanitizeOutline(raw) {
   }
   if (rings.length === 0) return null;
   const rotation = Number(raw.rotation);
+  // `page`: the size (mm) of the drawing these rings are measured against, so they stay registered to its lines
+  const page = Array.isArray(raw.page) && raw.page.length === 2 && raw.page.every((n) => Number.isFinite(n) && n > 0 && n <= 1000) ? [raw.page[0], raw.page[1]] : null;
   return {
     name: typeof raw.name === 'string' && raw.name ? raw.name.slice(0, 80) : 'Outline',
     rings,
     rotation: Number.isFinite(rotation) ? Math.max(-180, Math.min(180, Math.round(rotation))) : 0,
+    ...(page ? { page } : {}),
   };
 }
 

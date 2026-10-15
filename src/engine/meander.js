@@ -1,5 +1,5 @@
 import { clipPolyline } from './layers.js';
-import { backingLines } from './backing.js';
+import { backingStack } from './backing.js';
 import { createRng } from './rng.js';
 import { sites } from './voronoi.js';
 import { ConfigError } from './params.js';
@@ -262,7 +262,8 @@ export function curveOrder(curve, size, cell) {
  */
 export const MAX_TOUR_POINTS = 1500;
 
-export function meanderLayers(boundary, { curve = 'hilbert', cell = 6, angle = 45, spacing = 5, seed = 1, tone = null, backing = 'straight' } = {}) {
+export function meanderLayers(boundary, { curve = 'hilbert', cell = 6, angle = 45, spacing = 5, seed = 1, tone = null, backing = 'straight', backingDepth = 2, backingLength = 10, backingLayers = 'one' } = {}) {
+  const stack = () => backingStack(boundary, { style: backing, angle, spacing, depth: backingDepth, wavelength: backingLength }, backingLayers);
   if (!CURVES[curve]) throw new Error(`Unknown meander curve: ${curve}`);
   const box = boundary.bbox();
   if (curve === 'tsp') {
@@ -273,11 +274,11 @@ export function meanderLayers(boundary, { curve = 'hilbert', cell = 6, angle = 4
     const dots = sites(box, { spacing: cell, relax: 2, seed, tone });
     const tour = tspTour(dots);
     tour.push({ ...tour[0] });
-    return { layers: [clipPolyline(chaikin(tour), boundary), backingLines(boundary, { style: backing, angle, spacing })], extra: { dots: dots.length } };
+    return { layers: [clipPolyline(chaikin(tour), boundary), ...stack()], extra: { dots: dots.length } };
   }
   if (LSYSTEMS[curve]) {
     const { pts, order } = lsystemFill(curve, box, cell);
-    return { layers: [clipPolyline(chaikin(chaikin(pts)), boundary), backingLines(boundary, { style: backing, angle, spacing })], extra: { order, cells: pts.length } };
+    return { layers: [clipPolyline(chaikin(chaikin(pts)), boundary), ...stack()], extra: { order, cells: pts.length } };
   }
   const w = box.maxX - box.minX, h = box.maxY - box.minY;
   const order = curveOrder(curve, Math.max(w, h), cell);
@@ -290,6 +291,5 @@ export function meanderLayers(boundary, { curve = 'hilbert', cell = 6, angle = 4
   // round the corners so the strand turns instead of stopping dead
   pts = chaikin(chaikin(pts));
   const layer1 = clipPolyline(pts, boundary);
-  const layer2 = backingLines(boundary, { style: backing, angle, spacing });
-  return { layers: [layer1, layer2], extra: { order, cells: n } };
+  return { layers: [layer1, ...stack()], extra: { order, cells: n } };
 }

@@ -196,9 +196,10 @@ export function buildWeaveVerdict(stats) {
   if (!stats.pieces) {
     return { ...NONE, level: 'info', title: 'Nothing to weave', body: 'The swatch is smaller than one line pitch.' };
   }
+  // a description of how it prints, not a problem: the geometry check stays quiet and the figures carry the numbers
   return {
     ...NONE,
-    level: 'info',
+    level: 'ok',
     title: 'Experimental: two passes',
     body: `${stats.crossings} crossings in ${stats.pieces} pieces: the lower strands print first, then the upper ones, with ${stats.hops} lifts between pieces. The nozzle cannot go under a printed strand, so this is a two-level weave, and strands fuse where they cross.`,
   };

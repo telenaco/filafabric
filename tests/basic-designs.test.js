@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { waveLines, waveValue, WAVE_SHAPES } from '../src/engine/wavegrid.js';
-import { backingLines } from '../src/engine/backing.js';
+import { generateCoilTextile } from '../src/engine/coil.js';
+import { backingLines, backingStack } from '../src/engine/backing.js';
 import { meanderLayers } from '../src/engine/meander.js';
 import { boundaryFor } from '../src/engine/layers.js';
 import { findCrossings } from '../src/engine/crossings.js';
@@ -62,20 +63,19 @@ test('lines stay inside an outline, and lanes are joined into long strands', () 
   assert.ok(lines.length < 12, `${lines.length} strands: lanes were not joined`);
 });
 
-test('Zigzag mesh: two layers that cross each other, side by side or crossed, horizontal or vertical', () => {
+test('Zigzag mesh: two layers that cross each other, side by side or crossed', () => {
   const card = designById('zigzag');
   const { machine, material } = defaultProfiles();
   assert.ok(card && card.status === 'ready');
   assert.equal(card.controls.some((c) => c.kind === 'pattern'), false, 'no patterns');
   assert.equal(card.controls.some((c) => c.kind === 'shape'), false, 'no strand shapes');
+  assert.equal(card.controls.some((c) => c.key === 'direction'), false, 'which way it lies on the plate is not a choice');
   for (const mode of ['parallel', 'cross']) {
-    for (const direction of ['horizontal', 'vertical']) {
-      const r = card.generate(machine, material, { ...card.defaults(), width: 60, height: 60, mode, direction });
-      assert.equal(r.layerCount, 2);
-      assert.ok(r.report.between > 20, `${mode} ${direction}: the layers cross`);
-      assert.equal(r.fabric.components, 1);
-      assert.equal(r.fabric.exportable, true);
-    }
+    const r = card.generate(machine, material, { ...card.defaults(), width: 60, height: 60, mode });
+    assert.equal(r.layerCount, 2);
+    assert.ok(r.report.between > 20, `${mode}: the layers cross`);
+    assert.equal(r.fabric.components, 1);
+    assert.equal(r.fabric.exportable, true);
   }
   // the way the lines run: over stretches of about 15 mm, do they travel further in x or in y?
   const dominant = (lines) => {
@@ -90,30 +90,54 @@ test('Zigzag mesh: two layers that cross each other, side by side or crossed, ho
     }
     return along > across ? 'x' : 'y';
   };
-  const layers = (s) => card.generate(machine, material, { ...card.defaults(), width: 60, height: 60, ...s }).strands;
-  const first = (s) => dominant(layers(s).filter((st) => st.layer === 0 || st.kind === 'base').map((st) => st.pts));
-  assert.equal(first({ direction: 'horizontal' }), 'x');
-  assert.equal(first({ direction: 'vertical' }), 'y');
+  // side by side both layers run along x; crossed the second runs along y
+  const runs = (mode, layer) => {
+    const strands = card.generate(machine, material, { ...card.defaults(), width: 60, height: 60, mode }).strands;
+    return dominant(strands.filter((st) => st.layer === layer).map((st) => st.pts));
+  };
+  assert.equal(runs('parallel', 0), 'x');
+  assert.equal(runs('parallel', 1), 'x');
+  assert.equal(runs('cross', 0), 'x');
+  assert.equal(runs('cross', 1), 'y');
 });
 
-test('Zigzag single layer: one layer that holds itself together, in three waves', () => {
-  const card = designById('zigzag-single');
-  const { machine, material } = defaultProfiles();
-  assert.ok(card && card.status === 'ready');
-  for (const shape of WAVE_SHAPES) {
-    const r = card.generate(machine, material, { ...card.defaults(), width: 60, height: 60, shape, overlap: 30 });
-    assert.equal(r.layerCount, 1, 'one layer');
-    assert.equal(r.fabric.components, 1);
-    assert.equal(r.fabric.exportable, true);
-    assert.ok(r.report.crossings > 100, `${shape}: neighbouring lines cross`);
+test('a single layer of zigzag rows that meet is the Coil with a zigzag shape: neighbouring rows sit half a wave apart', () => {
+  for (const shape of ['zigzag', 'wave', 'square']) {
+    const touching = generateCoilTextile({ width: 60, height: 60, shape, size: 1.5, pitch: 6, rowOverlap: 0 });
+    const crossing = generateCoilTextile({ width: 60, height: 60, shape, size: 1.5, pitch: 6, rowOverlap: 0.2 });
+    assert.equal(touching.strands.length, 1, `${shape}: one strand`);
+    // rows of a lane 3 mm apart: the peaks of one row reach the troughs of the next, never short of them
+    const pts = touching.strands[0].pts;
+    const centre = (y) => Math.round((y - touching.rowPitch / 2) / touching.rowPitch);
+    const rows = new Map();
+    for (const p of pts) {
+      const k = centre(p.y);
+      if (!rows.has(k)) rows.set(k, []);
+      rows.get(k).push(p);
+    }
+    const keys = [...rows.keys()].sort((p, q) => p - q);
+    const mid = keys[Math.floor(keys.length / 2)];
+    let nearest = Infinity;
+    for (const p of rows.get(mid)) for (const q of rows.get(mid + 1) ?? []) {
+      if (Math.abs(p.x - q.x) < 6) nearest = Math.min(nearest, Math.hypot(p.x - q.x, p.y - q.y));
+    }
+    assert.ok(nearest < 0.45, `${shape}: neighbouring rows come within a bead of each other (${nearest.toFixed(2)} mm)`);
+    assert.ok(crossing.crossings > touching.crossings, `${shape}: more overlap, more crossings`);
+    assert.ok(crossing.crossings > 100, `${shape}: the rows cross`);
   }
-  // more reach, more crossing; the spacing sets how far a line has to swing to reach the next
-  const crossings = (overlap) => card.generate(machine, material, { ...card.defaults(), width: 60, height: 60, shape: 'sine', overlap }).report.crossings;
-  assert.ok(crossings(80) >= crossings(10));
+  const card = designById('coil');
+  const preset = card.presets.find((p) => p.id === 'zigzag-cells');
+  assert.ok(preset, 'the Coil offers it as a preset');
+  assert.equal(preset.patch.shape, 'zigzag');
+  assert.equal(designById('zigzag-single'), undefined, 'no separate single-layer card');
 });
 
 test('the essentials are real, ready cards and come first', () => {
-  assert.deepEqual([...ESSENTIALS], ['zigzag', 'zigzag-single', 'coil', 'starlattice', 'crosshatch', 'dipweave', 'halftone', 'meander']);
+  assert.deepEqual([...ESSENTIALS], ['zigzag', 'coil', 'starlattice', 'dipweave', 'halftone', 'meander']);
+  // Crosshatch & isogrid is kept in the code and left out of the list
+  assert.equal(designById('crosshatch').hidden, true);
+  assert.equal(designById('crosshatch').status, 'ready');
+  assert.equal(ESSENTIALS.includes('crosshatch'), false);
   for (const id of ESSENTIALS) assert.equal(designById(id)?.status, 'ready', id);
   assert.equal(designById('zigzag-mesh').name, 'Advanced zigzag mesh');
   assert.equal(designById('zigzag-mesh').status, 'preset');
@@ -156,9 +180,10 @@ test('the meander and Turing stripes are held by a gyroid backing unless straigh
   assert.equal(JSON.stringify(meanderLayers(b, { curve: 'hilbert' }).layers[1]), JSON.stringify(meanderLayers(b, { curve: 'hilbert', backing: 'straight' }).layers[1]));
   for (const id of ['meander', 'turing']) {
     const card = designById(id);
-    assert.equal(card.defaults().backing, 'gyroid', id);
+    assert.equal(card.defaults().backing, 'wave', id);
     assert.ok(card.controls.some((c) => c.kind === 'choice' && c.key === 'backing'), id);
-    assert.equal(card.sanitize({ backing: 'plaid' }).backing, 'gyroid');
+    assert.equal(card.sanitize({ backing: 'plaid' }).backing, 'wave');
+    assert.equal(card.sanitize({ backing: 'gyroid' }).backing, 'gyroid');
     assert.equal(card.sanitize({ backing: 'straight' }).backing, 'straight');
   }
 });
@@ -167,4 +192,31 @@ test('every tile has a card or a preset target, and the list can be built from t
   const ids = new Set(DESIGNS.map((d) => d.id));
   for (const id of ESSENTIALS) assert.ok(ids.has(id));
   assert.ok(DESIGNS.some((d) => d.id === 'zigzag-mesh' && d.opens.design === 'squiggle'));
+});
+
+test('the backing wave has a depth and a length you set, and a second backing is a third layer', () => {
+  const b = boundaryFor(60, 60);
+  const swing = (depth) => {
+    const lines = backingLines(b, { style: 'wave', angle: 0, spacing: 20, depth, wavelength: 8 });
+    const ys = lines.flat().filter((p) => p.x > 3 && p.x < 57).map((p) => p.y);
+    const near = ys.filter((y) => Math.abs(y - 30) < 6);
+    return Math.max(...near) - Math.min(...near);
+  };
+  assert.ok(swing(3) > swing(1) + 3, 'a deeper wave swings further');
+  assert.ok(Math.abs(swing(1.5) - 3) < 0.15, 'twice the depth from crest to trough');
+  const one = backingStack(b, { style: 'wave', angle: 45, spacing: 5, depth: 2, wavelength: 10 }, 'one');
+  const two = backingStack(b, { style: 'wave', angle: 45, spacing: 5, depth: 2, wavelength: 10 }, 'two');
+  assert.equal(one.length, 1);
+  assert.equal(two.length, 2);
+  assert.notEqual(JSON.stringify(two[0]), JSON.stringify(two[1]));
+  for (const id of ['meander', 'turing']) {
+    const card = designById(id);
+    const { machine, material } = defaultProfiles();
+    const layers = (s) => card.generate(machine, material, { ...card.defaults(), width: 60, height: 60, ...s }).layerCount;
+    assert.equal(layers({ backingLayers: 'one' }), 2, id + ': the first layer and one backing');
+    assert.equal(layers({ backingLayers: 'two' }), 3, id + ': a third layer');
+    const depthOf = (backingDepth) => JSON.stringify(card.generate(machine, material, { ...card.defaults(), width: 60, height: 60, backingDepth }).strands.slice(-3).map((s) => s.pts.length));
+    assert.notEqual(depthOf(1), depthOf(5), id + ': the depth changes the backing');
+    assert.ok(card.controls.some((c) => c.kind === 'sliders' && typeof c.when === 'function'), id + ': wave depth shows only for a wave');
+  }
 });

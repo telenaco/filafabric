@@ -91,8 +91,8 @@ export const DESIGNS = [
   {
     id: 'coil',
     name: 'Coil',
-    blurb: 'One looped strand, loops that overlap',
-    about: 'Flat rows of one continuous looped strand, one layer thick. Where the strand crosses itself or the row before, it lifts over by a layer, so there is no second layer to print.',
+    blurb: 'One strand in rows: loops, zigzags or waves that meet',
+    about: 'Flat rows of one continuous strand, one layer thick: loops that circle over themselves, or zigzag, wave and square rows whose peaks meet the next row (neighbouring rows run opposite ways, so they sit half a wave apart). Where the strand crosses itself or the row before, it lifts over by a layer, so there is no second layer to print.',
     file: 'coil',
     status: 'ready',
     roles: { base: 'Strand', anchored: 'Crossing over' },
@@ -286,7 +286,7 @@ DESIGNS.push(...BASIC_DESIGNS, ...SVG_DESIGNS, ...MORE_DESIGNS, ...LINE_DESIGNS,
  * The essentials: flat structures of lines in one or two layers with only a few controls, listed first and in this
  * order. Every other card is a variation, an experiment or a structure that needs more care.
  */
-export const ESSENTIALS = Object.freeze(['zigzag', 'zigzag-single', 'coil', 'starlattice', 'crosshatch', 'dipweave', 'halftone', 'meander']);
+export const ESSENTIALS = Object.freeze(['zigzag', 'coil', 'starlattice', 'dipweave', 'halftone', 'meander']);
 
 const BY_ID = new Map(DESIGNS.map((d) => [d.id, d]));
 

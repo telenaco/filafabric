@@ -2,25 +2,25 @@ import { PRINTABILITY } from './printability-data.js';
 import { validNumber } from './numeric.js';
 import { generate } from '../engine/generate.js';
 import { generateSquiggle, SAMPLERS, createImageSampler, minCrossingAmplitude } from '../engine/squiggle.js';
-import { placeOutline, rotateRings, ringsAspect, unflattenRings } from '../engine/outline.js';
+import { placeOutline, unflattenRings } from '../engine/outline.js';
 import { createPreview, ROLES } from './preview.js';
 import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airStrandMm, fitAspect, pileLiftFactor } from './controls.js';
 import { SQ_RANGES, SQUIGGLE_DEFAULTS, describeSquiggle, sizeForAspect } from './squiggle-controls.js';
 import { buildVerdict, buildSquiggleVerdict, formatMinutes } from './verdict.js';
 import { stateToHash, hashToState, sanitizeState } from './share.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
-import { readSvgOutline, drawOutlineThumb } from './svg-outline.js';
+import { $, $$, el, icon, ICONS } from './dom.js';
+import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard } from './panels.js';
+import { TooltipLayer } from './tooltip.js';
 import { DESIGNS, ESSENTIALS, designById, isReady, baseDesignSettings } from './designs.js';
 import { THUMBS, shapeThumb } from './thumbs.js';
 import { swatchCode } from './swatch.js';
 import { FIELDS, FIELD_IDS, createField } from '../engine/fields.js';
 import { SHAPES, SHAPE_IDS } from '../engine/shapes.js';
 import { readSvgLines } from './svg-lines.js';
-import { composeSvgLines } from '../engine/svg-lines.js';
+import { composeSvgLines, outlineFromVector } from '../engine/svg-lines.js';
 import { bindPanelExport } from './panel-ui.js';
 
-const $ = (selector) => document.querySelector(selector);
-const $$ = (selector) => [...document.querySelectorAll(selector)];
 const STORAGE_KEY = 'filament-textile-studio:v1'; // kept so a returning visitor's last session still opens
 const PLAY_ICON = 'M5 3l10 6-10 6z';
 const PAUSE_ICON = 'M4 3h3.5v12H4zM10.5 3H14v12h-3.5z';
@@ -179,61 +179,6 @@ const store = {
 };
 
 /* ---------- small helpers ---------- */
-function el(tag, props = {}, ...children) {
-  const node = document.createElement(tag);
-  for (const [k, v] of Object.entries(props)) {
-    if (k === 'class') node.className = v;
-    else if (k === 'text') node.textContent = v;
-    else if (v === true) node.setAttribute(k, '');
-    else if (v !== false && v !== null && v !== undefined) node.setAttribute(k, String(v));
-  }
-  for (const c of children) if (c !== null && c !== undefined && c !== false) node.append(c);
-  return node;
-}
-
-/**
- * Tooltips are easy to miss, so every control that has one carries a small "i". On the option buttons the text also
- * shows as a bubble on hover and on keyboard focus, and is read out by screen readers; the design tiles keep their
- * longer native tooltip.
- */
-function decorateTips(root = document) {
-  for (const node of root.querySelectorAll('button[title]')) {
-    if (node.classList.contains('pattern')) {
-      node.dataset.tip = node.title;
-      node.setAttribute('aria-description', node.title);
-      node.removeAttribute('title');
-    } else if (!node.classList.contains('design-tile')) continue;
-    if (!node.querySelector('.tip-i')) node.append(el('span', { class: 'tip-i', 'aria-hidden': 'true', text: 'i' }));
-  }
-}
-
-const SVG_NS = 'http://www.w3.org/2000/svg';
-function icon(d, { size = 18, fill = false } = {}) {
-  const svg = document.createElementNS(SVG_NS, 'svg');
-  svg.setAttribute('width', size);
-  svg.setAttribute('height', size);
-  svg.setAttribute('viewBox', '0 0 18 18');
-  svg.setAttribute('aria-hidden', 'true');
-  svg.setAttribute('fill', fill ? 'currentColor' : 'none');
-  if (!fill) {
-    svg.setAttribute('stroke', 'currentColor');
-    svg.setAttribute('stroke-width', '1.8');
-    svg.setAttribute('stroke-linecap', 'round');
-    svg.setAttribute('stroke-linejoin', 'round');
-  }
-  const path = document.createElementNS(SVG_NS, 'path');
-  path.setAttribute('d', d);
-  svg.append(path);
-  return svg;
-}
-const ICONS = {
-  ok: 'M9 1.8a7.2 7.2 0 100 14.4A7.2 7.2 0 009 1.8zM5.8 9.2l2.2 2.2 4.2-4.6',
-  'heads-up': 'M9 2.2L16.4 15H1.6zM9 7v3.6M9 12.8v.1',
-  info: 'M9 1.8a7.2 7.2 0 100 14.4A7.2 7.2 0 009 1.8zM9 8.2v4.4M9 5.6v.1',
-  error: 'M9 1.8a7.2 7.2 0 100 14.4A7.2 7.2 0 009 1.8zM6.4 6.4l5.2 5.2M11.6 6.4l-5.2 5.2',
-  chevron: 'M5 7l4 4 4-4',
-};
-
 async function fetchJson(url) {
   const response = await fetch(url);
   if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
@@ -357,6 +302,122 @@ function renderHistoryButtons() {
   $('#btn-redo').disabled = undoLog.cursor >= undoLog.stack.length - 1;
 }
 
+/* ---------- the settings panel (the classes are in panels.js) ---------- */
+
+/** Every control of every panel, so they can all redraw themselves from the current settings. */
+const controls = [];
+
+/** What the panel classes need from the studio. */
+const host = {
+  binding: (id) => BINDINGS[id],
+  settings: (id) => settingsOf(id),
+  change: () => afterDesignChange(),
+  nudge: () => afterControl(),
+  sizeChanged: () => { renderControls(); schedule(); },
+  commit: () => commit(),
+  toast: (message) => toast(message),
+  vectorSize: () => (state.vector ? [state.vector.width, state.vector.height] : null),
+  svg: () => svgSituation(),
+  importSvg: (file) => importSvg(file),
+  removeSvg: () => removeSvg(),
+  setShapeOutline: (on) => setShapeOutline(on),
+};
+
+function renderControls() {
+  for (const c of controls) c.update();
+}
+
+/** The panels of every design, and the sliders and size of the two older ones, mounted into their own markup. */
+function buildPanels() {
+  for (const mod of DESIGNS) {
+    if (mod.status !== 'ready' || mod.legacy) continue;
+    const panel = new DesignPanel(host, mod);
+    $('#settings-body').append(panel.node);
+    controls.push(panel);
+  }
+  for (const id of ['loop-pile', 'squiggle']) {
+    const b = BINDINGS[id];
+    const size = new SizeControl(host, id);
+    $(b.size.host).replaceChildren(size.node);
+    const sliders = (b.build ?? b.sliders).map((def) => new SliderControl(host, id, def));
+    $(b.host).replaceChildren(...sliders.map((s) => s.node));
+    controls.push(size, ...sliders);
+  }
+  const picker = new PatternPicker(host, 'loop-pile', 'pattern', ['none', ...FIELD_IDS], 'lp-pattern-title', { scale: PATTERN_SCALE });
+  $('#lp-pattern').replaceChildren(picker.node);
+  controls.push(picker);
+}
+
+/* ---------- the imported SVG ---------- */
+
+/** The closed shapes of the imported drawing as an outline, worked out once per drawing. */
+const shapeCache = { vector: null, outline: null };
+function shapesOf(vector) {
+  if (shapeCache.vector !== vector) {
+    shapeCache.vector = vector;
+    shapeCache.outline = outlineFromVector(vector);
+  }
+  return shapeCache.outline;
+}
+
+/** What the import card shows about the drawing and the current design. */
+function svgSituation() {
+  const mod = designById(state.design);
+  const v = state.vector;
+  const registered = !!state.outline?.page;
+  return {
+    vector: v,
+    usesVector: !!mod.usesVector,
+    idleNote: mod.svgNote ?? 'Its lines print first, with this pattern above, and its closed shapes can shape the pattern.',
+    allowsOutline: mod.outline !== false,
+    hasShapes: !!(v && shapesOf(v)),
+    outlineOn: registered,
+    // most previews are a 100 mm window of a larger swatch; a drawing's own outline is shown whole
+    window: v && !mod.usesVector && !mod.fullSize && !registered && state.result ? [state.result.cfg.t.sample_width, state.result.cfg.t.sample_height] : null,
+  };
+}
+
+/** A drawing sets the size of the swatch, whichever design is showing. */
+function followVectorSize() {
+  if (!state.vector) return;
+  const b = BINDINGS[state.design].size;
+  const [w, h] = b.get();
+  if (w !== state.vector.width || h !== state.vector.height) b.set(state.vector.width, state.vector.height, 'custom');
+}
+
+async function importSvg(file) {
+  try {
+    state.vector = await readSvgLines(file);
+    state.outline = null; // a new drawing starts without a shape outline; the switch brings it back
+    followVectorSize();
+    state.docName = file.name.replace(/\.svg$/i, '').slice(0, 60);
+    $('#doc-name').value = state.docName;
+    $('#panel-width').value = state.vector.width;
+    $('#panel-height').value = state.vector.height;
+    syncControls();
+    schedule();
+    commit();
+    toast(`Imported ${state.vector.paths.length} paths at ${state.vector.width.toFixed(1)} × ${state.vector.height.toFixed(1)} mm`);
+  } catch (e) {
+    toast(`Could not import the SVG: ${e.message}`);
+  }
+}
+
+function removeSvg() {
+  state.vector = null;
+  if (state.outline?.page) state.outline = null; // its shapes went with it
+  syncControls();
+  schedule();
+  commit();
+}
+
+function setShapeOutline(on) {
+  state.outline = on && state.vector ? shapesOf(state.vector) : null;
+  renderControls();
+  schedule();
+  commit();
+}
+
 /* ---------- generation ---------- */
 let genTimer = null;
 function schedule() {
@@ -372,10 +433,20 @@ function squiggleSampler() {
   return SAMPLERS[s.pattern] ?? SAMPLERS.centerSpot;
 }
 
-/** The outline as it will print for a width x height swatch: rotated, then fitted inside it (mm). */
+/**
+ * The outline as it will print for a width x height swatch (mm). A drawing's own shapes stay registered to its lines;
+ * any other outline is rotated, then fitted inside the swatch.
+ */
 function placedOutline(width, height) {
-  if (!state.outline) return null;
-  return placeOutline(unflattenRings(state.outline.rings), { rotation: state.outline.rotation, width, height });
+  const o = state.outline;
+  if (!o) return null;
+  const rings = unflattenRings(o.rings);
+  if (o.page) {
+    const [pw, ph] = o.page;
+    const long = Math.max(pw, ph);
+    return rings.map((r) => r.map((p) => ({ x: p.x * long * (width / pw), y: p.y * long * (height / ph) })));
+  }
+  return placeOutline(rings, { rotation: o.rotation, width, height });
 }
 
 /** In parallel mode, the least wave depth that still lets each line cross its neighbours (mm). */
@@ -391,18 +462,20 @@ function regenerate() {
   try {
     let result;
     const mod = designById(state.design);
+    followVectorSize();
+    // the preview of most designs is a 100 mm window; a design that works from the imported drawing, and a drawing's own
+    // outline, are shown whole
+    const cap = mod.fullSize || state.outline?.page ? Infinity : 100;
     if (!mod.legacy) {
       const own = state.designs[mod.id];
       const [w, h] = mod.size(own);
-      // the preview of most designs is a 100 mm window; a design that works from the imported drawing is shown whole
-      const cap = mod.fullSize ? Infinity : 100;
       const previewState = { ...own, width: Math.min(w, cap), height: Math.min(h, cap) };
       result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height), vector: mod.usesVector ? state.vector : null });
     } else if (state.design === 'squiggle') {
       const s = state.squiggle;
       result = generateSquiggle(machine, material, {
-        width: Math.min(s.width, 100),
-        height: Math.min(s.height, 100),
+        width: Math.min(s.width, cap),
+        height: Math.min(s.height, cap),
         mode: s.mode,
         shape: s.shape,
         spacing: s.spacing,
@@ -410,17 +483,18 @@ function regenerate() {
         wavelength: s.wavelength,
         sampler: squiggleSampler(),
         colorChange: s.colorChange,
-        outline: placedOutline(Math.min(s.width, 100), Math.min(s.height, 100)),
+        outline: placedOutline(Math.min(s.width, cap), Math.min(s.height, cap)),
       });
     } else {
       const [w, h] = sampleSize(state.primary);
       const textile = toTextile(state.primary, state.advanced);
-      textile.sample_width = Math.min(w, 100); textile.sample_height = Math.min(h, 100);
+      textile.sample_width = Math.min(w, cap); textile.sample_height = Math.min(h, cap);
       result = generate(machine, material, textile, { outline: placedOutline(textile.sample_width, textile.sample_height), liftAt: pileLiftFactor(state.primary) });
     }
     if (state.vector && !designById(state.design).usesVector) {
       const [fullWidth, fullHeight] = BINDINGS[state.design].size.get();
-      result = composeSvgLines(result, state.vector, { fullWidth, fullHeight });
+      // a drawing that is also the outline lies on the boundary itself, so its lines are not trimmed to it
+      result = composeSvgLines(result, state.vector, { fullWidth, fullHeight, clipLines: !state.outline?.page });
     }
     state.result = result;
     state.error = null;
@@ -490,15 +564,41 @@ function renderErrors() {
   $('#canvas-wrap').classList.toggle('dimmed', hasPreview);
 }
 
+/** What in a warning points at a setting, and which settings (by key) a person would change to answer it. */
+const FIXES = [
+  { when: /separate|disconnected|region|island/i, keys: ['spacing', 'pitch', 'cell', 'size', 'rowPitch', 'warpPitch', 'wavelength', 'block', 'hub'], advice: (l) => `Lower "${l}" so the lines meet.` },
+  { when: /never cross|peeled apart/i, keys: ['angle', 'turn', 'phase', 'second'], advice: (l) => `Change "${l}" so the layers cross each other.` },
+  { when: /free strand|without crossing|sag/i, keys: ['spacing', 'pitch', 'cell', 'size', 'rowPitch', 'warpPitch', 'wavelength', 'block'], advice: (l) => `Lower "${l}", or add a direction.` },
+  { when: /outline|outside|leave/i, keys: ['size', 'spacing', 'pitch', 'cell', 'block'], advice: (l) => `Lower "${l}" so more of the pattern fits inside.` },
+];
+
+/** The setting to change, named as the panel names it, for the first warning text it matches. */
+function adviceFor(mod, text) {
+  if (!mod || mod.legacy) return '';
+  const labels = new Map();
+  for (const c of mod.controls ?? []) if (c.kind === 'sliders') for (const item of c.items) labels.set(item.key, item.label);
+  for (const fix of FIXES) {
+    if (!fix.when.test(text)) continue;
+    const key = fix.keys.find((k) => labels.has(k));
+    if (key) return ` ${fix.advice(labels.get(key))}`;
+  }
+  return '';
+}
+
+/** The geometry check, or null when there is nothing to say: it only speaks up for a problem, and says what to change. */
 function currentVerdict() {
   if (!state.result || state.error) return null;
   const fabric = state.result.fabric;
-  if (fabric && !fabric.exportable) return { level: 'error', title: 'Structure needs attention', body: fabric.issues.join('. ') || 'Nothing fits inside this shape.', action: null };
   const mod = designById(state.design);
+  if (fabric && !fabric.exportable) {
+    const text = fabric.issues.join('. ') || 'Nothing fits inside this shape.';
+    return { level: 'error', title: 'Structure needs attention', body: text + adviceFor(mod, text), action: null };
+  }
   const verdict = !mod.legacy ? mod.verdict(state.result, state.designs[mod.id]) : state.design === 'squiggle'
     ? buildSquiggleVerdict(state.result.stats, { colorChange: state.squiggle.colorChange })
     : buildVerdict(state.result.stats, { roomy: state.primary.roomy });
-  return verdict.level === 'ready' || verdict.level === 'ok' ? { ...verdict, title: 'Geometry checked · test a swatch', body: `${fabric?.components === 1 ? 'One connected fabric region. ' : ''}${verdict.body} Physical print testing is still pending.` } : verdict;
+  if (verdict.level === 'ready' || verdict.level === 'ok') return null;
+  return { ...verdict, body: verdict.body + adviceFor(mod, `${verdict.title} ${verdict.body}`) };
 }
 
 function renderCheck() {
@@ -511,7 +611,8 @@ function renderCheck() {
   box.hidden = false;
   box.className = `check ${v.level}`;
   // collapsed by default so the controls keep the room; the one fix that matters sits on the row itself
-  const open = state.checkOpen ?? v.level === 'error';
+  // it only appears for a problem, so it opens straight onto what the problem is
+  const open = state.checkOpen ?? true;
   const toggle = el('button', { type: 'button', class: 'check-head', 'aria-expanded': String(open), 'aria-controls': 'check-body' },
     icon(ICONS[v.level] ?? ICONS.info, { size: 20 }),
     el('span', { class: 'check-title', text: v.title }),
@@ -622,12 +723,6 @@ function renderExport() {
   btn.disabled = !ok;
   const bytes = state.result ? state.result.gcode.length : 0;
   $('#export-size').textContent = ok ? (bytes > 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`) : '';
-  const fromDrawing = !!designById(state.design).usesVector;
-  const idleNote = designById(state.design).svgNote ?? 'Print SVG strokes first, with this pattern above.';
-  $('#svg-lines-info').textContent = state.vector ? `${state.vector.name} · ${state.vector.width.toFixed(1)} × ${state.vector.height.toFixed(1)} mm · ${state.vector.paths.length} paths` : idleNote;
-  $('#svg-lines-remove').hidden = !state.vector;
-  $('#svg-preview-note').hidden = !state.vector || fromDrawing;
-  if (state.vector) $('#svg-preview-note').textContent = `Preview sample: ${state.result?.cfg.t.sample_width ?? 100} × ${state.result?.cfg.t.sample_height ?? 100} mm. Full SVG: ${state.vector.width.toFixed(1)} × ${state.vector.height.toFixed(1)} mm.`;
 }
 
 const shortMachine = (name) => name.replace('Original ', '').replace(' i3', '').replace(' / MK3S+', '');
@@ -648,28 +743,11 @@ function renderPrinter() {
 }
 
 function renderSizes() {
-  for (const id of Object.keys(BINDINGS)) {
-    const b = BINDINGS[id].size;
-    const [w, h] = b.get();
-    const wi = $(`#${id}-w`);
-    const hi = $(`#${id}-h`);
-    if (wi && document.activeElement !== wi && wi.getAttribute('aria-invalid') !== 'true') wi.value = String(w);
-    if (hi && document.activeElement !== hi && hi.getAttribute('aria-invalid') !== 'true') hi.value = String(h);
-  }
-  renderOutline();
+  renderControls();
 }
 
 function renderSliders() {
-  for (const id of Object.keys(BINDINGS)) {
-    const b = BINDINGS[id];
-    for (const def of b.sliders) {
-      const input = $(`#${id}-${def.key}`);
-      if (input && document.activeElement !== input) input.value = String(b.get(def.key));
-      if (input) input.setAttribute('aria-valuetext', b.readout(def.key));
-      const out = $(`#${id}-${def.key}-out`);
-      if (out) { out.textContent = b.readout(def.key); const r = b.range(def.key), manual = b.get(def.key) < r.min || b.get(def.key) > r.max; out.classList.toggle('manual-value', manual); out.title = manual ? 'Manual value outside the slider range. Click to edit.' : 'Click to type an exact value'; }
-    }
-  }
+  renderControls();
   const d = describePrimary(state.primary);
   $('#room-value').textContent = d.roomy;
   for (const btn of $$('[data-room]')) btn.setAttribute('aria-pressed', String((btn.dataset.room === 'roomy') === state.primary.roomy));
@@ -771,228 +849,6 @@ function setShowTight(on) {
   $('#show-violations').checked = on;
   preview.setShowViolations(on);
   renderCheck();
-}
-
-function buildSlider(id, def) {
-  const b = BINDINGS[id];
-  const range = b.range(def.key);
-  const inputId = `${id}-${def.key}`;
-  const input = el('input', { id: inputId, type: 'range', min: range.min, max: range.max, step: range.step, 'aria-describedby': `${inputId}-help` });
-  input.value = String(b.get(def.key));
-  input.addEventListener('input', () => { b.set(def.key, Number(input.value)); afterControl(); });
-  input.addEventListener('change', commit);
-
-  const readout = el('button', { type: 'button', class: 'ctl-readout editable', id: `${inputId}-out`, title: 'Click to type a value', 'aria-label': `${def.label}: type an exact value` });
-  readout.addEventListener('click', () => editValue(id, def, readout));
-
-  return el('div', { class: 'ctl' },
-    el('div', { class: 'ctl-top' }, el('label', { class: 'ctl-label', for: inputId, text: def.label }), readout),
-    el('p', { class: 'ctl-help', id: `${inputId}-help`, text: def.help }),
-    input,
-    el('div', { class: 'ctl-ends', 'aria-hidden': 'true' }, el('span', { text: def.lo }), el('span', { text: def.hi })));
-}
-
-/** Swap a read-out for a number field so an exact value can be typed; Enter or leaving applies it, Escape cancels. */
-function editValue(id, def, readout) {
-  const b = BINDINGS[id];
-  const range = b.range(def.key);
-  const field = el('input', { type: 'number', class: 'ctl-edit', step: 'any', inputmode: 'decimal', 'aria-label': `${def.label}${def.unit ? ` in ${def.unit}` : ''}` });
-  field.value = String(b.get(def.key));
-  let done = false;
-  const finish = (apply) => {
-    if (done) return;
-    done = true;
-    const raw = field.value.trim();
-    const n = Number(raw);
-    if (apply && raw !== '' && Number.isFinite(n)) {
-      if (!validNumber(def.key, n, range)) {
-        toast(`${def.label}: enter a valid ${range.min === 0 ? 'non-negative' : 'positive'} value.`);
-        field.replaceWith(readout);
-        readout.focus();
-        return;
-      }
-      b.set(def.key, n);
-      afterControl();
-      commit();
-    }
-    field.replaceWith(readout);
-    renderSliders();
-    readout.focus();
-  };
-  field.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); finish(true); }
-    else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
-  });
-  field.addEventListener('blur', () => finish(true));
-  readout.replaceWith(field);
-  field.focus();
-  field.select();
-}
-
-function buildSliders(id) {
-  const b = BINDINGS[id];
-  if (b.groups?.length) for (const g of b.groups) $(g.host).replaceChildren(...g.items.map((def) => buildSlider(id, def)));
-  else $(b.host).replaceChildren(...(b.build ?? b.sliders).map((def) => buildSlider(id, def)));
-}
-
-function buildSize(id) {
-  const b = BINDINGS[id].size;
-  const error = el('p', { class: 'field-error', id: `${id}-size-error`, hidden: true });
-  const make = (axis, label, range) => {
-    const input = el('input', { id: `${id}-${axis}`, type: 'number', inputmode: 'decimal', min: range.min, max: range.max, step: range.step });
-    const field = el('label', { class: 'size-field', for: input.id }, el('span', { class: 'size-label', text: label }), input, el('span', { class: 'unit', 'aria-hidden': 'true', text: 'mm' }));
-    return { field, input, range, label: label.toLowerCase() };
-  };
-  const wf = make('w', 'Width', b.ranges.w);
-  const hf = make('h', 'Height', b.ranges.h);
-  const onInput = () => {
-    for (const f of [wf, hf]) f.input.removeAttribute('aria-invalid');
-    const bad = [wf, hf].find((f) => {
-      const n = Number(f.input.value);
-      return !f.input.value.trim() || !Number.isFinite(n) || n < f.range.min || n > f.range.max;
-    });
-    if (bad) {
-      bad.input.setAttribute('aria-invalid', 'true');
-      error.textContent = `Enter a ${bad.label} from ${bad.range.min} to ${bad.range.max} mm.`;
-      error.hidden = false;
-      return;
-    }
-    error.hidden = true;
-    b.set(Number(wf.input.value), Number(hf.input.value), null);
-    renderSizes();
-    schedule();
-  };
-  for (const f of [wf, hf]) {
-    f.input.addEventListener('input', onInput);
-    f.input.addEventListener('change', commit);
-  }
-  $(b.host).replaceChildren(
-    el('div', { class: 'size-inputs' }, wf.field, el('span', { class: 'times', 'aria-hidden': 'true', text: '×' }), hf.field),
-    error,
-    b.outline === false ? null : buildOutlineBox(id));
-}
-
-/* ---------- outline (an SVG the pattern fills) ---------- */
-function bindDrop(zone, onFile) {
-  zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
-  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
-  zone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    zone.classList.remove('dragover');
-    if (e.dataTransfer?.files?.[0]) onFile(e.dataTransfer.files[0]);
-  });
-}
-
-function svgInput(id) {
-  const input = el('input', { type: 'file', accept: '.svg,image/svg+xml', class: 'visually-hidden' });
-  input.addEventListener('change', () => {
-    if (input.files?.[0]) loadOutline(input.files[0], id);
-    input.value = '';
-  });
-  return input;
-}
-
-/** Built once per design; renderOutline() only updates it, so the rotate slider keeps working while dragged. */
-function buildOutlineBox(id) {
-  const drop = el('label', { class: 'dropzone compact', 'data-outline': 'empty' },
-    icon('M9 2.5l2 4.2 4.5.6-3.3 3.1.8 4.5L9 12.8l-4 2.1.8-4.5-3.3-3.1 4.5-.6z'),
-    el('span', { class: 'small strong', text: 'Fill an outline instead' }),
-    el('span', { class: 'small muted', text: 'Drop an SVG here, or browse. The pattern fills the shape.' }),
-    svgInput(id));
-  bindDrop(drop, (file) => loadOutline(file, id));
-
-  const match = el('button', { type: 'button', class: 'link small', 'data-outline': 'match', text: 'Match its shape' });
-  match.addEventListener('click', () => { matchOutline(id); renderSizes(); schedule(); commit(); });
-  const remove = el('button', { type: 'button', class: 'link small', text: 'Remove' });
-  remove.addEventListener('click', () => {
-    state.outline = null;
-    renderOutline();
-    schedule();
-    commit();
-  });
-  const replace = el('label', { class: 'link small file-link' }, 'Replace', svgInput(id));
-
-  const rotateId = `${id}-outline-rotate`;
-  const rotate = el('input', { id: rotateId, type: 'range', min: -180, max: 180, step: 5, value: 0 });
-  rotate.addEventListener('input', () => {
-    if (!state.outline) return;
-    state.outline.rotation = Number(rotate.value);
-    renderOutline();
-    schedule();
-  });
-  rotate.addEventListener('change', commit);
-
-  const card = el('div', { class: 'outline-loaded', 'data-outline': 'loaded', hidden: true },
-    el('div', { class: 'img-info' },
-      el('canvas', { class: 'outline-thumb', width: 112, height: 112, 'aria-hidden': 'true' }),
-      el('div', { class: 'img-text' },
-        el('div', { class: 'img-name', 'data-outline': 'name' }),
-        el('div', { class: 'small muted', 'data-outline': 'info' }),
-        el('div', { class: 'img-actions' }, match, replace, remove))),
-    el('div', { class: 'ctl' },
-      el('div', { class: 'ctl-top' }, el('label', { class: 'ctl-label', for: rotateId, text: 'Rotate outline' }), el('span', { class: 'ctl-readout', 'data-outline': 'angle' })),
-      rotate,
-      el('div', { class: 'ctl-ends', 'aria-hidden': 'true' }, el('span', { text: '−180°' }), el('span', { text: '180°' }))));
-  bindDrop(card, (file) => loadOutline(file, id));
-  return el('div', { class: 'outline-box', id: `${id}-outline` }, drop, card);
-}
-
-function outlineAspect() {
-  return ringsAspect(rotateRings(unflattenRings(state.outline.rings), state.outline.rotation));
-}
-
-function matchOutline(id) {
-  const b = BINDINGS[id].size;
-  const [w, h] = fitAspect(b.get()[0], outlineAspect(), b.ranges);
-  b.set(w, h, null);
-}
-
-function renderOutline() {
-  const o = state.outline;
-  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#34469a';
-  for (const id of Object.keys(BINDINGS)) {
-    const box = $(`#${id}-outline`);
-    if (!box) continue;
-    box.querySelector('[data-outline="empty"]').hidden = !!o;
-    box.querySelector('[data-outline="loaded"]').hidden = !o;
-    if (!o) continue;
-    const parts = o.rings.length;
-    box.querySelector('[data-outline="name"]').textContent = o.name;
-    const b = BINDINGS[id].size;
-    const [w, h] = b.get();
-    const [mw, mh] = fitAspect(w, outlineAspect(), b.ranges);
-    const matched = mw === w && mh === h;
-    box.querySelector('[data-outline="info"]').textContent = `${parts === 1 ? 'One shape' : `${parts} shapes and holes`} · fitted inside ${w} × ${h} mm${matched ? '' : ' (with room to spare)'}`;
-    box.querySelector('[data-outline="match"]').hidden = matched;
-    box.querySelector('[data-outline="angle"]').textContent = `${o.rotation}°`;
-    const rotate = $(`#${id}-outline-rotate`);
-    if (document.activeElement !== rotate) rotate.value = String(o.rotation);
-    const thumb = box.querySelector('.outline-thumb');
-    const key = `${o.name}:${o.rotation}:${o.rings.length}:${o.rings[0].length}:${accent}`;
-    if (thumb.dataset.key !== key) {
-      drawOutlineThumb(thumb, rotateRings(unflattenRings(o.rings), o.rotation), accent);
-      thumb.dataset.key = key;
-    }
-  }
-}
-
-async function loadOutline(file, id) {
-  if (!/\.svg$/i.test(file.name) && file.type !== 'image/svg+xml') {
-    toast('Use an SVG file for the outline.');
-    return;
-  }
-  try {
-    const o = await readSvgOutline(file);
-    state.outline = { name: o.name, rings: o.rings, rotation: 0 };
-    matchOutline(id);
-    renderSizes();
-    schedule();
-    commit();
-    const [w, h] = BINDINGS[id].size.get();
-    toast(`Filling ${o.name}: the swatch is ${w} × ${h} mm to match its shape`);
-  } catch (e) {
-    toast(`Could not use that outline: ${e.message}`);
-  }
 }
 
 function fieldValue(key) {
@@ -1185,7 +1041,7 @@ function renderTiles() {
   const ranking = new Map(PRINTABILITY.map((p, i) => [p.id, { ...p, rank: i + 1 }]));
   const byRank = (a, b) => (ranking.get(a.id)?.rank ?? 1000) - (ranking.get(b.id)?.rank ?? 1000);
   const essentials = ESSENTIALS.map((id) => DESIGNS.find((d) => d.id === id)).filter(Boolean);
-  const others = DESIGNS.filter((d) => !ESSENTIALS.includes(d.id)).sort(byRank);
+  const others = DESIGNS.filter((d) => !ESSENTIALS.includes(d.id) && !d.hidden).sort(byRank);
   const makeTile = (d) => {
     const ready = d.status === 'ready';
     const planned = d.status === 'planned';
@@ -1214,7 +1070,6 @@ function renderTiles() {
     heading('More structures', 'Easiest first'),
     ...others.map(makeTile),
   );
-  decorateTips($('#design-list'));
   renderTilePressed();
 }
 
@@ -1321,139 +1176,13 @@ function setDesign(id, { fromPreset = false } = {}) {
 
 /* ---------- panels for the newer designs, built from their registry entry ---------- */
 function afterDesignChange() {
-  renderDesignChoices();
   renderSliders();
   schedule();
   commit();
 }
 
-/** A little heat map of a pattern field, drawn in the accent colour: bright where the field is high. */
-function drawFieldThumb(canvas) {
-  const field = canvas.dataset.field;
-  const ratio = Math.min(window.devicePixelRatio || 1, 2);
-  const size = 48;
-  canvas.width = size * ratio;
-  canvas.height = size * ratio;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(ratio, ratio);
-  ctx.clearRect(0, 0, size, size);
-  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#34469a';
-  if (field === 'none') {
-    ctx.strokeStyle = accent;
-    ctx.globalAlpha = 0.55;
-    ctx.lineWidth = 2;
-    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(10 + i * 14, 24, 5, 0, Math.PI * 2); ctx.stroke(); }
-    return;
-  }
-  const sampler = createField(field);
-  const cells = 24;
-  ctx.fillStyle = accent;
-  for (let j = 0; j < cells; j++) {
-    for (let i = 0; i < cells; i++) {
-      ctx.globalAlpha = 0.08 + 0.92 * sampler(((i + 0.5) / cells) * 100, ((cells - j - 0.5) / cells) * 100, 100, 100);
-      ctx.fillRect(i * 2, j * 2, 2, 2);
-    }
-  }
-}
-
-/** The grid of pattern fields and the room for the pattern-size slider, for design `id`'s setting `c.key`. */
-function patternPicker(id, c, patterns, titleId) {
-  const grid = el('div', { class: 'patterns', role: 'group', 'aria-labelledby': titleId });
-  for (const field of patterns) {
-    const btn = el('button', { type: 'button', class: 'pattern', 'data-choice': `${id}:${c.key}:${field}`, 'aria-pressed': 'false', title: field === 'none' ? 'Every loop the same' : FIELDS[field].hint },
-      el('canvas', { class: 'pattern-thumb', 'data-field': field, 'aria-hidden': 'true' }),
-      el('span', { text: field === 'none' ? 'Plain' : FIELDS[field].label }));
-    btn.addEventListener('click', () => { settingsOf(id)[c.key] = field; afterDesignChange(); });
-    grid.append(btn);
-  }
-  return [grid, el('div', { id: `${id}-pattern-scale`, class: 'pattern-scale' })];
-}
-
-/** Control groups that show only while their when(settings) is true: { node, id, when }. */
-const conditionalGroups = [];
-
-function buildDesignPanel(mod) {
-  const id = mod.id;
-  const panel = el('div', { id: `panel-${id}`, class: 'panel', hidden: true },
-    el('header', { class: 'panel-head' },
-      el('h1', { class: 'title', text: mod.name }),
-      el('details', { class: 'pattern-about' }, el('summary', { text: 'About this pattern' }), el('p', { class: 'muted', text: mod.about }))));
-  mod.controls.forEach((c, n) => {
-    const titleId = `${id}-group-${n}-title`;
-    const group = (...kids) => {
-      const node = el('section', { class: 'group', 'aria-labelledby': titleId }, el('h2', { class: 'eyebrow', id: titleId, text: c.title }), ...kids);
-      if (typeof c.when === 'function') conditionalGroups.push({ node, id, when: c.when });
-      return node;
-    };
-    if (c.kind === 'presets') {
-      const grid = el('div', { class: 'patterns', role: 'group', 'aria-labelledby': titleId, id: `${id}-presets` });
-      for (const p of mod.presets) {
-        const btn = el('button', { type: 'button', class: 'pattern', 'data-preset': p.id, 'aria-pressed': 'false', title: p.blurb },
-          el('span', { text: p.name }));
-        btn.addEventListener('click', () => { Object.assign(state.designs[id], p.patch); afterDesignChange(); });
-        grid.append(btn);
-      }
-      panel.append(group(grid));
-    } else if (c.kind === 'size') {
-      panel.append(group(el('div', { id: `${id}-size` })));
-    } else if (c.kind === 'shape') {
-      const grid = el('div', { class: 'patterns', role: 'group', 'aria-labelledby': titleId });
-      for (const shape of mod.shapes) {
-        const btn = el('button', { type: 'button', class: 'pattern', 'data-choice': `${id}:${c.key}:${shape}`, 'aria-pressed': 'false', title: SHAPES[shape].hint });
-        btn.innerHTML = `${shapeThumb(shape)}<span>${SHAPES[shape].label}</span>`;
-        btn.addEventListener('click', () => { state.designs[id][c.key] = shape; afterDesignChange(); });
-        grid.append(btn);
-      }
-      panel.append(group(c.hint ? el('p', { class: 'group-hint', text: c.hint }) : null, grid));
-    } else if (c.kind === 'choice') {
-      const grid = el('div', { class: 'patterns', role: 'group', 'aria-labelledby': titleId });
-      for (const opt of c.options) {
-        const btn = el('button', { type: 'button', class: 'pattern', 'data-choice': `${id}:${c.key}:${opt.id}`, 'aria-pressed': 'false', title: opt.hint });
-        btn.innerHTML = `${opt.thumb ?? ''}<span>${opt.label}</span>`;
-        btn.addEventListener('click', () => { Object.assign(state.designs[id], opt.patch ?? {}); state.designs[id][c.key] = opt.id; afterDesignChange(); });
-        grid.append(btn);
-      }
-      panel.append(group(c.hint ? el('p', { class: 'group-hint', text: c.hint }) : null, grid));
-    } else if (c.kind === 'switch') {
-      const input = el('input', { type: 'checkbox', role: 'switch', 'data-switch': `${id}:${c.key}` });
-      input.addEventListener('change', () => { state.designs[id][c.key] = input.checked; afterDesignChange(); });
-      panel.append(group(el('label', { class: 'switch-row' }, input, el('span', {}, el('strong', { text: c.label }), el('small', { text: c.help })))));
-    } else if (c.kind === 'sliders') {
-      const k = mod.controls.slice(0, n).filter((x) => x.kind === 'sliders').length;
-      panel.append(group(el('div', { id: `${id}-sliders${k ? `-${k}` : ''}`, class: 'controls' })));
-    } else if (c.kind === 'pattern') {
-      panel.append(group(c.hint ? el('p', { class: 'group-hint', text: c.hint }) : null, ...patternPicker(id, c, mod.patterns, titleId)));
-    }
-  });
-  $('#settings-body').append(panel);
-}
-
-/** After the panels exist: the pattern size slider, which lives beside the pattern picker. */
-function buildPatternScale(mod) {
-  const c = mod.controls.find((x) => x.kind === 'pattern');
-  if (c?.scale) $(`#${mod.id}-pattern-scale`).replaceChildren(buildSlider(mod.id, c.scale));
-}
-
-function drawFieldThumbs() {
-  for (const canvas of $$('canvas[data-field]')) drawFieldThumb(canvas);
-}
-
-/** Press states for the presets, shape and pattern pickers; the pattern size shows only when a pattern is chosen. */
 function renderDesignChoices() {
-  for (const mod of DESIGNS) {
-    if (mod.status !== 'ready') continue;
-    const s = settingsOf(mod.id);
-    for (const btn of $$(`[data-choice^="${mod.id}:"]`)) {
-      const [, key, value] = btn.dataset.choice.split(':');
-      btn.setAttribute('aria-pressed', String(String(s[key]) === value));
-    }
-    for (const box of $$(`[data-switch^="${mod.id}:"]`)) box.checked = !!s[box.dataset.switch.split(':')[1]];
-    const active = mod.presetMatch ? mod.presetMatch(s) : null;
-    for (const btn of $$(`#${mod.id}-presets [data-preset]`)) btn.setAttribute('aria-pressed', String(btn.dataset.preset === active));
-    const scale = $(`#${mod.id}-pattern-scale`);
-    if (scale) scale.hidden = !s.pattern || s.pattern === 'none';
-    for (const g of conditionalGroups) if (g.id === mod.id) g.node.hidden = !g.when(s);
-  }
+  renderControls();
 }
 
 /* ---------- pictures for the squiggle pattern ---------- */
@@ -1737,7 +1466,7 @@ function bindStatic() {
     else if (e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
   });
 
-  window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', () => { buildPatterns(); drawFieldThumbs(); });
+  window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', () => { buildPatterns(); for (const c of controls) c.redraw(); });
 
   bindSquiggle();
 }
@@ -1745,7 +1474,9 @@ function bindStatic() {
 async function init() {
   await loadProfiles();
   preview = createPreview($('#preview'));
-  buildSvgLayerControl();
+  const importCard = new SvgImportCard(host);
+  $('#settings-body').prepend(importCard.node);
+  controls.push(importCard);
 
   // start from: a shared link, then the last session, then the defaults
   const fromLink = hashToState(location.hash);
@@ -1760,18 +1491,7 @@ async function init() {
   }
   if (initial) pictureDropped = loadState(initial);
 
-  for (const mod of DESIGNS) if (mod.status === 'ready' && !mod.legacy) buildDesignPanel(mod);
-  for (const id of Object.keys(BINDINGS)) {
-    buildSize(id);
-    buildSliders(id);
-  }
-  for (const mod of DESIGNS) if (mod.status === 'ready' && !mod.legacy) buildPatternScale(mod);
-  {
-    const [grid, scaleBox] = patternPicker('loop-pile', { key: 'pattern' }, ['none', ...FIELD_IDS], 'lp-pattern-title');
-    $('#lp-pattern').replaceChildren(grid, scaleBox);
-    scaleBox.replaceChildren(buildSlider('loop-pile', PATTERN_SCALE));
-  }
-  drawFieldThumbs();
+  buildPanels();
   buildAdvanced();
   buildSquiggleShapes();
   buildPatterns();
@@ -1779,42 +1499,17 @@ async function init() {
   renderTiles();
   bindStatic();
   bindPanelExport({
-    options: (width = 100, height = 100) => ({ machine: state.machines.get(state.machine), material: state.materials.get(state.material), design: state.design, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : state.design === 'squiggle' ? state.squiggle : state.designs[state.design], outline: placedOutline(width, height), vector: state.vector, image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale, panelSize: state.design === 'loop-pile' ? sampleSize(state.primary) : [settingsOf(state.design).width, settingsOf(state.design).height] }),
+    options: (width = 100, height = 100) => ({ machine: state.machines.get(state.machine), material: state.materials.get(state.material), design: state.design, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : state.design === 'squiggle' ? state.squiggle : state.designs[state.design], outline: placedOutline(width, height), vector: state.vector, shapeOutline: !!state.outline?.page, image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale, panelSize: state.design === 'loop-pile' ? sampleSize(state.primary) : [settingsOf(state.design).width, settingsOf(state.design).height] }),
     machines: () => state.machines, machineId: () => state.machine,
     selectMachine: (id) => { state.machine = id; schedule(); commit(); },
     download, filename: (w, h) => `${slug(state.docName)}_${state.design}_${w}x${h}mm.gcode`, toast,
   });
-  decorateTips();
+  new TooltipLayer();
   showDesign();
   $('#doc-name').value = state.docName;
   regenerate();
   commit();
   if (pictureDropped && fromLink) toast('This link was made with a picture, which links can\'t carry, so it opens with the centre spot pattern.');
-}
-
-function buildSvgLayerControl() {
-  const input = el('input', { type: 'file', accept: '.svg,image/svg+xml', class: 'visually-hidden', id: 'svg-lines-input' });
-  const remove = el('button', { type: 'button', id: 'svg-lines-remove', class: 'link small', text: 'Remove SVG', hidden: true });
-  const label = el('label', { class: 'btn svg-import', for: 'svg-lines-input', text: 'Import printable SVG lines' }); label.append(input);
-  const card = el('section', { class: 'svg-layer-control', 'aria-label': 'Printable SVG first layer' },
-    el('div', { class: 'svg-layer-actions' }, label, remove),
-    el('p', { id: 'svg-lines-info', class: 'small muted', text: 'Print SVG strokes first, with this pattern above.' }),
-    el('p', { id: 'svg-preview-note', class: 'small muted', hidden: true }));
-  $('#settings-body').prepend(card);
-  const importFile = async (file) => {
-    try {
-      const vector = await readSvgLines(file); state.vector = vector;
-      const b = BINDINGS[state.design].size; b.set(vector.width, vector.height, 'custom');
-      state.docName = file.name.replace(/\.svg$/i, '').slice(0, 60); $('#doc-name').value = state.docName;
-      $('#panel-width').value = vector.width; $('#panel-height').value = vector.height;
-      syncControls(); schedule(); commit(); toast(`Imported ${vector.paths.length} printable paths at ${vector.width.toFixed(1)} × ${vector.height.toFixed(1)} mm`);
-    } catch (e) { toast(`Could not import SVG lines: ${e.message}`); }
-  };
-  input.addEventListener('change', (e) => { if (e.target.files[0]) void importFile(e.target.files[0]); e.target.value = ''; });
-  card.addEventListener('dragover', (e) => { e.preventDefault(); card.classList.add('dragover'); });
-  card.addEventListener('dragleave', () => card.classList.remove('dragover'));
-  card.addEventListener('drop', (e) => { e.preventDefault(); card.classList.remove('dragover'); if (e.dataTransfer.files[0]) void importFile(e.dataTransfer.files[0]); });
-  remove.addEventListener('click', () => { state.vector = null; schedule(); commit(); });
 }
 
 init().catch((e) => {

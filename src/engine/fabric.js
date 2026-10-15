@@ -215,7 +215,8 @@ export function analyzeFabric(strands, { strandWidth = 0.45, layerHeight = 0.2, 
       if (i) {
         const a = s.pts[i - 1], d = Math.hypot(p.x - a.x, p.y - a.y);
         if (d > 1e-8) maxSlopeDeg = Math.max(maxSlopeDeg, Math.atan2(Math.abs(p.z - a.z), d) * 180 / Math.PI);
-        if (boundary && !segmentInside(a, p, boundary)) outsideSegments++;
+        // a strand marked onBoundary is the outline's own edge, drawn along the boundary it defines
+        if (boundary && !s.onBoundary && !segmentInside(a, p, boundary)) outsideSegments++;
       }
     });
     marks.sort((a, b) => a - b);

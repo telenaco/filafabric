@@ -144,6 +144,9 @@ h1, h2, h3 { margin: 0; }
 /* the headings that split the list: the essentials, then the rest */
 .design-group { grid-column: 1 / -1; margin: 10px 0 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
 .design-group:first-child { margin-top: 0; }
+/* the size line that takes the place of the width and height while an SVG sets the size */
+.size-follows { margin: 0; }
+.switch-row.disabled { opacity: 0.55; }
 .design-group small { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); }
 .design-tile[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent); }
 .design-thumb { display: block; width: 100%; height: auto; aspect-ratio: 160 / 96; background: var(--ground); border-bottom: 1px solid var(--line); }
@@ -264,19 +267,10 @@ input[aria-invalid="true"], select[aria-invalid="true"] { border-color: var(--da
   display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px 8px; min-height: 88px;
   font-size: 12.5px; font-weight: 600; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink-2);
 }
-.pattern { position: relative; }
 .pattern:hover { border-color: var(--line-2); }
-/* the "i" that says a control has a tooltip, and the bubble that shows it on hover and keyboard focus */
-.tip-i {
-  position: absolute; top: 4px; right: 4px; width: 14px; height: 14px; border-radius: 50%;
-  border: 1px solid var(--line-2); background: var(--panel); color: var(--muted);
-  font: italic 700 10px/12px Georgia, 'Times New Roman', serif; text-align: center; pointer-events: none;
-}
-.design-tile .tip-i { top: 6px; right: 6px; }
-.pattern[aria-pressed="true"] .tip-i { border-color: var(--accent); color: var(--accent); }
-.pattern[data-tip]:hover::after, .pattern[data-tip]:focus-visible::after {
-  content: attr(data-tip); position: absolute; z-index: 30; left: 0; top: calc(100% + 6px);
-  width: max-content; max-width: 230px; padding: 8px 10px; border-radius: 8px;
+/* the bubble every tooltip uses (src/ui/tooltip.js) */
+.tooltip {
+  position: fixed; z-index: 1000; max-width: 260px; padding: 8px 10px; border-radius: 8px;
   background: var(--ink); color: var(--ground); font-size: 12.5px; font-weight: 500; line-height: 1.35; text-align: left;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25); pointer-events: none;
 }

@@ -16,7 +16,6 @@ Nothing here has been printed yet: every drape or handle description below is a 
 | **Spacer net** | A net on the bed, a pillar of stacked rings on its nodes (or every second or third), and a second net on the pillars' tops, printed layer by layer | 2 nets + pillars | net spacing, pillar height, pillar radius, pillar every |
 | **Pillar weave** | Pillars on a grid and a serpentine fibre that passes each pillar on one side on one layer and the other side on the next, so the fibre layers lock round the pillars | layers + pillars | pillar spacing, layers, pillar radius |
 | **Zigzag mesh** | The plain version: two layers of zigzag lines, side by side (the second half a wave along, crossing all the way) or crossed at 90°, horizontal or vertical. No shapes, no patterns | 2 | layers, direction, line spacing, wave depth, wave length |
-| **Zigzag single layer** | One layer of sine, triangle or square waves, every other line half a wave along, so the peaks meet (or cross, with more reach) and close into cells; one layer holds itself together | 1 (+ lift at crossings) | wave, line spacing, wave length, reach |
 | **Advanced zigzag mesh** | Squiggle & Gyroid, parallel mode, zigzag strand: two anti-phase layers that open into diamonds | 2 | as Squiggle & Gyroid |
 | **Coil** | Flat rows of one continuous looped strand; where it crosses itself or the row before it lifts over by about a layer | 1 (+ lift at crossings) | presets (Open chain, Overlapping, Dense), strand shape, loop size and spacing, **row overlap**, crossing lift, pattern |
 | **Weave** | Warp and weft lines over and under each other: plain, twill 2/1, twill 2/2, basket, satin, herringbone, diamond twill, crepe. Printed in two passes by level, a lift for every piece | 2 levels | binding, line spacing |
@@ -52,12 +51,25 @@ peaks, lotus petals, lightning bolts, plus soft noise, bumps and stripes.
 
 ## The list
 
-The design list opens with the **essentials** (Zigzag mesh, Zigzag single layer, Coil, Star lattice, Crosshatch & isogrid,
-Dip weave, Halftone net, Meander): flat lines in one or two layers with only a few controls. Everything else follows,
+The design list opens with the **essentials** (Zigzag mesh, Coil, Star lattice, Dip weave, Halftone net, Meander): flat lines in one or two layers with only a few controls. Everything else follows,
 easiest first. Where a card used to have both a "Start from" row and a choice that said the same thing (the curve of
 the Meander, the tiling of the Star lattice, the map of the Conformal mesh), the choice now carries the sizes that
-suit it and the row is gone. The Meander and Turing stripes are held by a gyroid backing by default; straight lines are
-one click away.
+suit it and the row is gone. The Meander and Turing stripes are held by a wavy backing: a sine wave whose depth and
+length you set (the default), the fixed lines of a gyroid slice, or straight lines. One backing makes two layers with the
+curve; *Backing layers: two* adds a second backing turned across the first, a third layer. Layer thickness is the
+printer's *layer height* in the advanced settings.
+
+Crosshatch & isogrid is kept in the code and left out of the list for now (`hidden: true` on its card); its tests still
+run.
+
+A single layer of zigzag, wave or square rows whose peaks meet and close into cells is the **Coil** with that shape (the
+*Zigzag cells* preset): neighbouring rows run opposite ways, which puts them half a wave apart, and *row overlap* 0 is
+the peaks just meeting; more is crossing. It has no card of its own.
+
+One SVG import serves every design: its lines print first, the swatch takes its size (so the size fields give way to a
+line that says so), and a switch cuts the pattern to its closed shapes. The panel is built from classes in
+`src/ui/panels.js`, so a change to a control is made once and applies to every design; tooltips are one layer
+(`src/ui/tooltip.js`) that shows any element's title in a bubble the moment the pointer rests on it.
 
 What tells the flat line cards apart: **Crosshatch & isogrid** lays straight lines at chosen angles in each layer, so
 the angle is the design; **Dip weave** is a straight warp with a weft that dips to the bed between every warp, the
