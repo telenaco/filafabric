@@ -332,10 +332,14 @@ function contourArc(ring, from, to) {
 
 /**
  * Bend any existing XY pattern around green openings. A compact outward displacement bends nearby lines;
- * paths through an opening follow an offset of its actual contour. Penetration controls that offset so
- * neighbouring paths do not all collapse onto one rim. Z, incoming flow and move classes follow the source
+ * paths through an opening follow an offset of its actual contour. Z, incoming flow and move classes follow the source
  * path by arc length, including their transition points. The final exact subtraction prevents shortcuts
  * through concavities or overlapping openings. This routing is geometric, not a physical-strength model.
+ *
+ * The pattern comes up to the green shape and stays bonded to it. Only so many paths are routed round an opening as a
+ * thin band beside its wall can hold (a bead and a fifth apart, a few each side): the ones that only graze it, which
+ * bend round. The deeper ones end at the wall, as they do at a blue hole, and the lines near where they end are not
+ * pushed away from it. So a big opening leaves no void round it and nothing floats free of its wall.
  */
 export function repelGuideStrands(strands, rawGuides, { strandWidth = 0.45, influence = null, boundary = null } = {}) {
   if (!rawGuides?.length || !strands.length) return strands;
@@ -343,15 +347,65 @@ export function repelGuideStrands(strands, rawGuides, { strandWidth = 0.45, infl
   const guides = rawGuides.map(describe), step = Math.max(0.2, Math.min(0.75, strandWidth));
   let current = strands;
   for (const g of guides) {
-    const size = Math.min(g.box.maxX - g.box.minX, g.box.maxY - g.box.minY), push = Math.max(strandWidth, size * 0.3);
-    const reach = influence ?? Math.max(2.5 * push, 4 * strandWidth), clearance = strandWidth * 0.6;
-    if (!Number.isFinite(reach) || reach <= 0) throw new ConfigError(['Guide influence must be finite and positive.']);
+    const size = Math.min(g.box.maxX - g.box.minX, g.box.maxY - g.box.minY);
+    // the wall printed on the contour is `width` wide and centred on it: the nearest line lies just clear of its edge
+    const wall = Math.max(0, g.width ?? 0) / 2, clearance = Math.max(strandWidth * 0.6, wall + strandWidth * 0.5);
+    // the most the pattern may ever be pushed (a third of the opening, as it always was)
+    const pushMax = Math.max(strandWidth, size * 0.3);
+    const reachMax = influence ?? Math.max(2.5 * pushMax, 4 * strandWidth);
+    if (!Number.isFinite(reachMax) || reachMax <= 0) throw new ConfigError(['Guide influence must be finite and positive.']);
     const area = g.ring.reduce((sum, p, i) => { const q = g.ring[(i + 1) % g.ring.length]; return sum + p.x * q.y - q.x * p.y; }, 0);
     const unitRing = offsetPolyline([...g.ring, g.ring[0]], area >= 0 ? -1 : 1);
     const normalAt = (foot) => {
       const i = foot.edge, a = unitRing[i], b = unitRing[i + 1];
       return { x: a.x + (b.x - a.x) * foot.t - foot.x, y: a.y + (b.y - a.y) * foot.t - foot.y };
     };
+
+    // plan: split every strand that can be touched into the runs inside and outside the opening
+    const budget = { count: 0 };
+    const plans = new Map(), through = [];
+    for (const s of current) {
+      if (s.pts.length < 2 || s.pts.every((p) => p.x < g.box.minX - reachMax) || s.pts.every((p) => p.x > g.box.maxX + reachMax)
+        || s.pts.every((p) => p.y < g.box.minY - reachMax) || s.pts.every((p) => p.y > g.box.maxY + reachMax)) continue;
+      if (s.pts.every((p) => g.boundary.contains(p.x, p.y))) { plans.set(s, { enclosed: true }); continue; }
+      const dense = denseWithCuts(s.pts, g.ring, step, budget), runs = [];
+      for (let i = 0; i + 1 < dense.length;) {
+        const inside = g.boundary.contains((dense[i].x + dense[i + 1].x) / 2, (dense[i].y + dense[i + 1].y) / 2);
+        let end = i + 1;
+        while (end + 1 < dense.length && g.boundary.contains((dense[end].x + dense[end + 1].x) / 2, (dense[end].y + dense[end + 1].y) / 2) === inside) end++;
+        const run = dense.slice(i, end + 1), a = nearestFoot(run[0], g.ring), b = nearestFoot(run.at(-1), g.ring);
+        const item = { run, inside, routed: inside && a.d < 1e-5 && b.d < 1e-5, a, b, depth: 0, rank: 0.35 };
+        if (item.routed) {
+          item.depth = run.reduce((d, p) => Math.max(d, nearestFoot(p, g.ring).d), 0);
+          through.push(item);
+        }
+        runs.push(item);
+        i = end;
+      }
+      plans.set(s, { runs });
+    }
+    // A thin band holds a few paths each side, a bead and a fifth apart (adjacent beads share a fifth and bond). The
+    // ones that graze the opening are routed round it; the deeper ones end at the wall.
+    const bandMax = Math.min(pushMax, Math.max(4 * strandWidth, 0.1 * size));
+    const perSide = Math.max(1, Math.floor((bandMax - clearance - strandWidth / 2) / (0.8 * strandWidth)) + 1);
+    through.sort((p, q) => p.depth - q.depth);
+    const kept = through.slice(0, perSide * 2);
+    for (const item of through.slice(perSide * 2)) { item.routed = false; item.ends = true; }
+    // of those, the deepest hug the wall and the grazing ones lie further out, like streamlines past an obstacle
+    kept.reverse().forEach((item, k) => { item.rank = kept.length > 1 ? k / (kept.length - 1) : 0.35; });
+    const room = clearance + Math.max(0, Math.ceil(kept.length / 2) - 1) * 0.8 * strandWidth + strandWidth;
+    const push = Math.min(pushMax, Math.max(room, Math.min(bandMax, 4 * strandWidth)));
+    const reach = influence ?? Math.max(2.5 * push, 4 * strandWidth);
+    // a path that ends at the wall is not pushed away from it: the pattern is faded back to its own place there
+    for (const { runs } of plans.values()) {
+      if (!runs) continue;
+      runs.forEach((item, j) => {
+        if (item.inside) return;
+        item.fadeStart = !!runs[j - 1]?.ends;
+        item.fadeEnd = !!runs[j + 1]?.ends;
+      });
+    }
+    const smooth = (t) => (t >= 1 ? 1 : t <= 0 ? 0 : t * t * (3 - 2 * t));
     const displace = (p) => {
       const foot = nearestFoot(p, g.ring), inside = g.boundary.contains(p.x, p.y);
       if (!inside && foot.d >= reach) return p;
@@ -361,30 +415,27 @@ export function repelGuideStrands(strands, rawGuides, { strandWidth = 0.45, infl
       const amount = inside ? foot.d + push : push * (1 - foot.d / reach) ** 2;
       return { ...p, x: p.x + normal.x * amount, y: p.y + normal.y * amount };
     };
-    const budget = { count: 0 };
+
+    budget.count = 0;
     current = current.map((s) => {
-      if (s.pts.length < 2 || s.pts.every((p) => p.x < g.box.minX - reach) || s.pts.every((p) => p.x > g.box.maxX + reach)
-        || s.pts.every((p) => p.y < g.box.minY - reach) || s.pts.every((p) => p.y > g.box.maxY + reach)) return s;
+      const plan = plans.get(s);
+      if (!plan) return s;
       // A small motif wholly inside the opening moves as a whole instead of degenerating into repeated rim points.
-      if (s.pts.every((p) => g.boundary.contains(p.x, p.y))) {
+      if (plan.enclosed) {
         const centre = s.pts.reduce((p, q) => ({ x: p.x + q.x / s.pts.length, y: p.y + q.y / s.pts.length }), { x: 0, y: 0 });
         const foot = nearestFoot(centre, g.ring), normal = foot.d > 1e-8 ? { x: (foot.x - centre.x) / foot.d, y: (foot.y - centre.y) / foot.d } : normalAt(foot);
         const radius = s.pts.reduce((r, p) => Math.max(r, Math.hypot(p.x - centre.x, p.y - centre.y)), 0);
         // Keep different depths on different offsets; a row of enclosed motifs must not share one translated rim.
-        const shift = foot.d + radius + clearance + push * Math.max(0.1, 1 - foot.d / (size / 2));
+        const shift = foot.d + radius + clearance + pushMax * Math.max(0.1, 1 - foot.d / (size / 2));
         return { ...s, pts: s.pts.map((p) => ({ ...p, x: p.x + normal.x * shift, y: p.y + normal.y * shift })) };
       }
-      const dense = denseWithCuts(s.pts, g.ring, step, budget), out = [];
+      const out = [];
       const append = (p) => { const prev = out.at(-1); if (!prev || Math.hypot(p.x - prev.x, p.y - prev.y, (p.z ?? 0) - (prev.z ?? 0)) > 1e-9) out.push(p); };
-      for (let i = 0; i + 1 < dense.length;) {
-        const inside = g.boundary.contains((dense[i].x + dense[i + 1].x) / 2, (dense[i].y + dense[i + 1].y) / 2);
-        let end = i + 1;
-        while (end + 1 < dense.length && g.boundary.contains((dense[end].x + dense[end + 1].x) / 2, (dense[end].y + dense[end + 1].y) / 2) === inside) end++;
-        const run = dense.slice(i, end + 1), a = nearestFoot(run[0], g.ring), b = nearestFoot(run.at(-1), g.ring);
-        if (inside && a.d < 1e-5 && b.d < 1e-5) {
+      for (const item of plan.runs) {
+        const { run, a, b } = item;
+        if (item.routed) {
           const arc = contourArc(g.ring, a, b), arcLength = arcLengths(arc), sourceLength = arcLengths(run), length = arcLength.at(-1);
-          const depth = run.reduce((d, p) => Math.max(d, nearestFoot(p, g.ring).d), 0);
-          const middleOffset = clearance + (push - clearance) * Math.max(0.15, 1 - depth / (size / 2));
+          const middleOffset = clearance + (push - clearance) * item.rank;
           const n = Math.max(2, Math.ceil(length / step));
           const fractions = [...Array.from({ length: n + 1 }, (_, k) => k / n), ...sourceLength.map((d) => d / Math.max(1e-20, sourceLength.at(-1)))].sort((p, q) => p - q);
           for (let k = 0; k < fractions.length; k++) {
@@ -393,8 +444,21 @@ export function repelGuideStrands(strands, rawGuides, { strandWidth = 0.45, infl
             const p = atArc(arc, arcLength, t), foot = nearestFoot(p, g.ring), normal = normalAt(foot), offset = push + (middleOffset - push) * Math.sin(Math.PI * t) ** 2;
             append({ ...atArc(run, sourceLength, t), x: p.x + normal.x * offset, y: p.y + normal.y * offset });
           }
-        } else for (const p of run) append(displace(p));
-        i = end;
+        } else if (item.ends) {
+          // runs that end at the wall stay where they are; the exact subtraction at the end trims them to it
+          for (const p of run) append(p);
+        } else {
+          const lengths = item.fadeStart || item.fadeEnd ? arcLengths(run) : null;
+          run.forEach((p, k) => {
+            const moved = displace(p);
+            let w = 1;
+            if (lengths && moved !== p) {
+              if (item.fadeStart) w = Math.min(w, smooth(lengths[k] / reach));
+              if (item.fadeEnd) w = Math.min(w, smooth((lengths.at(-1) - lengths[k]) / reach));
+            }
+            append(w >= 1 ? moved : { ...moved, x: p.x + (moved.x - p.x) * w, y: p.y + (moved.y - p.y) * w });
+          });
+        }
       }
       budget.count += out.length;
       if (budget.count > MAX_MOVES) throw new ConfigError(['Guide repulsion exceeds the move limit; use wider spacing or a smaller sample.']);

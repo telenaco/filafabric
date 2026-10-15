@@ -84,3 +84,41 @@ test('enclosed motifs at different depths do not collapse onto the same rim posi
   assert.equal(result.length, 2);
   assert.ok(Math.hypot(result[0].pts[0].x - result[1].pts[0].x, result[0].pts[0].y - result[1].pts[0].y) > 0.5);
 });
+
+test('a wide opening leaves no void: the pattern comes up to its wall, and far pattern stays where it is', () => {
+  const b = boundaryFor(100, 100), ring = ellipse(50, 50, 12), guides = [{ ring, width: 1.4 }];
+  const input = [];
+  for (let k = 1.5; k < 100; k += 3) input.push(strand(`h${k}`, [{ x: 0, y: k }, { x: 100, y: k }]));
+  for (let k = 1.5; k < 100; k += 3) input.push({ ...strand(`v${k}`, [{ x: k, y: 0 }, { x: k, y: 100 }]), layer: 1 });
+  const out = repelGuideStrands(input, guides, { boundary: b });
+  const away = (p) => {
+    let m = Infinity;
+    for (let i = 0; i < ring.length; i++) {
+      const a = ring[i], c = ring[(i + 1) % ring.length], dx = c.x - a.x, dy = c.y - a.y;
+      const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy)));
+      m = Math.min(m, Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy));
+    }
+    return m;
+  };
+  const pts = out.flatMap((s) => s.pts);
+  check(out, conformalGuideRegion(b, guides));
+  // the old push was a third of the opening: nothing came within a millimetre and a third of the wall
+  assert.ok(Math.min(...pts.map(away)) < 0.8, 'lines end at the wall');
+  assert.ok(pts.filter((p) => away(p) < 1.5).length > 60, 'a band of pattern lies against the wall, so it is bonded to it');
+  // where nothing is bent, the lines are exactly the lines that were given
+  const onGrid = (v) => Math.abs(((v - 1.5) % 3 + 3) % 3) < 1e-6 || Math.abs(((v - 1.5) % 3 + 3) % 3 - 3) < 1e-6;
+  for (const p of pts.filter((q) => away(q) > 20)) assert.ok(onGrid(p.x) || onGrid(p.y), `${p.x}, ${p.y} is still on its line`);
+});
+
+test('only as many lines are routed round an opening as its band holds; the deeper ones end at the wall', () => {
+  const b = boundaryFor(100, 100), guides = [{ ring: ellipse(50, 50, 20), width: 1.4 }];
+  const input = [];
+  for (let k = 31.5; k < 70; k += 1.5) input.push(strand(`h${k}`, [{ x: 0, y: k }, { x: 100, y: k }]));
+  const out = repelGuideStrands(input, guides, { boundary: b });
+  // 26 lines cross the opening. The ones routed round it are whole lines; the rest are cut in two by it.
+  const whole = out.filter((s) => s.pts[0].x === 0 && s.pts.at(-1).x === 100).length;
+  const cut = out.filter((s) => !(s.pts[0].x === 0 && s.pts.at(-1).x === 100)).length;
+  assert.ok(whole >= 4 && whole <= 16, `${whole} routed round`);
+  assert.ok(cut >= 12, `${cut} ends at the wall`);
+  check(out, conformalGuideRegion(b, guides));
+});
