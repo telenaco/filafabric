@@ -14,6 +14,16 @@ test('a ring closes on itself and swings n times a turn', () => {
   assert.equal(outer, 12);
 });
 
+test('turning a ring rotates its peaks halfway between the neighbouring rings', () => {
+  const phase = Math.PI / 12;
+  const plain = trochoidRing({ x: 0, y: 0 }, 10, 12, 1.5);
+  const turned = trochoidRing({ x: 0, y: 0 }, 10, 12, 1.5, phase);
+  for (let i = 0; i < plain.length; i++) {
+    assert.ok(Math.abs(turned[i].x - (plain[i].x * Math.cos(phase) - plain[i].y * Math.sin(phase))) < 1e-9);
+    assert.ok(Math.abs(turned[i].y - (plain[i].x * Math.sin(phase) + plain[i].y * Math.cos(phase))) < 1e-9);
+  }
+});
+
 test('rings of one layer never touch, and the second layer crosses them all', () => {
   for (const loop of [0.8, 1.5, 2.2]) {
     const b = boundaryFor(50, 50);

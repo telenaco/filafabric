@@ -1,4 +1,5 @@
 import { chainPolylines, clipPolyline, densify } from './layers.js';
+import { solidHub } from './hub.js';
 
 /**
  * Spiderweb: one continuous Archimedean spiral (layer 1) crossed by a radial zigzag (layer 2) that goes out along
@@ -9,17 +10,19 @@ import { chainPolylines, clipPolyline, densify } from './layers.js';
 const TAU = Math.PI * 2;
 const tri = (u) => (2 / Math.PI) * Math.asin(Math.sin(TAU * u)); // -1..1, period 1
 
-export function webLayers(boundary, { spacing = 4, spokes = 24, hub = 3, tooth = 0 } = {}) {
+export function webLayers(boundary, { spacing = 4, spokes = 24, hub = 3, hubStyle = 'open', strandWidth = 0.45, tooth = 0 } = {}) {
+  hub = Math.max(0, hub);
   const box = boundary.bbox();
   const cx = (box.minX + box.maxX) / 2, cy = (box.minY + box.maxY) / 2;
   const R = Math.hypot(box.maxX - box.minX, box.maxY - box.minY) / 2 + spacing;
   const turns = Math.max(1, (R - hub) / spacing);
 
   // layer 1: r grows by `spacing` per turn; a sawtooth of `tooth` mm lines up with the spokes
-  const spiral = [];
+  const spiral = hubStyle === 'solid' ? solidHub({ x: cx, y: cy }, hub, strandWidth).slice(0, -1) : [];
   for (let theta = 0; theta <= turns * TAU; ) {
     const r = hub + (spacing * theta) / TAU;
-    const radius = r + tooth * tri((theta * spokes) / TAU);
+    const amplitude = Math.min(Math.abs(tooth), r - hub, (TAU * r) / (Math.max(spokes, 1) * 3));
+    const radius = r + Math.sign(tooth) * amplitude * tri((theta * spokes) / TAU);
     spiral.push({ x: cx + radius * Math.cos(theta), y: cy + radius * Math.sin(theta) });
     // half a millimetre of arc, and never fewer than eight points per tooth
     theta += Math.min(0.5 / Math.max(r, 1), TAU / (Math.max(spokes, 1) * 8));
