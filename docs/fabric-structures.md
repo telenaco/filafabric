@@ -73,10 +73,13 @@ lines, so nothing has to be tied on. The centre radius defaults to 0.6 mm (a cen
 Rosette's inner waves taper to fit it and Spirograph's rings start at it. *Open* leaves a hole of that radius instead.
 
 **Travel.** A drawing is many separate strokes, and every move between two is a retract, a lift, a travel and a drop. The
-SVG design, an imported drawing's lines and a full panel's drawing are therefore ordered by `src/engine/travel.js`:
-strands that touch end to end are merged into one (three passes of a wide line become one back-and-forth stroke), the
-rest are ordered greedily (nearest end first, closed shapes entering at the nearest vertex), and a 2-opt and Or-opt
-local search then removes the longest moves, turning strands round and choosing each closed shape's seam. The search
+SVG design, an imported drawing's lines and a full panel's drawing are therefore ordered by `src/engine/travel.js` and
+`src/engine/network.js` (the research and the measurements are in `docs/path-optimisation.md`): strands that touch end
+to end are merged into one (three passes of a wide line become one back-and-forth stroke); lines that meet or cross are
+rebuilt as the fewest strokes their network allows, an Eulerian trail decomposition that prints every line once (a
+lattice of 144 separate segments becomes 14 strokes, a triangulated net of 192 edges becomes 2); the rest are ordered
+greedily (nearest end first, closed shapes entering at the nearest vertex), and a 2-opt and Or-opt local search then
+removes the longest moves, turning strands round and choosing each closed shape's seam. The search
 is capped by a count of evaluations, not time, so the same drawing always gives the same G-code. On a drawing of sixty
 separate lines and circles it took the strands from 192 to 139 and the travel from 1047 to 836 mm.
 

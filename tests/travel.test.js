@@ -30,7 +30,7 @@ test('strands that touch end to end become one strand, with the short step acros
   const square = [seg('a', 0, 0, 10, 0), seg('b', 10, 0, 10, 10), seg('c', 10, 10, 0, 10)];
   const merged = mergeTouching(square, { within: 0.1 });
   assert.equal(merged.length, 1);
-  assert.equal(merged[0].pts.length, 6);
+  assert.equal(merged[0].pts.length, 4, "the shared points are printed once");
   assert.ok(Math.abs(total(merged) - 30) < 1e-9, 'no length is added when the ends meet exactly');
   // given in any order, and with one of them turned round
   const scrambled = mergeTouching([seg('c', 0, 10, 10, 10), seg('a', 0, 0, 10, 0), seg('b', 10, 0, 10, 10)], { within: 0.1 });

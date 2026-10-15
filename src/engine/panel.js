@@ -10,7 +10,7 @@ import { drawingPolylines, interpretDrawing } from './drawing.js';
 import { stackStrands } from './stack.js';
 import { conformalGuideRegion, repelGuideStrands } from './conformal.js';
 import { resolveCrossings } from './crossings.js';
-import { mergeTouching } from './travel.js';
+import { joinStrokes } from './travel.js';
 
 const rectangle = (w, h, x = 0, y = 0) => [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];
 const bounds = (s) => s.pts.reduce((b, p) => ({ minX: Math.min(b.minX, p.x), maxX: Math.max(b.maxX, p.x), minY: Math.min(b.minY, p.y), maxY: Math.max(b.maxY, p.y) }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
@@ -138,7 +138,7 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     // Original SVG strokes, including every green wall pass, stay as drawn. The green openings constrain fabric.
     const lineBoundary = shapeOutline ? new PolygonBoundary([rectangle(width, height)]) : outerBoundary;
     const source = [...whole.map(strand), ...clipStrands(clipped.map(strand), lineBoundary, bead / 2)];
-    progress({ phase: 'svg', done: 0, total }); await emit(orderStrands(mergeTouching(source, { within: bead * 1.1, allow: (p, q) => segmentInside(p, q, boundary) }), { improve: true }));
+    progress({ phase: 'svg', done: 0, total }); await emit(orderStrands(joinStrokes(source, { within: bead * 1.1, allow: (p, q) => segmentInside(p, q, boundary) }), { improve: true }));
     const vertical = basis.filter((s) => s.layer === 0);
     await emit(vertical); await emit(anchorTexture(vertical, source, boundary, h, bead, true));
     await emit(basis.filter((s) => s.layer === 1));

@@ -9,7 +9,7 @@ import { lanePoints } from './shapes.js';
 import { MAX_MOVES } from './tiler.js';
 import { contactGraph, clipStrands, connectStrands, orderStrands, travelDistance, simplifyStrands, safePoint, segmentInside } from './fabric.js';
 import { finishFabric } from './fabric-result.js';
-import { mergeTouching } from './travel.js';
+import { joinStrokes } from './travel.js';
 
 /**
  * Helpers shared by every design that is a few layers of plotted lines: ordered layers of polylines in mm in, moves,
@@ -242,7 +242,7 @@ export function layersToStrands(layers, { layerHeight = 0.2, strandWidth = 0.45,
     const beforeMm = travelDistance(flat);
     flat = flat.map((s) => ({ ...s, layer: s.layer === -1 ? layers.length : s.layer }));
     // a drawing of many separate lines: join the ones that touch, then order and direct what is left for the least travel
-    if (optimizeTravel) flat = mergeTouching(flat, { within: strandWidth * 1.1, allow: boundary ? (p, q) => segmentInside(p, q, boundary) : null });
+    if (optimizeTravel) flat = joinStrokes(flat, { within: strandWidth * 1.1, allow: boundary ? (p, q) => segmentInside(p, q, boundary) : null });
     flat = orderStrands(flat, { improve: optimizeTravel });
     const out = resolveCrossings(flat, { follow: true, lift: layerHeight, strandWidth, ramp }).strands;
     out.routing = { beforeMm, afterMm: travelDistance(out) };

@@ -2,7 +2,7 @@ import { interpretDrawing } from './drawing.js';
 import { conformalGuideRegion, repelGuideStrands } from './conformal.js';
 import { boundaryFor } from './layers.js';
 import { clipStrands, connectStrands, orderStrands, analyzeFabric, travelDistance, simplifyStrands, segmentInside } from './fabric.js';
-import { mergeTouching } from './travel.js';
+import { joinStrokes } from './travel.js';
 import { resolveCrossings } from './crossings.js';
 import { emitStrands } from './emit.js';
 import { computeStats } from './stats.js';
@@ -30,7 +30,7 @@ export function applySvgGuides(result, vector, { fullWidth = vector.width, fullH
   if (!native) {
     const repaired = connectStrands(strands, region, { strandWidth: bead });
     const lastLayer = Math.max(0, ...strands.map((s) => s.layer ?? 0)) + 1;
-    strands = orderStrands(mergeTouching(repaired.strands.map((s) => ({ ...s, layer: s.layer === -1 ? lastLayer : s.layer })), { within: bead * 1.1, allow: (p, q) => segmentInside(p, q, region) }), { improve: true });
+    strands = orderStrands(joinStrokes(repaired.strands.map((s) => ({ ...s, layer: s.layer === -1 ? lastLayer : s.layer })), { within: bead * 1.1, allow: (p, q) => segmentInside(p, q, region) }), { improve: true });
   }
   strands = resolveCrossings(strands, { follow: true, preserve: native, lift: native ? 0 : h, strandWidth: bead }).strands;
   if (strands.reduce((n, s) => n + s.pts.length + 3, 0) > MAX_MOVES) throw new ConfigError(['Guide repulsion exceeds the move limit. Use wider spacing or a smaller sample.']);

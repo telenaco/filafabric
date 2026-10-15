@@ -15,6 +15,10 @@
 //      slider move. Closed shapes also pick the seam that fits their neighbours.
 //
 // The work is capped by a count of evaluations, not by the clock, so the same drawing always gives the same G-code.
+//
+// Before any of that, lines that meet or cross are one network and need only as many strokes as it has pairs of odd
+// junctions (network.js, an Eulerian trail decomposition): joinStrokes() is merging and that, in one call.
+import { joinNetwork } from './network.js';
 
 const dist = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
 const near = (p, q) => dist(p, q) < 1e-6;
@@ -75,13 +79,23 @@ export function mergeTouching(strands, { within = 0.1, allow = null } = {}) {
         e.item.used = true;
         joined = true;
         pause = pause || !!e.item.s.pauseBefore;
-        pts = [...pts, ...(e.end === 0 ? e.item.s.pts : [...e.item.s.pts].reverse())];
+        const more = e.end === 0 ? e.item.s.pts : [...e.item.s.pts].reverse();
+        // lines that meet exactly share a point: it is printed once
+        pts = [...pts, ...more.slice(dist(pts.at(-1), more[0]) < 1e-9 ? 1 : 0)];
       }
       pts.reverse();
     }
     out.push(joined ? { ...item.s, pts, pauseBefore: pause } : item.s);
   }
   return out;
+}
+
+/**
+ * What the drawing pipelines call before ordering: strokes that touch end to end are merged, then lines that meet or
+ * cross are rebuilt as the fewest strokes their network needs, each line printed once.
+ */
+export function joinStrokes(strands, { within = 0.1, allow = null } = {}) {
+  return joinNetwork(mergeTouching(strands, { within, allow }), { within, allow });
 }
 
 /** The ring of a closed strand without its repeated end, rotated to start at vertex v and closed again. */
