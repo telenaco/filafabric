@@ -72,6 +72,7 @@ async function start() {
     error.hidden = false;
     input.select();
   });
+  button.disabled = false;
 }
 
 start();
