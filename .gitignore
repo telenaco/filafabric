@@ -5,3 +5,6 @@ node_modules/
 # personal sample files from the printers (kept locally, not published)
 *.gcode
 *.3mf
+
+# numbered demo prints written by tools/export-demo-prints.mjs (regenerate them; they are local)
+DemoTestingPrints/

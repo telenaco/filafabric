@@ -13,6 +13,13 @@ The first physical print has not been done yet; the Foamy material profile stays
 
 **Live site:** https://filafabric.pages.dev (Cloudflare Pages publishes every push to `main`; nothing to install).
 
+## Demo prints
+
+`node tools/export-demo-prints.mjs` writes twenty small swatches (60 × 60 mm, or `--size=80`) to `DemoTestingPrints/`, easiest
+to hardest, numbered 01 to 20 so they can be laid out in order. Each file name is the number, the design, the preset it
+started from, the size and the values of its settings; the first lines of the file repeat them, and `INDEX.md` lists what to
+look at in each. The folder is git-ignored: the files are made on your machine.
+
 ## The password gate
 
 The studio opens on a "Coming soon" page that says what it is and asks for one password (no username). Only a salted hash of the
