@@ -58,7 +58,10 @@ test('the shipped config is well formed and uses the full iteration count', () =
 test('the page loads the studio only through the gate', () => {
   const html = fs.readFileSync(path.join(projectRoot, 'index.html'), 'utf8');
   assert.match(html, /<body class="locked">/);
-  assert.match(html, /src="src\/boot\.js"/);
+  const bootSrc = html.match(/<script type="module" src="([^"]+)"/)?.[1];
+  const bootUrl = new URL(bootSrc, 'http://localhost/');
+  assert.equal(bootUrl.pathname, '/src/boot.js');
+  assert.ok(bootUrl.searchParams.get('v'), 'the gate markup loads a matching startup script despite older browser caches');
   assert.equal(html.includes('src/ui/main.js'), false, 'the studio is imported by boot.js after the password, never directly');
   for (const id of ['gate', 'gate-form', 'gate-password', 'gate-submit', 'gate-error', 'gate-remember', 'btn-lock']) {
     assert.ok(html.includes(`id="${id}"`), id);
