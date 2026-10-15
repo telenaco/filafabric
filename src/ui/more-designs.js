@@ -17,6 +17,7 @@ import { truchetLayers, TILES, TILE_IDS } from '../engine/truchet.js';
 import { voronoiLayers } from '../engine/voronoi.js';
 import { turingLayers } from '../engine/turing.js';
 import { FIELD_IDS, createField } from '../engine/fields.js';
+import { BACKING_STYLES } from '../engine/backing.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const WAVY = ['looped', 'figure8', 'zigzag', 'honeycomb', 'wave', 'square'];
@@ -29,6 +30,24 @@ const shapeOptions = () => WAVY.map((id) => ({ id, label: SHAPES[id].label, hint
  */
 export function layered(def) {
   const { c } = def;
+  // `bundle` names a choice that does the job of a "Start from" row: each of its options also sets the sizes and
+  // angles of the preset that picks it, so there is one selector instead of two that mean the same thing
+  let controls = def.controls;
+  if (def.bundle) {
+    controls = controls.filter((x) => x.kind !== 'presets').map((x) => {
+      if (x.kind !== 'choice' || x.key !== def.bundle) return x;
+      return {
+        ...x,
+        hint: x.hint ? `${x.hint} Each also sets the sizes that suit it.` : 'Each also sets the sizes that suit it.',
+        options: x.options.map((o) => {
+          const preset = c.presets.find((p) => p.patch[def.bundle] === o.id);
+          if (!preset) return o;
+          const { [def.bundle]: chosen, ...patch } = preset.patch;
+          return { ...o, patch };
+        }),
+      };
+    });
+  }
   const [tw, th] = def.thumbSize ?? [36, 22];
   let thumb = '';
   try {
@@ -53,7 +72,7 @@ export function layered(def) {
     size: (s) => [s.width, s.height],
     setSize: (s, w, h) => { s.width = w; s.height = h; },
     patterns: def.patterns,
-    controls: def.controls,
+    controls,
     // a design that works from the imported drawing says so, and then the studio hands it the drawing and the real size
     usesVector: !!def.usesVector,
     fullSize: !!def.fullSize,
@@ -98,10 +117,11 @@ export const MORE_DESIGNS = [
   layered({
     id: 'crosshatch',
     name: 'Crosshatch & isogrid',
-    blurb: 'Layers of lines at 60°, 90° or three ways',
-    about: 'Layers of parallel lines, each layer at its own angle, so every pair of layers crosses. Square drapes like woven cloth on the bias; three directions 60° apart are close to the same in every direction. Give the lines a wave so they can stretch along their length.',
+    blurb: 'Straight lines at the angles you choose, layer on layer',
+    about: 'The angle is the design here: layers of parallel lines, each layer at its own angle, so every pair of layers crosses. Square drapes like woven cloth on the bias; three directions 60° apart are close to the same in every direction. Give the lines a wave so they can stretch along their length.',
     file: 'crosshatch',
     c: CROSSHATCH,
+    bundle: 'directions',
     controls: [
       { kind: 'presets', title: 'Start from' },
       { kind: 'size', title: 'Size and shape' },
@@ -149,6 +169,7 @@ MORE_DESIGNS.push(layered({
   about: 'Rows of zigzag, each the mirror of the one below, and staircases that climb through them. Struts at the waists make an ordinary honeycomb; struts at the wide points make bow-tie cells that widen when pulled, so the fabric spreads under tension and hugs a curve.',
   file: 'auxetic',
   c: AUXETIC,
+  bundle: 'cell',
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
@@ -188,8 +209,8 @@ const DIPWEAVE = defineControls({
 MORE_DESIGNS.push(layered({
   id: 'dipweave',
   name: 'Dip weave',
-  blurb: 'Weft rides over each warp, dips between',
-  about: 'Warp lines straight on the bed and weft lines printed after them that ride over each warp and dip back to the bed between, so the fabric is one layer thick except at the crossings. Nothing is printed in mid-air, but the nozzle tip needs room to drop between warps.',
+  blurb: 'A straight warp with a weft that dips between: over and under in one layer',
+  about: 'The over-and-under is the design here, in a single layer: warp lines straight on the bed and weft lines printed after them that ride over each warp and dip back to the bed between, so the fabric is one layer thick except at the crossings. Nothing is printed in mid-air, but the nozzle tip needs room to drop between warps.',
   file: 'dipweave',
   ramp: 0.8, // a short ramp, so the weft really is back on the bed between warps
   c: DIPWEAVE,
@@ -296,8 +317,8 @@ MORE_DESIGNS.push(layered({
 
 const MEANDER = defineControls({
   ranges: { ...SIZE, cell: { min: 0.8, max: 14, step: 0.1 }, angle: { min: 15, max: 75, step: 5 }, spacing: { min: 0.8, max: 10, step: 0.1 }, seed: { min: 1, max: 999, step: 1 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
-  defaults: { width: 100, height: 100, curve: 'hilbert', cell: 6, angle: 45, spacing: 5, seed: 1, pattern: 'none', patternScale: 1, colorChange: false },
-  enums: { curve: CURVE_IDS, pattern: ['none', ...FIELD_IDS] },
+  defaults: { width: 100, height: 100, curve: 'hilbert', cell: 6, backing: 'gyroid', angle: 45, spacing: 5, seed: 1, pattern: 'none', patternScale: 1, colorChange: false },
+  enums: { curve: CURVE_IDS, backing: BACKING_STYLES, pattern: ['none', ...FIELD_IDS] },
   bools: ['colorChange'],
   presets: [
     { id: 'hilbert', name: 'Hilbert lace', blurb: 'Tight folds, hatched across', patch: { curve: 'hilbert', cell: 6, angle: 45, spacing: 5 } },
@@ -315,10 +336,11 @@ const MEANDER = defineControls({
 MORE_DESIGNS.push(layered({
   id: 'meander',
   name: 'Meander',
-  blurb: 'A space-filling curve crossed by a hatch',
-  about: 'One continuous strand that folds across the fabric and never crosses itself, held by a straight hatch laid over it at an angle: a Hilbert, Moore, Peano, Sierpiński or Gosper curve, a random maze, or one loop through scattered dots (denser where a pattern is bright). The folds give hidden slack, so it stretches by unfolding and reads as lace.',
+  blurb: 'A space-filling curve held by a wavy backing',
+  about: 'One continuous strand that folds across the fabric and never crosses itself, held by a backing laid over it at an angle, by default the wavy lines of a gyroid, which cross every fold at a different angle and can give along their length (or straight lines, if you prefer): a Hilbert, Moore, Peano, Sierpiński or Gosper curve, a random maze, or one loop through scattered dots (denser where a pattern is bright). The folds give hidden slack, so it stretches by unfolding and reads as lace.',
   file: 'meander',
   c: MEANDER,
+  bundle: 'curve',
   patterns: ['none', ...FIELD_IDS],
   controls: [
     { kind: 'presets', title: 'Start from' },
@@ -335,15 +357,16 @@ MORE_DESIGNS.push(layered({
       title: 'Look and feel',
       items: [
         { key: 'cell', label: 'Fold size', help: 'About how wide each fold of the curve is.', lo: 'Fine', hi: 'Coarse', unit: 'mm', edit: true },
-        { key: 'angle', label: 'Hatch angle', help: 'The angle of the lines laid across the curve.', lo: 'Shallow', hi: 'Steep', unit: '°', edit: true },
-        { key: 'spacing', label: 'Hatch spacing', help: 'Distance between the hatch lines.', lo: 'Dense', hi: 'Open', unit: 'mm', edit: true },
+        { key: 'angle', label: 'Backing angle', help: 'The angle of the lines laid across the curve.', lo: 'Shallow', hi: 'Steep', unit: '°', edit: true },
+        { key: 'spacing', label: 'Backing spacing', help: 'Distance between the backing lines, as if they were straight and parallel.', lo: 'Dense', hi: 'Open', unit: 'mm', edit: true },
         { key: 'seed', label: 'Pattern number', help: 'Used by the maze and stipple curves: each number is different, and the same number repeats it.', lo: '1', hi: '999', unit: '', edit: true },
       ],
     },
+    { kind: 'choice', key: 'backing', title: 'Backing', hint: 'The lines laid across the curve.', options: BACKING_STYLES.map((id) => ({ id, label: id === 'gyroid' ? 'Gyroid' : 'Straight', hint: id === 'gyroid' ? 'The wavy lines of a gyroid slice' : 'Parallel straight lines' })) },
     { kind: 'pattern', key: 'pattern', title: 'Grade the dots', hint: 'Only the stipple tour uses it: dots are denser where the pattern is bright.', scale: { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false } },
     COLOUR,
   ],
-  build: (s, boundary) => meanderLayers(boundary, { curve: s.curve, cell: s.cell, angle: s.angle, spacing: s.spacing, seed: s.seed, tone: s.pattern === 'none' ? null : createField(s.pattern, { scale: s.patternScale }) }),
+  build: (s, boundary) => meanderLayers(boundary, { curve: s.curve, cell: s.cell, angle: s.angle, spacing: s.spacing, seed: s.seed, backing: s.backing, tone: s.pattern === 'none' ? null : createField(s.pattern, { scale: s.patternScale }) }),
   summary: (result) => `a meander of ${result.report.crossings} crossings`,
 }));
 
@@ -405,6 +428,7 @@ MORE_DESIGNS.push(layered({
   about: 'A grid where every cell holds one of two orientations of a simple tile, picked at random. Diagonals give an X in every cell; arcs flow into long curves, with the second layer a half tile over so it crosses the first. The same seed always makes the same pattern, so a swatch can be made again.',
   file: 'truchet',
   c: TRUCHET,
+  bundle: 'tile',
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
@@ -471,7 +495,8 @@ MORE_DESIGNS.push(layered({
 
 const TURING = defineControls({
   ranges: { ...SIZE, wavelength: { min: 4, max: 14, step: 0.5 }, seed: { min: 1, max: 999, step: 1 }, angle: { min: 15, max: 75, step: 5 }, spacing: { min: 0.8, max: 10, step: 0.1 } },
-  defaults: { width: 100, height: 100, wavelength: 7, seed: 5, angle: 45, spacing: 5, colorChange: false },
+  defaults: { width: 100, height: 100, wavelength: 7, seed: 5, backing: 'gyroid', angle: 45, spacing: 5, colorChange: false },
+  enums: { backing: BACKING_STYLES },
   bools: ['colorChange'],
   presets: [
     { id: 'fine', name: 'Fine stripes', blurb: 'Close, thin worms', patch: { wavelength: 5, spacing: 4 } },
@@ -484,25 +509,26 @@ const TURING = defineControls({
 MORE_DESIGNS.push(layered({
   id: 'turing',
   name: 'Turing stripes',
-  blurb: 'Grown stripes, crossed by a hatch',
-  about: 'The same chemistry that makes animal stripes and coral: a reaction-diffusion field grown from a few specks until it settles into winding stripes about one wavelength apart, whose edges are the first layer. A straight hatch across them is the second. Organic and near the same in every direction. Each number is a different pattern, and the same number always grows the same one.',
+  blurb: 'Grown stripes held by a wavy backing',
+  about: 'The same chemistry that makes animal stripes and coral: a reaction-diffusion field grown from a few specks until it settles into winding stripes about one wavelength apart, whose edges are the first layer. A gyroid backing (or straight lines) across them is the second. Organic and near the same in every direction. Each number is a different pattern, and the same number always grows the same one.',
   file: 'turing',
   c: TURING,
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
+    { kind: 'choice', key: 'backing', title: 'Backing', hint: 'The lines laid across the stripes.', options: BACKING_STYLES.map((id) => ({ id, label: id === 'gyroid' ? 'Gyroid' : 'Straight', hint: id === 'gyroid' ? 'The wavy lines of a gyroid slice' : 'Parallel straight lines' })) },
     {
       kind: 'sliders',
       title: 'Look and feel',
       items: [
         { key: 'wavelength', label: 'Stripe spacing', help: 'About how far apart neighbouring stripes are.', lo: 'Fine', hi: 'Bold', unit: 'mm', edit: true },
         { key: 'seed', label: 'Pattern number', help: 'Each number grows a different pattern; the same number always grows the same one.', lo: '1', hi: '999', unit: '', edit: true },
-        { key: 'angle', label: 'Hatch angle', help: 'The angle of the lines laid across the stripes.', lo: 'Shallow', hi: 'Steep', unit: '°', edit: true },
-        { key: 'spacing', label: 'Hatch spacing', help: 'Distance between the hatch lines.', lo: 'Dense', hi: 'Open', unit: 'mm', edit: true },
+        { key: 'angle', label: 'Backing angle', help: 'The angle of the lines laid across the stripes.', lo: 'Shallow', hi: 'Steep', unit: '°', edit: true },
+        { key: 'spacing', label: 'Backing spacing', help: 'Distance between the backing lines, as if they were straight and parallel.', lo: 'Dense', hi: 'Open', unit: 'mm', edit: true },
       ],
     },
     COLOUR,
   ],
-  build: (s, boundary) => turingLayers(boundary, { wavelength: s.wavelength, seed: s.seed, angle: s.angle, spacing: s.spacing }),
+  build: (s, boundary) => turingLayers(boundary, { wavelength: s.wavelength, seed: s.seed, angle: s.angle, spacing: s.spacing, backing: s.backing }),
   summary: (result) => `Turing stripes of ${result.loops} loops and ${result.report.crossings} crossings`,
 }));

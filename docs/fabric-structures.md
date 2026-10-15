@@ -15,7 +15,9 @@ Nothing here has been printed yet: every drape or handle description below is a 
 | **Halftone net** | Two layers of lines whose thickness (flow, with speed following) carries a pattern: the topology never changes, so the fabric holds the same everywhere; the second layer can be the complement of the first so two colours trade thickness. Straight, wave or zigzag lines | 2 | pattern, line shape, same or complement, spacing, thinnest and thickest flow, grid angle |
 | **Spacer net** | A net on the bed, a pillar of stacked rings on its nodes (or every second or third), and a second net on the pillars' tops, printed layer by layer | 2 nets + pillars | net spacing, pillar height, pillar radius, pillar every |
 | **Pillar weave** | Pillars on a grid and a serpentine fibre that passes each pillar on one side on one layer and the other side on the next, so the fibre layers lock round the pillars | layers + pillars | pillar spacing, layers, pillar radius |
-| **Zigzag mesh** | Squiggle & Gyroid, parallel mode, zigzag strand: two anti-phase layers that open into diamonds | 2 | as Squiggle & Gyroid |
+| **Zigzag mesh** | The plain version: two layers of zigzag lines, side by side (the second half a wave along, crossing all the way) or crossed at 90°, horizontal or vertical. No shapes, no patterns | 2 | layers, direction, line spacing, wave depth, wave length |
+| **Zigzag single layer** | One layer of sine, triangle or square waves, every other line half a wave along, so the peaks meet (or cross, with more reach) and close into cells; one layer holds itself together | 1 (+ lift at crossings) | wave, line spacing, wave length, reach |
+| **Advanced zigzag mesh** | Squiggle & Gyroid, parallel mode, zigzag strand: two anti-phase layers that open into diamonds | 2 | as Squiggle & Gyroid |
 | **Coil** | Flat rows of one continuous looped strand; where it crosses itself or the row before it lifts over by about a layer | 1 (+ lift at crossings) | presets (Open chain, Overlapping, Dense), strand shape, loop size and spacing, **row overlap**, crossing lift, pattern |
 | **Weave** | Warp and weft lines over and under each other: plain, twill 2/1, twill 2/2, basket, satin, herringbone, diamond twill, crepe. Printed in two passes by level, a lift for every piece | 2 levels | binding, line spacing |
 | **Spiral panel** | Rings that follow the edge of the panel, nested inwards and joined by short jogs: one strand, no lifts | 1 | ring spacing, any SVG outline |
@@ -47,6 +49,20 @@ bottoms, so neighbouring layers stack), wave, square and rings.
 Patterns (a brightness map that shrinks or deepens the loops, waves, lifts or relief) are ported from the Blender
 ceramics add-on: deep spiral, brick, diamond grid, tribal feathers, circuit board, ocean waves, hexagon cells, mountain
 peaks, lotus petals, lightning bolts, plus soft noise, bumps and stripes.
+
+## The list
+
+The design list opens with the **essentials** (Zigzag mesh, Zigzag single layer, Coil, Star lattice, Crosshatch & isogrid,
+Dip weave, Halftone net, Meander): flat lines in one or two layers with only a few controls. Everything else follows,
+easiest first. Where a card used to have both a "Start from" row and a choice that said the same thing (the curve of
+the Meander, the tiling of the Star lattice, the map of the Conformal mesh), the choice now carries the sizes that
+suit it and the row is gone. The Meander and Turing stripes are held by a gyroid backing by default; straight lines are
+one click away.
+
+What tells the flat line cards apart: **Crosshatch & isogrid** lays straight lines at chosen angles in each layer, so
+the angle is the design; **Dip weave** is a straight warp with a weft that dips to the bed between every warp, the
+over-and-under look in one layer; **Halftone net** is the same crossed net with its line thickness (flow) carrying a
+pattern; **Weave** goes over and under in two printed levels.
 
 ## The publications
 

@@ -1,6 +1,7 @@
 import { createRng } from './rng.js';
 import { contourLoops } from './spiral.js';
-import { hatch, clipPolyline, densify } from './layers.js';
+import { clipPolyline, densify } from './layers.js';
+import { backingLines } from './backing.js';
 
 /**
  * Turing stripes: the iso-lines of a Gray-Scott reaction-diffusion field, the same chemistry that makes animal
@@ -87,7 +88,7 @@ function chainLoops(loops, boundary, jog) {
  * @param angle       angle of the hatch laid across it, degrees
  * @param spacing     spacing of the hatch, mm
  */
-export function turingLayers(boundary, { wavelength = 7, seed = 1, angle = 45, spacing = 5 } = {}) {
+export function turingLayers(boundary, { wavelength = 7, seed = 1, angle = 45, spacing = 5, backing = 'straight' } = {}) {
   const box = boundary.bbox();
   const field = growField(box, { wavelength, seed });
   let max = 0;
@@ -95,6 +96,6 @@ export function turingLayers(boundary, { wavelength = 7, seed = 1, angle = 45, s
   const loops = max > 0.05 ? contourLoops({ ...field, max }, max / 2).filter((l) => l.length > 8) : [];
   const strands = chainLoops(loops, boundary, wavelength * 1.2);
   const layer1 = strands.flatMap((s) => clipPolyline(s, boundary));
-  const layer2 = hatch(boundary, { angle, spacing });
+  const layer2 = backingLines(boundary, { style: backing, angle, spacing });
   return { layers: [layer1, layer2], extra: { loops: loops.length } };
 }

@@ -33,6 +33,7 @@ import { MORE_DESIGNS } from './more-designs.js';
 import { LINE_DESIGNS } from './line-designs.js';
 import { SVG_DESIGNS } from './svg-design.js';
 import { PUBLICATION_DESIGNS } from './pub-designs.js';
+import { BASIC_DESIGNS } from './basic-designs.js';
 import {
   RELIEF_CONTROLS, FRINGE_CONTROLS, BOUCLE_CONTROLS, SPIRAL_CONTROLS, WEAVE_CONTROLS,
 } from './structure-controls.js';
@@ -81,8 +82,8 @@ export const DESIGNS = [
   },
   {
     id: 'zigzag-mesh',
-    name: 'Zigzag mesh',
-    blurb: 'Two anti-phase layers that open into diamonds',
+    name: 'Advanced zigzag mesh',
+    blurb: 'Zigzag lines with the whole library of strand shapes and patterns',
     file: 'squiggle',
     status: 'preset',
     opens: { design: 'squiggle', patch: { shape: 'zigzag', mode: 'parallel' } },
@@ -279,7 +280,13 @@ export const DESIGNS = [
 ];
 
 // the SVG design card comes first after the original structures, then the line-algorithm library and the newer line designs
-DESIGNS.push(...SVG_DESIGNS, ...MORE_DESIGNS, ...LINE_DESIGNS, ...PUBLICATION_DESIGNS);
+DESIGNS.push(...BASIC_DESIGNS, ...SVG_DESIGNS, ...MORE_DESIGNS, ...LINE_DESIGNS, ...PUBLICATION_DESIGNS);
+
+/**
+ * The essentials: flat structures of lines in one or two layers with only a few controls, listed first and in this
+ * order. Every other card is a variation, an experiment or a structure that needs more care.
+ */
+export const ESSENTIALS = Object.freeze(['zigzag', 'zigzag-single', 'coil', 'starlattice', 'crosshatch', 'dipweave', 'halftone', 'meander']);
 
 const BY_ID = new Map(DESIGNS.map((d) => [d.id, d]));
 

@@ -10,7 +10,7 @@ import { buildVerdict, buildSquiggleVerdict, formatMinutes } from './verdict.js'
 import { stateToHash, hashToState, sanitizeState } from './share.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
 import { readSvgOutline, drawOutlineThumb } from './svg-outline.js';
-import { DESIGNS, designById, isReady, baseDesignSettings } from './designs.js';
+import { DESIGNS, ESSENTIALS, designById, isReady, baseDesignSettings } from './designs.js';
 import { THUMBS, shapeThumb } from './thumbs.js';
 import { swatchCode } from './swatch.js';
 import { FIELDS, FIELD_IDS, createField } from '../engine/fields.js';
@@ -189,6 +189,22 @@ function el(tag, props = {}, ...children) {
   }
   for (const c of children) if (c !== null && c !== undefined && c !== false) node.append(c);
   return node;
+}
+
+/**
+ * Tooltips are easy to miss, so every control that has one carries a small "i". On the option buttons the text also
+ * shows as a bubble on hover and on keyboard focus, and is read out by screen readers; the design tiles keep their
+ * longer native tooltip.
+ */
+function decorateTips(root = document) {
+  for (const node of root.querySelectorAll('button[title]')) {
+    if (node.classList.contains('pattern')) {
+      node.dataset.tip = node.title;
+      node.setAttribute('aria-description', node.title);
+      node.removeAttribute('title');
+    } else if (!node.classList.contains('design-tile')) continue;
+    if (!node.querySelector('.tip-i')) node.append(el('span', { class: 'tip-i', 'aria-hidden': 'true', text: 'i' }));
+  }
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -1167,7 +1183,10 @@ function updateDialogNote() {
 /** One tile per registry module; planned designs are visible placeholders that cannot be selected. */
 function renderTiles() {
   const ranking = new Map(PRINTABILITY.map((p, i) => [p.id, { ...p, rank: i + 1 }]));
-  const tiles = [...DESIGNS].sort((a, b) => (ranking.get(a.id)?.rank ?? 1000) - (ranking.get(b.id)?.rank ?? 1000)).map((d) => {
+  const byRank = (a, b) => (ranking.get(a.id)?.rank ?? 1000) - (ranking.get(b.id)?.rank ?? 1000);
+  const essentials = ESSENTIALS.map((id) => DESIGNS.find((d) => d.id === id)).filter(Boolean);
+  const others = DESIGNS.filter((d) => !ESSENTIALS.includes(d.id)).sort(byRank);
+  const makeTile = (d) => {
     const ready = d.status === 'ready';
     const planned = d.status === 'planned';
     const tile = el('button', {
@@ -1187,8 +1206,15 @@ function renderTiles() {
     if (ready) tile.addEventListener('click', () => setDesign(d.id));
     if (d.status === 'preset') tile.addEventListener('click', () => openPresetTile(d));
     return tile;
-  });
-  $('#design-list').replaceChildren(...tiles);
+  };
+  const heading = (text, sub) => el('h3', { class: 'design-group' }, text, el('small', { text: sub }));
+  $('#design-list').replaceChildren(
+    heading('Essentials', 'Flat lines in one or two layers, with only a few controls'),
+    ...essentials.map(makeTile),
+    heading('More structures', 'Easiest first'),
+    ...others.map(makeTile),
+  );
+  decorateTips($('#design-list'));
   renderTilePressed();
 }
 
@@ -1384,7 +1410,7 @@ function buildDesignPanel(mod) {
       for (const opt of c.options) {
         const btn = el('button', { type: 'button', class: 'pattern', 'data-choice': `${id}:${c.key}:${opt.id}`, 'aria-pressed': 'false', title: opt.hint });
         btn.innerHTML = `${opt.thumb ?? ''}<span>${opt.label}</span>`;
-        btn.addEventListener('click', () => { state.designs[id][c.key] = opt.id; afterDesignChange(); });
+        btn.addEventListener('click', () => { Object.assign(state.designs[id], opt.patch ?? {}); state.designs[id][c.key] = opt.id; afterDesignChange(); });
         grid.append(btn);
       }
       panel.append(group(c.hint ? el('p', { class: 'group-hint', text: c.hint }) : null, grid));
@@ -1758,6 +1784,7 @@ async function init() {
     selectMachine: (id) => { state.machine = id; schedule(); commit(); },
     download, filename: (w, h) => `${slug(state.docName)}_${state.design}_${w}x${h}mm.gcode`, toast,
   });
+  decorateTips();
   showDesign();
   $('#doc-name').value = state.docName;
   regenerate();

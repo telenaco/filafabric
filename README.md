@@ -4,8 +4,8 @@ A browser-based toolbox that generates direct G-code for experimental non-planar
 base plus a dense pile of raised, anchored 3D loops. First target: Prusa MK3S, Filaflex Foamy 95, a 100 × 100 mm
 sample. Machine and material profiles are data files, so more machines can be added from G-code you share.
 
-**Status:** the generator and the studio are built for the Prusa MK3S, with thirty structures (thirty-one tiles, with the Zigzag mesh preset) (Loop pile, Squiggle &
-Gyroid, Zigzag mesh, SVG design, Halftone net, Spacer net, Pillar weave, Coil, Weave, Spiral panel, Bouclé & picots, Relief, Fringe, Crosshatch & isogrid, Auxetic mesh, Dip weave,
+**Status:** the generator and the studio are built for the Prusa MK3S, with thirty-two structures (thirty-three tiles, with the Advanced zigzag mesh preset) (Zigzag mesh, Zigzag single layer, Loop pile, Squiggle &
+Gyroid, Advanced zigzag mesh, SVG design, Halftone net, Spacer net, Pillar weave, Coil, Weave, Spiral panel, Bouclé & picots, Relief, Fringe, Crosshatch & isogrid, Auxetic mesh, Dip weave,
 Spiderweb, Ring mail, Meander, Harmonograph, Truchet tiles, Voronoi lace, Turing stripes, Conformal mesh, Sunflower, Rosette,
 Flow lines, Bubbles, Parquet, Spirograph, Star lattice), a strand-shape and pattern library,
 and the automated tests passing. See `docs/fabric-structures.md` for the library.

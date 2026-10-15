@@ -86,44 +86,65 @@ export const PRINTABILITY = [
   },
   {
     "id": "meander",
-    "score": 18.28565868350327,
+    "score": 18.577736406282447,
     "components": 1,
-    "joints": 27,
+    "joints": 21,
     "reversedCrossings": 0,
     "separatedCrossings": 0,
-    "longestUnsupported": 2.9660934403741663,
-    "maxSlopeDeg": 11.003471802754936,
+    "longestUnsupported": 3.260733957566977,
+    "maxSlopeDeg": 11.006268491148493,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 27,
-    "moves": 9259,
+    "hops": 21,
+    "moves": 3358,
     "clearanceFlags": 0,
     "routing": {
-      "beforeMm": 191.30093634370186,
-      "afterMm": 191.30093634370186
+      "beforeMm": 1635.4032724130936,
+      "afterMm": 265.5965056218429
+    }
+  },
+  {
+    "id": "zigzag-single",
+    "score": 21.203958354856887,
+    "components": 1,
+    "joints": 50,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 3.9051248848458613,
+    "maxSlopeDeg": 10.893708585165166,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 50,
+    "moves": 4533,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 138.02097114006307,
+      "afterMm": 138.02097114006307
     }
   },
   {
     "id": "turing",
-    "score": 19.381793765543193,
+    "score": 21.845287489379967,
     "components": 1,
-    "joints": 35,
+    "joints": 29,
     "reversedCrossings": 0,
     "separatedCrossings": 0,
-    "longestUnsupported": 3.3151829164179674,
-    "maxSlopeDeg": 11.001427932707259,
+    "longestUnsupported": 4.65265041641797,
+    "maxSlopeDeg": 11.089986656544026,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 35,
-    "moves": 10432,
+    "hops": 29,
+    "moves": 4508,
     "clearanceFlags": 0,
     "routing": {
-      "beforeMm": 423.5733512410816,
-      "afterMm": 470.1548874434468
+      "beforeMm": 1809.28642915247,
+      "afterMm": 477.36944758252486
     }
   },
   {
@@ -166,6 +187,27 @@ export const PRINTABILITY = [
     "routing": {
       "beforeMm": 304.50388615593585,
       "afterMm": 179.47776134300545
+    }
+  },
+  {
+    "id": "zigzag",
+    "score": 23.002418247833614,
+    "components": 1,
+    "joints": 99,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 3.500000257142574,
+    "maxSlopeDeg": 11.052417733548465,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 99,
+    "moves": 11283,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 361.2624994984042,
+      "afterMm": 268.15385665159454
     }
   },
   {

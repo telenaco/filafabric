@@ -40,6 +40,7 @@ LINE_DESIGNS.push(layered({
   about: 'The two layers are the level lines of the two halves of one complex function, so wherever the grid bends they still cross at exactly 90° and the cells stay square, only larger or smaller. Bend it round a buttonhole, round two holes, round two poles like the field of a magnet, or into two families of spirals. Every hole gets a ring round it, a hem, held by the lines that run into it.',
   file: 'conformal',
   c: CONFORMAL,
+  bundle: 'map',
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
@@ -155,6 +156,7 @@ LINE_DESIGNS.push(layered({
   about: 'Each layer is a set of evenly spaced lines that follow a flow: ripples, a whirlpool, a grid of eddies, or a pattern that turns the lines. The second layer follows the same flow turned a quarter turn, so at every point it runs at a right angle to the first, however the lines bend. Lines are spaced by growing each one until it comes too close to another and starting the next one a spacing to the side (Jobard and Lefer). Where a flow has no direction, at the eye of a whirl, a small hole is left open.',
   file: 'flowlines',
   c: FLOW,
+  bundle: 'flow',
   patterns: ['none', ...FIELD_IDS],
   controls: [
     { kind: 'presets', title: 'Start from' },
@@ -238,6 +240,7 @@ LINE_DESIGNS.push(layered({
   about: 'The fabric is cut into blocks or planks like a parquet floor. In every block the first layer runs one way and the second the other, so every part of it is a plain right-angle mesh; neighbouring blocks are turned a quarter turn, so the layer on top changes direction from block to block. Printed in two colours it shows a basket weave, a herringbone or chevron bands. Each block is one serpentine strand per layer.',
   file: 'parquet',
   c: PARQUET,
+  bundle: 'tiling',
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
@@ -317,6 +320,7 @@ LINE_DESIGNS.push(layered({
   about: 'Geometric star patterns drawn the way Hankin found them: under the fabric lies a tiling of squares, hexagons or octagons; from the middle of every edge two straps leave at the contact angle and run on until they meet, and through the edge into the next tile. The straps fall into families that never cross each other, two on squares, three on hexagons and four on octagons; each family is a layer of its own, so wherever two straps cross they are in different layers and hold each other. A larger angle gives sharper stars.',
   file: 'starlattice',
   c: STAR,
+  bundle: 'tiling',
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
