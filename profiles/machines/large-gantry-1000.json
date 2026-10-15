@@ -2,7 +2,6 @@
   "id": "large-gantry-1000",
   "name": "Generic gantry 1000 mm (unverified)",
   "firmware": "generic-marlin",
-  "verified": false,
   "source": "Geometry/export template. Configure homing, levelling, priming and motion limits for the actual machine before printing.",
   "bed": { "width": 1000, "depth": 1000, "max_z": 300 },
   "extrusion": { "relative_e": true },

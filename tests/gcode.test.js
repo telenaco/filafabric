@@ -60,7 +60,7 @@ test('every parameter and the seed are recorded as comments', () => {
   assert.match(gcode, /^; param random_seed = 9$/m);
   assert.match(gcode, /^; param loop_width = 6$/m);
   assert.match(gcode, /^; machine: prusa-mk3s$/m);
-  assert.match(gcode, /^; material: filaflex-95-foamy \(unverified profile\)$/m);
+  assert.match(gcode, /^; material: filaflex-95-foamy$/m);
 });
 
 test('output is deterministic', () => {

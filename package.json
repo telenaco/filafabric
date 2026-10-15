@@ -13,7 +13,8 @@
     "test": "node --test",
     "serve": "node tools/serve.mjs --open",
     "vendor": "node tools/vendor-three.mjs",
-    "golden": "node tools/update-golden.mjs"
+    "golden": "node tools/update-golden.mjs",
+    "profiles": "node tools/profiles-index.mjs"
   },
   "devDependencies": {
     "three": "^0.169.0"

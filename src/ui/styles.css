@@ -146,6 +146,9 @@ h1, h2, h3 { margin: 0; }
 .design-group:first-child { margin-top: 0; }
 /* the size line that takes the place of the width and height while an SVG sets the size */
 .size-follows { margin: 0; }
+.profile-add { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.profile-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; width: 100%; }
+.profile-list li { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
 .switch-row.disabled { opacity: 0.55; }
 .design-group small { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); }
 .design-tile[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1.5px var(--accent); }

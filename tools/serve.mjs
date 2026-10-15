@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { exec } from 'node:child_process';
+import { buildProfileIndex } from './profiles-index.mjs';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -29,6 +30,12 @@ export function createServer(root) {
       if (file !== rootResolved && !file.startsWith(rootResolved + path.sep)) {
         res.writeHead(403, { 'Content-Type': 'text/plain' });
         res.end('Forbidden');
+        return;
+      }
+      // the list of printer and filament files is read from the folders, so a file dropped in shows up at once
+      if (rel === '/profiles/index.json') {
+        res.writeHead(200, { 'Content-Type': MIME['.json'], 'Cache-Control': 'no-store' });
+        res.end(JSON.stringify(buildProfileIndex(rootResolved)));
         return;
       }
       fs.readFile(file, (err, data) => {

@@ -16,7 +16,6 @@ export function validateMachine(m) {
   if (!m || typeof m !== 'object') return errors;
   need(errors, typeof m.id === 'string' && m.id.length > 0, 'id must be a non-empty string');
   need(errors, typeof m.name === 'string', 'name must be a string');
-  need(errors, typeof m.verified === 'boolean', 'verified must be true or false');
   need(errors, m.bed && isNum(m.bed.width) && m.bed.width > 0, 'bed.width must be > 0');
   need(errors, m.bed && isNum(m.bed.depth) && m.bed.depth > 0, 'bed.depth must be > 0');
   need(errors, m.bed && isNum(m.bed.max_z) && m.bed.max_z > 0, 'bed.max_z must be > 0');
@@ -46,7 +45,6 @@ export function validateMaterial(m) {
   if (!m || typeof m !== 'object') return errors;
   need(errors, typeof m.id === 'string' && m.id.length > 0, 'id must be a non-empty string');
   need(errors, typeof m.name === 'string', 'name must be a string');
-  need(errors, typeof m.verified === 'boolean', 'verified must be true or false');
   need(errors, isNum(m.filament_diameter) && m.filament_diameter > 0, 'filament_diameter must be > 0');
   need(errors, isNum(m.density) && m.density > 0, 'density must be > 0');
   const t = m.temperature || {};

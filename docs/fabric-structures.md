@@ -146,7 +146,7 @@ matters: layers that never cross, which can simply be peeled apart.
 ## Printing notes
 
 - Every design opens at 100 × 100 mm. For a first physical print, choose a 30 × 30 mm test swatch and increase the size once it prints cleanly.
-- The Foamy filament profile is unverified; see *Your first prints* in the studio's help. That profile retracts
+- The Foamy filament values come from the maker's guidance and have not been printed here yet; see *Your first prints* in the studio's help. That profile retracts
   nothing; if strings hurt (Fringe, Weave), raise the retraction in the material profile.
 - Crossings are printed as strand lying on strand, so the nozzle passes over a strand one layer high. If the nozzle
   drags a strand at a crossing, raise *Crossing lift* by 0.05 mm.

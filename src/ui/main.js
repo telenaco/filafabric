@@ -12,6 +12,7 @@ import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './pa
 import { $, $$, el, icon, ICONS } from './dom.js';
 import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard } from './panels.js';
 import { TooltipLayer } from './tooltip.js';
+import { ProfileStore } from './profile-store.js';
 import { DESIGNS, ESSENTIALS, designById, isReady, baseDesignSettings } from './designs.js';
 import { THUMBS, shapeThumb } from './thumbs.js';
 import { swatchCode } from './swatch.js';
@@ -187,15 +188,24 @@ async function fetchJson(url) {
   return response.json();
 }
 
+/** The printers and filaments: the profiles folder and what was added in the printer setup. */
+const profiles = new ProfileStore();
+
 async function loadProfiles() {
-  const index = await fetchJson('profiles/index.json');
-  for (const id of index.machines) state.machines.set(id, await fetchJson(`profiles/machines/${id}.json`));
-  for (const id of index.materials) state.materials.set(id, await fetchJson(`profiles/materials/${id}.json`));
-  return { machines: index.machines, materials: index.materials };
+  await profiles.loadFolders('profiles');
+  profiles.loadUser();
+  state.machines = profiles.machines;
+  state.materials = profiles.materials;
+  if (!state.machines.has(state.machine)) state.machine = [...state.machines.keys()][0];
+  if (!state.materials.has(state.material)) state.material = [...state.materials.keys()][0];
+  if (profiles.problems.length) console.warn('Some profile files could not be read', profiles.problems);
+  return { machines: [...state.machines.keys()], materials: [...state.materials.keys()] };
 }
 
+/** The ids a link or file may name; the studio's own default first, which is what an unknown one falls back to. */
 function known() {
-  return { machines: [...state.machines.keys()], materials: [...state.materials.keys()] };
+  const first = (list, id) => (list.includes(id) ? [id, ...list.filter((x) => x !== id)] : list);
+  return { machines: first([...state.machines.keys()], 'prusa-mk3s'), materials: first([...state.materials.keys()], 'filaflex-95-foamy') };
 }
 
 function snapshot() {
@@ -774,14 +784,11 @@ function renderPrinter() {
   const machine = state.machines.get(state.machine);
   const material = state.materials.get(state.material);
   if (!machine || !material) return;
-  const ok = machine.verified && material.verified;
   $('#printer-name').textContent = shortMachine(machine.name);
   $('#printer-material').textContent = shortMaterial(material.name);
-  $('#printer-dot').className = `status-dot ${ok ? 'ok' : 'warn'}`;
-  $('#btn-printer').title = ok
-    ? 'Printer and filament are both verified. Click to change the setup.'
-    : 'This filament has not been printed with this tool yet, so start with a test swatch. Click to change the setup.';
-  $('#btn-printer').setAttribute('aria-label', `Printer setup: ${shortMachine(machine.name)} with ${shortMaterial(material.name)}${ok ? '' : ', filament not yet verified'}`);
+  $('#printer-dot').className = 'status-dot ok';
+  $('#btn-printer').title = 'Change the printer and filament, or add your own from a PrusaSlicer or Bambu Studio export.';
+  $('#btn-printer').setAttribute('aria-label', `Printer setup: ${shortMachine(machine.name)} with ${shortMaterial(material.name)}`);
 }
 
 function renderSizes() {
@@ -1057,7 +1064,7 @@ function syncControls() {
 
 function fillDialogSelects() {
   const fill = (select, map, current) => {
-    select.replaceChildren(...[...map.values()].map((p) => el('option', { value: p.id, text: p.name + (p.verified ? '' : ' (not yet verified)'), selected: p.id === current })));
+    select.replaceChildren(...[...map.values()].map((p) => el('option', { value: p.id, text: p.name, selected: p.id === current })));
   };
   fill($('#sel-machine'), state.machines, state.machine);
   fill($('#sel-material'), state.materials, state.material);
@@ -1067,14 +1074,36 @@ function fillDialogSelects() {
 function updateDialogNote() {
   const material = state.materials.get($('#sel-material').value);
   const machine = state.machines.get($('#sel-machine').value);
-  const chip = (ok, yes, no) => el('span', { class: `chip ${ok ? 'ok' : 'warn'}`, text: ok ? yes : no });
-  $('#dialog-chips').replaceChildren(
-    ...(machine ? [chip(machine.verified, 'Printer verified', 'Printer not verified')] : []),
-    ...(material ? [chip(material.verified, 'Filament verified', 'Filament not yet tried here')] : []));
+  // where each profile came from, and anything the importer had to guess or leave out
   $('#dialog-note').textContent = [
-    machine && (machine.verified ? 'Printer limits come from your own sliced file.' : 'Printer limits are not verified yet.'),
-    material && (material.verified ? 'Filament behaviour is verified.' : 'Filament values come from the maker\'s guidance and have not been printed here yet, so start with a test swatch.'),
+    machine && `Printer: ${machine.source ?? machine.name}.`,
+    ...(machine ? profiles.notesFor('machines', machine.id) : []),
+    material && `Filament: ${material.source ?? material.name}.`,
+    ...(material ? profiles.notesFor('materials', material.id) : []),
   ].filter(Boolean).join(' ');
+  renderProfileList();
+}
+
+/** The profiles added here, each with a way to remove it. The ones in the profiles folder go when their file does. */
+function renderProfileList() {
+  const items = [];
+  for (const kind of ['machines', 'materials']) {
+    for (const profile of profiles.user[kind]) {
+      const remove = el('button', { type: 'button', class: 'link small', text: 'Remove' });
+      remove.addEventListener('click', () => {
+        profiles.remove(kind, profile.id);
+        if (!state.machines.has(state.machine)) state.machine = [...state.machines.keys()][0];
+        if (!state.materials.has(state.material)) state.material = [...state.materials.keys()][0];
+        fillDialogSelects();
+        renderPrinter();
+        schedule();
+        commit();
+      });
+      items.push(el('li', {}, el('span', { text: `${profile.name} (${kind === 'machines' ? 'printer' : 'filament'})` }), remove));
+    }
+  }
+  $('#profile-list').replaceChildren(...items);
+  $('#profile-list').hidden = items.length === 0;
 }
 
 /* ---------- designs ---------- */
@@ -1500,6 +1529,24 @@ function bindStatic() {
   $('#btn-printer').addEventListener('click', () => { fillDialogSelects(); dialog.showModal(); });
   $('#sel-machine').addEventListener('change', (e) => { state.machine = e.target.value; updateDialogNote(); schedule(); commit(); });
   $('#sel-material').addEventListener('change', (e) => { state.material = e.target.value; updateDialogNote(); schedule(); commit(); });
+  // a printer or filament profile as the slicers export it: PrusaSlicer .ini or sliced .gcode, Bambu Studio .json
+  $('#profile-file').addEventListener('change', async (e) => {
+    for (const file of [...e.target.files]) {
+      try {
+        const got = profiles.add(await file.text(), file.name);
+        if (got.machines[0]) state.machine = got.machines[0].id;
+        if (got.materials[0]) state.material = got.materials[0].id;
+        toast(`Added ${[...got.machines.map((m) => `${m.name} (printer)`), ...got.materials.map((m) => `${m.name} (filament)`)].join(' and ')}`);
+      } catch (err) {
+        toast(`${file.name}: ${err.errors?.[0] ?? err.message}`);
+      }
+    }
+    e.target.value = '';
+    fillDialogSelects();
+    renderPrinter();
+    schedule();
+    commit();
+  });
 
   document.addEventListener('keydown', (e) => {
     if (!(e.ctrlKey || e.metaKey) || e.target.closest('input, select, textarea')) return;

@@ -2,7 +2,6 @@
   "id": "prusa-mk3s",
   "name": "Original Prusa i3 MK3S / MK3S+",
   "firmware": "prusa-marlin",
-  "verified": true,
   "source": "Shape-Box_0.2mm_FLEX_MK3S_5m.gcode (PrusaSlicer 2.9.6, printer profile 2.5.11)",
   "bed": { "width": 250, "depth": 210, "max_z": 210 },
   "extrusion": { "relative_e": true },

@@ -9,7 +9,7 @@ Gyroid, Advanced zigzag mesh, SVG design, Halftone net, Spacer net, Pillar weave
 Spiderweb, Ring mail, Meander, Harmonograph, Truchet tiles, Voronoi lace, Turing stripes, Conformal mesh, Sunflower, Rosette,
 Flow lines, Bubbles, Parquet, Spirograph, Star lattice), a strand-shape and pattern library,
 and the automated tests passing. See `docs/fabric-structures.md` for the library.
-The first physical print has not been done yet; the Foamy material profile stays unverified until then.
+The first physical print has not been done yet, so start with a small test swatch.
 
 **Live site:** https://filafabric.pages.dev (Cloudflare Pages publishes every push to `main`; nothing to install).
 
@@ -75,11 +75,23 @@ settings in groups that show what you changed). The printer chip in the header o
 reopens the design and its settings) work for every design. Every exported file records its full parameter set
 and seed in comment lines.
 
+## Printers and filaments
+
+The printer and filament lists are the files in `profiles/machines/` and `profiles/materials/`, read the way a slicer reads its own folders. Each file can be this tool's JSON or what a slicer exports as it is:
+
+| Export | What it gives |
+|---|---|
+| PrusaSlicer config (`.ini`, `File > Export > Export Config`), or a bundle | A printer and a filament per section, named as in the slicer |
+| A `.gcode` PrusaSlicer sliced | The config it carries at the end of the file |
+| Bambu Studio / OrcaSlicer preset (`.json`) | A printer or a filament |
+
+Bed size, nozzle and filament diameter, temperatures, flow, retraction, machine limits and start/end G-code are read; the slicer's own start and end G-code is kept where its placeholders can be filled and the rest is left out, with a note saying so. Run `node tools/profiles-index.mjs` (or `npm run profiles`) after adding or removing a file to refresh `profiles/index.json`; the local server does it on the fly. In the printer setup dialog **Add a printer or filament file…** keeps a file in this browser only, with a **Remove** button; to share it, put the file in the folder.
+
 ## Printable SVG and garment panels
 
 **Import printable SVG lines** sits above the pattern settings. SVG strokes become actual extruded first-layer paths, with the selected pattern above them. Open subpaths stay open. Physical document dimensions, margins and transforms are retained; resizing the design scales the drawing too. This is separate from **Fill an outline instead**, which only defines the garment boundary. Save/Open settings includes the imported paths; share links omit them to keep links small.
 
-The live preview and **Export swatch** are bounded to 100 × 100 mm. **Full panel…** exports the selected texture as repeated sections over one continuous crossed backing, with the SVG drawing printed once across the full document. Radial motifs repeat per section. It runs in a worker with progress and cancellation, streams to a file in supported browsers, and limits the download fallback to 128 MB. Full panels currently use one filament. Select a printer that actually fits the panel. The generic 1000 × 1000 × 300 mm profile is an unverified template: configure homing, levelling and priming for the real machine.
+The live preview and **Export swatch** are bounded to 100 × 100 mm. **Full panel…** exports the selected texture as repeated sections over one continuous crossed backing, with the SVG drawing printed once across the full document. Radial motifs repeat per section. It runs in a worker with progress and cancellation, streams to a file in supported browsers, and limits the download fallback to 128 MB. Full panels currently use one filament. Select a printer that actually fits the panel. The generic 1000 × 1000 × 300 mm profile is a template: add your own printer from a slicer export (see *Printers and filaments*) or edit its startup, levelling and priming.
 
 The gallery lists estimated easier prints first, using the default 100 mm geometry: connection faults, unsupported spans, slopes, starts and loop-pile clearance flags. This is a comparative screen, not physical qualification. Details show the actual geometry and between-path travel for the current settings. Flat patterns start near the lower-left corner and choose the nearest remaining endpoint or closed-loop seam within each pass; raised pile and fringe preserve safe row order. Short structural ties connect isolated motifs, and crossing heights follow the previously printed material.
 
@@ -98,7 +110,7 @@ The original printer samples now live in ignored `reference/local-samples/`. The
 3. The 30 × 30 mm swatch with the defaults: compare the tight-spot markers with real collisions.
 4. A 100 × 100 mm swatch.
 
-Filaflex Foamy 95 values are unverified until the first print; change flow, temperature and the unsupported
+Filaflex Foamy 95 values come from the maker's guidance and have not been printed here yet; change flow, temperature and the unsupported
 speed one at a time. If the loops come out thin or break, raise Strand thickness in steps of 10 to 20 %. With the spec defaults the clearance model flags about 40 % of moves on the full sample.
 There are two causes: legs only 0.6 mm apart sit inside the nozzle keep-out, and neighbouring loops' caps cross
 at the same height (normal at 50 % overlap, and not removed by more room). `leg_gap` 1.5 mm with `clearance`
@@ -129,7 +141,7 @@ Code:
 | Path | What |
 |---|---|
 | `index.html`, `src/engine/`, `src/ui/` | The site and the pure-JS engine |
-| `profiles/machines/`, `profiles/materials/` | Machine and material profile JSON |
+| `profiles/machines/`, `profiles/materials/` | Printers and filaments: this tool's JSON, or a PrusaSlicer / Bambu Studio export dropped in as it is (see `profiles/README.md`) |
 | `vendor/three/` | Vendored three.js for the preview |
 | `tests/` | `node --test` engine tests, including a golden summary for a 20 x 20 sample |
 | `tools/` | Local server, three.js vendoring, golden-file updater |
@@ -150,7 +162,7 @@ Code:
 ## Open requests
 
 A PrusaSlicer-sliced `.gcode` made with **Filaflex Foamy 95** (not Generic FLEX) on the MK3S would let the Foamy
-material profile be verified; the MK3S machine and Generic FLEX values are already confirmed from the sample
+values be checked against a real profile; the MK3S machine and Generic FLEX values already come from the sample
 in this folder.
 
 ## Contributors

@@ -265,8 +265,13 @@
     <p class="muted">A setup holds the printer's limits and the filament's behaviour, so there is nothing to tune here.</p>
     <label class="field-row stacked" for="sel-machine"><span>Printer</span><select id="sel-machine"></select></label>
     <label class="field-row stacked" for="sel-material"><span>Filament</span><select id="sel-material"></select></label>
-    <div class="chips" id="dialog-chips"></div>
     <p class="muted small" id="dialog-note"></p>
+    <div class="profile-add">
+      <label class="btn" for="profile-file">Add a printer or filament file…</label>
+      <input type="file" id="profile-file" class="visually-hidden" accept=".ini,.json,.gcode,.cfg,.txt" multiple>
+      <p class="muted small">Drop in what your slicer exports: a PrusaSlicer config (.ini, or a sliced .gcode, which carries it) or a Bambu Studio preset (.json). To keep them for everyone who opens the studio, put the files in the <code>profiles/machines</code> or <code>profiles/materials</code> folder.</p>
+      <ul class="profile-list" id="profile-list" hidden></ul>
+    </div>
     <div class="dialog-actions"><button class="btn primary" value="close">Done</button></div>
   </form>
 </dialog>

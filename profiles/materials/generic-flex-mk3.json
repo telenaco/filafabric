@@ -1,7 +1,6 @@
 {
   "id": "generic-flex-mk3",
   "name": "Prusa Generic FLEX (MK3 family, 0.4 mm)",
-  "verified": true,
   "source": "Shape-Box_0.2mm_FLEX_MK3S_5m.gcode embedded config (PrusaSlicer 2.9.6)",
   "filament_diameter": 1.75,
   "density": 1.22,

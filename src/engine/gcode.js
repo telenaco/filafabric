@@ -67,8 +67,10 @@ function limitsBlock(cfg) {
 }
 
 function primeBlock(cfg) {
-  const length = PRIME.x1 - PRIME.x0;
-  const e = PRIME.filamentMm;
+  // a machine may say where its prime line goes (an imported one with no purge area in front of the bed)
+  const P = cfg.machine.prime ?? PRIME;
+  const length = P.x1 - P.x0;
+  const e = P.filamentMm;
   // Purge a fixed amount (foamy TPU oozes while it heats and the bed levels), slowly enough
   // to respect the material's volumetric ceiling.
   const volumePerMm = (e * filamentArea(cfg.derived.filamentDiameter)) / length;
@@ -76,11 +78,11 @@ function primeBlock(cfg) {
   const f = Math.round(v * 60);
   return [
     `G1 Z${fmt(cfg.t.layer_height, 3)} F720`,
-    `G1 X${PRIME.x0} Y${PRIME.y} F3000 ; go outside print area`,
+    `G1 X${P.x0} Y${P.y} F3000 ; go to the prime line`,
     'G92 E0',
-    `G1 X${PRIME.x1} Y${PRIME.y} E${fmt(e, 5)} F${f} ; prime line`,
+    `G1 X${P.x1} Y${P.y} E${fmt(e, 5)} F${f} ; prime line`,
     'G92 E0',
-    `G1 Z${PRIME.liftZ} F720 ; lift after priming`,
+    `G1 Z${P.liftZ} F720 ; lift after priming`,
   ];
 }
 
@@ -121,7 +123,7 @@ export class GcodeWriter {
   }
   header(info={}) {
     const {machine,material,t}=this.cfg;
-    const out=['; Textile G-code generator v1', '; machine: '+machine.id+(machine.verified?'':' (unverified profile)'), '; material: '+material.id+(material.verified?'':' (unverified profile)')];
+    const out=['; Textile G-code generator v1', '; machine: '+machine.id, '; material: '+material.id];
     if(info.stats) {
       out.push('; estimated time (no acceleration): '+fmt(info.stats.timeSec/60,1)+' min');
       out.push('; filament: '+fmt(info.stats.filamentMm,1)+' mm, loops: '+info.stats.loops);

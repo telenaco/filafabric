@@ -7,9 +7,11 @@ import { projectRoot, loadProfile } from './helpers.js';
 
 const index = JSON.parse(fs.readFileSync(path.join(projectRoot, 'profiles', 'index.json'), 'utf8'));
 
+const stem = (file) => file.replace(/\.[^.]+$/, '');
+
 test('every machine in profiles/index.json is valid', () => {
   assert.ok(index.machines.length >= 1);
-  for (const id of index.machines) {
+  for (const id of index.machines.map(stem)) {
     const errors = validateMachine(loadProfile('machines', id));
     assert.deepEqual(errors, [], `${id}: ${errors.join('; ')}`);
   }
@@ -17,7 +19,7 @@ test('every machine in profiles/index.json is valid', () => {
 
 test('every material in profiles/index.json is valid', () => {
   assert.ok(index.materials.length >= 2);
-  for (const id of index.materials) {
+  for (const id of index.materials.map(stem)) {
     const errors = validateMaterial(loadProfile('materials', id));
     assert.deepEqual(errors, [], `${id}: ${errors.join('; ')}`);
   }

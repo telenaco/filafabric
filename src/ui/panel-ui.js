@@ -8,7 +8,7 @@ export function bindPanelExport({ options, machines, machineId, selectMachine, d
     $('panel-progress').hidden = !on;
     for (const id of ['panel-width', 'panel-height', 'panel-repeat', 'panel-backing', 'panel-machine']) $(id).disabled = on;
   };
-  const note = () => { const m = machines().get($('panel-machine').value); $('panel-machine-note').textContent = `${m.bed.width} × ${m.bed.depth} × ${m.bed.max_z} mm${m.verified ? '' : '. Unverified template: configure startup, levelling and priming for your machine.'}`; };
+  const note = () => { const m = machines().get($('panel-machine').value); $('panel-machine-note').textContent = `${m.bed.width} × ${m.bed.depth} × ${m.bed.max_z} mm${m.source ? `. ${m.source}` : ''}`; };
   $('btn-panel').addEventListener('click', () => {
     $('panel-machine').replaceChildren(...[...machines().values()].map((m) => { const o = document.createElement('option'); o.value = m.id; o.textContent = m.name; return o; }));
     $('panel-machine').value = machineId(); note();
