@@ -13,6 +13,16 @@ The first physical print has not been done yet, so start with a small test swatc
 
 **Live site:** https://filafabric.pages.dev (Cloudflare Pages publishes every push to `main`; nothing to install).
 
+## Whole repeats at the edge
+
+A swatch is sewn or welded to the next piece, so a pattern meets the edge at the end of a repeat, never part-way
+through one (`src/engine/repeats.js`). The wave length, line spacing, tile or cell size you set is a target: the
+pattern uses the nearest size that fits a whole number of times (9.6 zigzags in 100 mm become 10 of 10 mm), its lanes
+run from one edge to the other with a wavy line kept a full swing in, and cells are whole: bubbles and chainmail rings
+sit inside the edge, Voronoi cells are closed by a wall along it, Truchet and basket blocks fill the swatch, star
+lattices meet the edge on a line of symmetry. A pattern that meets a straight edge at a slant (a 45° hatch, a
+herringbone, a radial web or rosette) cannot end on a whole repeat, and is cut there as before.
+
 ## Demo prints
 
 `node tools/export-demo-prints.mjs` writes twenty small swatches (60 × 60 mm, or `--size=80`) to `DemoTestingPrints/`, easiest

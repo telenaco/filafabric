@@ -20,7 +20,9 @@ const struts = (layer2) => {
 };
 
 test('hexagon struts sit at the waists and re-entrant struts at the wide points', () => {
-  const b = boundaryFor(60, 40);
+  // a height where the rows fit exactly 8 mm apart (whole repeats would stretch them otherwise): 4 gaps, plus the
+  // zigzag's swing and 0.3 mm at each edge
+  const b = boundaryFor(60, 4 * 8 + 2 * 2 + 0.6);
   const opts = { rowPitch: 8, period: 10, amplitude: 2 };
   const hex = struts(auxeticLayers(b, { ...opts, cell: 'hexagon' }).layers[1]);
   const re = struts(auxeticLayers(b, { ...opts, cell: 'reentrant' }).layers[1]);

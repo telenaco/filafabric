@@ -37,7 +37,10 @@ export function halftoneLayers(boundary, { spacing = 3, angle = 0, crossing = 90
   // each layer is one continuous line: it is never cut where a wave or a slanting edge would leave the outline, and
   // however far apart the ends of two neighbouring lines are, they are joined as long as the join stays inside
   const clearance = Math.max(CLEARANCE, bead * Math.max(thin, thick) / 2 + 0.025);
-  const lines = (deg, offset) => hatch(boundary, { angle: deg, spacing, offset, anchor: centre, shape: wavy ? shape : null, size, pitch, maxJog: Infinity, keepInside: clearance });
+  // lines square to the swatch fill it edge to edge in whole repeats (repeats.js); slanted ones keep a lattice through
+  // the centre, since a slanted line meets the edge part-way whatever its spacing
+  const square = (deg) => Math.abs(Math.sin((2 * deg * Math.PI) / 180)) < 1e-9;
+  const lines = (deg, offset) => hatch(boundary, { angle: deg, spacing, offset, anchor: square(deg) ? null : centre, shape: wavy ? shape : null, size, pitch, maxJog: Infinity, keepInside: clearance });
   const withFlow = (list, invert) => list.map((pts) => pts.map((p) => {
     const t = toneAt(p.x, p.y);
     return { ...p, flow: quantise(thin + (thick - thin) * (invert ? 1 - t : t)) };

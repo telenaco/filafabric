@@ -26,12 +26,28 @@ const circle = (c, r, from = 0, to = TAU, step = 0.5) => {
   return pts;
 };
 
+/** How far a point is from the nearest edge of the outline. */
+export function edgeDistance(boundary, x, y) {
+  let best = Infinity;
+  for (const ring of boundary.rings ?? []) {
+    for (let i = 0; i < ring.length; i++) {
+      const a = ring[i], b = ring[(i + 1) % ring.length];
+      const dx = b.x - a.x, dy = b.y - a.y, len2 = dx * dx + dy * dy;
+      const t = len2 > 0 ? Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / len2)) : 0;
+      best = Math.min(best, Math.hypot(x - a.x - t * dx, y - a.y - t * dy));
+    }
+  }
+  return best;
+}
+
 /**
  * Circles of mixed sizes packed until no gap is left that would take another: first a scatter of random circles
  * (each as large as fits, up to a random fraction of the largest size), then the largest empty circle is filled
  * again and again, found on a grid of distances to the nearest circle, until the largest gap is too small.
+ * Every circle is whole: it keeps `edge` mm inside the outline (repeats.js), so the edge of the swatch is a row of
+ * whole bubbles against it, none cut in half.
  */
-export function packCircles(boundary, { size = 4, gap = 0.6, seed = 1, tone = null } = {}) {
+export function packCircles(boundary, { size = 4, gap = 0.6, seed = 1, tone = null, edge = 0.5 } = {}) {
   const rng = createRng(seed);
   const box = boundary.bbox();
   const w = box.maxX - box.minX, h = box.maxY - box.minY;
@@ -40,11 +56,17 @@ export function packCircles(boundary, { size = 4, gap = 0.6, seed = 1, tone = nu
   const estimate = (w * h) / (Math.PI * (0.65 * size) ** 2); // about one bubble per π(0.65·size)² of swatch
   if (estimate > MAX_BUBBLES) throw new ConfigError([`This would need about ${Math.round(estimate)} bubbles; the limit is ${MAX_BUBBLES}. Use larger bubbles or a smaller swatch.`]);
 
-  // room[i]: how large a circle centred on grid point i could be (distance to the nearest circle, less the gap)
+  // room[i]: how large a circle centred on grid point i could be (distance to the nearest circle, less the gap, and to
+  // the edge of the outline, less `edge`)
   const step = Math.max(0.4, size / 8);
   const nx = Math.ceil(w / step) + 1, ny = Math.ceil(h / step) + 1;
   const room = new Float64Array(nx * ny);
-  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) room[j * nx + i] = boundary.contains(box.minX + i * step, box.minY + j * step) ? Infinity : -1;
+  for (let j = 0; j < ny; j++) {
+    for (let i = 0; i < nx; i++) {
+      const x = box.minX + i * step, y = box.minY + j * step;
+      room[j * nx + i] = boundary.contains(x, y) ? edgeDistance(boundary, x, y) - edge : -1;
+    }
+  }
   const out = [];
   const place = (c) => {
     out.push(c);
@@ -98,9 +120,11 @@ export function orthogonalCircle(a, b, c) {
 
 /**
  * One closed tour of a tree of circles: round each circle anticlockwise, and at every child a bridge out, the
- * child's own tour, and a bridge back, the two bridges about `width` apart.
+ * child's own tour, and a bridge back, the two bridges about `width` apart. The tour starts in the widest gap between
+ * the root's children. A child with no room for its bridges (too close to a neighbour's, or to the way back to the
+ * parent) is not bridged: its index goes into `unbridged`, so its branch is toured on its own instead of lost.
  */
-function tour(circles, children, root, width) {
+function tour(circles, children, root, width, unbridged = []) {
   const pts = [];
   const half = (r) => Math.asin(Math.min(0.9, width / 2 / r));
   const arc = (c, from, to) => pts.push(...circle(c, c.r, from, to).slice(pts.length ? 1 : 0));
@@ -116,7 +140,7 @@ function tour(circles, children, root, width) {
     const d = half(c.r);
     let at = from;
     for (const k of kids) {
-      if (k.a - d < at || k.a + d > to) continue; // no room on this side (it never happens for a packing)
+      if (k.a - d < at || k.a + d > to) { unbridged.push(k.j); continue; }
       arc(c, at, k.a - d);
       // out on the right of the line between the centres, round the child, back on the left
       const child = circles[k.j], back = k.a + Math.PI, dc = half(child.r);
@@ -125,7 +149,14 @@ function tour(circles, children, root, width) {
     }
     arc(c, at, to);
   };
-  walk(root, 0, TAU);
+  const c0 = circles[root];
+  const angles = children[root].map((j) => Math.atan2(circles[j].y - c0.y, circles[j].x - c0.x)).sort((p, q) => p - q);
+  let start = 0, widest = -1;
+  angles.forEach((a, k) => {
+    const next = k + 1 < angles.length ? angles[k + 1] : angles[0] + TAU;
+    if (next - a > widest) { widest = next - a; start = (a + next) / 2; }
+  });
+  walk(root, start, start + TAU);
   return pts;
 }
 
@@ -138,23 +169,45 @@ export function bubblesLayers(boundary, { size = 4, gap = 0.6, seed = 1, tone = 
   const circles = packCircles(boundary, { size, gap, seed, tone });
   if (circles.length < 3) throw new ConfigError(['The swatch is too small for bubbles this size.']);
 
-  // layer 2: the orthogonal circle in each gap between three neighbours (Delaunay triangles of the centres)
+  // layer 2, the backing: a ring in each gap between three neighbours (Delaunay triangles of the centres), centred
+  // where it meets all three at a right angle. Each is made to reach well into its three bubbles, so neighbouring rings
+  // overlap one another round every bubble and the backing is one connected mesh that holds the bubbles from all
+  // sides. A ring near the edge is made small enough to stay whole inside it, like the bubbles.
   const tris = delaunay(circles);
+  const bite = 1.5 * strandWidth; // the least a backing ring reaches into each of its bubbles
   const gaps = [];
   for (const [i, j, k] of tris) {
     const a = circles[i], b = circles[j], c = circles[k];
     const orth = orthogonalCircle(a, b, c);
-    if (!orth) continue;
-    // where the three are of mixed sizes the orthogonal circle can be larger than the gap; it is shrunk to reach
-    // just `depth` into the furthest of the three, so it still crosses each of them (nearly square on)
-    const depth = Math.min(1.1, 0.4 * Math.min(a.r, b.r, c.r));
-    const reach = Math.max(...[a, b, c].map((k) => Math.hypot(orth.x - k.x, orth.y - k.y) - k.r)) + depth;
-    const o = { x: orth.x, y: orth.y, r: Math.min(orth.r, reach) };
-    if (o.r < 0.8 || o.r > 1.6 * Math.max(a.r, b.r, c.r)) continue;
+    if (!orth || !boundary.contains(orth.x, orth.y)) continue;
+    // a little past the right-angle circle, so it overlaps the rings in the neighbouring gaps, and never less than a
+    // bite into the furthest of the three (a tight gap's right-angle circle is small); where they are of mixed sizes
+    // that circle can be larger than the gap, and it is held to reach `depth` into the furthest
+    const far = Math.max(...[a, b, c].map((q) => Math.hypot(orth.x - q.x, orth.y - q.y) - q.r));
+    const depth = Math.max(bite, Math.min(2, 0.5 * Math.min(a.r, b.r, c.r)));
+    const o = { x: orth.x, y: orth.y, r: Math.min(Math.max(1.2 * orth.r, far + bite), far + depth, edgeDistance(boundary, orth.x, orth.y) - 0.5) };
+    if (o.r < Math.max(0.8, far + 0.2) || o.r > 1.6 * Math.max(a.r, b.r, c.r)) continue;
     // four bubbles round one gap give two triangles with almost the same circle: keep one
-    const twin = gaps.findIndex((g) => Math.hypot(g.x - o.x, g.y - o.y) < 0.6 * Math.max(g.r, o.r));
+    const twin = gaps.findIndex((g) => Math.hypot(g.x - o.x, g.y - o.y) < 0.25 * Math.max(g.r, o.r));
     if (twin < 0) gaps.push(o);
     else if (o.r > gaps[twin].r) gaps[twin] = o;
+  }
+  // a bubble against the edge has no gap of three on its outer side, so its outer arc would run on uncrossed: a ring
+  // in the gap between it and each neighbour along the edge crosses both, wherever that ring fits whole
+  const againstEdge = (q) => edgeDistance(boundary, q.x, q.y) - q.r < Math.max(2, 0.5 * q.r);
+  for (const [i, j, k] of tris) {
+    for (const [p, q] of [[i, j], [j, k], [k, i]]) {
+      if (p > q) continue;
+      const a = circles[p], b = circles[q];
+      if (!againstEdge(a) || !againstEdge(b)) continue;
+      const d = Math.hypot(a.x - b.x, a.y - b.y), apart = d - a.r - b.r;
+      if (apart > Math.min(a.r, b.r)) continue;
+      const t = (a.r + apart / 2) / d;
+      const o = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+      if (gaps.some((g) => Math.hypot(g.x - o.x, g.y - o.y) < 0.8 * g.r)) continue; // already crossed there
+      const r = Math.min(apart / 2 + Math.max(bite, Math.min(1.6, 0.4 * Math.min(a.r, b.r))), edgeDistance(boundary, o.x, o.y) - 0.5);
+      if (r >= Math.max(0.8, apart / 2 + bite)) gaps.push({ x: o.x, y: o.y, r });
+    }
   }
 
   // layer 1: each bubble, or one tour per cluster of bubbles that nearly touch (a spanning tree of the neighbours)
@@ -193,7 +246,14 @@ export function bubblesLayers(boundary, { size = 4, gap = 0.6, seed = 1, tone = 
         for (const j of adj[i]) if (!seen[j]) { seen[j] = true; children[i].push(j); stack.push(j); }
       }
     }
-    rings = roots.map((r) => tour(circles, children, r, width));
+    // a branch that could not be bridged into its parent is toured as a cluster of its own
+    rings = [];
+    const queue = [...roots];
+    while (queue.length) {
+      const unbridged = [];
+      rings.push(tour(circles, children, queue.shift(), width, unbridged));
+      queue.push(...unbridged);
+    }
   } else {
     rings = circles.map((c) => circle(c, c.r));
   }

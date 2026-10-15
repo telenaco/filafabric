@@ -7,6 +7,7 @@ import { finishFabric } from './fabric-result.js';
 import { orderPlacements, travelDistance } from './fabric.js';
 import { RectBoundary } from './boundary.js';
 import { createRng } from './rng.js';
+import { fitPeriod } from './repeats.js';
 import { MAX_LOOPS, MAX_MOVES } from './tiler.js';
 
 /**
@@ -25,9 +26,13 @@ const smooth = (t) => {
  * @returns { placements, rows, hairs }. Placements are in the planner's shape (z above the loop base level).
  *   variation 0..100 scales a seeded wobble of each hair's length, height and sideways drift.
  */
-export function fringePlacements({ width, height, length = 15, lift = 3, spacing = 3, rowGap = 5, variation = 0, seed = 1 }) {
+export function fringePlacements({ width, height, length = 15, lift = 3, spacing = 3, rowGap = 5, variation = 0, seed = 1, whole = true }) {
   const rng = createRng(seed);
   const v = Math.max(0, Math.min(1, variation / 100));
+  // whole hairs (repeats.js): the hairs of a row fill the width exactly. Every base row keeps its feet (a hair is held
+  // only near its foot, so a row without feet would be loose), and a hair that would pass the top edge is drawn shorter
+  // and lower to end on it: a whole hair, not one cut off.
+  if (whole) spacing = fitPeriod(width, spacing);
   const rows = Math.floor(height / rowGap + 1e-9) + 1;
   const perRow = Math.max(0, Math.floor((width - spacing) / spacing + 1e-9) + 1);
   if (perRow * rows > MAX_LOOPS) {
@@ -39,7 +44,7 @@ export function fringePlacements({ width, height, length = 15, lift = 3, spacing
     const shift = k % 2 === 1 ? spacing / 2 : 0;
     for (let i = 0; i < perRow; i++) {
       const x0 = spacing / 2 + shift + i * spacing;
-      if (x0 > width) break;
+      if (x0 > width - (whole ? spacing / 4 : 0)) break;
       // draw the wobble first so a hair that is skipped does not shift the ones after it
       const wobbleLength = rng.symmetric(0.25);
       const wobbleLift = rng.symmetric(0.2);

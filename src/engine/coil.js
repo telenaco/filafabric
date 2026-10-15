@@ -4,7 +4,8 @@ import { computeStats } from './stats.js';
 import { PolygonBoundary } from './boundary.js';
 import { serpentineChains, centredLanes } from './fill.js';
 import { emitStrands } from './emit.js';
-import { lanePoints, lanePeriods, loopsClose } from './shapes.js';
+import { lanePoints, lanePeriods, loopsClose, fillPitch } from './shapes.js';
+import { fitLanes } from './repeats.js';
 import { resolveCrossings } from './crossings.js';
 import { MAX_MOVES } from './tiler.js';
 import { finishFabric } from './fabric-result.js';
@@ -49,6 +50,7 @@ export function generateCoilTextile({
   sizeAt = null,
   boundary = null,
   rowPitch: rowPitchOverride = null,
+  whole = true,
 }) {
   const warnings = [];
   const rowPitch = rowPitchOverride ?? coilRowPitch(size, rowOverlap, strandWidth);
@@ -56,14 +58,17 @@ export function generateCoilTextile({
   if (shape === 'looped' && loopsClose(pitch, size)) {
     warnings.push('The loops close up: this size is too small for this spacing, so the line is only wavy. Make the loops larger or the spacing smaller.');
   }
+  // whole repeats (repeats.js): rows from one edge to the other, and loops that fill each row to its ends
+  const rowsIn = whole ? fitLanes : centredLanes;
 
   /** One lane as world points: `from` to `to` along x at height `c`. */
   const lane = (c, from, to) => {
     const dir = to >= from ? 1 : -1;
     const length = Math.abs(to - from);
     const field = sizeAt ? (u) => sizeAt(from + dir * u, c) : null;
-    const pts = lanePoints({ shape, length, pitch, size, sizeAt: field, step: STEP });
-    return { pts: pts.map((p) => ({ x: from + dir * p.u, y: c + p.v, z: layerHeight })), loops: makesLoops ? lanePeriods({ shape, length, pitch, size }) : 0 };
+    const p = whole ? fillPitch(shape, length, pitch, size) : pitch;
+    const pts = lanePoints({ shape, length, pitch: p, size, sizeAt: field, step: STEP });
+    return { pts: pts.map((q) => ({ x: from + dir * q.u, y: c + q.v, z: layerHeight })), loops: makesLoops ? lanePeriods({ shape, length, pitch: p, size }) : 0 };
   };
 
   const strands = [];
@@ -75,8 +80,8 @@ export function generateCoilTextile({
     if (width < pitch) warnings.push('The swatch is narrower than one loop, so each row is a plain line.');
     const y0 = Math.min(size, height / 2);
     const y1 = Math.max(height - size, height / 2);
-    const count = Math.max(1, Math.floor((y1 - y0) / rowPitch + 1e-9) + 1);
-    const start = y0 + (y1 - y0 - (count - 1) * rowPitch) / 2;
+    const rowYs = rowsIn(y0, y1, rowPitch);
+    const count = rowYs.length;
     // cheap estimate first, so a huge layout is refused before anything is built
     const perRow = lanePoints({ shape, length: width, pitch, size, step: STEP }).length;
     pointBudget = perRow * count;
@@ -88,7 +93,7 @@ export function generateCoilTextile({
     const pts = [];
     const bulge = Math.min(0.35 * rowPitch, 1.5);
     for (let k = 0; k < count; k++) {
-      const c = start + k * rowPitch;
+      const c = rowYs[k];
       const forward = k % 2 === 0;
       const row = lane(c, forward ? 0 : width, forward ? width : 0);
       if (k > 0) {
@@ -111,7 +116,7 @@ export function generateCoilTextile({
     const box = boundary.bbox();
     const margin = size * 0.6;
     const lo = box.minY + margin, hi = box.maxY - margin;
-    const lanes = hi > lo ? centredLanes(lo, hi, rowPitch) : [(box.minY + box.maxY) / 2];
+    const lanes = hi > lo ? rowsIn(lo, hi, rowPitch) : [(box.minY + box.maxY) / 2];
     const chains = serpentineChains(boundary, 'y', lanes, { inset: 0.3, minLength: Math.max(2 * pitch, 1), maxJog: 3 * rowPitch });
     let id = 0;
     for (const segments of chains) {

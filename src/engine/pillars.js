@@ -39,13 +39,17 @@ function ringPoints(cx, cy, r, z) {
   return pts;
 }
 
-/** Coordinates `pitch` apart, centred in [lo + margin, hi - margin]. */
-function centred(lo, hi, pitch, margin) {
+/**
+ * Grid coordinates from lo + margin to hi - margin, the first and last on those ends and the gaps between as near
+ * `pitch` as fits (whole repeats, repeats.js). Their number of gaps is a multiple of `every`, so when only every n-th
+ * node carries a pillar, the nodes on both edges do.
+ */
+function centred(lo, hi, pitch, margin, every = 1) {
   const span = hi - lo - 2 * margin;
   if (span < 0) return [];
-  const n = Math.floor(span / pitch + 1e-9) + 1;
-  const start = lo + margin + (span - (n - 1) * pitch) / 2;
-  return Array.from({ length: n }, (_, i) => start + i * pitch);
+  if (span < 1e-9) return [lo + margin];
+  const n = Math.max(every, Math.round(span / pitch / every) * every);
+  return Array.from({ length: n + 1 }, (_, i) => lo + margin + (span * i) / n);
 }
 
 /** Pillar rings nearest-neighbour ordered, starting from `at`. */
@@ -89,8 +93,8 @@ const netLine = (axis, c, a, b, z) => {
 export function spacerStrands(boundary, { pitch = 5, layers = 8, radius = 1, every = 1, layerHeight = 0.2, strandWidth = 0.45 } = {}) {
   const box = boundary.bbox();
   const inset = strandWidth / 2 + 0.1;
-  const xs = centred(box.minX, box.maxX, pitch, inset + 0.5);
-  const ys = centred(box.minY, box.maxY, pitch, inset + 0.5);
+  const xs = centred(box.minX, box.maxX, pitch, inset + 0.5, every);
+  const ys = centred(box.minY, box.maxY, pitch, inset + 0.5, every);
   // the bottom net is on the bed, so it runs wherever the shape does; the top net is held up by pillars alone, so it
   // only runs along lines of pillars and only between the first and the last pillar of each line
   const nodes = [];

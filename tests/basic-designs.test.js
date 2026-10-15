@@ -6,6 +6,7 @@ import { backingLines, backingStack } from '../src/engine/backing.js';
 import { meanderLayers } from '../src/engine/meander.js';
 import { boundaryFor } from '../src/engine/layers.js';
 import { findCrossings } from '../src/engine/crossings.js';
+import { fitLanes } from '../src/engine/repeats.js';
 import { DESIGNS, ESSENTIALS, designById } from '../src/ui/designs.js';
 import { defaultProfiles } from './helpers.js';
 
@@ -31,8 +32,8 @@ test('a lane swings by exactly the amplitude, and a square wave steps straight u
     // away from the ends, where the lanes are joined by short jogs
     const ys = flat(lines).filter((p) => p.x > 3 && p.x < 57).map((p) => p.y);
     assert.ok(lines.length >= 1);
-    // three lanes at 20 mm: each swings 2 mm either side of its own centre
-    const lanes = [10, 30, 50];
+    // lanes about 20 mm apart from one edge to the other, a full swing in: each swings 2 mm either side of its centre
+    const lanes = fitLanes(0.3 + 2, 60 - 0.3 - 2, 20);
     for (const c of lanes) {
       const near = ys.filter((y) => Math.abs(y - c) < 3);
       assert.ok(Math.max(...near) - c > 1.9 && Math.max(...near) - c < 2.05, `${shape} up at ${c}`);
@@ -199,7 +200,10 @@ test('the backing wave has a depth and a length you set, and a second backing is
   const swing = (depth) => {
     const lines = backingLines(b, { style: 'wave', angle: 0, spacing: 20, depth, wavelength: 8 });
     const ys = lines.flat().filter((p) => p.x > 3 && p.x < 57).map((p) => p.y);
-    const near = ys.filter((y) => Math.abs(y - 30) < 6);
+    // around one lane in the middle (whole repeats place the lanes from one edge to the other, a full swing in)
+    const lanes = fitLanes(0.3 + depth, 60 - 0.3 - depth, 20);
+    const mid = lanes[Math.floor(lanes.length / 2)];
+    const near = ys.filter((y) => Math.abs(y - mid) < depth + 1);
     return Math.max(...near) - Math.min(...near);
   };
   assert.ok(swing(3) > swing(1) + 3, 'a deeper wave swings further');

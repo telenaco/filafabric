@@ -39,7 +39,9 @@ test('squares need two layers, hexagons three and octagons four; straps of one l
       assert.ok(found.length <= 0.05 * layer.length + 2, `${id}: ${found.length} crossings within a layer`);
     }
     const r = crossingReport(layers.flatMap((l, k) => l.map((pts) => ({ pts, layer: k }))), 2500);
-    assert.ok(r.between > 60, `${id}: ${r.between}`);
+    // whole repeats can make the tiling up to half a repeat larger (the octagons' 14.5 mm repeat fits 50 mm 3.45 times,
+    // so it becomes 3 repeats of 16.7 mm): fewer crossings on a small swatch, never a loose strap
+    assert.ok(r.between > 40, `${id}: ${r.between}`);
     assert.ok(r.longestUncrossed < 15, `${id}: longest ${r.longestUncrossed}`);
     for (const p of layers.flat(2)) assert.ok(p.x > -0.5 && p.x < 50.5 && p.y > -0.5 && p.y < 50.5);
   }

@@ -119,12 +119,30 @@ export function shapeStep(shape, pitch, size, base = 0.4) {
 }
 
 /**
+ * The pitch nearest `pitch` whose whole periods fill a lane of `length` mm exactly, what a period reaches past its own
+ * length (the forward bulge of a loop) included: a lane that ends with a whole period at the edge, not a straight
+ * lead-out (repeats.js).
+ */
+export function fillPitch(shape, length, pitch, size) {
+  let p = pitch;
+  for (let i = 0; i < 5; i++) {
+    const { uMin, uMax } = periodExtent(shape, p, size);
+    const room = length - (uMax - uMin - p);
+    if (!(room > 0)) return pitch;
+    p = room / Math.max(1, Math.round(room / p));
+  }
+  return p;
+}
+
+/**
  * Points along one lane as { u, v }: u within 0..`length`, v the offset from the centre line. Whole periods are
  * centred with a straight lead-in and lead-out, so the strand starts and ends on the centre line and never leaves
- * the lane. `sizeAt(u)` gives
- * a 0..1 factor on the size along the lane (a pattern field). Consecutive points are at most `step` mm apart.
+ * the lane; with `fill` the pitch is first made the nearest whose periods fill the lane, so there is no lead at all.
+ * `sizeAt(u)` gives a 0..1 factor on the size along the lane (a pattern field). Consecutive points are at most `step`
+ * mm apart.
  */
-export function lanePoints({ shape, length, pitch, size, sizeAt = null, step = 0.4 }) {
+export function lanePoints({ shape, length, pitch, size, sizeAt = null, step = 0.4, fill = false }) {
+  if (fill) pitch = fillPitch(shape, length, pitch, size);
   const periods = lanePeriods({ shape, length, pitch, size });
   const pts = [{ u: 0, v: 0 }];
   const straight = (from, to) => {

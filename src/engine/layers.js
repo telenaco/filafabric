@@ -6,6 +6,7 @@ import { serpentineChains, centredLanes } from './fill.js';
 import { emitStrands } from './emit.js';
 import { resolveCrossings, findCrossings } from './crossings.js';
 import { lanePoints } from './shapes.js';
+import { fitLanes } from './repeats.js';
 import { MAX_MOVES } from './tiler.js';
 import { contactGraph, clipStrands, connectStrands, orderStrands, travelDistance, simplifyStrands, safePoint, segmentInside } from './fabric.js';
 import { finishFabric } from './fabric-result.js';
@@ -68,8 +69,10 @@ const rotate = (p, c, s) => ({ x: p.x * c - p.y * s, y: p.x * s + p.y * c });
  * `keepInside` is a clearance in mm (0 is off): no point of any line comes closer to the outline than that. Lines are
  * drawn in from a slanting edge until they clear it and a wave that would leave the outline is flattened, so the strand
  * the shaping and clipping of a later pass would otherwise cut into pieces stays whole.
+ * `whole` (repeats.js): the lanes fill the outline from edge to edge at the nearest spacing that fits, a wavy line kept a
+ * full swing in from the edge, and each wavy line is whole periods from end to end.
  */
-export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = null, size = 0, pitch = 4, inset = 0.3, anchor = null, maxJog = null, keepInside = 0 } = {}) {
+export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = null, size = 0, pitch = 4, inset = 0.3, anchor = null, maxJog = null, keepInside = 0, whole = true } = {}) {
   const a = (angle * Math.PI) / 180;
   const c = Math.cos(a), s = Math.sin(a);
   const turned = new PolygonBoundary(boundary.rings.map((ring) => ring.map((p) => rotate(p, c, -s))));
@@ -84,6 +87,12 @@ export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = nu
     const y0 = rotate(anchor, c, -s).y + offset * spacing;
     lanes = [];
     for (let k = Math.ceil((lo - y0) / spacing); y0 + k * spacing <= hi; k++) lanes.push(y0 + k * spacing);
+  } else if (whole) {
+    const swing = shape && size > 0 ? size : 0;
+    const fitted = fitLanes(lo + swing, hi - swing, spacing);
+    const gap = fitted.length > 1 ? fitted[1] - fitted[0] : spacing;
+    lanes = fitted.map((y) => y + offset * gap).filter((y) => y > lo + swing - 1e-9 && y < hi - swing + 1e-9);
+    if (!lanes.length) lanes = [(box.minY + box.maxY) / 2];
   } else if (hi > lo) {
     lanes = centredLanes(lo, hi, spacing).map((y) => y + offset * spacing).filter((y) => y > lo - 1e-9 && y < hi + 1e-9);
   } else {
@@ -105,7 +114,7 @@ export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = nu
       const length = Math.abs(to - from);
       let line;
       if (shape && size > 0) {
-        line = lanePoints({ shape, length, pitch, size, step: STEP }).map((p) => ({ x: from + dir * p.u, y: seg.c + p.v }));
+        line = lanePoints({ shape, length, pitch, size, step: STEP, fill: whole }).map((p) => ({ x: from + dir * p.u, y: seg.c + p.v }));
       } else {
         line = densify([{ x: from, y: seg.c }, { x: to, y: seg.c }]);
       }

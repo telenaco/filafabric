@@ -1,5 +1,6 @@
 import { createRng } from './rng.js';
 import { clipPolyline, trailsFromEdges, densify } from './layers.js';
+import { fitCount } from './repeats.js';
 
 /**
  * Truchet tiles: a square grid where every cell holds one of two orientations of a simple tile, chosen at random
@@ -22,21 +23,26 @@ function arc(cx, cy, r, from, to) {
   });
 }
 
-/** The edges of one layer of arc tiles over a grid starting at (ox, oy). */
-function arcEdges(ox, oy, cols, rows, s, rng) {
+/** A quarter of an ellipse round (cx, cy) with half-axes rx, ry: a quarter circle when the tile is square. */
+function quarter(cx, cy, rx, ry, from, to) {
+  return arc(0, 0, 1, from, to).map((p) => ({ x: cx + rx * p.x, y: cy + ry * p.y }));
+}
+
+/** The edges of one layer of arc tiles over a grid starting at (ox, oy), tiles sx wide and sy high. */
+function arcEdges(ox, oy, cols, rows, sx, sy, rng) {
   const edges = [];
-  const h = s / 2;
+  const hx = sx / 2, hy = sy / 2;
   for (let j = 0; j < rows; j++) {
     for (let i = 0; i < cols; i++) {
-      const x0 = ox + i * s, y0 = oy + j * s, x1 = x0 + s, y1 = y0 + s;
+      const x0 = ox + i * sx, y0 = oy + j * sy, x1 = x0 + sx, y1 = y0 + sy;
       if (rng.next() < 0.5) {
         // centred on the top-left and bottom-right corners
-        edges.push(arc(x0, y1, h, -Math.PI / 2, 0)); // top edge midpoint to left edge midpoint
-        edges.push(arc(x1, y0, h, Math.PI / 2, Math.PI)); // bottom edge midpoint to right edge midpoint
+        edges.push(quarter(x0, y1, hx, hy, -Math.PI / 2, 0)); // top edge midpoint to left edge midpoint
+        edges.push(quarter(x1, y0, hx, hy, Math.PI / 2, Math.PI)); // bottom edge midpoint to right edge midpoint
       } else {
         // centred on the top-right and bottom-left corners
-        edges.push(arc(x1, y1, h, Math.PI, 1.5 * Math.PI)); // top edge midpoint to right edge midpoint
-        edges.push(arc(x0, y0, h, 0, Math.PI / 2)); // bottom edge midpoint to left edge midpoint
+        edges.push(quarter(x1, y1, hx, hy, Math.PI, 1.5 * Math.PI)); // top edge midpoint to right edge midpoint
+        edges.push(quarter(x0, y0, hx, hy, 0, Math.PI / 2)); // bottom edge midpoint to left edge midpoint
       }
     }
   }
@@ -44,16 +50,21 @@ function arcEdges(ox, oy, cols, rows, s, rng) {
 }
 
 /**
- * @param tile  'diagonals' | 'arcs'
- * @param size  tile size in mm
- * @param seed  random seed (the same seed gives the same pattern)
+ * @param tile   'diagonals' | 'arcs'
+ * @param size   tile size in mm
+ * @param seed   random seed (the same seed gives the same pattern)
+ * @param whole  whole tiles (repeats.js): the tiles fill the box exactly, each a little wider or taller than `size` so
+ *               a whole number fits each way, and the second layer of arcs (half a tile over) keeps to the tiles that
+ *               lie wholly inside; otherwise square tiles centred in the box and a second layer cut at the edge
  */
-export function truchetLayers(boundary, { tile = 'diagonals', size = 5, seed = 1 } = {}) {
+export function truchetLayers(boundary, { tile = 'diagonals', size = 5, seed = 1, whole = true } = {}) {
   if (!TILES[tile]) throw new Error(`Unknown Truchet tile: ${tile}`);
   const box = boundary.bbox();
   const w = box.maxX - box.minX, h = box.maxY - box.minY;
-  const cols = Math.max(1, Math.floor(w / size)), rows = Math.max(1, Math.floor(h / size));
-  const ox = box.minX + (w - cols * size) / 2, oy = box.minY + (h - rows * size) / 2;
+  const cols = whole ? fitCount(w, size) : Math.max(1, Math.floor(w / size));
+  const rows = whole ? fitCount(h, size) : Math.max(1, Math.floor(h / size));
+  const sx = whole ? w / cols : size, sy = whole ? h / rows : size;
+  const ox = box.minX + (w - cols * sx) / 2, oy = box.minY + (h - rows * sy) / 2;
   const rng = createRng(seed);
 
   const toLayer = (edges) => trailsFromEdges(edges).flatMap((t) => clipPolyline(densify(t), boundary));
@@ -62,7 +73,7 @@ export function truchetLayers(boundary, { tile = 'diagonals', size = 5, seed = 1
     const one = [], other = [];
     for (let j = 0; j < rows; j++) {
       for (let i = 0; i < cols; i++) {
-        const x0 = ox + i * size, y0 = oy + j * size, x1 = x0 + size, y1 = y0 + size;
+        const x0 = ox + i * sx, y0 = oy + j * sy, x1 = x0 + sx, y1 = y0 + sy;
         const up = [{ x: x0, y: y0 }, { x: x1, y: y1 }];
         const down = [{ x: x0, y: y1 }, { x: x1, y: y0 }];
         if (rng.next() < 0.5) { one.push(up); other.push(down); } else { one.push(down); other.push(up); }
@@ -71,8 +82,10 @@ export function truchetLayers(boundary, { tile = 'diagonals', size = 5, seed = 1
     return { layers: [toLayer(one), toLayer(other)], extra: { cols, rows } };
   }
 
-  // arcs: the second layer is a grid half a tile over, with a tile beyond each edge so it covers the swatch
-  const first = arcEdges(ox, oy, cols, rows, size, rng);
-  const second = arcEdges(ox - size / 2, oy - size / 2, cols + 1, rows + 1, size, rng);
+  // arcs: the second layer is a grid half a tile over: only its whole tiles, or a tile beyond each edge, cut there
+  const first = arcEdges(ox, oy, cols, rows, sx, sy, rng);
+  const second = whole
+    ? arcEdges(ox + sx / 2, oy + sy / 2, cols - 1, rows - 1, sx, sy, rng)
+    : arcEdges(ox - sx / 2, oy - sy / 2, cols + 1, rows + 1, sx, sy, rng);
   return { layers: [toLayer(first), toLayer(second)], extra: { cols, rows } };
 }

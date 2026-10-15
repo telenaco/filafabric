@@ -88,11 +88,24 @@ function chainLoops(loops, boundary, jog) {
  * @param angle       angle of the hatch laid across it, degrees
  * @param spacing     spacing of the hatch, mm
  */
-export function turingLayers(boundary, { wavelength = 7, seed = 1, angle = 45, spacing = 5, backing = 'straight', backingDepth = 2, backingLength = 10, backingLayers = 'one' } = {}) {
+export function turingLayers(boundary, { wavelength = 7, seed = 1, angle = 45, spacing = 5, backing = 'straight', backingDepth = 2, backingLength = 10, backingLayers = 'one', whole = true } = {}) {
   const box = boundary.bbox();
   const field = growField(box, { wavelength, seed });
   let max = 0;
   for (const value of field.data) if (value > max) max = value;
+  if (whole && max > 0) {
+    // whole stripes (repeats.js): the field fades to bare over the last third of a wavelength inside the edge, so a
+    // stripe that runs to the edge closes there in a rounded end instead of being cut off by it
+    const keep = 0.5, ramp = wavelength / 3;
+    for (let j = 0; j < field.ny; j++) {
+      for (let i = 0; i < field.nx; i++) {
+        const x = field.minX + i * field.cell, y = field.minY + j * field.cell;
+        const d = Math.min(x - box.minX, box.maxX - x, y - box.minY, box.maxY - y) - keep;
+        const t = Math.max(0, Math.min(1, d / ramp));
+        field.data[j * field.nx + i] *= t * t * (3 - 2 * t);
+      }
+    }
+  }
   const loops = max > 0.05 ? contourLoops({ ...field, max }, max / 2).filter((l) => l.length > 8) : [];
   const strands = chainLoops(loops, boundary, wavelength * 1.2);
   const layer1 = strands.flatMap((s) => clipPolyline(s, boundary));

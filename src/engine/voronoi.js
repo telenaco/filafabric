@@ -172,14 +172,37 @@ export function tessellate(points, box) {
  */
 export const MAX_SITES = 1500;
 
-export function voronoiLayers(boundary, { spacing = 8, relax = 4, seed = 1, tone = null } = {}) {
+/** Whether an outline is just its own bounding box (the plain swatch), so its edges are straight and square. */
+export function isBox(boundary) {
+  const ring = boundary.rings?.length === 1 ? boundary.rings[0] : null;
+  if (!ring || ring.length !== 4) return false;
+  const b = boundary.bbox();
+  return ring.every((p) => (Math.abs(p.x - b.minX) < 1e-9 || Math.abs(p.x - b.maxX) < 1e-9) && (Math.abs(p.y - b.minY) < 1e-9 || Math.abs(p.y - b.maxY) < 1e-9));
+}
+
+export function voronoiLayers(boundary, { spacing = 8, relax = 4, seed = 1, tone = null, whole = true } = {}) {
   const box = boundary.bbox();
   const estimate = Math.ceil(((box.maxX - box.minX) * (box.maxY - box.minY)) / (spacing * spacing));
   if (estimate > MAX_SITES) {
     throw new ConfigError([`This would need about ${estimate} cells; the limit is ${MAX_SITES}. Use larger cells or a smaller swatch.`]);
   }
   const points = sites(box, { spacing, relax, seed, tone });
-  const { delaunay: dEdges, voronoi: vEdges } = tessellate(points, box);
   const toLayer = (edges) => trailsFromEdges(edges).flatMap((t) => clipPolyline(densify(t), boundary));
+  if (whole && isBox(boundary)) {
+    // whole cells (repeats.js): every site mirrored across each edge, so the edge itself is a wall of the lace (the
+    // wall between a site and its mirror image lies on it). The cells along the edge are closed there, with their walls
+    // meeting it square on, instead of being cut open; a little in from the edge so the wall is printed whole.
+    const m = 0.3;
+    const inner = { minX: box.minX + m, minY: box.minY + m, maxX: box.maxX - m, maxY: box.maxY - m };
+    const mirrors = points.flatMap((p) => [
+      { x: 2 * inner.minX - p.x, y: p.y }, { x: 2 * inner.maxX - p.x, y: p.y },
+      { x: p.x, y: 2 * inner.minY - p.y }, { x: p.x, y: 2 * inner.maxY - p.y },
+    ]);
+    const { delaunay: dEdges, voronoi: vEdges } = tessellate([...points, ...mirrors], inner);
+    const own = new Set(points);
+    // the first layer joins the real sites only
+    return { layers: [toLayer(dEdges.filter(([a, b]) => own.has(a) && own.has(b))), toLayer(vEdges)], extra: { sites: points.length } };
+  }
+  const { delaunay: dEdges, voronoi: vEdges } = tessellate(points, box);
   return { layers: [toLayer(dEdges), toLayer(vEdges)], extra: { sites: points.length } };
 }

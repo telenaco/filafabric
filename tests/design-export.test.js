@@ -23,8 +23,10 @@ test('Bubbles export generates one full-size seeded design beyond the bounded pr
   assert.ok(result.moves.some((m) => m.extrude && m.x > 150 && m.y > 150));
   assert.ok(result.moves.length > preview.moves.length * 2);
   assert.ok(!result.strands.some((s) => /section-|backing-/.test(s.id)));
-  const coords = [...result.gcode.matchAll(/\bX(-?\d+(?:\.\d+)?)/g)].map((m) => Number(m[1]));
-  assert.ok(Math.max(...coords) - Math.min(...coords) > 150, 'G-code spans the selected size, including machine offset');
+  // a loop, not a spread: a dense design has more coordinates than one call can take
+  let lo = Infinity, hi = -Infinity;
+  for (const m of result.gcode.matchAll(/\bX(-?\d+(?:\.\d+)?)/g)) { const x = Number(m[1]); if (x < lo) lo = x; if (x > hi) hi = x; }
+  assert.ok(hi - lo > 150, 'G-code spans the selected size, including machine offset');
   assert.equal(generateDesignExport(input).gcode, result.gcode, 'same full-size seed and settings are repeatable');
 });
 

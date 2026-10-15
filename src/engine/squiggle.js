@@ -214,6 +214,7 @@ export function generateSquiggleTextile({
   sampler = SAMPLERS.centerSpot,
   colorChange = false,
   boundary = null,
+  whole = true,
 }) {
   const z1 = layerHeight;
   const z2 = layerHeight * 2;
@@ -221,13 +222,15 @@ export function generateSquiggleTextile({
   const ampRange = 0.85 * amplitude;
   const baseFreq = 1 / Math.max(0.5, wavelength);
   const tone = (x, y) => clamp(sampler(x, y, width, height), 0, 1);
+  // whole repeats (repeats.js): a wave of frequency f over a lane `span` long is made a whole number of waves long
+  const wholeFreq = (f, span) => (whole && span > 0 ? Math.max(1, Math.round(f * span)) / span : f);
 
   // Shapes other than the sine wave come from the strand-shape library. A looped line also swings back along the
   // lane, so the lane is sampled more finely, and a strand that crosses itself lifts over its earlier pass.
   const shaped = shape !== 'wave';
   const step = shaped ? shapeStep(shape, Math.max(0.5, wavelength), amplitude, 0.6) : 0.4;
-  const offsets = (travelled, size, isReverse, flip = 1) => {
-    const { v, du } = shapeAt(shape, travelled, { pitch: Math.max(0.5, wavelength), size });
+  const offsets = (travelled, size, isReverse, flip = 1, span = width) => {
+    const { v, du } = shapeAt(shape, travelled, { pitch: 1 / wholeFreq(1 / Math.max(0.5, wavelength), span), size });
     return { coordOffset: flip * v, spanOffset: isReverse ? -du : du };
   };
 
@@ -250,9 +253,11 @@ export function generateSquiggleTextile({
         const xNominal = minX + colIdx * pitchX;
         const t = tone(xNominal, y);
         const amp = minAmp + ampRange * t;
-        if (shaped) return offsets(isReverse ? height - y : y, amp, isReverse);
-        // Frequency increases in darker areas
-        const freq = baseFreq * (1 + 1.2 * t);
+        if (shaped) return offsets(isReverse ? height - y : y, amp, isReverse, 1, height);
+        // Frequency increases in darker areas; it is a whole number of waves up the column at the tone of its far end
+        // (exactly, for an even pattern)
+        const scale = 1 + 1.2 * t, scaleEnd = 1 + 1.2 * tone(xNominal, height);
+        const freq = (wholeFreq(baseFreq * scaleEnd, height) / scaleEnd) * scale;
         const phase = 2 * Math.PI * freq * y + colIdx * 0.5;
         return { coordOffset: amp * Math.sin(phase), spanOffset: 0 };
       },
@@ -262,7 +267,7 @@ export function generateSquiggleTextile({
     const pitchY = height / rows;
     const minY = pitchY / 2;
     const gyroidWavelength = Math.max(1.0, wavelength * 1.25);
-    const gyroidFreq = 1 / gyroidWavelength;
+    const gyroidFreq = wholeFreq(1 / gyroidWavelength, width);
     const gyroidAmp = Math.min(pitchY * 0.45, amplitude * 0.8);
 
     layer2 = layerStrands({
@@ -272,7 +277,7 @@ export function generateSquiggleTextile({
         const rowPhase = (rowIdx % 2) * Math.PI;
         const yNominal = minY + rowIdx * pitchY;
         const localAmp = gyroidAmp * (0.6 + 0.4 * tone(x, yNominal));
-        if (shaped) return offsets((isReverse ? width - x : x) + (rowIdx % 2) * (wavelength / 2), localAmp, isReverse);
+        if (shaped) return offsets((isReverse ? width - x : x) + (rowIdx % 2) * (0.5 / wholeFreq(1 / Math.max(0.5, wavelength), width)), localAmp, isReverse);
         const phase = 2 * Math.PI * gyroidFreq * x + rowPhase;
         return { coordOffset: localAmp * Math.sin(phase), spanOffset: 0 };
       },
@@ -289,7 +294,7 @@ export function generateSquiggleTextile({
     const pitchY = height / rows;
     const minY = pitchY / 2;
     const floor = minCrossingAmplitude(pitchY, strandWidth);
-    const k = 2 * Math.PI * baseFreq;
+    const k = 2 * Math.PI * wholeFreq(baseFreq, width);
     const ampAt = (x, y) => Math.max(floor, minAmp + ampRange * tone(x, y));
 
     layer1 = layerStrands({

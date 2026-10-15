@@ -1,4 +1,5 @@
 import { chainPolylines, clipPolyline, densify } from './layers.js';
+import { fitCount } from './repeats.js';
 
 /**
  * Ring mail: overlapping rings on a hexagonal lattice, a chainmail look, fused as one layer of rings and a second
@@ -50,12 +51,40 @@ function ringRows(rows, r, boundary) {
 }
 
 /**
+ * Whole rings only (repeats.js): the same hexagonal lattice, stretched a little so its outer rings touch the edges of
+ * the box from inside, every ring whole. The second layer's rings sit in the triangular gaps between two rows of it,
+ * so they are inside too: the edge is a row of whole rings, never a cut one.
+ */
+function wholeLattices(box, spacing, r) {
+  const m = 0.3;
+  const x0 = box.minX + r + m, x1 = box.maxX - r - m;
+  const y0 = box.minY + r + m, y1 = box.maxY - r - m;
+  const cols = fitCount(x1 - x0, spacing), sx = x1 > x0 ? (x1 - x0) / cols : 0;
+  const rowsN = fitCount(y1 - y0, (spacing * Math.sqrt(3)) / 2), sy = y1 > y0 ? (y1 - y0) / rowsN : 0;
+  const rowOf = (y, shifted) => (shifted
+    ? Array.from({ length: cols }, (_, i) => ({ x: x0 + sx * (i + 0.5), y }))
+    : Array.from({ length: cols + 1 }, (_, i) => ({ x: x0 + sx * i, y })));
+  const a = [], b = [];
+  for (let j = 0; j <= rowsN; j++) {
+    a.push(rowOf(y0 + sy * j, j % 2 === 1));
+    // a gap between row j and the next holds the rings of the second layer, a third of the way up
+    if (j < rowsN) b.push(rowOf(y0 + sy * (j + 1 / 3), j % 2 === 0));
+  }
+  return { a, b };
+}
+
+/**
  * @param spacing  distance between neighbouring ring centres (mm)
  * @param ratio    ring diameter over spacing: 1 is tangent, larger overlaps (1.3 to 1.7 reads as mail)
+ * @param whole    every ring whole, the lattice fitted to the box (otherwise a lattice from the corner, cut at the edges)
  */
-export function chainmailLayers(boundary, { spacing = 6, ratio = 1.5 } = {}) {
+export function chainmailLayers(boundary, { spacing = 6, ratio = 1.5, whole = true } = {}) {
   const box = boundary.bbox();
   const r = (spacing * ratio) / 2;
+  if (whole && box.maxX - box.minX > 2 * r + 0.6 && box.maxY - box.minY > 2 * r + 0.6) {
+    const { a, b } = wholeLattices(box, spacing, r);
+    return { layers: [ringRows(a, r, boundary), ringRows(b, r, boundary)], extra: { radius: r } };
+  }
   const a = lattice(box, spacing, box.minX, box.minY, r + spacing);
   const b = lattice(box, spacing, box.minX + spacing / 2, box.minY + (spacing * Math.sqrt(3)) / 6, r + spacing);
   return { layers: [ringRows(a, r, boundary), ringRows(b, r, boundary)], extra: { radius: r } };

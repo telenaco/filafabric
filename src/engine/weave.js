@@ -98,17 +98,21 @@ function linePieces({ axis, c, from, to, crossings, z1, z2, ramp }) {
  * @returns { strands, crossings, pieces, columns, rows, warnings }; strands are in print order (all lower pieces,
  *          then all upper pieces), each piece a strand so there is a lift between them
  */
-export function generateWeaveTextile({ width, height, pitch = 4, binding = 'plain', layerHeight = 0.2, strandWidth = 0.45, boundary = null }) {
+export function generateWeaveTextile({ width, height, pitch = 4, binding = 'plain', layerHeight = 0.2, strandWidth = 0.45, boundary = null, whole = true }) {
   const spec = WEAVE_BINDINGS[binding];
   if (!spec) throw new Error(`Unknown weave binding: ${binding}`);
   const warnings = [];
   const z1 = layerHeight;
   const z2 = 2 * layerHeight;
   const ramp = Math.max(0.4, Math.min(1.2, pitch / 2 - 0.8));
-  const columns = Math.floor(width / pitch + 1e-9);
-  const rows = Math.floor(height / pitch + 1e-9);
-  const x = (i) => (width - (columns - 1) * pitch) / 2 + i * pitch;
-  const y = (j) => (height - (rows - 1) * pitch) / 2 + j * pitch;
+  // whole cells (repeats.js): a whole number of cells each way, each line in the middle of its cell, so every edge is
+  // half a cell from the nearest line, the same all round
+  // (a swatch smaller than one pitch still holds no line at all)
+  const columns = whole && width >= pitch ? Math.round(width / pitch) : Math.floor(width / pitch + 1e-9);
+  const rows = whole && height >= pitch ? Math.round(height / pitch) : Math.floor(height / pitch + 1e-9);
+  const px = whole ? width / columns : pitch, py = whole ? height / rows : pitch;
+  const x = (i) => (width - (columns - 1) * px) / 2 + i * px;
+  const y = (j) => (height - (rows - 1) * py) / 2 + j * py;
   if (columns < 1 || rows < 1) {
     return { strands: [], crossings: 0, pieces: 0, columns: Math.max(0, columns), rows: Math.max(0, rows), warnings: ['The swatch is smaller than one pitch: nothing to print'] };
   }

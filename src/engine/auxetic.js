@@ -1,4 +1,5 @@
 import { centredLanes } from './fill.js';
+import { fitPeriod, fitLanes } from './repeats.js';
 import { shapeAt } from './shapes.js';
 import { chainPolylines, clipPolyline, densify } from './layers.js';
 
@@ -22,13 +23,15 @@ export const CELL_IDS = Object.freeze(Object.keys(CELLS));
 /** The widest the zigzag can swing and still leave the strand width and a little more at the waist. */
 export const maxAuxeticAmplitude = (rowPitch, strandWidth = 0.45) => Math.max(0.25, (rowPitch - 2 * strandWidth - 0.4) / 2);
 
-export function auxeticLayers(boundary, { rowPitch = 6, period = 8, amplitude = 2, cell = 'hexagon' } = {}) {
+export function auxeticLayers(boundary, { rowPitch = 6, period = 8, amplitude = 2, cell = 'hexagon', whole = true } = {}) {
   if (!CELLS[cell]) throw new Error(`Unknown auxetic cell: ${cell}`);
   const A = Math.min(amplitude, maxAuxeticAmplitude(rowPitch));
   const box = boundary.bbox();
   const x0 = box.minX;
+  // whole repeats (repeats.js): whole zigzag periods across, and the rows from one edge to the other
+  if (whole) period = fitPeriod(box.maxX - box.minX, period);
   // keep the zigzag inside the swatch: rows start one amplitude in from the edges
-  const lanes = centredLanes(box.minY + A + 0.3, box.maxY - A - 0.3, rowPitch);
+  const lanes = (whole ? fitLanes : centredLanes)(box.minY + A + 0.3, box.maxY - A - 0.3, rowPitch);
   // the wave is a zigzag whose extremes sit at a quarter and three quarters of the period
   const wave = (x) => shapeAt('zigzag', x - x0, { pitch: period, size: A }).v;
   const rowY = (k, x) => lanes[k] + (k % 2 === 0 ? 1 : -1) * wave(x);

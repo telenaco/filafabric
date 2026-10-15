@@ -3,10 +3,14 @@ import { bedFitErrors, PreflightError, writeGcode } from './gcode.js';
 import { computeStats } from './stats.js';
 import { plan } from './planner.js';
 import { PolygonBoundary, RectBoundary } from './boundary.js';
-import { serpentineChains, centredLanes } from './fill.js';
+import { serpentineChains } from './fill.js';
+import { fitLanes } from './repeats.js';
 import { MAX_MOVES } from './tiler.js';
 import { crossBase } from './base.js';
 import { finishFabric } from './fabric-result.js';
+
+/** The rows of a relief: from one edge to the other, the first and last 0.3 mm in, as near `rowPitch` apart as fits (repeats.js). */
+const rowLanes = (lo, hi, rowPitch) => fitLanes(lo + 0.3, hi - 0.3, rowPitch);
 
 /**
  * Relief: one strand per piece of fabric, row after row, that follows a pattern field up and down. Where the field is
@@ -96,7 +100,7 @@ export function reliefPlacements({ width, height, field = null, relief = 2, rowP
   };
 
   if (!boundary || boundary.isRectangle) {
-    const lanes = centredLanes(0, height, rowPitch);
+    const lanes = rowLanes(0, height, rowPitch);
     const pts = [];
     const bulge = Math.min(0.35 * rowPitch, 1.5);
     lanes.forEach((c, k) => {
@@ -117,7 +121,7 @@ export function reliefPlacements({ width, height, field = null, relief = 2, rowP
     placements.push({ id: 'relief', row: 0, col: 0, footY: lanes[0] ?? 0, points: pts });
   } else {
     const box = boundary.bbox();
-    const lanes = centredLanes(box.minY, box.maxY, rowPitch);
+    const lanes = rowLanes(box.minY, box.maxY, rowPitch);
     const chains = serpentineChains(boundary, 'y', lanes, { inset: 0.3, minLength: 2, maxJog: 3 * rowPitch });
     chains.forEach((segments, index) => {
       const pts = [];
@@ -189,7 +193,7 @@ export function generateRelief(machine, material, params = {}) {
   }
   const r = reliefPlacements({ width, height, field: params.field ?? null, relief, rowPitch, floor: params.floor ?? 0.3, boundary });
   cfg.derived.loopBaseZ = 3 * cfg.t.layer_height;
-  const box = boundary.bbox(), lanes = centredLanes(box.minY, box.maxY, rowPitch);
+  const box = boundary.bbox(), lanes = rowLanes(box.minY, box.maxY, rowPitch);
   const base = crossBase({ boundary, lanes, spacing: rowPitch, z: cfg.t.layer_height, inset: outline ? cfg.t.extrusion_width / 2 : 0 });
   const planned = plan(cfg, base, r.placements, boundary);
   const stats = computeStats(planned.moves, cfg, r.placements);

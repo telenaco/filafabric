@@ -2,6 +2,7 @@ import { clipPolyline, chainPolylines, densify } from './layers.js';
 import { orderLines } from './flowlines.js';
 import { ConfigError } from './params.js';
 import { findCrossings } from './crossings.js';
+import { fitCount } from './repeats.js';
 
 /**
  * Star lattice: Islamic geometric patterns (girih) by Hankin's polygons-in-contact method. A tiling is laid under
@@ -189,15 +190,25 @@ export function colourStraps(straps, maxLayers = 4) {
  * @param size    mm: the edge length of the tiles
  * @param angle   contact angle in degrees (how far the rays lean from the edge): 45 gives plain crossing lines,
  *                larger angles sharper stars
+ * @param whole   whole repeats (repeats.js): a whole number of the tiling's repeats each way (a square; two rows of
+ *                hexagons; an octagon and its square), the pattern stretched a few percent at most so they fill the box
+ *                and every edge falls on a line of symmetry of the motif, not part-way across a star
  */
-export function starLayers(boundary, { tiling = 'square', size = 8, angle = null } = {}) {
+export function starLayers(boundary, { tiling = 'square', size = 8, angle = null, whole = true } = {}) {
   const t = STAR_TILINGS[tiling];
   if (!t) throw new Error(`Unknown tiling: ${tiling}`);
   const box = boundary.bbox();
-  const faces = tilingFaces(tiling, box, size);
+  const repeat = tiling === 'square' ? [size, size] : tiling === 'hexagon' ? [size * Math.sqrt(3), 3 * size] : [size * (1 + Math.SQRT2), size * (1 + Math.SQRT2)];
+  const w = box.maxX - box.minX, h = box.maxY - box.minY;
+  const fx = whole ? w / (fitCount(w, repeat[0]) * repeat[0]) : 1;
+  const fy = whole ? h / (fitCount(h, repeat[1]) * repeat[1]) : 1;
+  // the tiling is laid in its own proportions over the box shrunk by (fx, fy), and the straps stretched back over it
+  const plain = { minX: box.minX, minY: box.minY, maxX: box.minX + w / fx, maxY: box.minY + h / fy };
+  const stretch = (p) => ({ x: box.minX + (p.x - box.minX) * fx, y: box.minY + (p.y - box.minY) * fy });
+  const faces = tilingFaces(tiling, plain, size);
   const straps = hankinStraps(faces, angle ?? t.angle);
   // only the straps that reach the swatch
-  const inside = straps.filter((pts) => pts.some((p) => p.x > box.minX - size && p.x < box.maxX + size && p.y > box.minY - size && p.y < box.maxY + size));
+  const inside = straps.filter((pts) => pts.some((p) => p.x > plain.minX - size && p.x < plain.maxX + size && p.y > plain.minY - size && p.y < plain.maxY + size)).map((pts) => pts.map(stretch));
   const colour = colourStraps(inside, 4);
   const count = Math.max(...colour) + 1;
   const layers = Array.from({ length: count }, (_, k) => {
