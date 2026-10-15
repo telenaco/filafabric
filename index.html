@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Filafabric: textile G-code studio</title>
 <meta name="robots" content="noindex">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#171c26">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
@@ -70,6 +74,7 @@
   <button type="button" class="menu-item" id="btn-help"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M6.2 6.2a1.9 1.9 0 113 1.5c-.8.5-1.2.9-1.2 1.7M8 11.6v.1"/></svg>Getting started</button>
   <div class="menu-sep" role="separator"></div>
   <button type="button" class="menu-item" id="btn-save-file"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7M5 7l3 3 3-3M3 12.5h10"/></svg>Save settings file</button>
+  <button type="button" class="menu-item" id="btn-error-log" title="Downloads recent local errors and current settings, including the current drawing. Share this file only when you want to share that drawing."><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7M5 7l3 3 3-3M3 12.5h10"/></svg>Download error log</button>
   <label class="menu-item file-link"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5h4l1.5 1.5h5.5v6.5h-11z"/></svg>Open settings file…<input type="file" id="file-open" accept=".json,application/json"></label>
   <div class="menu-sep" role="separator"></div>
   <button type="button" class="menu-item" id="btn-lock"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2"/></svg>Lock the studio</button>
@@ -79,8 +84,7 @@
 
 <div class="app">
   <aside class="designs" aria-labelledby="designs-title">
-    <h2 class="eyebrow" id="designs-title">Designs</h2>
-    <p class="small muted gallery-order" title="Default geometry ranked by free spans, slopes, nozzle lifts and clearance flags. Physical testing pending.">Essentials first, then easiest first · 100 × 100 mm</p>
+    <h2 class="eyebrow" id="designs-title" title="Essentials first, then the rest easiest first. Every design opens at 100 × 100 mm. The order ranks the default geometry by free spans, slopes, nozzle lifts and clearance flags; physical testing pending.">Designs</h2>
     <div class="design-list" id="design-list"></div>
     <p class="more-designs">More structures are on the way.</p>
   </aside>
@@ -97,7 +101,7 @@
         <button type="button" id="btn-view" class="tool-btn" popovertarget="view-menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l6 3-6 3-6-3z"/><path d="M2 8l6 3 6-3M2 11l6 3 6-3"/></svg>View</button>
       </div>
       <div class="canvas-note" id="canvas-note" hidden>Showing your last valid settings</div>
-      <div class="busy-chip" id="busy-chip" hidden>Updating…</div>
+      <div class="busy-chip" id="busy-chip" role="status" aria-live="polite" hidden>Updating…</div>
       <div class="canvas-foot">
         <div class="roles" role="group" aria-label="Colours in the preview: click one to hide or show it" id="roles"></div>
         <p class="canvas-hint" aria-hidden="true"><span class="hint-mouse">Drag to turn · scroll to zoom</span><span class="hint-touch">Drag to turn · pinch to zoom</span></p>
@@ -251,9 +255,9 @@
         <button type="button" id="btn-details" class="link small" aria-expanded="false" aria-controls="details">Details</button>
       </div>
       <div class="details" id="details" hidden></div>
-      <div class="export-actions">
-        <button type="button" id="btn-export" class="btn primary export" disabled>Export swatch <span id="export-size" class="export-size"></span></button>
-        <button type="button" id="btn-panel" class="btn export">Full panel…</button>
+      <div class="export-group">
+        <p id="study-notice" class="study-notice small muted" hidden>Exports and build failures share anonymous settings for research. Artwork and filenames stay on your device. <a href="study.html" target="_blank" rel="noopener">Details</a></p>
+        <button type="button" id="btn-export" class="btn primary export" aria-haspopup="dialog" disabled><svg width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7M5 7l3 3 3-3M3 12.5h10"/></svg>Export</button>
       </div>
     </footer>
   </aside>
@@ -278,20 +282,44 @@
 </dialog>
 
 <dialog id="panel-dialog" aria-labelledby="panel-title">
-  <h2 id="panel-title">Export a garment panel</h2>
-  <p class="muted">A continuous crossed backing with this texture repeated above it. The preview stays a swatch.</p>
-  <label class="field-row stacked" for="panel-machine"><span>Printer</span><select id="panel-machine"></select></label>
-  <p class="small muted" id="panel-machine-note"></p>
-  <div class="panel-dimensions">
-    <label class="field-row stacked" for="panel-width"><span>Width (mm)</span><input id="panel-width" type="number" min="1" step="1" value="1000"></label>
-    <label class="field-row stacked" for="panel-height"><span>Height (mm)</span><input id="panel-height" type="number" min="1" step="1" value="1000"></label>
-    <label class="field-row stacked" for="panel-repeat"><span>Texture repeat (mm)</span><input id="panel-repeat" type="number" min="5" step="5" value="50"></label>
-    <label class="field-row stacked" for="panel-backing"><span>Backing spacing (mm)</span><input id="panel-backing" type="number" min="0.3" step="0.1" value="5"></label>
+  <h2 id="panel-title">Export G-code</h2>
+  <div class="seg two export-mode" role="group" aria-label="What to export" id="export-mode">
+    <button type="button" id="export-mode-swatch" aria-pressed="true">This swatch</button>
+    <button type="button" id="export-mode-panel" aria-pressed="false">Full panel</button>
   </div>
-  <p class="small muted" id="panel-svg-note">Radial motifs repeat per section. Outlines and holes apply to the whole panel.</p>
+
+  <div id="export-swatch-fields">
+  <dl class="export-rows">
+    <div><dt>Design</dt><dd id="export-design"></dd></div>
+    <div><dt>Size</dt><dd id="export-dims"></dd></div>
+    <div><dt>Estimate</dt><dd id="export-estimate"></dd></div>
+  </dl>
+  <p id="export-window-note" class="muted small" hidden></p>
+  </div>
+
+  <div id="export-panel-fields" hidden>
+    <p class="muted small">A continuous crossed backing with this texture repeated above it, exported in sections. The preview stays a swatch.</p>
+    <div class="panel-dimensions">
+      <label class="field-row stacked" for="panel-width"><span>Width (mm)</span><input id="panel-width" type="number" min="1" step="1" value="1000"></label>
+      <label class="field-row stacked" for="panel-height"><span>Height (mm)</span><input id="panel-height" type="number" min="1" step="1" value="1000"></label>
+      <label class="field-row stacked" for="panel-repeat"><span>Texture repeat (mm)</span><input id="panel-repeat" type="number" min="5" step="5" value="50"></label>
+      <label class="field-row stacked" for="panel-backing"><span>Backing spacing (mm)</span><input id="panel-backing" type="number" min="0.3" step="0.1" value="5"></label>
+    </div>
+    <p class="export-warn small" id="export-fit" role="alert" hidden></p>
+    <p class="small muted" id="panel-svg-note">Radial motifs repeat per section. Outlines and holes apply to the whole panel.</p>
+  </div>
+
+  <div class="export-setup">
+    <span class="status-dot ok" aria-hidden="true"></span>
+    <span class="export-setup-text"><strong id="export-setup-name"></strong><span class="small muted" id="export-setup-sub"></span></span>
+    <button type="button" class="btn" id="export-change-setup">Change</button>
+  </div>
+
+  <label class="field-row stacked" for="export-filename"><span>File name</span><input id="export-filename" type="text" maxlength="180" spellcheck="false" autocomplete="off"></label>
+
   <progress id="panel-progress" max="1" value="0" hidden aria-label="Panel export progress"></progress>
   <p id="panel-status" class="small" role="status" aria-live="polite"></p>
-  <div class="dialog-actions"><button type="button" id="panel-close" class="btn">Close</button><button type="button" id="panel-cancel" class="btn" hidden>Cancel export</button><button type="button" id="panel-start" class="btn primary">Save panel G-code</button></div>
+  <div class="dialog-actions"><button type="button" id="panel-close" class="btn">Cancel</button><button type="button" id="panel-cancel" class="btn" hidden>Cancel export</button><button type="button" id="panel-start" class="btn primary">Save G-code</button></div>
 </dialog>
 
 <dialog id="help-dialog" class="help" aria-labelledby="help-title">

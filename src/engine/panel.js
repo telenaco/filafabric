@@ -123,7 +123,8 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     }
   };
   check();
-  await add(writer.header({ comments: [`Garment panel ${width} x ${height} mm; ${options.design}; repeat ${repeat} mm`, 'Continuous crossed backing; texture repeats in sections; physical swatch qualification required', `settings ${JSON.stringify(options.settings ?? {})}`] }));
+  const exportedSettings = { ...(options.settings ?? {}), colorChange: false };
+  await add(writer.header({ comments: [`Garment panel ${width} x ${height} mm; ${options.design}; repeat ${repeat} mm`, 'Continuous crossed backing; texture repeats in sections; physical swatch qualification required', `settings ${JSON.stringify(exportedSettings)}`, `studio settings ${JSON.stringify({ design: options.design, settings: { ...(options.studySettings ?? exportedSettings), colorChange: false }, width, height, repeat, backingSpacing, print: { layerHeight: h, layers, nozzleDiameter: cfg.t.nozzle_diameter, extrusionWidth: bead }, material: material.id })}`] }));
   let basis = backingLines(boundary, backingSpacing, h, vector ? h : 0, shapeOutline ? 0 : bead);
   if (guides.length) basis = resolveCrossings(repelGuideStrands(basis, guides, { boundary, strandWidth: bead }), { follow: true, preserve: true, lift: h, strandWidth: bead }).strands;
   if (!basis.length) throw new ConfigError(['No backing fits this outline. Use finer backing spacing or a larger panel.']);

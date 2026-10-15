@@ -29,6 +29,7 @@ import { generateFringe } from '../engine/fringe.js';
 import { generateSpiral } from '../engine/spiral.js';
 import { generateWeave, WEAVE_BINDINGS, WEAVE_BINDING_IDS } from '../engine/weave.js';
 import { bindingThumb } from './thumbs.js';
+import { OPTION_ICONS } from './option-thumbs.js';
 import { MORE_DESIGNS } from './more-designs.js';
 import { LINE_DESIGNS } from './line-designs.js';
 import { SVG_DESIGNS } from './svg-design.js';
@@ -175,8 +176,8 @@ export const DESIGNS = [
         title: 'Second layer',
         hint: 'Normals are lines that climb away from the edge, crossing every ring at a right angle, so the panel has crossings and holds together.',
         options: [
-          { id: 'none', label: 'None', hint: 'Rings only: one strand, no lifts' },
-          { id: 'normals', label: 'Normals', hint: 'Lines along the normals of the outline, crossing every ring at a right angle' },
+          { id: 'none', label: 'None', hint: 'Rings only: one strand, no lifts', thumb: OPTION_ICONS['spiral:second'].none },
+          { id: 'normals', label: 'Normals', hint: 'Lines along the normals of the outline, crossing every ring at a right angle', thumb: OPTION_ICONS['spiral:second'].normals },
         ],
       },
       { kind: 'sliders', title: 'Look and feel', items: [{ key: 'spacing', label: 'Ring spacing', help: 'Distance between neighbouring rings.', lo: 'Tight', hi: 'Open', unit: 'mm', edit: true }] },

@@ -3,7 +3,8 @@
 // settings into layers of polylines. The rest (the panel, the print, the verdict, the report) is shared.
 import { defineControls, r1, r2 } from './structure-controls.js';
 import { buildLayeredVerdict } from './verdict.js';
-import { thumbFromLayers, shapeThumb } from './thumbs.js';
+import { thumbFromLayers, optionThumbFromLayers, shapeThumb } from './thumbs.js';
+import { OPTION_ICONS } from './option-thumbs.js';
 import { boundaryFor, layeredResult } from '../engine/layers.js';
 import { resolveConfig } from '../engine/params.js';
 import { SHAPES } from '../engine/shapes.js';
@@ -50,6 +51,20 @@ export function layered(def) {
     });
   }
   const [tw, th] = def.thumbSize ?? [36, 22];
+  // every option and every preset gets a picture: a drawn icon where the geometry cannot show the difference at the size
+  // of a button (option-thumbs.js), otherwise the design itself, small, with that option or preset chosen. Those are
+  // drawn the first time their section is opened (`picture`), so opening the studio costs nothing.
+  const picture = (patch) => () => {
+    try {
+      const s = { ...c.defaults, ...patch, width: tw, height: th };
+      return optionThumbFromLayers(def.build(c.sanitize ? c.sanitize(s) : s, boundaryFor(tw, th)).layers, tw, th);
+    } catch { return ''; }
+  };
+  controls = controls.map((x) => {
+    if (x.kind !== 'choice') return x;
+    const icons = OPTION_ICONS[`${def.id}:${x.key}`] ?? {};
+    return { ...x, options: x.options.map((o) => (o.thumb ? o : icons[o.id] ? { ...o, thumb: icons[o.id] } : { ...o, picture: picture({ ...(o.patch ?? {}), [x.key]: o.id }) })) };
+  });
   let thumb = '';
   try {
     const s = { ...c.defaults, width: tw, height: th };
@@ -69,6 +84,7 @@ export function layered(def) {
     ranges: c.ranges,
     presets: c.presets,
     presetMatch: c.presetMatch,
+    presetPicture: (preset) => picture(preset.patch)(),
     describe: c.describe,
     size: (s) => [s.width, s.height],
     setSize: (s, w, h) => { s.width = w; s.height = h; },

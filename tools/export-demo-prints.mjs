@@ -4,6 +4,7 @@
 //   node tools/export-demo-prints.mjs --size=60  a smaller swatch (mm), which prints faster
 import fs from 'node:fs';
 import { DESIGNS, designById } from '../src/ui/designs.js';
+import { relevantKeys, settingsFileName, showValue as show } from '../src/ui/file-name.js';
 
 const profile = (kind, id) => JSON.parse(fs.readFileSync(new URL(`../profiles/${kind}/${id}.json`, import.meta.url)));
 const machine = profile('machines', 'prusa-mk3s');
@@ -37,40 +38,10 @@ const PLAN = [
   { design: 'spacer', preset: 'airy', what: 'Spacer net with a pillar on every second node: the hardest, most open structure' },
 ];
 
-/** Short, readable names for the settings whose own names are long; every other setting keeps its own name. */
-const SHORT = {
-  designPattern: 'fill', designSpacing: 'fillSp', designAngle: 'fillAng',
-  backing: 'backing', backingArea: 'area',
-  backing1Pattern: 'b1', backing1Spacing: 'b1Sp', backing1Angle: 'b1Ang',
-  backing2Pattern: 'b2', backing2Spacing: 'b2Sp', backing2Angle: 'b2Ang',
-  patternScale: 'scale', rowOverlap: 'overlap', rowPitch: 'rowPitch', colorChange: 'twoColours',
-};
-const MAX_NAME = 150;
-
-/** The settings that matter for the current choices, in the order the panel shows them. */
-function relevantKeys(mod, s) {
-  const keys = [];
-  for (const c of mod.controls) {
-    if (typeof c.when === 'function' && !c.when(s)) continue;
-    if (c.kind === 'choice' || c.kind === 'shape') keys.push(c.key);
-    else if (c.kind === 'sliders') for (const item of c.items) keys.push(item.key);
-    else if (c.kind === 'pattern') { keys.push(c.key); if (c.scale) keys.push(c.scale.key); }
-    else if (c.kind === 'switch' && s[c.key]) keys.push(c.key);
-  }
-  return [...new Set(keys)];
-}
-
-const show = (v) => (typeof v === 'number' ? String(Number(v.toFixed(2))) : v === true ? 'on' : String(v));
-
+/** The number, then the name every export gets (src/ui/file-name.js): design, preset, size and each setting's value. */
 function fileName(n, mod, s, presetId) {
   const [w, h] = mod.size(s);
-  const head = [String(n).padStart(2, '0'), mod.file, presetId ?? 'custom', `${w}x${h}mm`];
-  let keys = relevantKeys(mod, s);
-  const build = () => [...head, ...keys.map((k) => `${SHORT[k] ?? k}${typeof s[k] === 'number' ? '' : '-'}${show(s[k])}`)].join('_').replace(/[^A-Za-z0-9._-]+/g, '-');
-  // a long name drops the angles that are zero, then the last settings (the first lines of the file have them all)
-  if (build().length > MAX_NAME) keys = keys.filter((k) => !(/angle$/i.test(k) && s[k] === 0));
-  while (build().length > MAX_NAME && keys.length > 3) keys = keys.slice(0, -1);
-  return `${build()}.gcode`;
+  return settingsFileName({ head: [String(n).padStart(2, '0'), mod.file, presetId ?? 'custom', `${w}x${h}mm`], s, keys: relevantKeys(mod, s) });
 }
 
 fs.mkdirSync(OUT, { recursive: true });

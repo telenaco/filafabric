@@ -453,7 +453,11 @@ export class Section extends Control {
       titled ? el('h2', { class: 'eyebrow', id: this.titleId, text: spec.title }) : null);
     for (const part of [].concat(this.buildBody())) if (part) this.node.append(part);
     this.fold = titled ? new SectionFold(host, this.node, { id: this.titleId, icon: sectionIcon(spec.title, spec.kind) }) : null;
+    this.fold?.button.addEventListener('click', () => { if (!this.fold.body.hidden) this.opened(); });
   }
+
+  /** The section was opened. The default does nothing. */
+  opened() {}
 
   get settings() {
     return this.host.settings(this.mod.id);
@@ -495,10 +499,17 @@ class OptionSection extends Section {
 
   buildBody() {
     this.grid = el('div', { class: 'patterns', role: 'group', 'aria-labelledby': this.titleId, ...this.gridAttrs() });
+    this.pictures = [];
     this.buttons = this.options().map((opt) => {
       const btn = el('button', { type: 'button', class: 'pattern', 'aria-pressed': 'false', title: opt.hint, ...opt.attrs });
       if (opt.html !== undefined) btn.innerHTML = opt.html;
       else btn.append(el('span', { text: opt.text }));
+      // a picture drawn from the design itself waits until the section is first opened
+      if (opt.picture) {
+        const slot = el('span', { class: 'option-picture', 'aria-hidden': 'true' });
+        btn.prepend(slot);
+        this.pictures.push({ slot, draw: opt.picture });
+      }
       btn.addEventListener('click', () => { opt.apply(); this.host.change(); });
       this.grid.append(btn);
       return { btn, opt };
@@ -508,6 +519,19 @@ class OptionSection extends Section {
 
   refresh() {
     for (const { btn, opt } of this.buttons) btn.setAttribute('aria-pressed', String(opt.pressed()));
+  }
+
+  /** Draws the waiting pictures one at a time, so the section opens at once and fills in. */
+  opened() {
+    const queue = this.pictures.splice(0);
+    const step = () => {
+      const job = queue.shift();
+      if (!job) return;
+      job.slot.innerHTML = job.draw();
+      if (!job.slot.innerHTML) job.slot.hidden = true;
+      setTimeout(step, 0);
+    };
+    if (queue.length) setTimeout(step, 0);
   }
 }
 
@@ -522,6 +546,7 @@ export class PresetsSection extends OptionSection {
       attrs: { 'data-preset': p.id },
       text: p.name,
       hint: p.blurb,
+      picture: this.mod.presetPicture ? () => this.mod.presetPicture(p) : this.host.presetPicture ? () => this.host.presetPicture(this.mod, p) : null,
       pressed: () => (this.mod.presetMatch ? this.mod.presetMatch(this.settings) : null) === p.id,
       apply: () => Object.assign(this.settings, p.patch),
     }));
@@ -550,6 +575,7 @@ export class ChoiceSection extends OptionSection {
       attrs: { 'data-choice': `${this.mod.id}:${key}:${opt.id}` },
       html: `${opt.thumb ?? ''}<span>${opt.label}</span>`,
       hint: opt.hint,
+      picture: opt.thumb ? null : opt.picture ?? null,
       pressed: () => String(this.settings[key]) === opt.id,
       apply: () => { Object.assign(this.settings, opt.patch ?? {}); this.settings[key] = opt.id; },
     }));

@@ -10,20 +10,25 @@ import { buildVerdict, buildSquiggleVerdict, formatMinutes } from './verdict.js'
 import { stateToHash, hashToState, sanitizeState, PRINT_DEFAULTS } from './share.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
 import { $, $$, el, icon, ICONS } from './dom.js';
-import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, OptionFold } from './panels.js';
-import { layerHeightOptions } from '../engine/params.js';
+import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, SectionFold } from './panels.js';
+import { layerHeightOptions, resolveConfig } from '../engine/params.js';
 import { TooltipLayer } from './tooltip.js';
 import { ProfileStore } from './profile-store.js';
 import { DESIGNS, ESSENTIALS, designById, isReady, baseDesignSettings } from './designs.js';
-import { THUMBS, shapeThumb } from './thumbs.js';
+import { THUMBS, shapeThumb, presetThumb } from './thumbs.js';
 import { swatchCode } from './swatch.js';
+import { exportFileName, relevantKeys } from './file-name.js';
 import { FIELDS, FIELD_IDS, createField } from '../engine/fields.js';
 import { SHAPES, SHAPE_IDS } from '../engine/shapes.js';
 import { readSvgLines } from './svg-lines.js';
-import { composeSvgLines, outlineFromVector } from '../engine/svg-lines.js';
-import { summariseDrawing, describeDrawing, cropToDrawing } from '../engine/drawing.js';
+import { composeSvgLines, outlineFromVector, vectorPatternRings } from '../engine/svg-lines.js';
+import { applySvgGuides } from '../engine/svg-guides.js';
+import { summariseDrawing, describeDrawing, interpretDrawing } from '../engine/drawing.js';
 import { stackLayers } from '../engine/stack.js';
+import { windowRings } from '../engine/window.js';
 import { bindPanelExport } from './panel-ui.js';
+import { createStudyRecorder } from './study.js';
+import { classifyBuildError, DiagnosticLog, suggestRecovery } from './diagnostics.js';
 
 const STORAGE_KEY = 'filament-textile-studio:v1'; // kept so a returning visitor's last session still opens
 const PLAY_ICON = 'M5 3l10 6-10 6z';
@@ -114,7 +119,7 @@ const state = {
   materials: new Map(),
   machine: 'prusa-mk3s',
   material: 'filaflex-95-foamy',
-  design: 'loop-pile',
+  design: 'zigzag',
   primary: { ...PRIMARY_DEFAULTS },
   advanced: {},
   squiggle: { ...SQUIGGLE_DEFAULTS },
@@ -176,6 +181,7 @@ let preview = null;
 let rafId = 0;
 let lastFrame = 0;
 const undoLog = { stack: [], cursor: -1 };
+const diagnosticLog = new DiagnosticLog();
 const openAdvancedGroups = new Set();
 
 /* ---------- storage ---------- */
@@ -325,6 +331,8 @@ function renderHistoryButtons() {
 
 /** Every control of every panel, so they can all redraw themselves from the current settings. */
 const controls = [];
+let svgImportCard = null;
+let studyRecorder = null;
 
 const PRINT_RANGES = { layers: { min: 1, max: 10, step: 1 } };
 const PRINT_THICKNESS = { label: 'Layer thickness', help: 'How thick every layer is. Thinner prints cleaner and slower; thicker is quick, but strands lie over each other less cleanly.' };
@@ -368,6 +376,7 @@ const PRINT_BINDING = {
 const host = {
   binding: (id) => (id === 'print' ? PRINT_BINDING : BINDINGS[id]),
   settings: (id) => settingsOf(id),
+  presetPicture: (mod, preset) => presetThumb(mod, preset, { machine: state.machines.get(state.machine), material: printMaterial() }),
   change: () => afterDesignChange(),
   nudge: () => afterControl(),
   sizeChanged: () => { renderControls(); schedule(); },
@@ -382,6 +391,7 @@ const host = {
 
 function renderControls() {
   for (const c of controls) c.update();
+  renderPrinter();
 }
 
 /** The panels of every design, and the sliders and size of the two older ones, mounted into their own markup. */
@@ -403,6 +413,8 @@ function buildPanels() {
   const picker = new PatternPicker(host, 'loop-pile', 'pattern', ['none', ...FIELD_IDS], 'lp-pattern-title', { scale: PATTERN_SCALE });
   $('#lp-pattern').replaceChildren(picker.node);
   controls.push(picker);
+  const pilePatterns = new SectionFold(host, $('#lp-pattern').closest('section'), { id: 'lp-pattern-section' });
+  controls.push(pilePatterns);
   // the layers every design shares live in the printer setup
   const layersCard = new PrintSetupCard(host, { thickness: PRINT_THICKNESS, layers: PRINT_LAYERS });
   $('#print-setup').replaceChildren(layersCard.node);
@@ -443,11 +455,11 @@ function svgSituation() {
     summary: v ? summaryOf(v) : '',
     usesVector: !!mod.usesVector,
     idleNote: mod.svgNote ?? 'Its lines print first, with this pattern above, and its closed shapes can shape the pattern.',
-    allowsOutline: mod.outline !== false,
+    allowsOutline: true,
     hasShapes: !!(v && shapesOf(v)),
     outlineOn: registered,
     // most previews are a 100 mm window of a larger swatch; a drawing's own outline is shown whole
-    window: v && !mod.usesVector && !mod.fullSize && !registered && state.result ? [state.result.cfg.t.sample_width, state.result.cfg.t.sample_height] : null,
+    window: v && state.result && (v.width > state.result.cfg.t.sample_width || v.height > state.result.cfg.t.sample_height) ? [state.result.cfg.t.sample_width, state.result.cfg.t.sample_height] : null,
   };
 }
 
@@ -461,14 +473,9 @@ function followVectorSize() {
 
 async function importSvg(file) {
   try {
-    let drawing = await readSvgLines(file);
-    // a page bigger than the bed cannot be printed whole, and the drawing on it usually is a small part of it: cut it down
-    const bed = state.machines.get(state.machine).bed;
-    const cut = drawing.width > bed.width || drawing.height > bed.depth;
-    const page = [drawing.width, drawing.height];
-    if (cut) drawing = cropToDrawing(drawing);
+    const drawing = await readSvgLines(file);
     state.vector = drawing;
-    state.outline = null; // a new drawing starts without a shape outline; the switch brings it back
+    state.outline = shapesOf(drawing); // red contains the pattern and blue cuts it away on import
     followVectorSize();
     state.docName = file.name.replace(/\.svg$/i, '').slice(0, 60);
     $('#doc-name').value = state.docName;
@@ -477,7 +484,7 @@ async function importSvg(file) {
     syncControls();
     schedule();
     commit();
-    toast(`Imported ${state.vector.name}: ${summaryOf(state.vector)}, ${state.vector.width.toFixed(1)} × ${state.vector.height.toFixed(1)} mm${cut ? `. The page (${page[0].toFixed(0)} × ${page[1].toFixed(0)} mm) is larger than the bed, so it was cut down to the drawing.` : ''}`);
+    toast(`Imported ${state.vector.name}: ${state.vector.width.toFixed(1)} × ${state.vector.height.toFixed(1)} mm`);
   } catch (e) {
     toast(`Could not import the SVG: ${e.message}`);
   }
@@ -518,14 +525,19 @@ function squiggleSampler(width = state.squiggle.width, height = state.squiggle.h
  * The outline as it will print for a width x height swatch (mm). A drawing's own shapes stay registered to its lines;
  * any other outline is rotated, then fitted inside the swatch.
  */
-function placedOutline(width, height) {
+function placedOutline(width, height, fullWidth = width, fullHeight = height) {
   const o = state.outline;
   if (!o) return null;
   const rings = unflattenRings(o.rings);
   if (o.page) {
     const [pw, ph] = o.page;
     const long = Math.max(pw, ph);
-    return rings.map((r) => r.map((p) => ({ x: p.x * long * (width / pw), y: p.y * long * (height / ph) })));
+    // Saved rings are simplified and rounded for sharing. While the drawing is available, its original edges are authoritative.
+    const scaled = state.vector ? vectorPatternRings(state.vector, { scaleX: fullWidth / state.vector.width, scaleY: fullHeight / state.vector.height })
+      : rings.map((r) => r.map((p) => ({ x: p.x * long * (fullWidth / pw), y: p.y * long * (fullHeight / ph) })));
+    const cropped = windowRings(scaled, width, height);
+    if (!cropped.length) throw new Error('The bottom-left preview window contains no filled SVG shape. Use full-panel export for the complete drawing.');
+    return cropped;
   }
   return placeOutline(rings, { rotation: o.rotation, width, height });
 }
@@ -541,7 +553,7 @@ function parallelDepth() {
 function printMaterial() {
   const base = state.materials.get(state.material);
   normalisePrint();
-  if (!base || state.print.layerHeight === PRINT_DEFAULTS.layerHeight) return base;
+  if (!base || base.print_defaults?.layer_height === state.print.layerHeight) return base;
   return { ...base, print_defaults: { ...(base.print_defaults ?? {}), layer_height: state.print.layerHeight } };
 }
 
@@ -552,14 +564,14 @@ function regenerate() {
     let result;
     const mod = designById(state.design);
     followVectorSize();
-    // the preview of most designs is a 100 mm window; a design that works from the imported drawing, and a drawing's own
-    // outline, are shown whole
-    const cap = mod.fullSize || state.outline?.page ? Infinity : 100;
+    // Every design uses a bounded preview window. Imported drawings keep their full scale within it.
+    // Ordinary SVG swatches show the complete drawing; garment-size files retain a bounded pattern sample.
+    const cap = state.vector && Math.max(state.vector.width, state.vector.height) <= 250 && state.vector.width <= machine.bed.width && state.vector.height <= machine.bed.depth ? 250 : 100;
     if (!mod.legacy) {
       const own = state.designs[mod.id];
       const [w, h] = mod.size(own);
       const previewState = { ...own, width: Math.min(w, cap), height: Math.min(h, cap) };
-      result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height), vector: mod.usesVector ? state.vector : null });
+      result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height, w, h), vector: mod.usesVector || mod.vectorGuides ? state.vector : null, vectorSize: [w, h], includeLines: !state.vector });
     } else if (state.design === 'squiggle') {
       const s = state.squiggle;
       // a picture is shown whole: the preview is the whole swatch at the shape it has, shrunk to fit the window
@@ -576,26 +588,29 @@ function regenerate() {
         wavelength: s.wavelength,
         sampler: squiggleSampler(pw, ph),
         colorChange: s.colorChange,
-        outline: placedOutline(pw, ph),
+        outline: placedOutline(pw, ph, s.width, s.height),
       });
     } else {
       const [w, h] = sampleSize(state.primary);
       const textile = toTextile(state.primary, state.advanced);
       textile.sample_width = Math.min(w, cap); textile.sample_height = Math.min(h, cap);
-      result = generate(machine, material, textile, { outline: placedOutline(textile.sample_width, textile.sample_height), liftAt: pileLiftFactor(state.primary) });
+      result = generate(machine, material, textile, { outline: placedOutline(textile.sample_width, textile.sample_height, w, h), liftAt: pileLiftFactor(state.primary) });
     }
-    if (state.vector && !designById(state.design).usesVector) {
+    if (state.vector) {
       const [fullWidth, fullHeight] = BINDINGS[state.design].size.get();
+      result = applySvgGuides(result, state.vector, { fullWidth, fullHeight, outline: mod.outline === false ? placedOutline(result.cfg.t.sample_width, result.cfg.t.sample_height, fullWidth, fullHeight) : null });
       // a drawing that is also the outline lies on the boundary itself, so its lines are not trimmed to it
-      result = composeSvgLines(result, state.vector, { fullWidth, fullHeight, clipLines: !state.outline?.page });
+      result = composeSvgLines(result, state.vector, { fullWidth, fullHeight, clipLines: !state.outline?.page && !result.guideCount });
     }
     result = stackLayers(result, state.print.layers);
+    if (state.vector) result.documentSize = [state.vector.width, state.vector.height];
     state.result = result;
     state.error = null;
     preview.update(result);
     applyScrub();
   } catch (e) {
     state.error = e;
+    recordBuildFailure(e);
     if (!(e && Array.isArray(e.errors))) console.error(e);
   }
   $('#busy-chip').hidden = true;
@@ -699,10 +714,11 @@ function currentVerdict() {
 function renderCheck() {
   const box = $('#check');
   let v = currentVerdict();
+  const recovery = state.error ? suggestRecovery(designById(state.design), settingsOf(state.design), state.error) : null;
   if (!v && state.error) {
     // say what the problem is, and which setting to change: the same words the message above the controls uses
     const text = Array.isArray(state.error.errors) ? state.error.errors.map((m) => plainError(m).text).join('. ') : String(state.error.message || state.error);
-    v = { level: 'error', title: 'Can\'t build this yet', body: `${text}${adviceFor(designById(state.design), text)}`, action: null };
+    v = { level: 'error', title: 'Can\'t build this yet', body: recovery ? `${text} Simplify this pattern restores practical spacing and loop or wave sizes. You can undo the change.` : `${text}${adviceFor(designById(state.design), text)} Download the error log to keep this attempt and its settings.`, action: null };
   }
   if (!v) { box.hidden = true; return; }
   box.hidden = false;
@@ -716,6 +732,11 @@ function renderCheck() {
     el('span', { class: 'check-chev' }, icon(ICONS.chevron, { size: 16 })));
   toggle.addEventListener('click', () => { state.checkOpen = !open; renderCheck(); });
   const row = el('div', { class: 'check-row' }, toggle);
+  if (recovery) {
+    const simplify = el('button', { type: 'button', class: 'check-btn', title: recovery.description, text: recovery.label });
+    simplify.addEventListener('click', () => applyBuildRecovery(recovery));
+    row.append(simplify);
+  }
   if (v.action === 'roomy-on') {
     const quick = el('button', { type: 'button', class: 'check-btn', title: `${v.actionLabel}: 1.5 mm between loop feet`, text: 'Add room' });
     quick.addEventListener('click', () => setRoomy(true));
@@ -725,6 +746,11 @@ function renderCheck() {
   if (open) {
     const body = el('div', { class: 'check-body', id: 'check-body' }, el('p', { text: v.body }));
     const actions = el('div', { class: 'check-actions' });
+    if (state.error) {
+      const saveLog = el('button', { type: 'button', class: 'check-btn ghost', text: 'Download error log', title: 'Downloads recent local errors and current settings, including the current drawing. Share this file only when you want to share that drawing.' });
+      saveLog.addEventListener('click', saveErrorLog);
+      actions.append(saveLog);
+    }
     if (v.action === 'roomy-off') {
       const btn = el('button', { type: 'button', class: 'check-btn ghost', text: v.actionLabel });
       btn.addEventListener('click', () => setRoomy(false));
@@ -817,9 +843,31 @@ function renderPlayback() {
 function renderExport() {
   const btn = $('#btn-export');
   const ok = !!state.result && !state.error && state.result.moves.length > 0;
-  btn.disabled = !ok;
-  const bytes = state.result ? state.result.gcode.length : 0;
-  $('#export-size').textContent = ok ? (bytes > 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`) : '';
+  // one Export button: a swatch needs a build that worked, a panel only needs a design that can be one
+  btn.disabled = !(ok || designById(state.design).panel !== false);
+}
+
+/** What the Export dialog shows of this swatch, or null when it cannot be exported. */
+function swatchInfo() {
+  const ok = !!state.result && !state.error && state.result.moves.length > 0;
+  if (!ok) return null;
+  const cfg = state.result.cfg;
+  const [w, h] = [cfg.t.sample_width, cfg.t.sample_height];
+  const bytes = state.result.gcode.length;
+  const size = bytes > 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  const stats = state.result.stats;
+  const mm = (n) => String(Math.round(n * 10) / 10);
+  const doc = state.result.documentSize;
+  const context = doc && (doc[0] > w || doc[1] > h) ? `This exports the ${mm(w)} × ${mm(h)} mm sample. Choose Full panel for the complete ${mm(doc[0])} × ${mm(doc[1])} mm SVG.` : '';
+  return { design: designById(state.design).name, dims: `${mm(w)} × ${mm(h)} mm`, context, estimate: `${formatMinutes(stats.timeSec / 60)} min · ${stats.filamentGrams.toFixed(2)} g · ${size}`, name: swatchFileName() };
+}
+
+/** The print setup in two lines: what the printer chip holds, repeated in the Export dialog so it can be checked. */
+function setupSummary() {
+  const machine = state.machines.get(state.machine), material = state.materials.get(state.material);
+  if (!machine || !material) return null;
+  const n = state.print.layers;
+  return { name: `${shortMachine(machine.name)} · ${material.name}`, sub: `${state.print.layerHeight} mm layers · ${n} ${n === 1 ? 'layer' : 'layers'}` };
 }
 
 const shortMachine = (name) => name.replace('Original ', '').replace(' i3', '').replace(' / MK3S+', '');
@@ -829,11 +877,14 @@ function renderPrinter() {
   const machine = state.machines.get(state.machine);
   const material = state.materials.get(state.material);
   if (!machine || !material) return;
+  // the chip says what the setup holds, so the layers are never a thing to look for elsewhere
+  const n = state.print.layers;
+  const layers = `${state.print.layerHeight} mm · ${n} ${n === 1 ? 'layer' : 'layers'}`;
   $('#printer-name').textContent = shortMachine(machine.name);
-  $('#printer-material').textContent = shortMaterial(material.name);
+  $('#printer-material').textContent = `${shortMaterial(material.name)} · ${layers}`;
   $('#printer-dot').className = 'status-dot ok';
-  $('#btn-printer').title = 'Change the printer and filament, or add your own from a PrusaSlicer or Bambu Studio export.';
-  $('#btn-printer').setAttribute('aria-label', `Printer setup: ${shortMachine(machine.name)} with ${shortMaterial(material.name)}`);
+  $('#btn-printer').title = 'Printer, filament, layer thickness and number of layers. Add your own printer or filament from a PrusaSlicer or Bambu Studio export.';
+  $('#btn-printer').setAttribute('aria-label', `Printer setup: ${shortMachine(machine.name)} with ${shortMaterial(material.name)}, ${layers}`);
 }
 
 function renderSizes() {
@@ -1050,7 +1101,7 @@ function drawPatternThumb(canvas, sampler) {
 const squiggleFolds = new Map();
 function foldSquiggle(id) {
   if (squiggleFolds.has(id)) return;
-  const fold = new OptionFold(host, $(`#${id}`), { id });
+  const fold = new SectionFold(host, $(`#${id}`).closest('section'), { id });
   squiggleFolds.set(id, fold);
   controls.push(fold);
 }
@@ -1104,6 +1155,15 @@ function buildPatterns() {
   }));
   foldSquiggle('sq-patterns');
   renderSquiggleChoices();
+}
+
+/** The sections of the two hand-built panels fold like every other design's, closed until they are opened. */
+function foldRemainingSections() {
+  for (const section of $$('#settings-body .panel > section.group')) {
+    const heading = section.querySelector('h2');
+    if (!heading || section.classList.contains('section-fold')) continue;
+    controls.push(new SectionFold(host, section, { id: heading.id }));
+  }
 }
 
 function syncControls() {
@@ -1195,7 +1255,8 @@ function renderTiles() {
     if (d.status === 'preset') tile.addEventListener('click', () => openPresetTile(d));
     return tile;
   };
-  const heading = (text, sub) => el('h3', { class: 'design-group' }, text, el('small', { text: sub }));
+  // the headings are one word or two; what they mean is a tooltip, so the first tile is the first thing in the list
+  const heading = (text, sub) => el('h3', { class: 'design-group', title: sub }, text);
   $('#design-list').replaceChildren(
     heading('Essentials', 'Flat lines in one or two layers, with only a few controls'),
     ...essentials.map(makeTile),
@@ -1279,8 +1340,10 @@ function showDesign() {
     const panel = $(`#panel-${d.id}`);
     if (panel) panel.hidden = d.id !== state.design;
   }
+  const svgSlot = $(`#panel-${state.design} .size-svg-slot`);
+  if (svgSlot && svgImportCard) svgSlot.append(svgImportCard.node);
   $('#tight-option').hidden = state.design !== 'loop-pile';
-  $('#btn-panel').hidden = designById(state.design).panel === false;
+  renderExport();
   if (state.design !== 'loop-pile' && state.showTight) setShowTight(false);
 }
 
@@ -1404,6 +1467,65 @@ function bindSquiggle() {
 }
 
 /* ---------- actions ---------- */
+function recordBuildFailure(error, input = null) {
+  if (error?.name === 'AbortError') return false;
+  const [width, height] = input ? [input.width, input.height] : BINDINGS[state.design].size.get();
+  const captured = input ?? {
+    design: state.design, width, height, studySettings: { ...settingsOf(state.design) },
+    machine: state.machines.get(state.machine), material: printMaterial(), layers: state.print.layers,
+    vector: state.vector, outline: state.outline?.rings,
+  };
+  const vector = captured.vector, sourcePaths = vector?.paths ?? [];
+  const settings = captured.studySettings ?? captured.settings ?? {};
+  const recorded = diagnosticLog.record({
+    design: captured.design,
+    settings: {
+      ...settings,
+      operation: input ? 'panel' : 'preview',
+      print: { layers: captured.layers, layerHeight: captured.material?.print_defaults?.layer_height },
+      machine: captured.machine?.id, material: captured.material?.id,
+      ...(input ? { repeat: captured.repeat, backingSpacing: captured.backingSpacing } : state.design === 'loop-pile' ? { advanced: { ...state.advanced } } : {}),
+    },
+    dimensions: { width, height },
+    sourceComplexity: { svgPathCount: sourcePaths.length, svgPointCount: sourcePaths.reduce((count, path) => count + path.length, 0), svgWidth: vector?.width ?? 0, svgHeight: vector?.height ?? 0, outlineRingCount: captured.outline?.length ?? 0 },
+    error,
+  });
+  if (recorded) reportStudyExport('build-error', { ...captured, error: classifyBuildError(error) });
+  return recorded;
+}
+
+function applyBuildRecovery(recovery) {
+  // Failed edits may not have reached the normal history. Keep this exact state so Undo restores the attempt.
+  const key = snapshotKey();
+  if (undoLog.stack[undoLog.cursor]?.key !== key) {
+    undoLog.stack = undoLog.stack.slice(0, undoLog.cursor + 1);
+    undoLog.stack.push({ key, data: JSON.parse(JSON.stringify(snapshot())) });
+    if (undoLog.stack.length > 100) undoLog.stack.shift();
+    undoLog.cursor = undoLog.stack.length - 1;
+  }
+  Object.assign(settingsOf(state.design), recovery.patch);
+  clearTimeout(genTimer);
+  syncControls();
+  renderControls();
+  regenerate();
+  commit();
+  renderHistoryButtons();
+  if (!state.error) toast('Pattern simplified. Undo restores your previous settings.');
+}
+
+function saveErrorLog() {
+  const name = `${slug(state.docName)}-error-log.json`;
+  const data = {
+    format: 'filafabric-error-log-v1',
+    downloadedAt: new Date().toISOString(),
+    note: 'This file contains recent local build errors and the complete current settings snapshot, including the current drawing when one is loaded. It is downloaded locally; share it only when you want to share that drawing.',
+    errors: diagnosticLog.export(),
+    current: snapshot(),
+  };
+  download(name, new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+  toast(state.vector ? 'Error log saved, including the current drawing.' : 'Error log saved with the current settings.');
+}
+
 function slug(s) {
   return (s || 'swatch').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'swatch';
 }
@@ -1417,13 +1539,65 @@ function download(name, blob) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function exportGcode() {
+function reportStudyExport(exportType, options = {}, stats = state.result?.stats) {
+  if (!studyRecorder) return;
+  const cfg = state.result?.cfg;
+  const [width, height] = ['settings-json', 'build-error'].includes(exportType) ? BINDINGS[state.design].size.get() : [cfg?.t.sample_width, cfg?.t.sample_height];
+  const vector = options.vector ?? state.vector;
+  let print = stats?.print ?? { layerHeight: cfg?.t.layer_height, layers: state.print.layers, nozzleDiameter: cfg?.t.nozzle_diameter, extrusionWidth: cfg?.t.extrusion_width };
+  if (exportType === 'build-error') {
+    print = { layerHeight: options.material?.print_defaults?.layer_height ?? state.print.layerHeight, layers: options.layers ?? state.print.layers };
+    try {
+      const current = resolveConfig(options.machine ?? state.machines.get(state.machine), options.material ?? printMaterial());
+      Object.assign(print, { nozzleDiameter: current.t.nozzle_diameter, extrusionWidth: current.t.extrusion_width });
+    } catch { /* the invalid profile itself may be the cause; do not substitute an older successful build */ }
+  }
+  void studyRecorder.record({
+    design: options.design ?? state.design, exportType,
+    dimensions: { width: options.width ?? width, height: options.height ?? height },
+    properties: {
+      settings: exportType === 'gcode-panel' ? { ...(options.studySettings ?? settingsOf(state.design)), colorChange: false } : options.studySettings ?? settingsOf(state.design),
+      print,
+      metrics: exportType === 'build-error' ? {} : { timeSec: stats?.timeSec, filamentMm: stats?.filamentMm, moves: stats?.moves ?? state.result?.moves?.length },
+      sources: { svg: !!vector, image: (options.design ?? state.design) === 'squiggle' && (options.settings ?? state.squiggle).pattern === 'image' && !!(options.image ?? state.image), ...(vector ? { svgPaths: vector.paths.length, svgPoints: vector.paths.reduce((n, p) => n + p.length, 0), svgGuides: interpretDrawing(vector).guides.length } : {}) },
+      panel: { repeat: options.repeat, backingSpacing: options.backingSpacing },
+      ...(exportType === 'build-error' ? { error: options.error } : {}),
+    },
+  });
+}
+
+/** The settings an exported file is named after: what a registry design's panel shows, the controls of the two older ones. */
+function namedKeys(id) {
+  const mod = designById(id), s = settingsOf(id);
+  if (!mod.legacy) return relevantKeys(mod, s);
+  if (id === 'squiggle') return ['mode', 'shape', ...SQ_SLIDERS.map((d) => d.key), 'pattern', 'colorChange'];
+  return [...LOOP_SLIDERS.map((d) => d.key), 'edgeLoops', 'roomy', 'pattern', ...(s.pattern && s.pattern !== 'none' ? ['patternScale'] : [])];
+}
+
+/**
+ * The name a file is saved under unless the person types another: design, preset, size, the value of every setting and
+ * the print setup (src/ui/file-name.js), so a folder of exports shows which designs and looks are printed most.
+ */
+function exportName(size, panel = false, panelSettings = {}) {
+  const settings = panel ? { ...settingsOf(state.design), ...panelSettings } : settingsOf(state.design);
+  const keys = panel ? [...namedKeys(state.design), 'repeat', 'backingSpacing'] : namedKeys(state.design);
+  return exportFileName(designById(state.design), settings, keys, { size, print: state.print, material: state.material, docName: state.docName, panel });
+}
+
+function swatchFileName() {
+  const cfg = state.result?.cfg;
+  return exportName(cfg ? [cfg.t.sample_width, cfg.t.sample_height] : BINDINGS[state.design].size.get());
+}
+
+function exportGcode(fileName = null) {
   if (!state.result || state.error || state.result.moves.length === 0) return;
   const code = currentSwatch();
-  const name = `${slug(state.docName)}_${code}_${state.material}.gcode`;
+  const name = fileName || swatchFileName();
   // name the swatch inside the file too, so a printed sample can be matched to its settings from the G-code alone
-  const text = state.result.gcode.replace('; Textile G-code generator v1\n', (head) => `${head}; swatch ${code}\n; name ${state.docName.replace(/[\r\n]+/g, ' ')}\n`);
+  const settings = JSON.stringify({ design: state.design, settings: settingsOf(state.design), print: state.print, machine: state.machine, material: state.material });
+  const text = state.result.gcode.replace('; Textile G-code generator v1\n', (head) => `${head}; swatch ${code}\n; name ${state.docName.replace(/[\r\n]+/g, ' ')}\n; studio settings ${settings}\n`);
   download(name, new Blob([text], { type: 'text/plain' }));
+  reportStudyExport('gcode-swatch');
   toast(`Saved ${name}`);
 }
 
@@ -1443,6 +1617,7 @@ async function shareLink() {
 
 function saveFile() {
   download(`${slug(state.docName)}-settings.json`, new Blob([JSON.stringify(snapshot(), null, 2)], { type: 'application/json' }));
+  reportStudyExport('settings-json');
 }
 
 async function openFile(file) {
@@ -1567,7 +1742,6 @@ function bindStatic() {
 
   $('#btn-undo').addEventListener('click', undo);
   $('#btn-redo').addEventListener('click', redo);
-  $('#btn-export').addEventListener('click', exportGcode);
   $('#btn-share').addEventListener('click', shareLink);
   $('#btn-details').addEventListener('click', () => { state.details = !state.details; renderFigures(); });
   $('#btn-advanced').addEventListener('click', () => openAdvanced($('#advanced-body').hidden));
@@ -1579,6 +1753,7 @@ function bindStatic() {
   anchorPopover($('#view-menu'), $('#btn-view'));
   $('#btn-help').addEventListener('click', () => { closeMenus(); $('#help-dialog').showModal(); });
   $('#btn-save-file').addEventListener('click', () => { closeMenus(); saveFile(); });
+  $('#btn-error-log').addEventListener('click', () => { closeMenus(); saveErrorLog(); });
   $('#btn-reset').addEventListener('click', () => { closeMenus(); resetDesign(); });
   $('#file-open').addEventListener('change', (e) => {
     closeMenus();
@@ -1625,9 +1800,10 @@ function bindStatic() {
 async function init() {
   await loadProfiles();
   preview = createPreview($('#preview'));
-  const importCard = new SvgImportCard(host);
-  $('#settings-body').prepend(importCard.node);
-  controls.push(importCard);
+  svgImportCard = new SvgImportCard(host);
+  controls.push(svgImportCard);
+  studyRecorder = createStudyRecorder($('#study-notice'));
+  void studyRecorder.init();
 
   // start from: a shared link, then the last session, then the defaults
   const fromLink = hashToState(location.hash);
@@ -1637,7 +1813,11 @@ async function init() {
   }
   // a page that is opened (not a shared link) lands on the zigzag mesh, whatever was open last; what was set in the
   // other designs is kept for when they are chosen
-  if (initial && !fromLink) initial.design = 'loop-pile';
+  if (initial && !fromLink) initial.design = 'zigzag';
+  if (initial && !fromLink) for (const [id, oldHub] of [['web', 3], ['rosette', 4], ['spirograph', 4], ['sunflower', 3]]) {
+    const settings = initial.designs?.[id];
+    if (settings && !settings.hubStyle && settings.hub === oldHub) settings.hub = 0.6;
+  }
   let pictureDropped = false;
   if (initial && !fromLink && initial.sampleDefaults !== 100) {
     for (const settings of [initial.squiggle, ...Object.values(initial.designs ?? {})]) if (settings && settings.width === settings.height && [50, 200].includes(settings.width)) { settings.width = 100; settings.height = 100; }
@@ -1649,14 +1829,20 @@ async function init() {
   buildAdvanced();
   buildSquiggleShapes();
   buildPatterns();
+  foldRemainingSections();
   fillDialogSelects();
   renderTiles();
   bindStatic();
   bindPanelExport({
-    options: (width = 100, height = 100) => ({ machine: state.machines.get(state.machine), material: printMaterial(), design: state.design, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : state.design === 'squiggle' ? state.squiggle : state.designs[state.design], outline: placedOutline(width, height), vector: state.vector, shapeOutline: !!state.outline?.page, layers: state.print.layers, image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale, panelSize: state.design === 'loop-pile' ? sampleSize(state.primary) : [settingsOf(state.design).width, settingsOf(state.design).height] }),
+    options: (width = state.vector?.width ?? 100, height = state.vector?.height ?? 100) => ({ machine: state.machines.get(state.machine), material: printMaterial(), design: state.design, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : state.design === 'squiggle' ? state.squiggle : state.designs[state.design], studySettings: { ...settingsOf(state.design) }, outline: placedOutline(width, height), vector: state.vector, shapeOutline: !!state.outline?.page, layers: state.print.layers, image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale, panelSize: state.design === 'loop-pile' ? sampleSize(state.primary) : [settingsOf(state.design).width, settingsOf(state.design).height] }),
     machines: () => state.machines, machineId: () => state.machine,
-    selectMachine: (id) => { state.machine = id; schedule(); commit(); },
-    download, filename: (w, h) => `${slug(state.docName)}_${state.design}_${w}x${h}mm.gcode`, toast,
+    saveSwatch: (name) => exportGcode(name), swatchInfo, setupSummary,
+    openSetup: () => $('#btn-printer').click(),
+    panelAvailable: () => designById(state.design).panel !== false,
+    download, filename: (w, h, repeat, backingSpacing) => exportName([w, h], true, { repeat, backingSpacing }), toast,
+    onExport: (options, stats) => reportStudyExport('gcode-panel', options, stats),
+    onError: (error, input) => recordBuildFailure(error, input),
+    onDownloadErrorLog: saveErrorLog,
   });
   new TooltipLayer();
   showDesign();

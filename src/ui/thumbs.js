@@ -49,6 +49,95 @@ export function thumbFromLayers(layers, width, height) {
   return `<svg class="design-thumb" viewBox="0 0 160 96" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
 }
 
+/**
+ * The same drawing at the size of an option button (48 x 32), for an option or a preset whose difference shows in the
+ * geometry: a meander's curve, a parquet's floor, a coarser or finer preset. Points that land on the same tenth of a
+ * pixel are written once, so a dense pattern stays a short string.
+ */
+export function optionThumbFromLayers(layers, width, height) {
+  const W = 48, H = 32;
+  const scale = Math.min((W - 4) / width, (H - 4) / height);
+  const ox = (W - width * scale) / 2, oy = (H - height * scale) / 2;
+  const paths = layers.map((polylines, k) => {
+    let d = '';
+    for (const pts of polylines) {
+      let last = '';
+      for (const p of pts) {
+        const at = `${(ox + p.x * scale).toFixed(1)} ${(oy + (height - p.y) * scale).toFixed(1)}`;
+        if (at === last) continue;
+        d += `${last ? 'L' : 'M'}${at}`;
+        last = at;
+      }
+    }
+    return d ? `<path d="${d}" stroke="var(--role-${k === 0 ? 'base' : 'anchored'})"/>` : '';
+  }).join('');
+  return `<svg class="shape-thumb option-thumb" width="48" height="32" viewBox="0 0 48 32" fill="none" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+}
+
+const PRESET_CACHE_LIMIT = 64;
+const presetPictures = new Map();
+const presetModules = new WeakMap();
+let nextPresetModule = 1;
+const PRESET_ROLES = { base: 'base', supported: 'anchored', rising: 'lifting', falling: 'lifting', unsupported: 'free' };
+
+/**
+ * A lazy fallback for presets outside the layered-design factory. Use the actual small sample, with no imported
+ * artwork, and project its height into the option picture so relief and pillar-height variants stay visible.
+ */
+export function presetThumb(mod, preset, { machine, material } = {}) {
+  if (!mod || typeof mod.generate !== 'function' || typeof mod.defaults !== 'function') return '';
+  let key;
+  try {
+    if (!presetModules.has(mod)) presetModules.set(mod, nextPresetModule++);
+    key = JSON.stringify([presetModules.get(mod), preset?.patch ?? {}, machine, material]);
+  } catch { return ''; }
+  if (presetPictures.has(key)) {
+    const picture = presetPictures.get(key);
+    presetPictures.delete(key); presetPictures.set(key, picture);
+    return picture;
+  }
+
+  let picture = '';
+  try {
+    const width = 36, height = 22;
+    const result = mod.generate(machine, material, { ...mod.defaults(), ...preset?.patch, width, height });
+    const strands = result.strands ?? [];
+    const count = strands.reduce((n, strand) => n + strand.pts.length, 0);
+    // The generator has its own move/crossing guards; cap the additional thumbnail work and markup as well.
+    if (!count || count > 80000) throw new Error('Preset sample is too dense for an option picture');
+    const stride = Math.max(1, Math.ceil(count / 6000));
+    const roleOf = (strand, p) => PRESET_ROLES[p.cls ?? (strand.kind === 'base' ? 'base' : 'supported')] ?? 'anchored';
+    let minZ = Infinity;
+    for (const strand of strands) for (const p of strand.pts) {
+      if (![p.x, p.y, p.z ?? 0].every(Number.isFinite)) throw new Error('Invalid preset sample point');
+      minZ = Math.min(minZ, p.z ?? 0);
+    }
+    const paths = strands.map((strand) => strand.pts.filter((p, i, pts) => i === 0 || i === pts.length - 1 || i % stride === 0 || roleOf(strand, p) !== roleOf(strand, pts[i - 1]))
+      .map((p) => ({ x: p.x + 0.35 * ((p.z ?? 0) - minZ), y: p.y + 1.6 * ((p.z ?? 0) - minZ), role: roleOf(strand, p) })));
+    let minX = 0, minY = 0, maxX = width, maxY = height;
+    for (const pts of paths) for (const p of pts) {
+      minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+    }
+    const scale = Math.min(44 / (maxX - minX), 28 / (maxY - minY));
+    const ox = (48 - (maxX - minX) * scale) / 2, oy = (32 - (maxY - minY) * scale) / 2;
+    const at = (p) => `${(ox + (p.x - minX) * scale).toFixed(1)} ${(oy + (maxY - p.y) * scale).toFixed(1)}`;
+    const buckets = Object.fromEntries(['base', 'anchored', 'lifting', 'free'].map((role) => [role, { d: '', last: '' }]));
+    for (const pts of paths) for (let i = 1; i < pts.length; i++) {
+      const from = at(pts[i - 1]), to = at(pts[i]);
+      if (from === to) continue;
+      const bucket = buckets[pts[i].role];
+      bucket.d += `${bucket.last === from ? '' : `M${from}`}L${to}`;
+      bucket.last = to;
+    }
+    const body = Object.entries(buckets).filter(([, bucket]) => bucket.d).map(([role, bucket]) => `<path d="${bucket.d}" stroke="var(--role-${role})"/>`).join('');
+    if (body && body.length < 145000) picture = `<svg class="shape-thumb option-thumb" width="48" height="32" viewBox="0 0 48 32" fill="none" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+  } catch { /* A missing option picture must never prevent choosing its preset. */ }
+  presetPictures.set(key, picture);
+  if (presetPictures.size > PRESET_CACHE_LIMIT) presetPictures.delete(presetPictures.keys().next().value);
+  return picture;
+}
+
 const R = 'var(--role-base)';
 const A = 'var(--role-anchored)';
 const svgTile = (body, extra = '') => `<svg class="design-thumb" viewBox="0 0 160 96" fill="none" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${extra}>${body}</svg>`;

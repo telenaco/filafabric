@@ -73,9 +73,10 @@ where" in the check turns them on too). For the loop pile, everything else lives
 settings in groups that show what you changed). The page always opens on the Zigzag mesh (what was set in the other
 designs is kept for when you choose them; a shared link opens the design it was made from). The printer chip in the
 header opens the printer setup: printer, filament, the **layer thickness** (only what the nozzle can lay down: a 0.4 mm
-nozzle prints 0.10, 0.15, 0.20 and 0.25 mm) and the **number of layers**. A list of more than four options (patterns,
-strand shapes, "Start from") sits behind one line that names the chosen option and opens to show them all; choosing
-one closes it again. The **···** menu has Getting started, Save/Open settings file and Reset this design. Undo/redo and **Share** (a link that
+nozzle prints 0.10, 0.15, 0.20 and 0.25 mm) and the **number of layers**. Settings sections start folded under a title
+and a summary of their current values. Open a section to see its cards or sliders; choosing a card keeps the section
+open. Option and preset pictures use the same line colours as the preview. The **···** menu has Getting started,
+Save/Open settings file, Download error log and Reset this design. Undo/redo and **Share** (a link that
 reopens the design and its settings) work for every design. Every exported file records its full parameter set
 and seed in comment lines.
 
@@ -113,6 +114,24 @@ The gallery lists estimated easier prints first, using the default 100 mm geomet
 Spacing sliders reach 0.8 mm. Click any slider value to enter an exact value beyond its range; valid manual values survive saving and reopening. Invalid geometry, machine limits and generation budgets produce errors instead of silently changing the requested value.
 
 ## Local files
+
+G-code names describe the design, preset, actual exported dimensions, relevant settings and print setup. The Export
+dialog lets you replace the suggested name. Long suggestions retain a compact settings identifier so two different
+designs do not acquire the same shortened name; the G-code header keeps the complete settings. Full-panel names
+include texture repeat and backing spacing, and describe their single-filament output. An SVG sample's name and size
+describe the exported window; use Full panel to export the complete document.
+
+To count designs and settings in a folder of automatically named exports, run:
+
+```bash
+node tools/tally-exports.mjs "C:/Users/me/Downloads"
+node tools/tally-exports.mjs "C:/Users/me/Downloads" --json
+```
+
+This local tally reads filenames and sends nothing to a server. Renamed files may not be recognizable. For online
+anonymous export and build-failure statistics, see [STUDY_SETUP.md](STUDY_SETUP.md). Collection stays off until the
+Cloudflare database and enable flag are configured; visitors then see a notice above Export. Download error log saves
+recent failures and the current design locally, including any drawing, so share that file deliberately.
 
 The original printer samples now live in ignored `reference/local-samples/`. They are retained as profile provenance, outside the deployable source. There were no STL files in this project. Engine modules, tests, vendored preview code and reference documentation remain in use.
 
