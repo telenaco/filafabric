@@ -1,5 +1,6 @@
 // Geometric screening, not a material-strength model. All distances are millimetres.
 import { findCrossings } from './crossings.js';
+import { improveTravel } from './travel.js';
 const mix = (a, b, t) => ({ ...b, x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: (a.z ?? 0) + ((b.z ?? 0) - (a.z ?? 0)) * t });
 const cross = (ax, ay, bx, by) => ax * by - ay * bx;
 // Flow is stored on the destination point: it applies to the whole incoming extrusion move.
@@ -281,8 +282,11 @@ export function analyzeFabric(strands, { strandWidth = 0.45, layerHeight = 0.2, 
   return { components: graph.components, joints: graph.joints, reversedCrossings, separatedCrossings, longestUnsupported, maxSlopeDeg, outsideSegments, issues, exportable: strands.length > 0 && issues.length === 0, physicallyVerified: false };
 }
 
-/** Layer precedence first; within a layer, bottom-left start and nearest endpoint/closed-loop seam. */
-export function orderStrands(strands, { start = null } = {}) {
+/**
+ * Layer precedence first; within a layer, bottom-left start and nearest endpoint/closed-loop seam. `improve` follows
+ * the greedy order with a 2-opt and Or-opt pass over the travel moves (travel.js), for drawings with many strands.
+ */
+export function orderStrands(strands, { start = null, improve = false } = {}) {
   if (!strands.length) return [];
   let minX = Infinity, minY = Infinity;
   for (const s of strands) for (const p of s.pts) { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); }
@@ -292,7 +296,9 @@ export function orderStrands(strands, { start = null } = {}) {
   const out = [];
   for (const layer of [...groups.keys()].sort((a, b) => a - b)) {
     const left = [...groups.get(layer)];
+    const layerStart = at, layerFirst = out.length;
     let pause = left.some((s) => s.pauseBefore);
+    const hadPause = pause;
     while (left.length) {
       let best = Infinity, pick = 0, vertex = 0, reverse = false, closed = false;
       left.forEach((s, i) => {
@@ -310,6 +316,11 @@ export function orderStrands(strands, { start = null } = {}) {
       else if (reverse) pts = [...pts].reverse();
       out.push({ ...s, pts, pauseBefore: pause }); pause = false;
       at = pts.at(-1) ?? at;
+    }
+    if (improve && out.length - layerFirst > 2) {
+      const better = improveTravel(out.splice(layerFirst), layerStart);
+      better.forEach((s, i) => out.push({ ...s, pauseBefore: hadPause && i === 0 }));
+      at = out.at(-1).pts.at(-1) ?? at;
     }
   }
   return out;

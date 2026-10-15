@@ -1,4 +1,4 @@
-import { clipStrands, connectStrands, orderStrands, analyzeFabric, travelDistance, finishAtPrintedBoundary } from './fabric.js';
+import { clipStrands, connectStrands, orderStrands, analyzeFabric, travelDistance, finishAtPrintedBoundary, segmentInside } from './fabric.js';
 import { resolveCrossings } from './crossings.js';
 import { PolygonBoundary } from './boundary.js';
 import { simplifyRing, flattenRings } from './outline.js';
@@ -7,6 +7,7 @@ import { computeStats } from './stats.js';
 import { writeGcode } from './gcode.js';
 import { classifyPaths, interpretDrawing, drawingPolylines, sanitizeSvgLines } from './drawing.js';
 import { svgDimensions } from './svg-parse.js';
+import { mergeTouching } from './travel.js';
 import { conformalGuideRegion } from './conformal.js';
 import { hasNativeHeight } from './svg-guides.js';
 import { MAX_MOVES } from './tiler.js';
@@ -78,10 +79,12 @@ export function composeSvgLines(result, vector, { fullWidth = vector.width, full
   if (!native) {
     const repaired = connectStrands(strands, boundary, { strandWidth: w });
     const last = Math.max(1, ...strands.map((s) => s.layer)) + 1;
-    strands = orderStrands(repaired.strands.map((s) => ({ ...s, layer: s.layer === -1 ? last : s.layer, pts: s.name === 'Structural tie' ? s.pts.map((p) => ({ ...p, z: 2 * h })) : s.pts })));
+    // the drawing's lines first touch-merge, then every layer is ordered and directed for the least travel
+    const layered = repaired.strands.map((s) => ({ ...s, layer: s.layer === -1 ? last : s.layer, pts: s.name === 'Structural tie' ? s.pts.map((p) => ({ ...p, z: 2 * h })) : s.pts }));
+    strands = orderStrands(mergeTouching(layered, { within: w * 1.1, allow: (p, q) => segmentInside(p, q, boundary) }), { improve: true });
     strands = resolveCrossings(strands, { follow: true, lift: h, strandWidth: w }).strands;
   } else {
-    strands = [...orderStrands(imported), ...body];
+    strands = [...orderStrands(mergeTouching(imported, { within: w * 1.1, allow: (p, q) => segmentInside(p, q, boundary) }), { improve: true }), ...body];
     if (result.guideRepulsion || result.spacer || result.pillarWeave) strands = resolveCrossings(strands, { follow: true, preserve: true, lift: 0, strandWidth: w }).strands;
   }
   checkMoveBudget(strands);

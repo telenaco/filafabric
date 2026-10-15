@@ -96,6 +96,8 @@ export const SVG_DESIGNS = [
     usesVector: true,
     fullSize: true,
     panel: true,
+    // a drawing is many separate lines: join the ones that touch and order the rest for the least travel (travel.js)
+    optimizeTravel: true,
     svgNote: 'Bring a drawing: red closed shapes are filled, blue ones are left empty, and lines print as drawn.',
     controls: [
       { kind: 'presets', title: 'Start from' },

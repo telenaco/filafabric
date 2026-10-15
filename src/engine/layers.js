@@ -9,6 +9,7 @@ import { lanePoints } from './shapes.js';
 import { MAX_MOVES } from './tiler.js';
 import { contactGraph, clipStrands, connectStrands, orderStrands, travelDistance, simplifyStrands, safePoint, segmentInside } from './fabric.js';
 import { finishFabric } from './fabric-result.js';
+import { mergeTouching } from './travel.js';
 
 /**
  * Helpers shared by every design that is a few layers of plotted lines: ordered layers of polylines in mm in, moves,
@@ -232,14 +233,17 @@ export function crossingReport(items, areaMm2, strandWidth = 0.45) {
  * Layers of polylines to strands: layer k at (k + 1) layer heights, a self-crossing strand lifts over its own earlier
  * pass, and the first strand of every layer after the first can pause for a filament change.
  */
-export function layersToStrands(layers, { layerHeight = 0.2, strandWidth = 0.45, colorChange = false, ramp = 1.6, boundary = null, coherent = false, inset = strandWidth / 2 } = {}) {
+export function layersToStrands(layers, { layerHeight = 0.2, strandWidth = 0.45, colorChange = false, ramp = 1.6, boundary = null, coherent = false, inset = strandWidth / 2, optimizeTravel = false } = {}) {
   if (coherent) {
     let flat = layers.flatMap((list, k) => list.filter((p) => p.length >= 2).map((p, i) => ({ id: `l${k + 1}-${i + 1}`, layer: k, kind: k ? 'supported' : 'base', name: `Layer ${k + 1}`, pauseBefore: colorChange && k > 0 && i === 0, pts: p.map((q) => ({ x: q.x, y: q.y, z: layerHeight, ...(q.flow !== undefined ? { flow: q.flow } : {}) })) })));
     flat = simplifyStrands(flat);
     if (boundary) flat = clipStrands(flat, boundary, inset);
     if (boundary) flat = connectStrands(flat, boundary, { strandWidth }).strands;
     const beforeMm = travelDistance(flat);
-    flat = orderStrands(flat.map((s) => ({ ...s, layer: s.layer === -1 ? layers.length : s.layer })));
+    flat = flat.map((s) => ({ ...s, layer: s.layer === -1 ? layers.length : s.layer }));
+    // a drawing of many separate lines: join the ones that touch, then order and direct what is left for the least travel
+    if (optimizeTravel) flat = mergeTouching(flat, { within: strandWidth * 1.1, allow: boundary ? (p, q) => segmentInside(p, q, boundary) : null });
+    flat = orderStrands(flat, { improve: optimizeTravel });
     const out = resolveCrossings(flat, { follow: true, lift: layerHeight, strandWidth, ramp }).strands;
     out.routing = { beforeMm, afterMm: travelDistance(out) };
     return out;
@@ -264,7 +268,7 @@ export function layersToStrands(layers, { layerHeight = 0.2, strandWidth = 0.45,
  * End to end for a layered design: machine, material and layers of polylines in, moves, stats, G-code and report out.
  * @param layers  array of layers, each an array of polylines of { x, y } in mm
  */
-export function layeredResult(machine, material, { width, height, layers, colorChange = false, outline = null, extra = {}, ramp = 1.6, inset }) {
+export function layeredResult(machine, material, { width, height, layers, colorChange = false, outline = null, extra = {}, ramp = 1.6, inset, optimizeTravel = false }) {
   const cfg = resolveConfig(machine, material, { sample_width: width, sample_height: height });
   const fit = bedFitErrors(cfg);
   if (fit.length > 0) throw new PreflightError(fit);
@@ -272,7 +276,7 @@ export function layeredResult(machine, material, { width, height, layers, colorC
   if (points > MAX_MOVES) {
     throw new ConfigError([`This layout would need about ${points.toLocaleString('en')} moves; the limit is ${MAX_MOVES.toLocaleString('en')}. Use wider spacing, larger cells or a smaller swatch.`]);
   }
-  const strands = layersToStrands(layers, { layerHeight: cfg.t.layer_height, strandWidth: cfg.t.extrusion_width, colorChange, ramp, boundary: boundaryFor(width, height, outline), coherent: true, inset });
+  const strands = layersToStrands(layers, { layerHeight: cfg.t.layer_height, strandWidth: cfg.t.extrusion_width, colorChange, ramp, boundary: boundaryFor(width, height, outline), coherent: true, inset, optimizeTravel });
   const moves = emitStrands(strands, { retraction: cfg.derived.retraction });
   const stats = computeStats(moves, cfg, []);
   stats.loops = 0;

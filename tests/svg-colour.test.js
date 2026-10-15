@@ -309,8 +309,10 @@ test('imported drawing lines print their passes on the first layer under any pat
   const v = { name: 'wide', width: 60, height: 60, paths: [[{ x: 5, y: 30 }, { x: 55, y: 30 }]], styles: [{ color: 'other', width: 1.2 }] };
   const composed = composeSvgLines(result, v);
   const first = composed.strands.filter((s) => s.name === 'Imported SVG lines');
-  assert.equal(first.length, 3, 'three passes');
-  const ys = first.map((s) => s.pts[0].y).sort((a, b) => a - b);
+  // three passes side by side are one back-and-forth stroke: no lift and travel between them
+  assert.equal(first.length, 1, 'three passes, printed as one stroke');
+  const ys = [...new Set(first[0].pts.map((p) => Math.round(p.y * 1000) / 1000))].sort((a, b) => a - b);
+  assert.equal(ys.length, 3, 'three runs');
   assert.ok(Math.abs(ys[1] - ys[0] - 0.36) < 1e-6 && Math.abs(ys[2] - ys[1] - 0.36) < 1e-6);
 });
 

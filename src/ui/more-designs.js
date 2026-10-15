@@ -93,6 +93,7 @@ export function layered(def) {
         colorChange: !!s.colorChange,
         outline: built.outline ?? outline,
         inset: def.usesVector ? 0 : undefined,
+        optimizeTravel: !!def.optimizeTravel,
         extra: { layerCount: built.layers.length, ...(built.extra ?? {}) },
         ramp: def.ramp ?? 1.6,
       });
