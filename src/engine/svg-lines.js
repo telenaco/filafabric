@@ -5,85 +5,19 @@ import { simplifyRing, flattenRings } from './outline.js';
 import { emitStrands } from './emit.js';
 import { computeStats } from './stats.js';
 import { writeGcode } from './gcode.js';
+import { classifyPaths, interpretDrawing, drawingPolylines, sanitizeSvgLines } from './drawing.js';
+import { svgDimensions } from './svg-parse.js';
 
-const MM = { mm: 1, cm: 10, in: 25.4, px: 25.4 / 96, pt: 25.4 / 72, pc: 25.4 / 6, q: 0.25, '': 25.4 / 96 };
-export function svgDimensions({ width, height, viewBox } = {}) {
-  const length = (s) => { const m = /^\s*([+\d.eE-]+)\s*(mm|cm|in|px|pt|pc|q)?\s*$/.exec(s ?? ''); return m && Number(m[1]) > 0 ? Number(m[1]) * MM[m[2] ?? ''] : null; };
-  const box = String(viewBox ?? '').trim().split(/[\s,]+/).map(Number);
-  const aspect = box.length === 4 && box.every(Number.isFinite) && box[2] > 0 && box[3] > 0 ? box[2] / box[3] : null;
-  let w = length(width), h = length(height);
-  if (w && !h && aspect) h = w / aspect;
-  if (h && !w && aspect) w = h * aspect;
-  if (!w && !h && aspect) { w = box[2] * MM.px; h = box[3] * MM.px; }
-  if (!(w > 0 && h > 0) || w > 1000 || h > 1000) throw new Error('SVG width and height must resolve to 0–1000 mm. Export with millimetre dimensions or a viewBox.');
-  return { width: Number(w.toFixed(8)), height: Number(h.toFixed(8)) };
-}
-
-/** Separate SVG moveto subpaths without inventing extrusion across pen-up gaps. */
-export function splitSvgSubpaths(d) {
-  const tokens = String(d).match(/[a-zA-Z]|[+-]?(?:\d*\.\d+|\d+\.?\d*)(?:[eE][+-]?\d+)?/g) ?? [];
-  const arity = { M: 2, L: 2, H: 1, V: 1, C: 6, S: 4, Q: 4, T: 2, A: 7, Z: 0 };
-  const parts = []; let run = [], i = 0, cmd = null, x = 0, y = 0, sx = 0, sy = 0;
-  while (i < tokens.length) {
-    if (/^[a-z]$/i.test(tokens[i])) cmd = tokens[i++];
-    if (!cmd || !(cmd.toUpperCase() in arity)) throw new Error('Unsupported SVG path command');
-    const upper = cmd.toUpperCase(), relative = cmd !== upper, n = arity[upper];
-    if (upper === 'Z') { run.push(cmd); x = sx; y = sy; cmd = null; continue; }
-    const values = tokens.slice(i, i + n).map(Number);
-    if (values.length !== n || !values.every(Number.isFinite)) throw new Error('Incomplete SVG path');
-    i += n;
-    if (upper === 'M') {
-      if (run.length) parts.push(run.join(' '));
-      x = values[0] + (relative ? x : 0); y = values[1] + (relative ? y : 0); sx = x; sy = y;
-      run = ['M', x, y]; cmd = relative ? 'l' : 'L';
-    } else {
-      run.push(cmd, ...values);
-      if (upper === 'H') x = values[0] + (relative ? x : 0);
-      else if (upper === 'V') y = values[0] + (relative ? y : 0);
-      else { x = values[n - 2] + (relative ? x : 0); y = values[n - 1] + (relative ? y : 0); }
-    }
-  }
-  if (run.length) parts.push(run.join(' '));
-  return parts;
-}
-
-export function sanitizeSvgLines(raw) {
-  if (!raw || !Number.isFinite(raw.width) || !Number.isFinite(raw.height) || raw.width <= 0 || raw.height <= 0 || raw.width > 1000 || raw.height > 1000 || !Array.isArray(raw.paths)) return null;
-  let count = 0;
-  for (const path of raw.paths) {
-    if (!Array.isArray(path) || path.length < 2) return null;
-    count += path.length; if (count > 100000) return null;
-    if (path.some((p) => !Number.isFinite(p.x) || !Number.isFinite(p.y) || Math.abs(p.x) > 10000 || Math.abs(p.y) > 10000)) return null;
-  }
-  return { name: String(raw.name ?? 'SVG lines').slice(0, 100), width: raw.width, height: raw.height, paths: raw.paths.map((path) => path.map(({ x, y }) => ({ x, y }))) };
-}
+// The reading of a drawing lives in drawing.js (what red, blue and line widths mean) and svg-parse.js (the file).
+export { svgDimensions, classifyPaths, sanitizeSvgLines };
 
 /**
- * Closed shapes and open lines of a drawing's paths (points in mm): a path whose end is back at its start is a shape,
- * unless it is a speck. Shapes come back without the repeated end point.
- */
-export function classifyPaths(paths, { closeTolerance = 0.35, minArea = 0.5 } = {}) {
-  const closed = [], open = [];
-  for (const path of paths) {
-    if (path.length < 2) continue;
-    const a = path[0], b = path[path.length - 1];
-    if (path.length >= 4 && Math.hypot(a.x - b.x, a.y - b.y) <= closeTolerance) {
-      let area = 0;
-      for (let i = 1; i < path.length; i++) area += path[i - 1].x * path[i].y - path[i].x * path[i - 1].y;
-      if (Math.abs(area) / 2 >= minArea) { closed.push(path.slice(0, -1)); continue; }
-    }
-    open.push(path);
-  }
-  return { closed, open };
-}
-
-/**
- * The closed shapes of a drawing as an outline that stays registered to the drawing's own lines: rings measured in the
- * drawing's longer side (so every number is 0 to 1, as a saved outline needs), with the drawing's size in `page`.
- * Simplified until it is small enough to save. Null when the drawing has no closed shape.
+ * The filled shapes of a drawing (red ones, less the blue holes in them) as an outline that stays registered to the
+ * drawing's own lines: rings measured in the drawing's longer side (so every number is 0 to 1, as a saved outline
+ * needs), with the drawing's size in `page`. Simplified until it is small enough to save. Null when nothing is filled.
  */
 export function outlineFromVector(vector, { maxPoints = 1800, maxRings = 64 } = {}) {
-  const { closed } = classifyPaths(vector.paths);
+  const closed = interpretDrawing(vector).rings;
   if (closed.length === 0) return null;
   const long = Math.max(vector.width, vector.height);
   let rings = closed;
@@ -98,18 +32,23 @@ export function outlineFromVector(vector, { maxPoints = 1800, maxRings = 64 } = 
 }
 
 /**
- * Imported open strokes print first, with the currently selected structure above them. `clipLines: false` is for a
- * drawing that is also the outline: its closed shapes lie on the boundary itself, so they are kept whole (and are not
- * checked against it), while its open lines are still trimmed to what is inside.
+ * The drawing prints first, with the currently selected structure above it: its lines (each as many passes as its
+ * width asks for) and the outlines of its red and blue shapes. `clipLines: false` is for a drawing that is also the
+ * outline: the edges of its filled shapes lie on the boundary itself, so they are kept whole, and its lines are printed
+ * as drawn (a line across a hole is what ties an island to the rest), trimmed only to the swatch. Neither is checked
+ * against the outline.
  */
 export function composeSvgLines(result, vector, { fullWidth = vector.width, fullHeight = vector.height, offsetX = 0, offsetY = 0, clipLines = true } = {}) {
   const { cfg } = result, h = cfg.t.layer_height, w = cfg.t.extrusion_width;
   const boundary = new PolygonBoundary(result.outline ?? [[{ x: 0, y: 0 }, { x: cfg.t.sample_width, y: 0 }, { x: cfg.t.sample_width, y: cfg.t.sample_height }, { x: 0, y: cfg.t.sample_height }]]);
-  const shapeSet = new Set(classifyPaths(vector.paths).closed.map((ring) => ring[0]));
-  const drawn = vector.paths.map((path, i) => ({ id: `svg-${i}`, name: 'Imported SVG lines', kind: 'base', layer: 0, fixed: true, shape: shapeSet.has(path[0]), pts: path.map((p) => ({ x: p.x * fullWidth / vector.width - offsetX, y: p.y * fullHeight / vector.height - offsetY, z: h })) }));
-  const imported = clipLines
-    ? clipStrands(drawn, boundary, w / 2)
-    : [...drawn.filter((s) => s.shape).map((s) => ({ ...s, onBoundary: true })), ...clipStrands(drawn.filter((s) => !s.shape), boundary, w / 2)];
+  const { clipped, whole } = drawingPolylines(vector, { scaleX: fullWidth / vector.width, scaleY: fullHeight / vector.height, offsetX, offsetY, bead: w, edges: clipLines ? 'all' : 'kept' });
+  let serial = 0;
+  const strand = (poly) => ({ id: `svg-${serial++}`, name: 'Imported SVG lines', kind: 'base', layer: 0, fixed: true, shape: poly.shape, pts: poly.pts.map((p) => ({ x: p.x, y: p.y, z: h })) });
+  const swatch = new PolygonBoundary([[{ x: 0, y: 0 }, { x: cfg.t.sample_width, y: 0 }, { x: cfg.t.sample_width, y: cfg.t.sample_height }, { x: 0, y: cfg.t.sample_height }]]);
+  const lines = clipLines
+    ? clipStrands(clipped.map(strand), boundary, w / 2)
+    : clipStrands(clipped.map(strand), swatch, w / 2).map((s) => ({ ...s, onBoundary: true }));
+  const imported = [...whole.map((poly) => ({ ...strand(poly), onBoundary: true })), ...lines];
   const body = result.strands.map((s) => ({ ...s, id: `pattern-${s.id}`, layer: (s.layer ?? 0) + 1, pts: s.pts.map(({ cls, ...p }) => ({ ...p, z: result.placements ? p.z + h : 2 * h, ...(result.placements && cls ? { cls } : {}) })) }));
   let strands = [...imported, ...body];
   const beforeMm = travelDistance(strands);

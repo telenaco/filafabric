@@ -1,13 +1,15 @@
 import { PolygonBoundary } from './boundary.js';
 import { densify } from './layers.js';
 import { infillLines, INFILL_IDS } from './infill.js';
-import { classifyPaths } from './svg-lines.js';
+import { classifyPaths, interpretDrawing, linePasses } from './drawing.js';
 
 /**
  * SVG design: a drawing becomes a printable textile, with one or two backing layers on top.
  *
- *  - The design layer is the drawing itself: its lines as drawn (outline), its closed shapes filled with a slicer
- *    infill pattern (fill), or both. Shapes inside shapes are holes, as in an "O".
+ *  - The design layer is the drawing itself, read the way drawing.js says: closed RED shapes are filled with a slicer
+ *    infill pattern, closed BLUE shapes are holes (blue inside red cuts a hole, red inside that is filled again), and
+ *    everything else is a line, printed with as many passes as its width asks for. The drawing's lines as drawn
+ *    (outline), its red areas filled (fill), or both.
  *  - Each backing layer is one more layer of a slicer infill pattern, over the whole swatch, over the drawn shapes
  *    only, or over the drawing's bounding box. A backing line rides over the design lines wherever it crosses one,
  *    so the layers are held together by the crossings and nothing needs gluing.
@@ -27,7 +29,7 @@ const circle = (cx, cy, r, n = 48) => {
   return [...pts, { ...pts[0] }];
 };
 
-/** A drawing to start from: a heart with a ring cut out of it and a stem joining the ring to the tip. In a 100 x 100 mm box. */
+/** A drawing to start from: a red heart with a blue ring cut out of it and a black stem joining the ring to the tip. In a 100 x 100 mm box. */
 export function sampleVector() {
   const n = 120;
   const heart = Array.from({ length: n }, (_, i) => {
@@ -42,10 +44,11 @@ export function sampleVector() {
     width: 100,
     height: 100,
     paths: [heart, circle(50, 58, 11), [{ x: 50, y: 47 }, { x: 50, y: 35 }, { x: 50, y: 22 }, { x: 50, y: 11 }]],
+    styles: [{ color: 'red', width: 0.25 }, { color: 'blue', width: 0.25 }, { color: 'other', width: 0.45 }],
   };
 }
 
-/** The drawing's paths scaled to a width x height swatch, as closed rings and open strokes. */
+/** The drawing's paths scaled to a width x height swatch, as closed rings and open strokes (colours ignored). */
 export function splitPaths(vector, width, height) {
   const sx = width / vector.width, sy = height / vector.height;
   return classifyPaths(vector.paths.map((path) => path.map((p) => ({ x: p.x * sx, y: p.y * sy }))));
@@ -66,32 +69,39 @@ const bboxOf = (paths) => {
  * @param boundary  the swatch (or outline) as a boundary
  * @param settings  { width, height, mode, designPattern, designSpacing, designAngle, backing ('none' | 'one' | 'two'),
  *                    backingArea, backing1Pattern, backing1Spacing, backing1Angle, backing2Pattern, … }
- * @param vector    { name, width, height, paths } in mm, or null for the sample drawing
+ * @param vector    { name, width, height, paths, styles? } in mm, or null for the sample drawing
+ * @param options   { bead } the width of one printed line, which sets how many passes a wide line takes
  * @returns { layers, extra, warnings }: layers of polylines (the design, then each backing), ready for layeredResult
  */
-export function svgDesignLayers(boundary, settings, vector = null) {
+export function svgDesignLayers(boundary, settings, vector = null, { bead = 0.45 } = {}) {
   const s = settings;
   const source = vector ?? sampleVector();
-  const { closed, open } = splitPaths(source, s.width, s.height);
+  const model = interpretDrawing(source, { scaleX: s.width / source.width, scaleY: s.height / source.height });
   const warnings = [];
   let mode = s.mode;
-  if ((mode === 'fill' || mode === 'both') && closed.length === 0) {
-    warnings.push(`${vector ? vector.name : 'The drawing'} has no closed shapes to fill, so its lines print as drawn`);
+  if ((mode === 'fill' || mode === 'both') && model.fills.length === 0) {
+    const who = vector ? vector.name : 'The drawing';
+    warnings.push(model.styled
+      ? `${who} has no red closed shape to fill (a closed shape is filled when it is red; blue is left empty), so its lines print as drawn`
+      : `${who} has no closed shapes to fill, so its lines print as drawn`);
     mode = 'outline';
   }
 
-  const outlines = [...closed.map((ring) => [...ring, { ...ring[0] }]), ...open].map((pts) => densify(pts, 0.5));
-  const shape = closed.length ? new PolygonBoundary(closed) : null;
+  // the edge of every red or blue shape, and every line with its passes
+  const edges = model.shapes.map((sh) => densify([...sh.ring, { ...sh.ring[0] }], 0.5));
+  const lines = model.lines.flatMap((line) => linePasses(line, bead)).map((pts) => densify(pts, 0.5));
+  const outlines = [...edges, ...lines];
+  const shape = model.rings.length ? new PolygonBoundary(model.rings) : null;
   const design = [];
   if (mode === 'outline' || mode === 'both') design.push(...outlines);
   if ((mode === 'fill' || mode === 'both') && shape) {
     // in 'both' the fill stops at the outline's own line; in 'fill' it forms the shape's edge by itself
     design.push(...infillLines(s.designPattern, shape, { spacing: s.designSpacing, angle: s.designAngle, layer: 0, inset: mode === 'both' ? 0.15 : 0.25 }));
-    // open strokes are not shapes, so a fill never draws them: keep them printed as lines
-    if (mode === 'fill') design.push(...open.map((pts) => densify(pts, 0.5)));
+    // lines are not shapes, so a fill never draws them: keep them printed as lines
+    if (mode === 'fill') design.push(...lines);
   }
 
-  const all = [...closed, ...open];
+  const all = [...model.rings, ...model.lines.map((l) => l.pts)];
   const box = bboxOf(all);
   const margin = 3;
   const areaFor = (kind) => {
@@ -123,8 +133,11 @@ export function svgDesignLayers(boundary, settings, vector = null) {
       svgDesign: {
         name: source.name,
         sample: !vector,
-        closed: closed.length,
-        open: open.length,
+        closed: model.shapes.length,
+        open: model.lines.length,
+        filled: model.fills.length,
+        holes: new Set(model.fills.flatMap((f) => f.holes)).size,
+        lines: model.lines.length,
         mode,
         designPattern: mode === 'outline' ? null : s.designPattern,
         backing,

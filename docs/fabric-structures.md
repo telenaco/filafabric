@@ -11,7 +11,7 @@ Nothing here has been printed yet: every drape or handle description below is a 
 |---|---|---|---|
 | **Loop pile** | Soft raised arches anchored on an open base; each loop arches over the lines beneath it | base + arches | pile height, loop size, spacing, base openness, strand thickness, variation, **pattern** (raises some loops, lowers others) |
 | **Squiggle & Gyroid** | Two fused layers of lines (columns then rows, or two offset rows that cross) | 2 | mode, strand shape, pattern, line spacing, wave depth and length, two colours |
-| **SVG design** | Bring a drawing: its lines print as drawn and its closed shapes (holes included) can be filled with any of the 17 PrusaSlicer infill patterns; then one or two backing layers go on top, each with its own infill pattern, spacing and angle, over the whole swatch, the shapes only or the drawing's box | 1 + 1 or 2 | drawing becomes (lines, fill, both), fill pattern, spacing and angle, backing layers, backing area, each backing's pattern, spacing and angle |
+| **SVG design** | Bring a drawing: its lines print as drawn (a wide line as several passes) and its red closed shapes, less the blue holes in them, can be filled with any of the 17 PrusaSlicer infill patterns; then one or two backing layers go on top, each with its own infill pattern, spacing and angle, over the whole swatch, the shapes only or the drawing's box | 1 + 1 or 2 | drawing becomes (lines, fill, both), fill pattern, spacing and angle, backing layers, backing area, each backing's pattern, spacing and angle |
 | **Halftone net** | Two layers of lines whose thickness (flow, with speed following) carries a pattern: the topology never changes, so the fabric holds the same everywhere; the second layer can be the complement of the first so two colours trade thickness. Straight, wave or zigzag lines | 2 | pattern, line shape, same or complement, spacing, thinnest and thickest flow, grid angle |
 | **Spacer net** | A net on the bed, a pillar of stacked rings on its nodes (or every second or third), and a second net on the pillars' tops, printed layer by layer | 2 nets + pillars | net spacing, pillar height, pillar radius, pillar every |
 | **Pillar weave** | Pillars on a grid and a serpentine fibre that passes each pillar on one side on one layer and the other side on the next, so the fibre layers lock round the pillars | layers + pillars | pillar spacing, layers, pillar radius |
@@ -81,7 +81,10 @@ A single layer of zigzag, wave or square rows whose peaks meet and close into ce
 the peaks just meeting; more is crossing. It has no card of its own.
 
 One SVG import serves every design: its lines print first, the swatch takes its size (so the size fields give way to a
-line that says so), and a switch cuts the pattern to its closed shapes. The panel is built from classes in
+line that says so), and a switch cuts the pattern to its red shapes. Colour and width carry the meaning (`src/engine/drawing.js`):
+closed red is filled, closed blue is a hole, the innermost shape a point lies in decides, so blue inside red cuts a hole and
+red inside that is filled again; anything else is a line, printed as many passes as its stroke width asks for (width ÷
+extrusion width, rounded, at least one). The file is read by `src/engine/svg-parse.js`, which needs no browser. The panel is built from classes in
 `src/ui/panels.js`, so a change to a control is made once and applies to every design; tooltips are one layer
 (`src/ui/tooltip.js`) that shows any element's title in a bubble the moment the pointer rests on it.
 

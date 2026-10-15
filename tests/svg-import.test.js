@@ -58,3 +58,19 @@ test('a drawing that is also the outline keeps the line along its own edge', () 
   assert.equal(composeSvgLines(result, vector, { clipLines: true }).vector.paths, 0, 'trimmed to the boundary it lies on');
   assert.equal(composeSvgLines(result, vector, { clipLines: false }).vector.paths, 1, 'kept whole');
 });
+
+test('a line across a hole of the drawing that is the outline is printed, not trimmed away', () => {
+  const { machine, material } = defaultProfiles();
+  const rings = [square(0, 0, 40, 40), square(10, 10, 20, 20)];
+  const vector = { name: 'frame', width: 40, height: 40, paths: [...rings, [{ x: 5, y: 20 }, { x: 35, y: 20 }]], styles: [{ color: 'red', width: 0.25 }, { color: 'blue', width: 0.25 }, { color: 'other', width: 0.45 }] };
+  const outline = outlineFromVector(vector);
+  const card = designById('crosshatch');
+  const placed = unflattenRings(outline.rings).map((r) => r.map((p) => ({ x: p.x * 40, y: p.y * 40 })));
+  const result = card.generate(machine, material, { ...card.defaults(), width: 40, height: 40 }, { outline: placed });
+  const trimmed = composeSvgLines(result, vector, { clipLines: true });
+  const whole = composeSvgLines(result, vector, { clipLines: false });
+  const lineLength = (r) => r.strands.filter((s) => s.name === 'Imported SVG lines' && !s.shape).reduce((n, s) => n + s.pts.slice(1).reduce((m, p, i) => m + Math.hypot(p.x - s.pts[i].x, p.y - s.pts[i].y), 0), 0);
+  assert.ok(lineLength(whole) > 29, 'the whole 30 mm line is printed');
+  assert.ok(lineLength(trimmed) < 12, 'trimmed to the frame it is only the two bits in the frame');
+  assert.equal(whole.fabric.issues.some((i) => /leave the outline/.test(i)), false, 'a drawn line is not checked against the outline');
+});

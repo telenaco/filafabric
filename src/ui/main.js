@@ -20,6 +20,7 @@ import { FIELDS, FIELD_IDS, createField } from '../engine/fields.js';
 import { SHAPES, SHAPE_IDS } from '../engine/shapes.js';
 import { readSvgLines } from './svg-lines.js';
 import { composeSvgLines, outlineFromVector } from '../engine/svg-lines.js';
+import { summariseDrawing, describeDrawing, cropToDrawing } from '../engine/drawing.js';
 import { stackLayers } from '../engine/stack.js';
 import { bindPanelExport } from './panel-ui.js';
 
@@ -396,6 +397,18 @@ function shapesOf(vector) {
   return shapeCache.outline;
 }
 
+/** What the drawing holds, in the words of the import card: "2 filled shapes with 1 hole, 9 lines (up to 3 passes)". */
+const summaryCache = { vector: null, bead: 0, text: '' };
+function summaryOf(vector) {
+  const bead = state.result?.cfg?.t?.extrusion_width ?? 0.45;
+  if (summaryCache.vector !== vector || summaryCache.bead !== bead) {
+    summaryCache.vector = vector;
+    summaryCache.bead = bead;
+    summaryCache.text = describeDrawing(summariseDrawing(vector, { bead }));
+  }
+  return summaryCache.text;
+}
+
 /** What the import card shows about the drawing and the current design. */
 function svgSituation() {
   const mod = designById(state.design);
@@ -403,6 +416,7 @@ function svgSituation() {
   const registered = !!state.outline?.page;
   return {
     vector: v,
+    summary: v ? summaryOf(v) : '',
     usesVector: !!mod.usesVector,
     idleNote: mod.svgNote ?? 'Its lines print first, with this pattern above, and its closed shapes can shape the pattern.',
     allowsOutline: mod.outline !== false,
@@ -423,7 +437,13 @@ function followVectorSize() {
 
 async function importSvg(file) {
   try {
-    state.vector = await readSvgLines(file);
+    let drawing = await readSvgLines(file);
+    // a page bigger than the bed cannot be printed whole, and the drawing on it usually is a small part of it: cut it down
+    const bed = state.machines.get(state.machine).bed;
+    const cut = drawing.width > bed.width || drawing.height > bed.depth;
+    const page = [drawing.width, drawing.height];
+    if (cut) drawing = cropToDrawing(drawing);
+    state.vector = drawing;
     state.outline = null; // a new drawing starts without a shape outline; the switch brings it back
     followVectorSize();
     state.docName = file.name.replace(/\.svg$/i, '').slice(0, 60);
@@ -433,7 +453,7 @@ async function importSvg(file) {
     syncControls();
     schedule();
     commit();
-    toast(`Imported ${state.vector.paths.length} paths at ${state.vector.width.toFixed(1)} × ${state.vector.height.toFixed(1)} mm`);
+    toast(`Imported ${state.vector.name}: ${summaryOf(state.vector)}, ${state.vector.width.toFixed(1)} × ${state.vector.height.toFixed(1)} mm${cut ? `. The page (${page[0].toFixed(0)} × ${page[1].toFixed(0)} mm) is larger than the bed, so it was cut down to the drawing.` : ''}`);
   } catch (e) {
     toast(`Could not import the SVG: ${e.message}`);
   }

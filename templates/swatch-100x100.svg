@@ -1,7 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!--
-  A 100 x 100 mm page to draw a printable swatch on. Draw lines (they print as lines) and closed shapes (they can be
-  filled with the pattern or with an infill pattern), then import the file in Filafabric: the swatch takes this size.
+  A 100 x 100 mm page to draw a printable swatch on, then import the file in Filafabric: the swatch takes this size.
+
+  Colour says what a closed shape does:
+    red  (#ff0000)  filled with the pattern
+    blue (#0000ff)  left empty: a hole. Blue inside red cuts a hole; red inside that blue is filled again.
+  A shape that is not closed is never filled.
+
+  Everything else is a line and prints as drawn, in any colour. A line as wide as the extrusion (about 0.4 to 0.5 mm)
+  is one pass; a 0.8 mm line is two passes side by side, a 1.2 mm line three.
+
   Text must be converted to paths first. The guide rectangle below is hidden, so it is not printed.
 -->
 <svg

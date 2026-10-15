@@ -5,6 +5,7 @@ import { defineControls, r1, r2 } from './structure-controls.js';
 import { buildLayeredVerdict } from './verdict.js';
 import { thumbFromLayers, shapeThumb } from './thumbs.js';
 import { boundaryFor, layeredResult } from '../engine/layers.js';
+import { resolveConfig } from '../engine/params.js';
 import { SHAPES } from '../engine/shapes.js';
 import { crosshatchLayers, DIRECTIONS, DIRECTION_IDS } from '../engine/crosshatch.js';
 import { auxeticLayers, CELLS, CELL_IDS } from '../engine/auxetic.js';
@@ -81,7 +82,9 @@ export function layered(def) {
     panel: def.panel,
     svgNote: def.svgNote,
     generate: (machine, material, s, { outline = null, vector = null } = {}) => {
-      const built = def.build(s, boundaryFor(s.width, s.height, outline), { vector });
+      // a drawing's lines print as many passes as their width asks for, and a pass is as wide as this filament's bead
+      const bead = def.usesVector ? resolveConfig(machine, material, { sample_width: s.width, sample_height: s.height }).t.extrusion_width : undefined;
+      const built = def.build(s, boundaryFor(s.width, s.height, outline), { vector, bead });
       const result = layeredResult(machine, material, {
         width: s.width,
         height: s.height,

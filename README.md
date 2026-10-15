@@ -89,7 +89,18 @@ Bed size, nozzle and filament diameter, temperatures, flow, retraction, machine 
 
 ## Printable SVG and garment panels
 
-**Import printable SVG lines** sits above the pattern settings. SVG strokes become actual extruded first-layer paths, with the selected pattern above them. Open subpaths stay open. Physical document dimensions, margins and transforms are retained; resizing the design scales the drawing too. This is separate from **Fill an outline instead**, which only defines the garment boundary. Save/Open settings includes the imported paths; share links omit them to keep links small.
+**Import SVG** sits above the pattern settings. Colour and stroke width say what each part of the drawing does:
+
+| In the drawing | What it prints |
+|---|---|
+| A closed shape in pure **red** (`#ff0000`) | Filled with the pattern |
+| A closed shape in pure **blue** (`#0000ff`) | Left empty: a hole |
+| Blue inside red | Cuts a hole in the red; a red shape inside that blue is filled again (the innermost shape decides) |
+| A shape that is not closed | Never filled; it is a line |
+| Any open path, or a closed shape in another colour | A line, printed as drawn |
+| A line's stroke width | The number of passes: width ÷ extrusion width, rounded, at least one. A line as wide as the nozzle is one pass; a 0.8 mm line is two passes side by side and a 1.2 mm line three |
+
+Colour comes from the fill, or from the stroke when the fill is `none`; the stroke width of a red or blue shape is only a marker. Physical document dimensions, margins and transforms are retained; resizing the design scales the drawing (and its line widths) too. A drawing that carries no colours at all (an older saved file) keeps the previous rule: closed paths are shapes and shapes inside shapes alternate fill, hole. **Fill its shapes with this pattern** cuts the pattern to the red area, less the blue holes in it. Save/Open settings includes the imported paths and their colours; share links omit them to keep links small. `tests/fixtures/red-blue-lines.svg` is a small example of all of this.
 
 The live preview and **Export swatch** are bounded to 100 × 100 mm. **Full panel…** exports the selected texture as repeated sections over one continuous crossed backing, with the SVG drawing printed once across the full document. Radial motifs repeat per section. It runs in a worker with progress and cancellation, streams to a file in supported browsers, and limits the download fallback to 128 MB. Full panels currently use one filament. Select a printer that actually fits the panel. The generic 1000 × 1000 × 300 mm profile is a template: add your own printer from a slicer export (see *Printers and filaments*) or edit its startup, levelling and priming.
 

@@ -491,7 +491,7 @@ export class PrintSetupCard extends Control {
 /**
  * The SVG import. A drawing comes in once, here, and does three things everywhere in the studio: its lines print first,
  * the swatch takes its size, and (if you ask) the pattern is cut to its closed shapes. `host.svg()` describes the
- * situation: { vector, usesVector, idleNote, allowsOutline, hasShapes, outlineOn, window }, and the card calls
+ * situation: { vector, summary, usesVector, idleNote, allowsOutline, hasShapes, outlineOn, window }, and the card calls
  * host.importSvg(file), host.removeSvg() and host.setShapeOutline(on).
  */
 export class SvgImportCard extends Control {
@@ -501,13 +501,15 @@ export class SvgImportCard extends Control {
     this.pick = el('label', { class: 'btn svg-import', for: 'svg-lines-input', text: 'Import SVG' }, this.input);
     this.remove = el('button', { type: 'button', id: 'svg-lines-remove', class: 'link small', text: 'Remove SVG', hidden: true });
     this.info = el('p', { id: 'svg-lines-info', class: 'small muted' });
+    this.found = el('p', { id: 'svg-lines-found', class: 'small', hidden: true });
+    this.legend = el('p', { id: 'svg-colour-legend', class: 'small muted', text: 'Colour says what a closed shape does: red is filled with the pattern, blue is left empty. A blue shape inside a red one is a hole, and a red one inside that is filled again. A shape that is not closed is never filled. Lines print as drawn: one pass for a line as wide as the extrusion, several side by side for a wider one.' });
     this.shapeSwitch = el('input', { type: 'checkbox', role: 'switch', id: 'svg-outline-switch' });
     this.shapeRow = el('label', { class: 'switch-row', hidden: true }, this.shapeSwitch,
-      el('span', {}, el('strong', { text: 'Fill its shapes with this pattern' }), el('small', { text: 'The pattern is cut to the SVG\'s closed shapes, with the shapes drawn as lines round it.' })));
+      el('span', {}, el('strong', { text: 'Fill its shapes with this pattern' }), el('small', { text: 'The pattern is cut to the SVG\'s red shapes (less the blue holes in them), with their edges drawn as lines.' })));
     this.note = el('p', { id: 'svg-preview-note', class: 'small muted', hidden: true });
     this.template = el('a', { class: 'link small', href: 'templates/swatch-100x100.svg', download: 'swatch-100x100.svg', text: 'Get a 100 × 100 mm template to draw on' });
     this.node = el('section', { class: 'svg-layer-control', 'aria-label': 'SVG import' },
-      el('div', { class: 'svg-layer-actions' }, this.pick, this.remove), this.info, this.template, this.shapeRow, this.note);
+      el('div', { class: 'svg-layer-actions' }, this.pick, this.remove), this.info, this.found, this.legend, this.template, this.shapeRow, this.note);
 
     this.input.addEventListener('change', (e) => { if (e.target.files[0]) void host.importSvg(e.target.files[0]); e.target.value = ''; });
     this.remove.addEventListener('click', () => host.removeSvg());
@@ -521,7 +523,9 @@ export class SvgImportCard extends Control {
   update() {
     const s = this.host.svg();
     const v = s.vector;
-    this.info.textContent = v ? `${v.name} · ${fmt(v.width)} × ${fmt(v.height)} mm · ${v.paths.length} paths` : s.idleNote;
+    this.info.textContent = v ? `${v.name} · ${fmt(v.width)} × ${fmt(v.height)} mm` : s.idleNote;
+    this.found.hidden = !v;
+    this.found.textContent = v ? `Prints: ${s.summary}` : '';
     this.remove.hidden = !v;
     this.pick.firstChild.textContent = v ? 'Replace SVG' : 'Import SVG';
     // a design that draws the SVG itself has its own say about shapes; the others can be cut to them

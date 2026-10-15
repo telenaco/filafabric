@@ -25,11 +25,11 @@ test('SVG physical units and viewBox retain the document size, including margins
 });
 
 test('multiple open subpaths stay separate and relative movetos retain their position', async () => {
-  const { splitSvgSubpaths } = await import('../src/engine/svg-lines.js');
-  const parts = splitSvgSubpaths('M 0 0 L 10 0 m 5 5 l 10 0');
+  const { pathSubpaths } = await import('../src/engine/svg-parse.js');
+  const parts = pathSubpaths('M 0 0 L 10 0 m 5 5 l 10 0');
   assert.equal(parts.length, 2);
-  assert.match(parts[1], /^M 15 5 /);
-  assert.ok(parts.every((d) => !/[zZ]/.test(d)), 'open lines must not be closed');
+  assert.deepEqual(parts[1].pts[0], [15, 5]);
+  assert.ok(parts.every((s) => !s.closed), 'open lines must not be closed');
 });
 
 test('SVG strokes are extruded before the selected rosette pattern', async () => {

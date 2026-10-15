@@ -6,7 +6,7 @@ import { GcodeWriter, bedFitErrors, PreflightError } from './gcode.js';
 import { PolygonBoundary } from './boundary.js';
 import { clipStrands, contactGraph, segmentInside, orderStrands } from './fabric.js';
 import { createField } from './fields.js';
-import { classifyPaths } from './svg-lines.js';
+import { drawingPolylines } from './drawing.js';
 import { stackStrands } from './stack.js';
 
 const rectangle = (w, h, x = 0, y = 0) => [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];
@@ -113,10 +113,13 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   if (contactGraph(basis, { strandWidth: bead, layerHeight: h, cellSize: Math.max(5, backingSpacing) }).components !== 1) warnings.push('The backing is in separate pieces in this outline: use finer spacing or export separate garment pieces.');
   if (warnings.length) await add(warnings.map((w) => `; WARNING ${w}`));
   if (vector) {
-    // a drawing that is also the outline keeps its closed shapes whole: they lie on the boundary they define
-    const shapeSet = shapeOutline ? new Set(classifyPaths(vector.paths).closed.map((ring) => ring[0])) : new Set();
-    const drawn = vector.paths.map((path, i) => ({ id: `svg-${i}`, layer: 0, kind: 'base', shape: shapeSet.has(path[0]), pts: path.map((p) => ({ x: p.x * width / vector.width, y: p.y * height / vector.height, z: h })) }));
-    const source = [...drawn.filter((s) => s.shape), ...clipStrands(drawn.filter((s) => !s.shape), boundary, bead / 2)];
+    // a drawing that is also the outline keeps the edges of its filled shapes whole: they lie on the boundary they define
+    const { clipped, whole } = drawingPolylines(vector, { scaleX: width / vector.width, scaleY: height / vector.height, bead, edges: shapeOutline ? 'kept' : 'all' });
+    let serial = 0;
+    const strand = (poly) => ({ id: `svg-${serial++}`, layer: 0, kind: 'base', shape: poly.shape && shapeOutline, pts: poly.pts.map((p) => ({ x: p.x, y: p.y, z: h })) });
+    // as drawn: the lines of a drawing that is the outline are trimmed to the panel, not to the shapes they cross
+    const lineBoundary = shapeOutline ? new PolygonBoundary([rectangle(width, height)]) : boundary;
+    const source = [...whole.map(strand), ...clipStrands(clipped.map(strand), lineBoundary, bead / 2)];
     progress({ phase: 'svg', done: 0, total }); await emit(orderStrands(source));
     const vertical = basis.filter((s) => s.layer === 0);
     await emit(vertical); await emit(anchorTexture(vertical, source, boundary, h, bead, true));
