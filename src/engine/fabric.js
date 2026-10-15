@@ -75,7 +75,7 @@ function cutsAlong(a, b, boundary) {
   return [...new Set(cuts)].sort((p, q) => p - q);
 }
 
-function safePoint(p, boundary, inset) {
+export function safePoint(p, boundary, inset) {
   if (!boundary.contains(p.x, p.y)) {
     let edge = false;
     if (inset === 0) for (const ring of boundary.rings ?? []) for (let i = 0; i < ring.length; i++) {

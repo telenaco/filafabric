@@ -7,7 +7,7 @@ import { emitStrands } from './emit.js';
 import { resolveCrossings, findCrossings } from './crossings.js';
 import { lanePoints } from './shapes.js';
 import { MAX_MOVES } from './tiler.js';
-import { contactGraph, clipStrands, connectStrands, orderStrands, travelDistance, simplifyStrands } from './fabric.js';
+import { contactGraph, clipStrands, connectStrands, orderStrands, travelDistance, simplifyStrands, safePoint } from './fabric.js';
 import { finishFabric } from './fabric-result.js';
 
 /**
@@ -70,8 +70,11 @@ const rotate = (p, c, s) => ({ x: p.x * c - p.y * s, y: p.x * s + p.y * c });
  * lines sideways by a fraction of the spacing so two layers can interleave. With an `anchor` point the lines lie on a
  * lattice through it (otherwise they are centred in the outline). `maxJog` is the longest connector joining one line
  * to the next (default three spacings); a negative value leaves every line a strand of its own.
+ * `keepInside` is a clearance in mm (0 is off): no point of any line comes closer to the outline than that. Lines are
+ * drawn in from a slanting edge until they clear it and a wave that would leave the outline is flattened, so the strand
+ * the shaping and clipping of a later pass would otherwise cut into pieces stays whole.
  */
-export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = null, size = 0, pitch = 4, inset = 0.3, anchor = null, maxJog = null } = {}) {
+export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = null, size = 0, pitch = 4, inset = 0.3, anchor = null, maxJog = null, keepInside = 0 } = {}) {
   const a = (angle * Math.PI) / 180;
   const c = Math.cos(a), s = Math.sin(a);
   const turned = new PolygonBoundary(boundary.rings.map((ring) => ring.map((p) => rotate(p, c, -s))));
@@ -92,22 +95,41 @@ export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = nu
     lanes = [(box.minY + box.maxY) / 2];
   }
   const chains = serpentineChains(turned, 'y', lanes, { inset, minLength: 1, maxJog: maxJog ?? 3 * spacing });
+  const clear = (p) => safePoint(rotate(p, c, s), boundary, keepInside);
   return chains.map((segments) => {
     const pts = [];
     for (const seg of segments) {
-      const dir = seg.to >= seg.from ? 1 : -1;
-      const length = Math.abs(seg.to - seg.from);
+      let { from, to } = seg;
+      const dir = to >= from ? 1 : -1;
+      if (keepInside > 0) {
+        // a lane meets a slanting edge further along than its clearance, so each end comes in until it is clear
+        for (let i = 0; i < 80 && !clear({ x: from, y: seg.c }); i++) from += dir * 0.05;
+        for (let i = 0; i < 80 && !clear({ x: to, y: seg.c }); i++) to -= dir * 0.05;
+        if ((to - from) * dir < 0.5) continue;
+      }
+      const length = Math.abs(to - from);
       let line;
       if (shape && size > 0) {
-        line = lanePoints({ shape, length, pitch, size, step: STEP }).map((p) => ({ x: seg.from + dir * p.u, y: seg.c + p.v }));
+        line = lanePoints({ shape, length, pitch, size, step: STEP }).map((p) => ({ x: from + dir * p.u, y: seg.c + p.v }));
       } else {
-        line = densify([{ x: seg.from, y: seg.c }, { x: seg.to, y: seg.c }]);
+        line = densify([{ x: from, y: seg.c }, { x: to, y: seg.c }]);
+      }
+      if (keepInside > 0) {
+        // a wave that would leave the outline is flattened where it would, so the line goes on instead of being cut
+        line = line.map((p) => {
+          if (clear(p)) return p;
+          for (const f of [0.75, 0.5, 0.25, 0]) {
+            const q = { x: p.x, y: seg.c + (p.y - seg.c) * f };
+            if (clear(q)) return q;
+          }
+          return { x: p.x, y: seg.c };
+        });
       }
       if (pts.length) pts.push(...densify([pts[pts.length - 1], line[0]]).slice(1));
       pts.push(...(pts.length ? line.slice(1) : line));
     }
     return pts.map((p) => rotate(p, c, s));
-  });
+  }).filter((pts) => pts.length >= 2);
 }
 
 /**
