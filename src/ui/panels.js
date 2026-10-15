@@ -171,17 +171,20 @@ export class SizeControl extends Control {
     }
     this.inputs = el('div', { class: 'size-inputs' }, this.width.field, el('span', { class: 'times', 'aria-hidden': 'true', text: '×' }), this.height.field);
     this.note = el('p', { class: 'size-follows small muted', hidden: true });
+    this.divider = el('div', { class: 'size-source-divider', text: 'or', 'aria-hidden': 'true' });
+    this.svgSlot = el('div', { class: 'size-svg-slot' });
     this.warn = el('p', { class: 'ctl-warn small', hidden: true });
-    this.node = el('div', { class: 'size-control' }, this.inputs, this.note, this.warn, this.error);
+    this.node = el('div', { class: 'size-control' }, this.inputs, this.divider, this.svgSlot, this.note, this.warn, this.error);
   }
 
   update() {
     const follow = this.host.vectorSize();
     this.inputs.hidden = !!follow;
-    this.note.hidden = !follow;
+    this.note.hidden = true;
+    this.divider.hidden = !!follow;
     if (follow) {
-      this.note.textContent = `The size comes from the SVG: ${fmt(follow[0])} × ${fmt(follow[1])} mm. Remove the SVG to set it by hand.`;
       this.error.hidden = true;
+      this.warn.hidden = true;
       return;
     }
     const [w, h] = this.host.binding(this.designId).size.get();
@@ -228,6 +231,28 @@ function drawFieldThumb(canvas, field) {
 export const FOLD_AFTER = 4;
 
 const CHEVRON = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l5 5 5-5"/></svg>';
+
+/** Collapse a whole section under its own title; the original card grid remains visible together when expanded. */
+export class SectionFold extends Control {
+  constructor(host, section, { id = 'section', open = false } = {}) {
+    super(host);
+    this.node = section;
+    const heading = section.querySelector('h2');
+    const title = heading.textContent;
+    this.body = el('div', { class: 'section-fold-body', id: `${id}-body`, hidden: !open });
+    for (const child of [...section.childNodes]) if (child !== heading) this.body.append(child);
+    this.button = el('button', { type: 'button', class: 'section-fold-toggle', 'aria-expanded': String(open), 'aria-controls': this.body.id });
+    this.button.innerHTML = CHEVRON;
+    this.button.append(el('span', { text: title }));
+    heading.replaceChildren(this.button);
+    section.classList.add('section-fold');
+    section.append(this.body);
+    this.button.addEventListener('click', () => {
+      this.body.hidden = !this.body.hidden;
+      this.button.setAttribute('aria-expanded', String(!this.body.hidden));
+    });
+  }
+}
 
 /**
  * Folds a grid of option buttons (the chosen one has aria-pressed) behind a single line showing the chosen option's
@@ -304,8 +329,7 @@ export class PatternPicker extends Control {
     this.scaleBox = el('div', { id: `${designId}-pattern-scale`, class: 'pattern-scale' });
     this.scale = scale ? new SliderControl(host, designId, scale) : null;
     if (this.scale) this.scaleBox.append(this.scale.node);
-    this.fold = patterns.length > FOLD_AFTER ? new OptionFold(host, this.grid, { id: `${designId}-${key}`, none: 'Plain' }) : null;
-    this.node = el('div', { class: 'pattern-picker' }, this.fold ? this.fold.node : this.grid, this.scaleBox);
+    this.node = el('div', { class: 'pattern-picker' }, this.grid, this.scaleBox);
   }
 
   redraw() {
@@ -336,6 +360,7 @@ export class Section extends Control {
     this.node = el('section', { class: 'group', 'aria-labelledby': this.titleId },
       el('h2', { class: 'eyebrow', id: this.titleId, text: spec.title }));
     for (const part of [].concat(this.buildBody())) if (part) this.node.append(part);
+    this.fold = new SectionFold(host, this.node, { id: this.titleId, open: !this.foldable });
   }
 
   get settings() {
@@ -385,9 +410,8 @@ class OptionSection extends Section {
       this.grid.append(btn);
       return { btn, opt };
     });
-    // a long list is kept behind one line that names the chosen option
-    this.fold = this.buttons.length > FOLD_AFTER ? new OptionFold(this.host, this.grid, { id: this.titleId }) : null;
-    return [this.hint(), this.fold ? this.fold.node : this.grid];
+    this.foldable = this.buttons.length > FOLD_AFTER;
+    return [this.hint(), this.grid];
   }
 
   refresh() {
@@ -484,6 +508,7 @@ export class SlidersSection extends Section {
 export class PatternSection extends Section {
   buildBody() {
     this.picker = new PatternPicker(this.host, this.mod.id, this.spec.key, this.mod.patterns, this.titleId, { scale: this.spec.scale ?? null });
+    this.foldable = this.mod.patterns.length > FOLD_AFTER;
     return [this.hint(), this.picker.node];
   }
 
@@ -601,21 +626,19 @@ export class PrintSetupCard extends Control {
 export class SvgImportCard extends Control {
   constructor(host) {
     super(host);
-    this.input = el('input', { type: 'file', accept: '.svg,image/svg+xml', class: 'visually-hidden', id: 'svg-lines-input' });
-    this.pick = el('label', { class: 'btn svg-import', for: 'svg-lines-input', text: 'Import SVG' }, this.input);
+    this.input = el('input', { type: 'file', accept: '.svg,image/svg+xml', class: 'visually-hidden', id: 'svg-lines-input', tabindex: '-1' });
+    this.pick = el('label', { class: 'btn svg-import', for: 'svg-lines-input', text: 'Import SVG', tabindex: '0', role: 'button' }, this.input);
     this.remove = el('button', { type: 'button', id: 'svg-lines-remove', class: 'link small', text: 'Remove SVG', hidden: true });
     this.info = el('p', { id: 'svg-lines-info', class: 'small muted' });
-    this.found = el('p', { id: 'svg-lines-found', class: 'small', hidden: true });
-    this.legend = el('p', { id: 'svg-colour-legend', class: 'small muted', text: 'Colour says what a closed shape does: red is filled with the pattern, blue is left empty. A blue shape inside a red one is a hole, and a red one inside that is filled again. A shape that is not closed is never filled. Lines print as drawn: one pass for a line as wide as the extrusion, several side by side for a wider one.' });
     this.shapeSwitch = el('input', { type: 'checkbox', role: 'switch', id: 'svg-outline-switch' });
-    this.shapeRow = el('label', { class: 'switch-row', hidden: true }, this.shapeSwitch,
-      el('span', {}, el('strong', { text: 'Fill its shapes with this pattern' }), el('small', { text: 'The pattern is cut to the SVG\'s red shapes (less the blue holes in them), with their edges drawn as lines.' })));
+    this.shapeRow = el('label', { class: 'switch-row', hidden: true, title: 'Cut this pattern to the red SVG shapes, leaving blue holes empty. Pattern ends meet the printed borders.' }, this.shapeSwitch,
+      el('span', {}, el('strong', { text: 'Fill its shapes with this pattern' })));
     this.note = el('p', { id: 'svg-preview-note', class: 'small muted', hidden: true });
-    this.template = el('a', { class: 'link small', href: 'templates/swatch-100x100.svg', download: 'swatch-100x100.svg', text: 'Get a 100 × 100 mm template to draw on' });
-    this.node = el('section', { class: 'svg-layer-control', 'aria-label': 'SVG import' },
-      el('div', { class: 'svg-layer-actions' }, this.pick, this.remove), this.info, this.found, this.legend, this.template, this.shapeRow, this.note);
+    this.node = el('div', { class: 'svg-layer-control', 'aria-label': 'SVG import' },
+      el('div', { class: 'svg-layer-actions' }, this.pick, this.remove), this.info, this.shapeRow, this.note);
 
     this.input.addEventListener('change', (e) => { if (e.target.files[0]) void host.importSvg(e.target.files[0]); e.target.value = ''; });
+    this.pick.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.input.click(); } });
     this.remove.addEventListener('click', () => host.removeSvg());
     this.shapeSwitch.addEventListener('change', () => host.setShapeOutline(this.shapeSwitch.checked));
     const node = this.node;
@@ -627,9 +650,10 @@ export class SvgImportCard extends Control {
   update() {
     const s = this.host.svg();
     const v = s.vector;
-    this.info.textContent = v ? `${v.name} · ${fmt(v.width)} × ${fmt(v.height)} mm` : s.idleNote;
-    this.found.hidden = !v;
-    this.found.textContent = v ? `Prints: ${s.summary}` : '';
+    this.info.textContent = v ? `${v.name} · ${fmt(v.width)} × ${fmt(v.height)} mm` : '';
+    this.info.hidden = !v;
+    this.pick.dataset.tip = `${v ? `Replace this drawing. Prints: ${s.summary}.` : 'Use the SVG document’s size and print its vector lines first.'} With a standard 0.4 mm nozzle, stroke widths of 0.4 mm print one pass, 0.8 mm two, 1.2 mm three, and so on. Adjacent passes overlap by at least 20%. Red contains the pattern; blue blocks it; green bends the pattern around its contour.`;
+    this.pick.setAttribute('aria-description', this.pick.dataset.tip);
     this.remove.hidden = !v;
     this.pick.firstChild.textContent = v ? 'Replace SVG' : 'Import SVG';
     // a design that draws the SVG itself has its own say about shapes; the others can be cut to them
@@ -641,4 +665,3 @@ export class SvgImportCard extends Control {
     if (s.window) this.note.textContent = `Preview sample: ${fmt(s.window[0])} × ${fmt(s.window[1])} mm. Full SVG: ${fmt(v.width)} × ${fmt(v.height)} mm.`;
   }
 }
-

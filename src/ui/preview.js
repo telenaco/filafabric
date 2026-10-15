@@ -142,7 +142,8 @@ export function createPreview(container) {
       if (b.violation) { viol.pos.push(b.x, b.y, b.z); viol.idx.push(i); }
     }
     state.buckets = { ...buckets, travel, hops, viol };
-    const ext = { minX: 0, minY: 0, maxX: cfg.t.sample_width, maxY: cfg.t.sample_height };
+    const [documentWidth, documentHeight] = result.documentSize ?? [cfg.t.sample_width, cfg.t.sample_height];
+    const ext = { minX: 0, minY: 0, maxX: documentWidth, maxY: documentHeight };
     for (const m of moves) {
       if (!m.extrude) continue;
       if (m.x < ext.minX) ext.minX = m.x;
@@ -189,14 +190,15 @@ export function createPreview(container) {
     state.violations = add(new THREE.Points(vg, new THREE.PointsMaterial({ color: pal.violation, size: 4, sizeAttenuation: false })));
 
     const o = cfg.derived.origin;
-    const bed = cfg.machine.bed;
+    const bed = result.documentSize ? { width: documentWidth, depth: documentHeight } : cfg.machine.bed;
     // the bed as a faint plane rather than an outline, so its far edges never cut across the view
     const plate = new THREE.Mesh(
       new THREE.PlaneGeometry(bed.width, bed.depth),
       new THREE.MeshBasicMaterial({ color: pal.bed, transparent: true, opacity: 0.3, depthWrite: false })
     );
-    plate.position.set(bed.width / 2 - o.x, bed.depth / 2 - o.y, -0.05);
+    plate.position.set(bed.width / 2 - (result.documentSize ? 0 : o.x), bed.depth / 2 - (result.documentSize ? 0 : o.y), -0.05);
     add(plate);
+    if (result.documentSize) add(rectangle(0, 0, documentWidth, documentHeight, pal.sample));
     if (result.outline) {
       for (const ring of result.outline) {
         const pts = [];

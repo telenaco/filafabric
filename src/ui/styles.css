@@ -40,12 +40,27 @@ h1, h2, h3 { margin: 0; }
 .pattern-about { margin-top: 6px; font-size: 13px; color: var(--muted); }
 .pattern-about summary { cursor: pointer; width: fit-content; }
 .pattern-about p { max-width: 65ch; margin: 8px 0 0; }
-.svg-layer-control { padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.svg-layer-control { background: var(--panel); }
 .svg-layer-control p { margin: 6px 0 0; overflow-wrap: anywhere; }
 .svg-layer-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .svg-import { cursor: pointer; font-size: 13px; min-height: 40px; }
 .svg-layer-control.dragover { outline: 2px solid var(--accent); outline-offset: -2px; }
+.size-source-divider { display: flex; align-items: center; gap: 10px; margin: 10px 0; font-size: 12px; color: var(--muted); }
+.size-source-divider::before, .size-source-divider::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
+.svg-layer-control .switch-row { margin-top: 12px; }
+.section-fold > .eyebrow { margin: 0; }
+.section-fold-toggle { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px; padding: 0; border: 0; background: transparent; text-align: left; font: inherit; color: inherit; }
+.section-fold-toggle > svg { flex: none; transform: rotate(-90deg); transition: transform 0.15s; }
+.section-fold-toggle[aria-expanded="true"] > svg { transform: rotate(0); }
+.section-fold-body { margin-top: 12px; }
+.section-fold-toggle:focus-visible, .svg-import:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 .export-actions { display: grid; grid-template-columns: 1.25fr 1fr; gap: 8px; }
+.study-notice { margin: 0 0 10px; font-size: 12px; line-height: 1.4; }
+.study-notice a { color: var(--accent); }
+.study-page { max-width: 720px; margin: 0 auto; padding: 40px 24px 64px; }
+.study-page h1 { font-size: 30px; margin-top: 28px; }
+.study-page h2 { font-size: 19px; margin-top: 28px; }
+.study-page p { margin: 12px 0; }
 .export-actions .export { font-size: 14px; min-height: 46px; padding: 8px; }
 .panel-dimensions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 #panel-dialog { max-width: min(560px, calc(100vw - 28px)); max-height: calc(100dvh - 32px); overflow: auto; }
@@ -187,7 +202,7 @@ h1, h2, h3 { margin: 0; }
   position: absolute; top: 66px; left: 12px; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 600;
   background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-bd);
 }
-.busy-chip { left: auto; right: 12px; background: var(--panel); color: var(--muted); border-color: var(--line); }
+.busy-chip { position: fixed; top: 50%; left: 50%; right: auto; transform: translate(-50%, -50%); z-index: 60; padding: 14px 24px; font-size: 18px; border-radius: 14px; background: var(--panel); color: var(--ink); border-color: var(--line); box-shadow: var(--shadow); pointer-events: none; }
 .canvas-foot {
   position: absolute; left: 12px; right: 12px; bottom: 10px; display: flex; justify-content: space-between; align-items: flex-end;
   gap: 12px; pointer-events: none;
@@ -370,6 +385,9 @@ input[role="switch"]:checked::before { transform: translateX(16px); }
 .check.error { background: var(--danger-bg); border-color: var(--danger-bd); color: var(--danger-ink); }
 .check-row { display: flex; align-items: center; gap: 8px; padding-right: 8px; }
 .check-row .check-btn { flex: none; min-height: 36px; }
+.check.error .check-row { flex-wrap: wrap; }
+.check.error .check-head { flex-basis: 100%; }
+.check.error .check-row > .check-btn { margin: 0 14px 10px; }
 .check-head {
   flex: 1 1 auto; min-width: 0; min-height: 48px; display: flex; align-items: center; gap: 10px; padding: 8px 12px;
   background: transparent; border: 0; text-align: left; font-weight: 700; color: inherit;
@@ -455,10 +473,13 @@ dialog p { margin: 6px 0; }
   .settings { flex: none; border-left: 0; border-top: 1px solid var(--line); }
   .settings-body { padding: 18px 16px 24px; }
   .summary { order: -1; box-shadow: none; padding: 14px 16px; }
-  .export-actions {
+  .export-group {
     position: fixed; left: 16px; right: 16px; bottom: 16px; width: auto; z-index: 30; min-height: 52px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px;
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
   }
+  .app:has(#study-notice:not([hidden])) { padding-bottom: 170px; }
+  body:has(#study-notice:not([hidden])) .toast { bottom: 166px; }
   .export-actions .export { position: static; min-width: 0; }
   .adv-fields { grid-template-columns: 1fr; }
   .toast { bottom: 84px; }
