@@ -133,7 +133,7 @@ test('a single layer of zigzag rows that meet is the Coil with a zigzag shape: n
 });
 
 test('the essentials are real, ready cards and come first', () => {
-  assert.deepEqual([...ESSENTIALS], ['zigzag', 'squiggle', 'coil', 'starlattice', 'dipweave', 'halftone', 'meander', 'turing']);
+  assert.deepEqual([...ESSENTIALS], ['zigzag', 'squiggle', 'coil', 'starlattice', 'dipweave', 'halftone', 'meander', 'turing', 'svgdesign', 'bubbles', 'voronoi']);
   // Crosshatch & isogrid is kept in the code and left out of the list
   assert.equal(designById('crosshatch').hidden, true);
   assert.equal(designById('crosshatch').status, 'ready');
