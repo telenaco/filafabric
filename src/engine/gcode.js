@@ -1,5 +1,6 @@
 import { filamentArea, moveSpeed, segmentE } from './extrusion.js';
 import { PRIME, startPosition } from './params.js';
+import { normalizeStartModes } from './gcode-modes.js';
 
 export class PreflightError extends Error {
   constructor(errors) {
@@ -130,7 +131,7 @@ export class GcodeWriter {
     }
     for(const key of Object.keys(t).sort()) out.push('; param '+key+' = '+JSON.stringify(t[key]));
     for(const comment of info.comments??[]) out.push('; '+String(comment).replace(/[\r\n]+/g,' '));
-    out.push(...fillTemplate(machine.start_gcode,this.vars()),'; BODY START');
+    out.push(...fillTemplate(normalizeStartModes(machine.start_gcode),this.vars()),'; BODY START');
     return out;
   }
   move(m) {

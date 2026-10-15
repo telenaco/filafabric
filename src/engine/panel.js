@@ -4,13 +4,15 @@ import { generateSquiggle, SAMPLERS, createImageSampler } from './squiggle.js';
 import { resolveConfig, ConfigError } from './params.js';
 import { GcodeWriter, bedFitErrors, PreflightError } from './gcode.js';
 import { PolygonBoundary } from './boundary.js';
-import { clipStrands, contactGraph, segmentInside, orderStrands } from './fabric.js';
+import { clipStrands, contactGraph, segmentInside, orderStrands, finishAtPrintedBoundary } from './fabric.js';
 import { createField } from './fields.js';
-import { drawingPolylines } from './drawing.js';
+import { drawingPolylines, interpretDrawing } from './drawing.js';
 import { stackStrands } from './stack.js';
+import { conformalGuideRegion, repelGuideStrands } from './conformal.js';
+import { resolveCrossings } from './crossings.js';
 
 const rectangle = (w, h, x = 0, y = 0) => [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];
-const bounds = (s) => ({ minX: Math.min(s.pts[0].x, s.pts.at(-1).x), maxX: Math.max(s.pts[0].x, s.pts.at(-1).x), minY: Math.min(s.pts[0].y, s.pts.at(-1).y), maxY: Math.max(s.pts[0].y, s.pts.at(-1).y) });
+const bounds = (s) => s.pts.reduce((b, p) => ({ minX: Math.min(b.minX, p.x), maxX: Math.max(b.maxX, p.x), minY: Math.min(b.minY, p.y), maxY: Math.max(b.maxY, p.y) }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
 
 function backingLines(boundary, spacing, h, offset, bead = 0.45) {
   const inset = bead / 2;
@@ -42,12 +44,13 @@ function anchorTexture(backing, texture, boundary, h, width, sourcePrinted = fal
       const points = texture[i - backing.length].pts;
       for (let k = 0; k < points.length; k += Math.max(1, Math.floor(points.length / 80))) {
         const q = points[k];
-        for (const s of backing) {
-          const a = s.pts[0], b = s.pts.at(-1), dx = b.x - a.x, dy = b.y - a.y;
+        for (const s of backing) for (let segment = 1; segment < s.pts.length; segment++) {
+          const a = s.pts[segment - 1], b = s.pts[segment], dx = b.x - a.x, dy = b.y - a.y;
           const t = Math.max(0, Math.min(1, ((q.x - a.x) * dx + (q.y - a.y) * dy) / Math.max(1e-12, dx * dx + dy * dy)));
-          const p = { x: a.x + dx * t, y: a.y + dy * t, z: sourcePrinted ? a.z : a.z + h };
+          const z = a.z + (b.z - a.z) * t;
+          const p = { x: a.x + dx * t, y: a.y + dy * t, z: sourcePrinted ? z : z + h };
           const end = { ...q, z: sourcePrinted ? q.z + h : q.z }, d = Math.hypot(p.x - q.x, p.y - q.y);
-          if (d < 0.05 || (best && d >= best.d) || Math.abs(p.z - end.z) > Math.tan(25 * Math.PI / 180) * d || !segmentInside(p, end, boundary, width / 2)) continue;
+          if (d < 0.05 || (best && d >= best.d) || Math.abs(p.z - end.z) > Math.tan(25 * Math.PI / 180) * d || !segmentInside(p, end, boundary, sourcePrinted ? 0 : width / 2)) continue;
           best = { p, q: end, d };
         }
       }
@@ -58,13 +61,22 @@ function anchorTexture(backing, texture, boundary, h, width, sourcePrinted = fal
   return ties;
 }
 
-function textureResult(options, repeat) {
+function textureResult(options, repeat, offsetX = 0, offsetY = 0) {
   const { machine, material, design, settings = {} } = options;
   if (design === 'loop-pile') { const field = options.pilePattern && options.pilePattern !== 'none' ? createField(options.pilePattern, { scale: options.pilePatternScale ?? 1 }) : null; return generate(machine, material, { ...settings, sample_width: repeat, sample_height: repeat, boundary_policy: 'footprint' }, { liftAt: field ? (x, y) => 0.3 + 0.7 * field(x, y) : null }); }
   if (design === 'squiggle') return generateSquiggle(machine, material, { ...settings, width: repeat, height: repeat, sampler: settings.pattern === 'image' && options.image ? createImageSampler(options.image, options.width ?? repeat, options.height ?? repeat, { yUp: true }) : SAMPLERS[settings.pattern] ?? SAMPLERS.centerSpot, colorChange: false });
   const d = DESIGNS.find((d) => d.id === design && d.status === 'ready');
   if (!d) throw new ConfigError(['Choose a supported fabric design.']);
-  return d.generate(machine, material, { ...d.defaults(), ...settings, width: repeat, height: repeat, colorChange: false });
+  try { return d.generate(machine, material, { ...d.defaults(), ...settings, width: repeat, height: repeat, colorChange: false }, {
+    vector: options.vector,
+    vectorSize: [options.width ?? repeat, options.height ?? repeat],
+    vectorOffset: [offsetX, offsetY],
+    // The full-document strokes print once before the panel backing, rather than once per texture section.
+    includeLines: !options.vector,
+  }); } catch (error) {
+    if (d.vectorGuides && error.errors?.some((message) => /green openings fill/i.test(message))) return { cfg: resolveConfig(machine, material, { sample_width: repeat, sample_height: repeat }), strands: [], moves: [], fabric: { issues: [] } };
+    throw error;
+  }
 }
 
 /** Bounded-memory panel export. Texture repeats per section; full-document SVG strokes never repeat. */
@@ -79,7 +91,10 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   if (signal?.aborted) throw new DOMException('Export cancelled', 'AbortError');
   const texture = textureResult(options, repeat);
   const cfg = resolveConfig(machine, material, { ...texture.cfg.t, sample_width: width, sample_height: height });
-  const h = cfg.t.layer_height, bead = cfg.t.extrusion_width, boundary = new PolygonBoundary(outline ?? [rectangle(width, height)]);
+  const h = cfg.t.layer_height, bead = cfg.t.extrusion_width;
+  const model = vector ? interpretDrawing(vector, { scaleX: width / vector.width, scaleY: height / vector.height }) : null;
+  const guides = model?.guides ?? [], outerBoundary = new PolygonBoundary(outline ?? (shapeOutline && model?.rings.length ? model.rings : [rectangle(width, height)]));
+  const boundary = guides.length ? conformalGuideRegion(outerBoundary, guides) : outerBoundary;
   // number of layers: the texture of every section is printed that many times on top of itself
   const layers = Math.max(1, Math.round(options.layers ?? 1));
   const stackIf = (strands) => (layers > 1 && !texture.placements?.length ? stackStrands(strands, layers, { layerHeight: h, strandWidth: bead }) : strands);
@@ -108,7 +123,8 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   };
   check();
   await add(writer.header({ comments: [`Garment panel ${width} x ${height} mm; ${options.design}; repeat ${repeat} mm`, 'Continuous crossed backing; texture repeats in sections; physical swatch qualification required', `settings ${JSON.stringify(options.settings ?? {})}`] }));
-  const basis = backingLines(boundary, backingSpacing, h, vector ? h : 0, bead);
+  let basis = backingLines(boundary, backingSpacing, h, vector ? h : 0, shapeOutline ? 0 : bead);
+  if (guides.length) basis = resolveCrossings(repelGuideStrands(basis, guides, { boundary, strandWidth: bead }), { follow: true, preserve: true, lift: h, strandWidth: bead }).strands;
   if (!basis.length) throw new ConfigError(['No backing fits this outline. Use finer backing spacing or a larger panel.']);
   if (contactGraph(basis, { strandWidth: bead, layerHeight: h, cellSize: Math.max(5, backingSpacing) }).components !== 1) warnings.push('The backing is in separate pieces in this outline: use finer spacing or export separate garment pieces.');
   if (warnings.length) await add(warnings.map((w) => `; WARNING ${w}`));
@@ -118,7 +134,8 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     let serial = 0;
     const strand = (poly) => ({ id: `svg-${serial++}`, layer: 0, kind: 'base', shape: poly.shape && shapeOutline, pts: poly.pts.map((p) => ({ x: p.x, y: p.y, z: h })) });
     // as drawn: the lines of a drawing that is the outline are trimmed to the panel, not to the shapes they cross
-    const lineBoundary = shapeOutline ? new PolygonBoundary([rectangle(width, height)]) : boundary;
+    // Original SVG strokes, including every green wall pass, stay as drawn. The green openings constrain fabric.
+    const lineBoundary = shapeOutline ? new PolygonBoundary([rectangle(width, height)]) : outerBoundary;
     const source = [...whole.map(strand), ...clipStrands(clipped.map(strand), lineBoundary, bead / 2)];
     progress({ phase: 'svg', done: 0, total }); await emit(orderStrands(source));
     const vertical = basis.filter((s) => s.layer === 0);
@@ -128,7 +145,11 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   peakSectionMoves = texture.moves.length;
   // a picture is one picture across the whole panel, so every section is made from its own window onto it
   const pictured = options.design === 'squiggle' && options.settings?.pattern === 'image' && !!options.image;
-  const sectionStrands = (x, y, w, ht) => (pictured
+  const designModule = DESIGNS.find((d) => d.id === options.design);
+  const drawn = !!vector && (designModule?.usesVector || designModule?.vectorGuides);
+  const sectionStrands = (x, y, w, ht) => (drawn
+    ? stackIf(textureResult(options, repeat, x, y).strands)
+    : pictured
     ? stackIf(generateSquiggle(machine, material, { ...options.settings, width: w, height: ht, sampler: createImageSampler(options.image, width, height, { offsetX: x, offsetY: y, yUp: true }), colorChange: false }).strands)
     : texture.strands);
   const cache = new Map(), zOffset = (vector ? 3 : 2) * h;
@@ -139,17 +160,26 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     const w = Math.min(repeat, width - x), ht = Math.min(repeat, height - y);
     const cellBoundary = new PolygonBoundary([rectangle(w, ht)]), phaseX = ((x - basis[0].pts[0].x) % backingSpacing + backingSpacing) % backingSpacing, phaseY = y % backingSpacing;
     const key = `${w}:${ht}:${phaseX.toFixed(5)}:${phaseY.toFixed(5)}`;
-    let local = !outline && !pictured ? cache.get(key) : null;
+    let local = !outline && !pictured && !drawn && !guides.length ? cache.get(key) : null;
     if (!local) {
-      local = clipStrands(sectionStrands(x, y, w, ht).map((s) => ({ ...s, pts: s.pts.map((p) => ({ ...p, z: p.z + zOffset })) })), cellBoundary, bead / 2);
-      const localBasis = basis.filter((s) => { const b = bounds(s); return b.maxX >= x && b.minX <= x + w && b.maxY >= y && b.minY <= y + ht; }).map((s) => ({ ...s, pts: s.pts.map((p) => ({ ...p, x: Math.max(0, Math.min(w, p.x - x)), y: Math.max(0, Math.min(ht, p.y - y)) })) })).filter((s) => Math.hypot(s.pts[1].x - s.pts[0].x, s.pts[1].y - s.pts[0].y) > 0.1);
-      if (!outline) local = [...anchorTexture(localBasis, local, cellBoundary, h, bead), ...local];
-      if (!outline && !pictured) { if (cache.size >= 4) cache.delete(cache.keys().next().value); cache.set(key, local); }
+      local = clipStrands(sectionStrands(x, y, w, ht).map((s) => ({ ...s, pts: s.pts.map((p) => ({ ...p, z: p.z + zOffset })) })), cellBoundary, drawn ? 0 : bead / 2);
+      if (!outline && !shapeOutline && !guides.length) {
+        const localBasis = basis.filter((s) => { const b = bounds(s); return b.maxX >= x && b.minX <= x + w && b.maxY >= y && b.minY <= y + ht; }).map((s) => ({ ...s, pts: s.pts.map((p) => ({ ...p, x: Math.max(0, Math.min(w, p.x - x)), y: Math.max(0, Math.min(ht, p.y - y)) })) })).filter((s) => Math.hypot(s.pts[1].x - s.pts[0].x, s.pts[1].y - s.pts[0].y) > 0.1);
+        local = [...anchorTexture(localBasis, local, cellBoundary, h, bead), ...local];
+      }
+      if (!outline && !pictured && !drawn && !guides.length) { if (cache.size >= 4) cache.delete(cache.keys().next().value); cache.set(key, local); }
     }
     let placed = local.map((s) => ({ ...s, id: `section-${sections}-${s.id}`, pts: s.pts.map((p) => ({ ...p, x: p.x + x, y: p.y + y })) }));
-    if (outline) {
+    if (outline || shapeOutline || guides.length) {
+      if (guides.length && !designModule?.vectorGuides) placed = repelGuideStrands(placed, guides, { boundary, strandWidth: bead });
       placed = clipStrands(placed.filter((s) => !s.id.includes('anchor-')), boundary, bead / 2);
-      const support = clipStrands(basis, new PolygonBoundary([rectangle(w, ht, x, y)]), 0);
+      if (shapeOutline) placed = finishAtPrintedBoundary(placed, boundary, bead);
+      if (guides.length) placed = resolveCrossings(placed, { follow: true, preserve: true, lift: h, strandWidth: bead }).strands;
+      let support;
+      if (guides.length) {
+        const extent = bounds({ pts: placed.flatMap((s) => s.pts) }), pad = Math.max(2 * backingSpacing, bead * 4);
+        support = basis.filter((s) => { const b = bounds(s); return b.maxX >= extent.minX - pad && b.minX <= extent.maxX + pad && b.maxY >= extent.minY - pad && b.minY <= extent.maxY + pad; });
+      } else support = clipStrands(basis, new PolygonBoundary([rectangle(w, ht, x, y)]), 0);
       placed = [...anchorTexture(support, placed, boundary, h, bead), ...placed];
     }
     peakSectionMoves = Math.max(peakSectionMoves, placed.reduce((n, s) => n + s.pts.length + 3, 0));
@@ -159,5 +189,5 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     await flush(); progress({ phase: 'texture', done: sections, total });
   }
   await add([`; panel estimate (no acceleration): ${(writer.timeSec / 60).toFixed(1)} min; filament ${writer.cumE.toFixed(1)} mm`, ...writer.footer()]); await flush();
-  return { sections, peakSectionMoves, bytes, moves: writer.moves, filamentMm: writer.cumE, timeSec: writer.timeSec, warnings, physicallyVerified: false };
+  return { sections, peakSectionMoves, bytes, moves: writer.moves, filamentMm: writer.cumE, timeSec: writer.timeSec, guideCount: guides.length, print: { layerHeight: h, nozzleDiameter: cfg.t.nozzle_diameter, extrusionWidth: bead, layers }, warnings, physicallyVerified: false };
 }

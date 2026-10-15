@@ -1,4 +1,5 @@
 import { validateMachine, validateMaterial } from './profiles.js';
+import { normalizeStartModes } from './gcode-modes.js';
 
 /**
  * Printer and filament profiles in the formats the slicers already export, so a person adds a machine by dropping the
@@ -143,10 +144,8 @@ function startBlock(text, notes, label) {
   if (dropped.length) notes.push(`${label}: ${dropped.length} start G-code line(s) used slicer macros this tool cannot fill and were left out.`);
   const out = [...lines];
   if (!out.some((l) => l.includes('{machine_limits}'))) out.unshift('{machine_limits}');
-  // this tool's E moves are relative
-  if (!out.some((l) => /^\s*M83\b/i.test(l))) out.push('M83 ; relative E');
   if (!out.some((l) => l.includes('{prime_line}'))) out.push('{prime_line}', 'G92 E0');
-  return out;
+  return normalizeStartModes(out);
 }
 
 function endBlock(text, notes, label) {

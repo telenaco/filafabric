@@ -11,13 +11,16 @@
 //
 // Everything here is plain geometry in millimetres: no browser, no printing. The printing pipeline takes the polylines.
 
+import { unionFilledRegions } from './polygon-region.js';
+
 export const FILL = 'red';
 export const HOLE = 'blue';
+export const GUIDE = 'green';
 export const MAX_PASSES = 8;
 
 /* ---------- what is saved of a drawing ---------- */
 
-const COLOURS = new Set(['red', 'blue', 'other']);
+const COLOURS = new Set(['red', 'blue', 'green', 'other']);
 
 /** A drawing from a file or a saved setting, or null when it cannot be one. Keeps `styles` only when they line up with the paths. */
 export function sanitizeSvgLines(raw) {
@@ -134,12 +137,13 @@ function nest(shapes) {
 export function interpretDrawing(vector, { scaleX = 1, scaleY = 1 } = {}) {
   const widthScale = Math.sqrt(Math.abs(scaleX * scaleY)) || 1;
   const styled = Array.isArray(vector.styles) && vector.styles.length === vector.paths.length;
-  const shapes = [], lines = [];
+  const shapes = [], lines = [], guides = [];
   vector.paths.forEach((path, index) => {
     if (path.length < 2) return;
     const pts = path.map((p) => ({ x: p.x * scaleX, y: p.y * scaleY }));
     const style = styled ? vector.styles[index] : null;
     const ring = closedRing(pts);
+    if (ring && style?.color === GUIDE) guides.push({ ring, width: style.width * widthScale, index });
     if (ring && (!style || style.color === FILL || style.color === HOLE)) shapes.push({ ring, color: style ? style.color : null, index });
     else lines.push({ pts, width: style ? style.width * widthScale : 0, closed: !!ring, index });
   });
@@ -166,9 +170,9 @@ export function interpretDrawing(vector, { scaleX = 1, scaleY = 1 } = {}) {
     for (const h of holes) h.kept = true;
     fills.push({ ring: s.ring, holes: holes.map((h) => h.ring) });
   }
-  const rings = fills.flatMap((f) => [f.ring, ...f.holes]);
+  const rings = unionFilledRegions(fills);
   for (const s of shapes) delete s.samples;
-  return { shapes, fills, rings, lines, styled };
+  return { shapes, fills, rings, lines, guides, styled };
 }
 
 /* ---------- lines and their passes ---------- */
@@ -213,7 +217,8 @@ export function offsetPolyline(pts, d) {
 export function linePasses(line, bead = 0.45) {
   const n = passesFor(line.width, bead);
   if (n === 1) return [line.pts];
-  const pitch = line.width / n;
+  // Adjacent beads share at least 20% of their width so a multi-pass stroke bonds as one line.
+  const pitch = Math.min(line.width / n, bead * 0.8);
   return Array.from({ length: n }, (_, k) => offsetPolyline(line.pts, (k - (n - 1) / 2) * pitch));
 }
 
@@ -275,7 +280,7 @@ export function cropToDrawing(vector, { margin = 3 } = {}) {
 export function summariseDrawing(vector, { bead = 0.45 } = {}) {
   const m = interpretDrawing(vector);
   const holes = new Set(m.fills.flatMap((f) => f.holes)).size;
-  return { fills: m.fills.length, holes, lines: m.lines.length, passes: m.lines.reduce((n, l) => Math.max(n, passesFor(l.width, bead)), 1), styled: m.styled };
+  return { fills: m.fills.length, holes, guides: m.guides.length, lines: m.lines.length, passes: m.lines.reduce((n, l) => Math.max(n, passesFor(l.width, bead)), 1), styled: m.styled };
 }
 
 export function describeDrawing(s) {
@@ -283,5 +288,6 @@ export function describeDrawing(s) {
   const parts = [];
   if (s.fills) parts.push(`${plural(s.fills, 'filled shape')}${s.holes ? ` with ${plural(s.holes, 'hole')}` : ''}`);
   if (s.lines) parts.push(`${plural(s.lines, 'line')}${s.passes > 1 ? ` (up to ${s.passes} passes)` : ''}`);
+  if (s.guides) parts.push(plural(s.guides, 'green guide'));
   return parts.length ? parts.join(', ') : 'nothing to print yet';
 }

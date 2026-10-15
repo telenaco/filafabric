@@ -55,11 +55,11 @@ test('a line as wide as the extrusion is one pass and a wider one is several sid
   const line = interpretDrawing(v).lines[0];
   const passes = linePasses(line, 0.45);
   assert.equal(passes.length, 3);
-  // side by side: 0.4 mm apart, centred on the drawn line, same length
+  // side by side: 20% overlap of a 0.45 mm bead, centred on the drawing, same length
   const mid = (p) => ({ x: (p[0].x + p.at(-1).x) / 2, y: (p[0].y + p.at(-1).y) / 2 });
   const [a, b, c] = passes.map(mid);
-  assert.ok(Math.abs(Math.hypot(a.x - b.x, a.y - b.y) - 0.4) < 1e-6);
-  assert.ok(Math.abs(Math.hypot(b.x - c.x, b.y - c.y) - 0.4) < 1e-6);
+  assert.ok(Math.abs(Math.hypot(a.x - b.x, a.y - b.y) - 0.36) < 1e-6);
+  assert.ok(Math.abs(Math.hypot(b.x - c.x, b.y - c.y) - 0.36) < 1e-6);
   const centre = mid(line.pts);
   assert.ok(Math.hypot(b.x - centre.x, b.y - centre.y) < 1e-6);
   assert.ok(Math.abs(Math.hypot(passes[0][0].x - passes[0].at(-1).x, passes[0][0].y - passes[0].at(-1).y) - Math.hypot(line.pts[0].x - line.pts.at(-1).x, line.pts[0].y - line.pts.at(-1).y)) < 1e-6);
@@ -254,7 +254,7 @@ test('a saved drawing keeps its colours only when they line up with its paths', 
   const raw = { name: 'x', width: 10, height: 10, paths: [[{ x: 0, y: 0 }, { x: 5, y: 5 }]] };
   assert.deepEqual(sanitizeSvgLines({ ...raw, styles: [{ color: 'red', width: 1.23456 }] }).styles, [{ color: 'red', width: 1.235 }]);
   assert.equal(sanitizeSvgLines({ ...raw, styles: [] }).styles, undefined);
-  assert.equal(sanitizeSvgLines({ ...raw, styles: [{ color: 'green', width: 1 }] }).styles, undefined);
+  assert.equal(sanitizeSvgLines({ ...raw, styles: [{ color: 'purple', width: 1 }] }).styles, undefined);
   assert.equal(sanitizeSvgLines({ ...raw, styles: [{ color: 'red', width: -1 }] }).styles, undefined);
   assert.equal('styles' in sanitizeSvgLines(raw), false, 'an older drawing is unchanged');
 });
@@ -267,7 +267,7 @@ test('the drawing is the outline: its red area, less the blue hole, in the drawi
   assert.equal(o.rings.length, 3, 'the square, the star hole and the circle');
   assert.deepEqual(o.page, [210, 297]);
   const blueOnly = { name: 'b', width: 100, height: 100, paths: [sq(10, 10, 50)], styles: [{ color: 'blue', width: 0.25 }] };
-  assert.equal(outlineFromVector(blueOnly), null, 'nothing red: nothing to cut the pattern to');
+  assert.ok(outlineFromVector(blueOnly), 'blue blocks the default rectangular page even without a red container');
   const blackOnly = { name: 'k', width: 100, height: 100, paths: [sq(10, 10, 50)], styles: [{ color: 'other', width: 0.25 }] };
   assert.equal(outlineFromVector(blackOnly), null);
 });
@@ -311,7 +311,7 @@ test('imported drawing lines print their passes on the first layer under any pat
   const first = composed.strands.filter((s) => s.name === 'Imported SVG lines');
   assert.equal(first.length, 3, 'three passes');
   const ys = first.map((s) => s.pts[0].y).sort((a, b) => a - b);
-  assert.ok(Math.abs(ys[1] - ys[0] - 0.4) < 1e-6 && Math.abs(ys[2] - ys[1] - 0.4) < 1e-6);
+  assert.ok(Math.abs(ys[1] - ys[0] - 0.36) < 1e-6 && Math.abs(ys[2] - ys[1] - 0.36) < 1e-6);
 });
 
 test('a small motif on a big page is cut down to the drawing, with its lines and colours unchanged', () => {

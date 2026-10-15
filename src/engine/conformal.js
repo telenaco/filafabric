@@ -2,6 +2,8 @@ import { sampleGrid, isoLines } from './isolines.js';
 import { clipPolyline } from './layers.js';
 import { PolygonBoundary } from './boundary.js';
 import { ConfigError } from './params.js';
+import { guidedConformalLayers } from './conformal-guides.js';
+export { conformalGuideRegion, repelGuideStrands } from './conformal-guides.js';
 
 /**
  * Conformal mesh: the two layers are the level lines of the real and the imaginary part of one complex function
@@ -152,7 +154,8 @@ function splitWhere(pts, ok) {
  * @param feature  size of the holes or the distance of the poles, as a fraction of half the shorter side
  * @param arms, twist  the nautilus: how many lines of each family go once round
  */
-export function conformalLayers(boundary, { map = 'hole', spacing = 3, feature = 0.35, arms = 21, twist = 13 } = {}) {
+export function conformalLayers(boundary, { map = 'hole', spacing = 3, feature = 0.35, arms = 21, twist = 13, guides = [], guideHems = true, strandWidth = 0.45 } = {}) {
+  if (guides.length) return guidedConformalLayers(boundary, { spacing, guides, guideHems, strandWidth });
   const m = MAPS[map];
   if (!m) throw new Error(`Unknown conformal map: ${map}`);
   const box = boundary.bbox();
@@ -169,6 +172,7 @@ export function conformalLayers(boundary, { map = 'hole', spacing = 3, feature =
   const inHole = (x, y) => holes.some((c) => (x - c.x) ** 2 + (y - c.y) ** 2 < c.r * c.r);
 
   const cell = Math.max(0.35, Math.min(spacing / 6, Math.max(w, h) / 320));
+  if ((Math.ceil(w / cell) + 3) * (Math.ceil(h / cell) + 3) > 400000) throw new ConfigError(['This swatch is too large for the conformal mesh; use a smaller one.']);
   const fAt = (x, y) => {
     const key = `${x},${y}`;
     let v = values.get(key);

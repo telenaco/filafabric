@@ -20,7 +20,11 @@ import { MAX_MOVES } from './tiler.js';
  * @returns strands of every copy, in print order, copy by copy
  */
 export function stackStrands(strands, count, { layerHeight = 0.2, strandWidth = 0.45 } = {}) {
+  if (!Number.isFinite(count)) throw new ConfigError(['The number of layers must be finite.']);
+  if (!strands.length) return strands;
   const copies = Math.max(1, Math.round(count));
+  const points = strands.reduce((n, s) => n + s.pts.length + 4, 0);
+  if (points * copies > MAX_MOVES) throw new ConfigError([`${copies} layers would need about ${(points * copies).toLocaleString('en')} moves; the limit is ${MAX_MOVES.toLocaleString('en')}. Use fewer layers or a smaller section.`]);
   if (copies <= 1) return strands;
   const all = [];
   for (let k = 0; k < copies; k++) {
@@ -28,7 +32,9 @@ export function stackStrands(strands, count, { layerHeight = 0.2, strandWidth = 
       all.push({ ...s, id: `${s.id}~${k + 1}`, copy: k, pts: s.pts.map((p) => ({ ...p, z: p.z + k * layerHeight })) });
     }
   }
-  return resolveCrossings(all, { follow: true, preserve: true, lift: layerHeight, strandWidth }).strands;
+  const settled = resolveCrossings(all, { follow: true, preserve: true, lift: layerHeight, strandWidth }).strands;
+  if (settled.reduce((n, s) => n + s.pts.length + 4, 0) > MAX_MOVES) throw new ConfigError(['The stacked crossing paths exceed the move limit. Use fewer layers or a smaller section.']);
+  return settled;
 }
 
 /**

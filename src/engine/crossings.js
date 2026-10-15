@@ -228,7 +228,7 @@ function followSupports(strands, found, arcs, { lift, ramp, preserve = false }) 
       const a = s.pts[Math.max(0, j - 1)], b = s.pts[j];
       const t = j ? Math.max(0, Math.min(1, (arc - arcs[si][j - 1]) / Math.max(1e-12, arcs[si][j] - arcs[si][j - 1]))) : 0;
       const z = zAt(arc);
-      pts.push({ ...b, x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z, _arc: arc, ...(z > base + 1e-6 ? { cls: 'supported' } : {}) });
+      pts.push({ ...b, x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z, _arc: arc, ...(!preserve && z > base + 1e-6 ? { cls: 'supported' } : {}) });
     }
     for (let i = 1; i < pts.length; i++) {
       const d = Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
@@ -243,7 +243,7 @@ function followSupports(strands, found, arcs, { lift, ramp, preserve = false }) 
   const point = (si, arc) => out[si].pts[Math.min(out[si].pts.length - 1, lowerBound(at[si], arc - 1e-7))];
   for (let pass = 0; pass < 120; pass++) {
     let changed = false;
-    const raise = (p, z) => { if (z > p.z + 1e-9) { p.z = z; p.cls = 'supported'; changed = true; } };
+    const raise = (p, z) => { if (z > p.z + 1e-9) { p.z = z; if (!preserve || !p.cls) p.cls = 'supported'; changed = true; } };
     for (const s of out) {
       for (let i = 1; i < s.pts.length; i++) { const a = s.pts[i - 1], b = s.pts[i]; raise(b, a.z - slope * Math.hypot(b.x - a.x, b.y - a.y)); }
       for (let i = s.pts.length - 2; i >= 0; i--) { const a = s.pts[i + 1], b = s.pts[i]; raise(b, a.z - slope * Math.hypot(b.x - a.x, b.y - a.y)); }

@@ -144,7 +144,7 @@ function rgbOf(value) {
   return null;
 }
 
-/** 'none', 'red', 'blue' or 'other'. Pure red (255, 0, 0) and pure blue (0, 0, 255), with a hair of room for rounding in an export. */
+/** Semantic red/blue contours and CSS green/lime guides, with a little room for export rounding. */
 function paintClass(value, current) {
   let v = String(value).trim().toLowerCase();
   if (v === 'none' || v === 'transparent') return 'none';
@@ -154,6 +154,7 @@ function paintClass(value, current) {
   const [r, g, b] = rgb;
   if (r >= 250 && g <= 5 && b <= 5) return 'red';
   if (b >= 250 && r <= 5 && g <= 5) return 'blue';
+  if (g >= 120 && r <= 5 && b <= 5) return 'green';
   return 'other';
 }
 
@@ -392,7 +393,8 @@ export function parseSvg(text, name = 'SVG lines') {
     if (!SHAPES.has(lname)) return;
     if (++elements > MAX_ELEMENTS) throw new Error('This SVG has too many shapes. Simplify the drawing before importing it.');
 
-    const color = style.fill !== 'none' ? style.fill : style.stroke;
+    const semantic = (color) => ['red', 'blue', 'green'].includes(color);
+    const color = semantic(style.stroke) && !semantic(style.fill) ? style.stroke : style.fill !== 'none' ? style.fill : style.stroke;
     if (color === 'none') return; // neither filled nor stroked: not drawn
     const det = Math.abs(here[0] * here[3] - here[1] * here[2]);
     const scale = Math.sqrt(det) || 1;

@@ -1,5 +1,7 @@
 import { PolygonBoundary } from './boundary.js';
-import { densify } from './layers.js';
+import { densify, clipPolyline } from './layers.js';
+import { windowRings } from './window.js';
+import { finishAtPrintedBoundary } from './fabric.js';
 import { infillLines, INFILL_IDS } from './infill.js';
 import { classifyPaths, interpretDrawing, linePasses } from './drawing.js';
 
@@ -73,10 +75,13 @@ const bboxOf = (paths) => {
  * @param options   { bead } the width of one printed line, which sets how many passes a wide line takes
  * @returns { layers, extra, warnings }: layers of polylines (the design, then each backing), ready for layeredResult
  */
-export function svgDesignLayers(boundary, settings, vector = null, { bead = 0.45 } = {}) {
+export function svgDesignLayers(boundary, settings, vector = null, { bead = 0.45, vectorSize = null, vectorOffset = [0, 0], includeLines = true, onlyLayer = null } = {}) {
   const s = settings;
   const source = vector ?? sampleVector();
-  const model = interpretDrawing(source, { scaleX: s.width / source.width, scaleY: s.height / source.height });
+  const [fw, fh] = vectorSize ?? [s.width, s.height], [ox, oy] = vectorOffset;
+  const sx = fw / source.width, sy = fh / source.height;
+  const projected = { ...source, paths: source.paths.map((pts) => pts.map((p) => ({ x: p.x * sx - ox, y: p.y * sy - oy }))), styles: source.styles?.map((style) => ({ ...style, width: style.width * Math.sqrt(sx * sy) })) };
+  const model = interpretDrawing(projected);
   const warnings = [];
   let mode = s.mode;
   if ((mode === 'fill' || mode === 'both') && model.fills.length === 0) {
@@ -88,15 +93,19 @@ export function svgDesignLayers(boundary, settings, vector = null, { bead = 0.45
   }
 
   // the edge of every red or blue shape, and every line with its passes
-  const edges = model.shapes.map((sh) => densify([...sh.ring, { ...sh.ring[0] }], 0.5));
-  const lines = model.lines.flatMap((line) => linePasses(line, bead)).map((pts) => densify(pts, 0.5));
+  const cropLines = (pts) => clipPolyline(pts, boundary, 0);
+  const edges = includeLines && (onlyLayer === null || onlyLayer === 0) ? model.shapes.flatMap((sh) => cropLines([...sh.ring, { ...sh.ring[0] }])) : [];
+  const lines = includeLines && (onlyLayer === null || onlyLayer === 0) ? model.lines.flatMap((line) => linePasses(line, bead)).flatMap(cropLines) : [];
   const outlines = [...edges, ...lines];
-  const shape = model.rings.length ? new PolygonBoundary(model.rings) : null;
+  const rings = windowRings(model.rings, s.width, s.height);
+  const shape = rings.length ? new PolygonBoundary(rings) : null;
   const design = [];
   if (mode === 'outline' || mode === 'both') design.push(...outlines);
-  if ((mode === 'fill' || mode === 'both') && shape) {
+  if ((onlyLayer === null || onlyLayer === 0) && (mode === 'fill' || mode === 'both') && shape) {
     // in 'both' the fill stops at the outline's own line; in 'fill' it forms the shape's edge by itself
-    design.push(...infillLines(s.designPattern, shape, { spacing: s.designSpacing, angle: s.designAngle, layer: 0, inset: mode === 'both' ? 0.15 : 0.25 }));
+    let fill = infillLines(s.designPattern, shape, { spacing: s.designSpacing, angle: s.designAngle, layer: 0, inset: mode === 'both' ? 0.15 : 0.25 });
+    if (mode === 'both') fill = finishAtPrintedBoundary(fill.map((pts) => ({ pts })), new PolygonBoundary(model.rings), bead).map((s) => s.pts);
+    design.push(...fill);
     // lines are not shapes, so a fill never draws them: keep them printed as lines
     if (mode === 'fill') design.push(...lines);
   }
@@ -105,11 +114,12 @@ export function svgDesignLayers(boundary, settings, vector = null, { bead = 0.45
   const box = bboxOf(all);
   const margin = 3;
   const areaFor = (kind) => {
-    if (kind === 'shape' && shape) return shape;
+    if (kind === 'shape' && model.rings.length) return shape;
     if (kind === 'box' || (kind === 'shape' && box)) {
       const b = box ?? boundary.bbox();
       const rect = [{ x: b.minX - margin, y: b.minY - margin }, { x: b.maxX + margin, y: b.minY - margin }, { x: b.maxX + margin, y: b.maxY + margin }, { x: b.minX - margin, y: b.maxY + margin }];
-      return new PolygonBoundary([rect]);
+      const cropped = windowRings([rect], s.width, s.height);
+      return cropped.length ? new PolygonBoundary(cropped) : null;
     }
     return boundary;
   };
@@ -120,7 +130,7 @@ export function svgDesignLayers(boundary, settings, vector = null, { bead = 0.45
   for (let k = 1; k <= n; k++) {
     const pattern = s[`backing${k}Pattern`], spacing = s[`backing${k}Spacing`], angle = s[`backing${k}Angle`];
     const region = areaFor(s.backingArea);
-    const lines = infillLines(pattern, region, { spacing, angle, layer: k });
+    const lines = region && (onlyLayer === null || onlyLayer === k) ? infillLines(pattern, region, { spacing, angle, layer: k }) : [];
     layers.push(lines);
     backing.push({ pattern, spacing, angle, lines: lines.length });
   }

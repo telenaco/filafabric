@@ -17,7 +17,7 @@ test('the SVG design card is registered, works from the drawing and shows at its
   assert.equal(card.status, 'ready');
   assert.equal(card.usesVector, true);
   assert.equal(card.fullSize, true);
-  assert.equal(card.panel, false);
+  assert.equal(card.panel, true, 'the drawing can be exported at full garment size');
   assert.ok(DESIGNS.indexOf(card) > DESIGNS.findIndex((d) => d.id === 'fringe'));
 });
 

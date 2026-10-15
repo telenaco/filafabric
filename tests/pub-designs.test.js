@@ -41,8 +41,9 @@ test('the complement second layer is thick where the first is thin', () => {
 test('flow reaches the G-code: thicker lines use proportionally more filament and run no faster', () => {
   const { machine, material } = defaultProfiles();
   const make = (flow) => {
-    const { layers } = halftoneLayers(boundaryFor(40, 40), { spacing: 4, tone: () => 0.5, thin: flow, thick: flow });
-    return layeredResult(machine, material, { width: 40, height: 40, layers });
+    // Compare flow on identical geometry; the production builder reserves more edge clearance for a wider bead.
+    const { layers } = halftoneLayers(boundaryFor(40, 40), { spacing: 4, tone: () => 0.5, thin: 2, thick: 2 });
+    return layeredResult(machine, material, { width: 40, height: 40, layers: layers.map((layer) => layer.map((pts) => pts.map((p) => ({ ...p, flow })))) });
   };
   const one = make(1), two = make(2);
   assert.ok(one.moves.every((m) => m.flow === undefined), 'nominal flow adds nothing');

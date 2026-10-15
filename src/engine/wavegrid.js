@@ -85,12 +85,10 @@ export function waveLines(boundary, { angle = 0, spacing = 3, amplitude = 1, wav
   const list = [];
   lanes.forEach((y, k) => {
     const pieces = [];
-    for (const [from, to] of turned.intervals('y', y)) {
-      if (to - from < 1) continue;
-      // the wave is measured from a fixed x, so lanes that start together stay together whatever the outline does
-      const start = phase + k * laneShift + (from - box.minX) / wavelength;
-      for (const run of clipPolyline(lanePoints(shape, from, to, y, amplitude, wavelength, start), turned, 1)) pieces.push(run);
-    }
+    // A wave can enter a slanted edge before its centre lane does. Generate its whole X extent, then clip the wave.
+    const from = box.minX - wavelength, to = box.maxX + wavelength;
+    const start = phase + k * laneShift + (from - box.minX) / wavelength;
+    pieces.push(...clipPolyline(lanePoints(shape, from, to, y, amplitude, wavelength, start), turned, 1));
     // alternate lanes run the other way so the end of one is beside the start of the next
     if (k % 2 === 1) pieces.reverse().forEach((p) => p.reverse());
     list.push(...pieces);

@@ -7,7 +7,7 @@ import { emitStrands } from './emit.js';
 import { resolveCrossings, findCrossings } from './crossings.js';
 import { lanePoints } from './shapes.js';
 import { MAX_MOVES } from './tiler.js';
-import { contactGraph, clipStrands, connectStrands, orderStrands, travelDistance, simplifyStrands, safePoint } from './fabric.js';
+import { contactGraph, clipStrands, connectStrands, orderStrands, travelDistance, simplifyStrands, safePoint, segmentInside } from './fabric.js';
 import { finishFabric } from './fabric-result.js';
 
 /**
@@ -45,21 +45,15 @@ export function densify(pts, step = STEP) {
 
 /** The parts of a polyline that lie inside the boundary, as separate polylines (anything shorter than 1 mm is dropped). */
 export function clipPolyline(pts, boundary, minLength = 1) {
-  const dense = densify(pts);
-  const out = [];
-  let run = [];
-  const flush = () => {
-    let len = 0;
-    for (let i = 1; i < run.length; i++) len += Math.hypot(run[i].x - run[i - 1].x, run[i].y - run[i - 1].y);
-    if (run.length >= 2 && len >= minLength) out.push(run);
-    run = [];
-  };
-  for (const p of dense) {
-    if (boundary.contains(p.x, p.y)) run.push(p);
-    else flush();
-  }
-  flush();
-  return out;
+  // Exact segment intersections retain the edge and cannot skip a hole between sampled points.
+  return clipStrands([{ pts: densify(pts).map((p) => ({ ...p, z: 0 })) }], boundary, 0)
+    .map((s) => s.pts.map(({ z, ...p }, i, pts) => {
+      if (boundary.contains(p.x, p.y)) return p;
+      // Polygon containment is half-open at an edge. A numerical nudge keeps downstream strict tests in the region.
+      const q = pts[i === pts.length - 1 ? i - 1 : i + 1], length = Math.hypot(q.x - p.x, q.y - p.y);
+      return length > 1e-9 ? { ...p, x: p.x + (q.x - p.x) / length * 1e-8, y: p.y + (q.y - p.y) / length * 1e-8 } : p;
+    }))
+    .filter((run) => run.reduce((n, p, i) => n + (i ? Math.hypot(p.x - run[i - 1].x, p.y - run[i - 1].y) : 0), 0) >= minLength);
 }
 
 const rotate = (p, c, s) => ({ x: p.x * c - p.y * s, y: p.x * s + p.y * c });
@@ -144,7 +138,7 @@ export function chainPolylines(list, boundary, maxJog = 6) {
     if (cur) {
       const end = cur[cur.length - 1];
       const d = Math.hypot(pts[0].x - end.x, pts[0].y - end.y);
-      if (d <= maxJog && boundary.contains((pts[0].x + end.x) / 2, (pts[0].y + end.y) / 2)) {
+      if (d <= maxJog && segmentInside(end, pts[0], boundary)) {
         cur.push(...densify([end, pts[0]]).slice(1), ...pts.slice(1));
         continue;
       }
@@ -238,11 +232,11 @@ export function crossingReport(items, areaMm2, strandWidth = 0.45) {
  * Layers of polylines to strands: layer k at (k + 1) layer heights, a self-crossing strand lifts over its own earlier
  * pass, and the first strand of every layer after the first can pause for a filament change.
  */
-export function layersToStrands(layers, { layerHeight = 0.2, strandWidth = 0.45, colorChange = false, ramp = 1.6, boundary = null, coherent = false } = {}) {
+export function layersToStrands(layers, { layerHeight = 0.2, strandWidth = 0.45, colorChange = false, ramp = 1.6, boundary = null, coherent = false, inset = strandWidth / 2 } = {}) {
   if (coherent) {
     let flat = layers.flatMap((list, k) => list.filter((p) => p.length >= 2).map((p, i) => ({ id: `l${k + 1}-${i + 1}`, layer: k, kind: k ? 'supported' : 'base', name: `Layer ${k + 1}`, pauseBefore: colorChange && k > 0 && i === 0, pts: p.map((q) => ({ x: q.x, y: q.y, z: layerHeight, ...(q.flow !== undefined ? { flow: q.flow } : {}) })) })));
     flat = simplifyStrands(flat);
-    if (boundary) flat = clipStrands(flat, boundary, strandWidth / 2);
+    if (boundary) flat = clipStrands(flat, boundary, inset);
     if (boundary) flat = connectStrands(flat, boundary, { strandWidth }).strands;
     const beforeMm = travelDistance(flat);
     flat = orderStrands(flat.map((s) => ({ ...s, layer: s.layer === -1 ? layers.length : s.layer })));
@@ -270,7 +264,7 @@ export function layersToStrands(layers, { layerHeight = 0.2, strandWidth = 0.45,
  * End to end for a layered design: machine, material and layers of polylines in, moves, stats, G-code and report out.
  * @param layers  array of layers, each an array of polylines of { x, y } in mm
  */
-export function layeredResult(machine, material, { width, height, layers, colorChange = false, outline = null, extra = {}, ramp = 1.6 }) {
+export function layeredResult(machine, material, { width, height, layers, colorChange = false, outline = null, extra = {}, ramp = 1.6, inset }) {
   const cfg = resolveConfig(machine, material, { sample_width: width, sample_height: height });
   const fit = bedFitErrors(cfg);
   if (fit.length > 0) throw new PreflightError(fit);
@@ -278,7 +272,7 @@ export function layeredResult(machine, material, { width, height, layers, colorC
   if (points > MAX_MOVES) {
     throw new ConfigError([`This layout would need about ${points.toLocaleString('en')} moves; the limit is ${MAX_MOVES.toLocaleString('en')}. Use wider spacing, larger cells or a smaller swatch.`]);
   }
-  const strands = layersToStrands(layers, { layerHeight: cfg.t.layer_height, strandWidth: cfg.t.extrusion_width, colorChange, ramp, boundary: boundaryFor(width, height, outline), coherent: true });
+  const strands = layersToStrands(layers, { layerHeight: cfg.t.layer_height, strandWidth: cfg.t.extrusion_width, colorChange, ramp, boundary: boundaryFor(width, height, outline), coherent: true, inset });
   const moves = emitStrands(strands, { retraction: cfg.derived.retraction });
   const stats = computeStats(moves, cfg, []);
   stats.loops = 0;

@@ -2,6 +2,8 @@
 import { findCrossings } from './crossings.js';
 const mix = (a, b, t) => ({ ...b, x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: (a.z ?? 0) + ((b.z ?? 0) - (a.z ?? 0)) * t });
 const cross = (ax, ay, bx, by) => ax * by - ay * bx;
+// Flow is stored on the destination point: it applies to the whole incoming extrusion move.
+const widthFactor = (p) => ['rising', 'falling', 'unsupported'].includes(p.cls) ? Math.sqrt(p.flow ?? 1) : (p.flow ?? 1);
 
 function projection(p, a, b) {
   const dx = b.x - a.x, dy = b.y - a.y;
@@ -36,7 +38,7 @@ export function contactGraph(strands, { strandWidth = 0.45, layerHeight = 0.2, p
   let joints = 0;
   strands.forEach((s, si) => {
     for (let i = 1; i < s.pts.length; i++) {
-      const a = s.pts[i - 1], b = s.pts[i], pad = strandWidth;
+      const a = s.pts[i - 1], b = s.pts[i], width = strandWidth * widthFactor(b), pad = width / 2;
       const x0 = Math.floor((Math.min(a.x, b.x) - pad) / cell), x1 = Math.floor((Math.max(a.x, b.x) + pad) / cell);
       const y0 = Math.floor((Math.min(a.y, b.y) - pad) / cell), y1 = Math.floor((Math.max(a.y, b.y) + pad) / cell);
       const seen = new Set();
@@ -45,12 +47,12 @@ export function contactGraph(strands, { strandWidth = 0.45, layerHeight = 0.2, p
           if (root(si) === root(q.si) || seen.has(q)) continue;
           seen.add(q);
           const hit = segmentContact(a, b, q.a, q.b);
-          if (hit.distance > strandWidth + 1e-9) continue;
+          if (hit.distance > (width + q.width) / 2 + 1e-9) continue;
           const za = mix(a, b, hit.t).z, zb = mix(q.a, q.b, hit.u).z;
           if (planar || Math.abs(za - zb) <= layerHeight + 0.04) { join(si, q.si); joints++; }
         }
       }
-      const q = { a, b, si };
+      const q = { a, b, si, width };
       for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) {
         const key = `${x},${y}`;
         if (!grid.has(key)) grid.set(key, []);
@@ -109,20 +111,30 @@ export function clipStrands(strands, boundary, inset = 0.225) {
     const flush = () => { if (run.length > 1) { out.push({ ...strand, pauseBefore: !!strand.pauseBefore && part === 0, id: `${strand.id ?? 'strand'}-p${part++}`, pts: run }); } run = []; };
     for (let j = 1; j < strand.pts.length; j++) {
       const a = strand.pts[j - 1], b = strand.pts[j], cuts = cutsAlong(a, b, boundary);
-      if (segmentInside(a, b, boundary, inset)) { push(a); push(b); continue; }
+      const clearance = inset * widthFactor(b);
+      if (clearance === 0) {
+        for (let c = 1; c < cuts.length; c++) {
+          const lo = cuts[c - 1], hi = cuts[c];
+          if (safePoint(mix(a, b, (lo + hi) / 2), boundary, 0)) { push(mix(a, b, lo)); push(mix(a, b, hi)); }
+          else flush();
+        }
+        continue;
+      }
+      if (segmentInside(a, b, boundary, clearance)) { push(a); push(b); continue; }
       const ts = [0];
       for (let c = 1; c < cuts.length; c++) {
         const from = cuts[c - 1], to = cuts[c];
         const n = Math.max(2, Math.ceil((to - from) * Math.hypot(b.x - a.x, b.y - a.y) / 0.25));
         for (let k = 1; k <= n; k++) ts.push(from + (to - from) * k / n);
       }
-      let prev = mix(a, b, 0), was = safePoint(prev, boundary, inset);
+      let prev = mix(a, b, 0), was = safePoint(prev, boundary, clearance);
       if (was) push(prev);
+      else flush(); // A new segment can require more clearance when its flow increases.
       for (let k = 1; k < ts.length; k++) {
-        const p = mix(a, b, ts[k]), good = safePoint(p, boundary, inset);
+        const p = mix(a, b, ts[k]), good = safePoint(p, boundary, clearance);
         if (was !== good) {
           let lo = ts[k - 1], hi = ts[k];
-          for (let n = 0; n < 24; n++) { const mid = (lo + hi) / 2; if (safePoint(mix(a, b, mid), boundary, inset) === was) lo = mid; else hi = mid; }
+          for (let n = 0; n < 24; n++) { const mid = (lo + hi) / 2; if (safePoint(mix(a, b, mid), boundary, clearance) === was) lo = mid; else hi = mid; }
           const edge = mix(a, b, good ? hi : lo);
           if (good) push(edge); else { push(edge); flush(); }
         }
@@ -133,6 +145,37 @@ export function clipStrands(strands, boundary, inset = 0.225) {
     flush();
   }
   return out;
+}
+
+/** Let an open pattern end finish on a printed border's centreline. Never continue through a hole or move a closed motif. */
+export function finishAtPrintedBoundary(strands, boundary, bead = 0.45) {
+  return strands.map((s) => {
+    if (s.pts.length < 2) return s;
+    const first = s.pts[0], last = s.pts.at(-1);
+    if (Math.hypot(first.x - last.x, first.y - last.y) < 1e-6) return s;
+    const pts = [...s.pts];
+    for (const [i, j] of [[0, 1], [pts.length - 1, pts.length - 2]]) {
+      const p = pts[i], q = pts[j], length = Math.hypot(p.x - q.x, p.y - q.y);
+      if (length < 1e-9) continue;
+      let nearest = Infinity, nearestPoint = null, hit = null;
+      const reach = 2 * bead, end = { ...p, x: p.x + (p.x - q.x) / length * reach, y: p.y + (p.y - q.y) / length * reach };
+      for (const ring of boundary.rings ?? []) for (let k = 0; k < ring.length; k++) {
+        const a = ring[k], b = ring[(k + 1) % ring.length], foot = mix(a, b, projection(p, a, b));
+        const distance = Math.hypot(p.x - foot.x, p.y - foot.y);
+        if (distance < nearest) { nearest = distance; nearestPoint = { ...p, x: foot.x, y: foot.y }; }
+      }
+      if (nearest > bead + 1e-7 || nearest < 1e-7) continue;
+      for (const t of cutsAlong(p, end, boundary).slice(1)) {
+        const candidate = mix(p, end, t);
+        // cutsAlong includes the ray's far end; it is eligible only if it lies on an edge.
+        if (safePoint(candidate, boundary, 0) && !safePoint(candidate, boundary, 1e-6) && segmentInside(p, candidate, boundary)) { hit = candidate; break; }
+      }
+      // At a glancing angle, a short finish into the border is better than a long sideways extension.
+      if (!hit && nearestPoint && segmentInside(p, nearestPoint, boundary)) hit = nearestPoint;
+      if (hit) pts[i] = hit;
+    }
+    return { ...s, pts };
+  });
 }
 
 /** Short paired ties, wholly inside the outline. Separate SVG islands remain separate and are reported. */
@@ -147,7 +190,7 @@ export function connectStrands(strands, boundary, { strandWidth = 0.45, maxTie =
     for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (const b of grid.get(`${x + dx},${y + dy}`) ?? []) {
       if (a.group === b.group) continue;
       const d = Math.hypot(a.p.x - b.p.x, a.p.y - b.p.y);
-      if (d > maxTie || d < strandWidth) continue;
+      if (d > maxTie || d < 1e-7) continue;
       const key = [a.group, b.group].sort((p, q) => p - q).join(':');
       const list = candidates.get(key) ?? [];
       if (list.length && d >= list.at(-1).d && list.length >= 8) continue;
@@ -167,7 +210,7 @@ export function connectStrands(strands, boundary, { strandWidth = 0.45, maxTie =
     if (second) pair.push(second);
     for (const q of pair) {
       const n = Math.max(2, Math.ceil(q.d / 0.4));
-      ties.push({ id: `tie-${ties.length + 1}`, kind: 'supported', layer: -1, name: 'Structural tie', pts: Array.from({ length: n + 1 }, (_, i) => mix(q.a.p, q.b.p, i / n)) });
+      ties.push({ id: `tie-${ties.length + 1}`, kind: 'supported', layer: -1, name: 'Structural tie', pts: Array.from({ length: n + 1 }, (_, i) => ({ ...mix(q.a.p, q.b.p, i / n), flow: 1 })) });
     }
   }
   return { strands: [...strands, ...ties], ties: ties.length };

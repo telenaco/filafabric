@@ -28,7 +28,7 @@ const quantise = (f) => Math.round(f / FLOW_STEP) * FLOW_STEP;
  * @param crossing  angle (degrees) the second layer is turned from the first
  * @returns { layers, extra }: two layers of polylines whose points carry a `flow`
  */
-export function halftoneLayers(boundary, { spacing = 3, angle = 0, crossing = 90, shape = 'straight', size = 1.5, pitch = 8, tone = null, thin = 0.6, thick = 1.8, second = 'same' } = {}) {
+export function halftoneLayers(boundary, { spacing = 3, angle = 0, crossing = 90, shape = 'straight', size = 1.5, pitch = 8, tone = null, thin = 0.6, thick = 1.8, second = 'same', bead = 0.45 } = {}) {
   const box = boundary.bbox();
   const w = box.maxX - box.minX, h = box.maxY - box.minY;
   const toneAt = (x, y) => (tone ? Math.max(0, Math.min(1, tone(x - box.minX, y - box.minY, w, h))) : 0.5);
@@ -36,7 +36,8 @@ export function halftoneLayers(boundary, { spacing = 3, angle = 0, crossing = 90
   const wavy = shape !== 'straight' && size > 0;
   // each layer is one continuous line: it is never cut where a wave or a slanting edge would leave the outline, and
   // however far apart the ends of two neighbouring lines are, they are joined as long as the join stays inside
-  const lines = (deg, offset) => hatch(boundary, { angle: deg, spacing, offset, anchor: centre, shape: wavy ? shape : null, size, pitch, maxJog: Infinity, keepInside: CLEARANCE });
+  const clearance = Math.max(CLEARANCE, bead * Math.max(thin, thick) / 2 + 0.025);
+  const lines = (deg, offset) => hatch(boundary, { angle: deg, spacing, offset, anchor: centre, shape: wavy ? shape : null, size, pitch, maxJog: Infinity, keepInside: clearance });
   const withFlow = (list, invert) => list.map((pts) => pts.map((p) => {
     const t = toneAt(p.x, p.y);
     return { ...p, flow: quantise(thin + (thick - thin) * (invert ? 1 - t : t)) };
