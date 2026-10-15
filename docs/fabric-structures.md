@@ -26,7 +26,7 @@ Nothing here has been printed yet: every drape or handle description below is a 
 | **Crosshatch & isogrid** | Layers of parallel lines, each at its own angle: 0/90, 45/135, 60/120, three ways 60° apart meeting in triangles (isogrid), or the kagome (hexagons and triangles, never more than two strands at a node); lines can be wavy | 2 or 3 | directions, line shape and wave size, spacing |
 | **Auxetic mesh** | Rows of zigzag, each the mirror of the one below, with staircases of struts: honeycomb cells, or re-entrant bow-ties that widen when pulled | 2 | cell type, row spacing, cell width and depth |
 | **Dip weave** | Straight warp on the bed, straight weft that rides over each warp and dips back to the bed between | 1 (+ lift at crossings) | warp and weft spacing |
-| **Spiderweb** | One continuous spiral crossed by a radial zigzag out along one spoke and back along the next | 2 | turn spacing, spokes, hub hole, sawtooth |
+| **Spiderweb** | One continuous spiral crossed by a radial zigzag out along one spoke and back along the next | 2 | turn spacing, spokes, centre (solid or open) and its radius, sawtooth |
 | **Ring mail** | Overlapping rings on a hexagonal lattice, a second layer of rings shifted into the triangular gaps | 2 | ring spacing, ring overlap |
 | **Meander** | One strand that never crosses itself (Hilbert, Moore, Peano, Sierpiński, Gosper, a random maze, or a stipple tour through graded dots), held by a hatch at an angle | 2 | curve, fold size, hatch angle and spacing, pattern |
 | **Harmonograph** | A closed Lissajous curve that crosses itself in a diamond lattice, optionally with a phase-turned copy | 1 or 2 | lobes across and up, phase |
@@ -34,12 +34,12 @@ Nothing here has been printed yet: every drape or handle description below is a 
 | **Voronoi lace** | Relaxed Voronoi cells with their Delaunay triangulation across; cells smaller where a pattern is bright | 2 | cell size, evenness, pattern number, pattern |
 | **Turing stripes** | Reaction-diffusion stripes grown from a few specks, crossed by a hatch; the same number grows the same pattern | 2 | stripe spacing, pattern number, hatch |
 | **Conformal mesh** | The level lines of the two halves of one complex function: a square grid bent round a buttonhole, two holes, two poles (a magnet's field) or into two families of spirals, at 90° everywhere; every hole gets a hem | 2 | map, cell size, hole size, spiral lines and twist |
-| **Sunflower** | Seeds placed by the golden angle; each layer joins them along the spirals that turn one way (8 and 13, 13 and 21 ... by the parity of the Fibonacci number), so both layers pass through every seed | 2 | seed spacing, open centre |
-| **Rosette** | Guilloché: the parallel squiggle wrapped round a centre, two continuous wavy spirals in opposite phase, half a turn spacing apart | 2 | turn spacing, lobes, swing, open centre |
+| **Sunflower** | Seeds placed by the golden angle; each layer joins them along the spirals that turn one way (8 and 13, 13 and 21 ... by the parity of the Fibonacci number), so both layers pass through every seed | 2 | seed spacing, centre (solid or open) and its radius |
+| **Rosette** | Guilloché: the parallel squiggle wrapped round a centre, two continuous wavy spirals in opposite phase, half a turn spacing apart | 2 | turn spacing, lobes, swing, centre (solid or open) and its radius |
 | **Flow lines** | Evenly spaced streamlines of a flow (ripples, a whirlpool, eddies, or a pattern that turns the lines) and of the same flow turned 90°, so they cross square on everywhere; the eye of a whirl is left open | 2 | flow, line spacing, wave size, bend, pattern |
 | **Bubbles** | Rings of mixed sizes packed until no gap is left, each cluster of nearly touching rings toured as one strand; a ring in every gap, centred on the radical centre of its three bubbles, holds them | 2 | bubble size, pattern number, clusters, pattern |
 | **Parquet** | A floor of blocks (basket weave, herringbone, chevron); in every block the layers run along and across at 90°, and neighbouring blocks are turned a quarter turn, which shows in two colours | 2 | floor, block size, plank length, line spacing, turn |
-| **Spirograph** | Rings of trochoid curls out to the corners; a second layer of rings half a spacing out, turned half a curl, swings into the rings on both sides | 2 | ring spacing, curl (waves to big loops), open centre |
+| **Spirograph** | Rings of trochoid curls out to the corners; a second layer of rings half a spacing out, turned half a curl, swings into the rings on both sides | 2 | ring spacing, curl (waves to big loops), centre (solid or open) and its radius |
 | **Star lattice** | Islamic star patterns by Hankin's polygons-in-contact on squares, hexagons or octagons and squares; the straps fall into families that never cross each other, one layer each | 2, 3 or 4 | tiling, tile size, contact angle |
 
 Strand shapes (Coil, Bouclé's ring, Crosshatch and Squiggle & Gyroid): looped, figure-8, zigzag, honeycomb (flat tops and
@@ -52,8 +52,7 @@ peaks, lotus petals, lightning bolts, plus soft noise, bumps and stripes.
 ## The list
 
 The design list opens with the **essentials** (Zigzag mesh, Squiggle & Gyroid, Coil, Star lattice, Dip weave, Halftone net,
-Meander, Turing stripes): flat lines in one or two layers with only a few controls. Everything else follows,
-easiest first. Where a card used to have both a "Start from" row and a choice that said the same thing (the curve of
+Meander, Turing stripes, SVG design, Bubbles, Voronoi lace). Everything else follows, easiest first. Where a card used to have both a "Start from" row and a choice that said the same thing (the curve of
 the Meander, the tiling of the Star lattice, the map of the Conformal mesh), the choice now carries the sizes that
 suit it and the row is gone. The Meander and Turing stripes are held by a wavy backing: a sine wave whose depth and
 length you set (the default), the fixed lines of a gyroid slice, or straight lines. One backing makes two layers with the
@@ -67,6 +66,19 @@ printer profile may say its `nozzle_diameter` (an imported slicer printer does);
 reaches every design through the material, so each design lays its first layer that thick. The number of layers is how
 many times the whole pattern is printed on top of itself, each copy one layer above the one before and lifting over what
 it crosses. Designs of raised loops keep their own height and say so.
+
+**Centres.** The round designs (Spiderweb, Rosette, Spirograph, Sunflower) close their middle with a small solid hub by
+default: a flat spiral whose turns overlap by 20% (`solidHub` in `src/engine/hub.js`), which is the start of one of the
+lines, so nothing has to be tied on. The centre radius defaults to 0.6 mm (a centre 1.2 mm across) and is honoured:
+Rosette's inner waves taper to fit it and Spirograph's rings start at it. *Open* leaves a hole of that radius instead.
+
+**Travel.** A drawing is many separate strokes, and every move between two is a retract, a lift, a travel and a drop. The
+SVG design, an imported drawing's lines and a full panel's drawing are therefore ordered by `src/engine/travel.js`:
+strands that touch end to end are merged into one (three passes of a wide line become one back-and-forth stroke), the
+rest are ordered greedily (nearest end first, closed shapes entering at the nearest vertex), and a 2-opt and Or-opt
+local search then removes the longest moves, turning strands round and choosing each closed shape's seam. The search
+is capped by a count of evaluations, not time, so the same drawing always gives the same G-code. On a drawing of sixty
+separate lines and circles it took the strands from 192 to 139 and the travel from 1047 to 836 mm.
 
 **Long lists fold.** Any picker with more than four options (`FOLD_AFTER` in `src/ui/panels.js`) is one line showing the
 chosen option's picture and name, which opens to the whole list and closes again when one is chosen. Options are listed
