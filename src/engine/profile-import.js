@@ -75,12 +75,17 @@ export function parseConfigText(text) {
 
 const KNOWN = ['machine_limits', 'prime_line', 'first_layer_temp', 'bed_temp', 'nozzle_diameter', 'printer_model_check', 'print_min_x', 'print_min_y', 'print_width', 'print_height', 'raise_z', 'park_z'];
 
-/** Slicer placeholders mapped to the ones this tool fills. */
+/** `[name]` or `{name}`, with an optional first-extruder index, for any of the names: the same value in either syntax. */
+const placeholder = (names) => {
+  const any = `(?:${names.join('|')})(?:\\[(?:0|initial_extruder|initial_tool)\\])?`;
+  return new RegExp(`\\[${any}\\]|\\{${any}\\}`, 'g');
+};
+
+/** Slicer placeholders mapped to the ones this tool fills (PrusaSlicer's names, then Bambu Studio's and OrcaSlicer's). */
 const SWAPS = [
-  [/\[first_layer_temperature(?:\[0\])?\]|\{first_layer_temperature(?:\[0\])?\}|\{first_layer_temperature\[initial_extruder\]\}/g, '{first_layer_temp}'],
-  [/\[temperature(?:\[0\])?\]|\{temperature(?:\[0\])?\}|\{temperature\[initial_extruder\]\}/g, '{first_layer_temp}'],
-  [/\[first_layer_bed_temperature(?:\[0\])?\]|\{first_layer_bed_temperature(?:\[0\])?\}|\[bed_temperature(?:\[0\])?\]|\{bed_temperature(?:\[0\])?\}|\{bed_temperature_initial_layer(?:\[0\])?\}/g, '{bed_temp}'],
-  [/\[nozzle_diameter(?:\[0\])?\]|\{nozzle_diameter(?:\[0\])?\}/g, '{nozzle_diameter}'],
+  [placeholder(['first_layer_temperature', 'temperature', 'nozzle_temperature_initial_layer', 'nozzle_temperature']), '{first_layer_temp}'],
+  [placeholder(['first_layer_bed_temperature', 'bed_temperature', 'bed_temperature_initial_layer_single', 'bed_temperature_initial_layer', 'hot_plate_temp_initial_layer', 'hot_plate_temp']), '{bed_temp}'],
+  [placeholder(['nozzle_diameter']), '{nozzle_diameter}'],
   [/\{\s*max_layer_z\s*(?:\+\s*\d+(?:\.\d+)?)?\s*\}|\[max_layer_z\]/g, '{raise_z}'],
 ];
 
@@ -92,10 +97,34 @@ const SWAPS = [
 export function translateGcode(text) {
   const kept = [];
   const dropped = [];
+  // a conditional block ({if ...} to {endif}) holds lines meant for some printers or settings and not others: none of
+  // them is kept, because keeping the lines of every branch would run all of them
+  let depth = 0;
   for (const raw of String(text ?? '').split(/\r?\n/)) {
     let line = raw.replace(/\s+$/, '');
     if (line.trim() === '') continue;
+    const opens = (line.match(/\{\s*if\b/g) ?? []).length;
+    const closes = (line.match(/\{\s*endif\s*\}/g) ?? []).length;
+    const conditional = depth > 0 || opens > 0 || closes > 0 || /\{\s*(?:elsif|else)\b/.test(line);
+    depth = Math.max(0, depth + opens - closes);
+    if (conditional) { dropped.push(line); continue; }
     for (const [pattern, to] of SWAPS) line = line.replace(pattern, to);
+    // a comment that names a slicer value ("; Printer : [printer_preset]") loses the comment and keeps its command
+    const semi = line.indexOf(';');
+    if (semi >= 0 && /\[[A-Za-z_][\w\[\]]*\]|\{(?!(?:first_layer_temp|bed_temp|nozzle_diameter|raise_z|machine_limits|prime_line)\})/.test(line.slice(semi))) {
+      line = line.slice(0, semi).replace(/\s+$/, '');
+      if (line.trim() === '') { dropped.push(raw); continue; }
+    }
+    // the macro a Klipper printer starts or ends a print with (PRINT_START BED=... EXTRUDER=... CHAMBER=...) keeps the
+    // arguments this tool can fill and loses the others, which those macros give a default; any other macro call that
+    // would lose an argument is dropped whole, since it may need it
+    if (MACRO_CALL.test(line)) {
+      const [code, ...rest] = line.replace(/;.*$/, '').trim().split(/\s+/);
+      const args = rest.filter((a) => !/\[|\{(?!(?:first_layer_temp|bed_temp|nozzle_diameter)\})/.test(a));
+      if (args.length < rest.length) dropped.push(line);
+      if (args.length === rest.length || /^(PRINT_START|START_PRINT|PRINT_END|END_PRINT)$/i.test(code)) kept.push([code, ...args].join(' '));
+      continue;
+    }
     const placeholders = [...line.matchAll(/\{([^}]*)\}/g)].map((m) => m[1]);
     const unknown = placeholders.some((p) => !KNOWN.includes(p));
     if (unknown || /\[[A-Za-z_][\w\[\]]*\]/.test(line.replace(/;.*$/, ''))) { dropped.push(line); continue; }
@@ -104,8 +133,15 @@ export function translateGcode(text) {
   return { lines: kept, dropped };
 }
 
-const heats = (lines) => lines.some((l) => /^\s*M(104|109|140|190)\b/i.test(l));
-const homes = (lines) => lines.some((l) => /^\s*G28\b/i.test(l));
+/** A Klipper macro called with arguments: a command word that is not a G, M or T code, then KEY=value pairs. */
+const MACRO_CALL = /^\s*(?![GMT]\d)[A-Za-z_][A-Za-z0-9_]*(\s+[A-Za-z_][A-Za-z0-9_]*=\S*)+\s*(;.*)?$/;
+/** The macros a Klipper printer starts and ends a print with: they heat, home and level, or park and cool, themselves. */
+const startMacro = (lines) => lines.some((l) => /^\s*(PRINT_START|START_PRINT)\b/i.test(l));
+const endMacro = (lines) => lines.some((l) => /^\s*(PRINT_END|END_PRINT)\b/i.test(l));
+const heats = (lines) => startMacro(lines) || lines.some((l) => /^\s*M(104|109|140|190)\b/i.test(l));
+const homes = (lines) => startMacro(lines) || lines.some((l) => /^\s*G28\b/i.test(l));
+/** Whether a start block already draws a purge line of its own: a move across the bed that pushes filament out. */
+const primes = (lines) => lines.some((l) => /^\s*G[01]\b/i.test(l) && /\b[XY]-?\d/i.test(l) && /\bE\d*\.?\d*[1-9]/i.test(l.replace(/;.*$/, '')));
 
 /** A start block for a machine whose own could not be used. */
 function genericStart() {
@@ -136,7 +172,7 @@ function genericEnd() {
 
 function startBlock(text, notes, label) {
   const { lines, dropped } = translateGcode(text);
-  const usable = heats(lines) && homes(lines) && lines.length >= 4;
+  const usable = (heats(lines) && homes(lines) && lines.length >= 4) || startMacro(lines);
   if (!usable) {
     notes.push(`${label}: the start G-code could not be used (${dropped.length ? `${dropped.length} line(s) rely on slicer macros` : 'no heating or homing in it'}), so a generic start block is used. Check it against your printer.`);
     return genericStart();
@@ -144,18 +180,23 @@ function startBlock(text, notes, label) {
   if (dropped.length) notes.push(`${label}: ${dropped.length} start G-code line(s) used slicer macros this tool cannot fill and were left out.`);
   const out = [...lines];
   if (!out.some((l) => l.includes('{machine_limits}'))) out.unshift('{machine_limits}');
-  if (!out.some((l) => l.includes('{prime_line}'))) out.push('{prime_line}', 'G92 E0');
+  // the printer's own purge is kept and this tool's prime line left out, so the nozzle is not primed twice
+  if (!out.some((l) => l.includes('{prime_line}')) && !primes(out)) out.push('{prime_line}', 'G92 E0');
   return normalizeStartModes(out);
 }
 
 function endBlock(text, notes, label) {
   const { lines, dropped } = translateGcode(text);
-  const usable = lines.length >= 2 && lines.some((l) => /^\s*M(104|140)\s+S0\b/i.test(l));
+  const usable = (lines.length >= 2 && lines.some((l) => /^\s*M(104|140)\s+S0\b/i.test(l))) || endMacro(lines);
   if (!usable) {
     notes.push(`${label}: the end G-code could not be used, so a generic end block is used.`);
     return genericEnd();
   }
   if (dropped.length) notes.push(`${label}: ${dropped.length} end G-code line(s) used slicer macros and were left out.`);
+  // the head must rise before it travels to park: a slicer often lifts in a conditional line, which is left out
+  const isMove = (l, axis) => /^\s*G[01]\b/i.test(l) && new RegExp(`\\b${axis}(-?\\d|\\{)`, 'i').test(l.replace(/;.*$/, ''));
+  const firstTravel = lines.findIndex((l) => isMove(l, '[XY]'));
+  if (firstTravel >= 0 && !lines.slice(0, firstTravel + 1).some((l) => isMove(l, 'Z'))) return ['G1 Z{raise_z} F720 ; lift clear of the print', ...lines];
   return lines;
 }
 
@@ -169,8 +210,10 @@ function bedFromShape(shape) {
 }
 
 function limitsFrom(get) {
+  // Bambu Studio calls the feed rate limits machine_max_speed_*; PrusaSlicer machine_max_feedrate_*
+  const read = (key) => get(key) ?? (key.includes('max_feedrate') ? get(key.replace('max_feedrate', 'max_speed')) : undefined);
   // two values mean normal and stealth mode (PrusaSlicer's machine limits); one means a single mode
-  const two = (key) => String(get(key) ?? '').split(',').map((s) => num(s));
+  const two = (key) => String(read(key) ?? '').split(',').map((s) => num(s));
   const mode = (i) => {
     const pickAt = (key, fallback) => pick(two(key)[i], two(key)[0], fallback);
     return {
@@ -183,8 +226,12 @@ function limitsFrom(get) {
     };
   };
   const modes = { normal: mode(0) };
-  if (String(get('machine_max_feedrate_x') ?? '').includes(',')) modes.stealth = mode(1);
-  return { default_mode: 'normal', emit_to_gcode: true, modes };
+  if (String(read('machine_max_feedrate_x') ?? '').includes(',')) modes.stealth = mode(1);
+  // the limits go into the G-code only where the slicer would put them there: not when its profile says to use them for
+  // the time estimate alone, and not on Klipper, which sets its limits in its own config and does not know M201/M203
+  const usage = String(get('machine_limits_usage') ?? 'emit_to_gcode');
+  const flavor = String(get('gcode_flavor') ?? '').toLowerCase();
+  return { default_mode: 'normal', emit_to_gcode: usage === 'emit_to_gcode' && flavor !== 'klipper', modes };
 }
 
 function machineFrom(get, { id, name, source, notes }) {
@@ -211,6 +258,19 @@ function machineFrom(get, { id, name, source, notes }) {
     end_gcode: endBlock(get('end_gcode') ?? get('machine_end_gcode'), notes, name),
   };
   return machine;
+}
+
+/**
+ * A printer profile from settings that were already read and merged (a preset of a slicer's vendor library, with what
+ * it inherits), checked as a file would be. `values` holds the slicer's own keys (PrusaSlicer's or Bambu Studio's).
+ * @returns { machine, notes }
+ */
+export function machineFromSettings(values, { id, name, source }) {
+  const notes = [];
+  const machine = machineFrom((key) => values[key], { id, name, source, notes });
+  const errors = validateMachine(machine);
+  if (errors.length) throw new ProfileImportError(errors.map((e) => `printer ${name}: ${e}`));
+  return { machine, notes };
 }
 
 /* ---------- filaments ---------- */

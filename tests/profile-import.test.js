@@ -41,7 +41,9 @@ test('the slicer\'s start G-code is kept where its placeholders can be filled, a
   assert.match(start, /M104 S\{first_layer_temp\}/);
   assert.match(start, /M140 S\{bed_temp\}/);
   assert.match(start, /\{machine_limits\}/);
-  assert.match(start, /\{prime_line\}/);
+  // the printer's own intro line is kept, so this tool's prime line is not drawn on top of it
+  assert.match(start, /intro line/);
+  assert.doesNotMatch(start, /\{prime_line\}/);
   assert.doesNotMatch(start, /\{if /, 'a slicer macro never reaches the G-code');
   assert.doesNotMatch(start, /\[[a-z_]+\]/, 'no square-bracket placeholder is left');
   assert.ok(got.notes.some((n) => /slicer macros/.test(n)));

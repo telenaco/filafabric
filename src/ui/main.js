@@ -13,7 +13,9 @@ import { $, $$, el, icon, ICONS } from './dom.js';
 import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, SectionFold } from './panels.js';
 import { layerHeightOptions, resolveConfig } from '../engine/params.js';
 import { TooltipLayer } from './tooltip.js';
-import { ProfileStore } from './profile-store.js';
+// versioned with the release in boot.js, so a returning browser never pairs this file with an older printer loader
+import { ProfileStore } from './profile-store.js?v=20261015-printer-library';
+import { searchMachines } from './machine-search.js?v=20261015-printer-library';
 import { DESIGNS, ESSENTIALS, designById, isReady, baseDesignSettings } from './designs.js';
 import { THUMBS, shapeThumb, presetThumb } from './thumbs.js';
 import { swatchCode } from './swatch.js';
@@ -207,7 +209,7 @@ async function fetchJson(url) {
 const profiles = new ProfileStore();
 
 async function loadProfiles() {
-  await profiles.loadFolders('profiles');
+  await Promise.all([profiles.loadFolders('profiles'), profiles.loadLibrary('profiles/library')]);
   profiles.loadUser();
   state.machines = profiles.machines;
   state.materials = profiles.materials;
@@ -1243,14 +1245,85 @@ function fillDialogSelects() {
   const fill = (select, map, current) => {
     select.replaceChildren(...[...map.values()].map((p) => el('option', { value: p.id, text: p.name, selected: p.id === current })));
   };
-  fill($('#sel-machine'), state.machines, state.machine);
+  renderMachinePicker();
   fill($('#sel-material'), state.materials, state.material);
   updateDialogNote();
 }
 
+/* ---------- the printer picker: the printers here and the library's hundreds, found by typing ---------- */
+
+/** Every printer that can be picked: the ones in the profiles folder or added here first, then the library's. */
+function machineEntries() {
+  const own = [...state.machines.values()].filter((m) => profiles.origins.get(`machines:${m.id}`) !== 'library')
+    .map((m) => ({ id: m.id, vendor: 'yours', name: m.name, model: m.name, nozzle: m.nozzle_diameter ?? 0.4, bed: [m.bed.width, m.bed.depth, m.bed.max_z] }));
+  return [...own, ...(profiles.library?.machines ?? [])];
+}
+
+function renderMachinePicker() {
+  const query = $('#machine-search').value;
+  const vendors = [{ id: 'yours', name: 'In this studio' }, ...(profiles.library?.vendors ?? [])];
+  const vendorName = new Map(vendors.map((v) => [v.id, v.name]));
+  const all = machineEntries();
+  const found = searchMachines(all, query, vendors);
+  $('#machine-search').placeholder = `Search ${all.length} printers: A1 mini, P1S, MK4S, CORE One…`;
+  const items = [];
+  let group = null;
+  for (const entry of found) {
+    // grouped by vendor while nothing is typed; a search lists the best matches first, each saying its vendor
+    if (!query.trim() && entry.vendor !== group) {
+      group = entry.vendor;
+      items.push(el('p', { class: 'machine-group', 'aria-hidden': 'true', text: vendorName.get(entry.vendor) ?? entry.vendor }));
+    }
+    const bed = entry.bed ? `${entry.bed[0]} × ${entry.bed[1]} mm` : '';
+    const btn = el('button', { type: 'button', class: 'machine-option', 'data-machine': entry.id, 'aria-pressed': String(entry.id === state.machine) },
+      el('span', { class: 'machine-name', text: entry.name }),
+      el('span', { class: 'machine-meta', text: [query.trim() ? vendorName.get(entry.vendor) : null, entry.nozzle ? `${entry.nozzle} mm nozzle` : null, bed].filter(Boolean).join(' · ') }));
+    items.push(btn);
+  }
+  if (!found.length) items.push(el('p', { class: 'machine-empty small muted', text: 'No printer matches. Try fewer words, or add your printer\'s file below.' }));
+  $('#machine-list').replaceChildren(...items);
+  const current = state.machines.get(state.machine);
+  $('#machine-count').textContent = `${current ? `In use: ${current.name}. ` : ''}${query.trim() ? `${found.length} ${found.length === 1 ? 'printer matches' : 'printers match'}.` : `${all.length} printers, by maker.`}`;
+}
+
+async function chooseMachine(id) {
+  try {
+    if (!(await profiles.useLibrary(id))) throw new Error('this printer is not in the library');
+  } catch (e) {
+    toast(`Could not load that printer: ${e.message}`);
+    return;
+  }
+  state.machine = id;
+  normalisePrint();
+  renderControls();
+  renderMachinePicker();
+  updateDialogNote();
+  schedule();
+  commit();
+  $(`#machine-list [data-machine="${CSS.escape(id)}"]`)?.focus();
+}
+
+function bindMachinePicker() {
+  const search = $('#machine-search'), list = $('#machine-list');
+  search.addEventListener('input', () => { renderMachinePicker(); list.scrollTop = 0; });
+  list.addEventListener('click', (e) => { const btn = e.target.closest('[data-machine]'); if (btn) void chooseMachine(btn.dataset.machine); });
+  // the arrow keys move from the search into the list and along it, so a printer is picked without the mouse
+  const options = () => [...list.querySelectorAll('[data-machine]')];
+  search.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') { e.preventDefault(); options()[0]?.focus(); }
+    else if (e.key === 'Enter') { e.preventDefault(); const first = options()[0]; if (first) void chooseMachine(first.dataset.machine); }
+  });
+  list.addEventListener('keydown', (e) => {
+    const all = options(), at = all.indexOf(document.activeElement);
+    if (at < 0) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); all[Math.min(all.length - 1, at + 1)].focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); (at === 0 ? search : all[at - 1]).focus(); }
+  });
+}
+
 function updateDialogNote() {
   const material = state.materials.get($('#sel-material').value);
-  const machine = state.machines.get($('#sel-machine').value);
+  const machine = state.machines.get(state.machine);
   // where each profile came from, and anything the importer had to guess or leave out
   $('#dialog-note').textContent = [
     machine && `Printer: ${machine.source ?? machine.name}.`,
@@ -1707,6 +1780,7 @@ async function openFile(file) {
   try {
     const data = JSON.parse(await file.text());
     if (!data || typeof data !== 'object') throw new Error('that is not a settings file');
+    if (typeof data.machine === 'string') await profiles.useLibrary(data.machine).catch(() => null);
     applySnapshot(data);
     commit();
     toast('Settings loaded');
@@ -1848,7 +1922,7 @@ function bindStatic() {
 
   const dialog = $('#printer-dialog');
   $('#btn-printer').addEventListener('click', () => { fillDialogSelects(); dialog.showModal(); });
-  $('#sel-machine').addEventListener('change', (e) => { state.machine = e.target.value; normalisePrint(); renderControls(); updateDialogNote(); schedule(); commit(); });
+  bindMachinePicker();
   $('#sel-material').addEventListener('change', (e) => { state.material = e.target.value; updateDialogNote(); schedule(); commit(); });
   // a printer or filament profile as the slicers export it: PrusaSlicer .ini or sliced .gcode, Bambu Studio .json
   $('#profile-file').addEventListener('change', async (e) => {
@@ -1908,6 +1982,8 @@ async function init() {
     for (const settings of [initial.squiggle, ...Object.values(initial.designs ?? {})]) if (settings && settings.width === settings.height && [50, 200].includes(settings.width)) { settings.width = 100; settings.height = 100; }
     if (initial.primary && initial.primary.swatch !== 'custom') initial.primary.swatch = 'full';
   }
+  // a printer from the library is read before the settings that name it are checked against the known printers
+  if (initial?.machine) await profiles.useLibrary(initial.machine).catch(() => null);
   if (initial) pictureDropped = loadState(initial);
 
   buildPanels();

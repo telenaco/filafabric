@@ -14,9 +14,62 @@ export class ProfileStore {
     this.materials = new Map();
     /** Why a file in the folder could not be read: [{ file, message }] */
     this.problems = [];
-    this.origins = new Map(); // `${kind}:${id}` -> 'folder' | 'user'
+    this.origins = new Map(); // `${kind}:${id}` -> 'folder' | 'user' | 'library'
     this.notes = new Map(); // `${kind}:${id}` -> [text]
     this.user = { machines: [], materials: [] };
+    /** The printer library's index ({ vendors, machines }), or null when there is none. */
+    this.library = null;
+    this.libraryBase = 'profiles/library';
+    this.vendorFiles = new Map(); // vendor id -> the promise of its file
+  }
+
+  /**
+   * The printer library (profiles/library, made by tools/import-vendor-profiles.mjs from the slicers' vendor profiles):
+   * only its index is read here, a few hundred names; a vendor's file is read when one of its printers is chosen.
+   */
+  async loadLibrary(base = 'profiles/library') {
+    this.libraryBase = base;
+    try {
+      const res = await fetch(`${base}/index.json`);
+      this.library = res.ok ? await res.json() : null;
+    } catch {
+      this.library = null;
+    }
+  }
+
+  libraryEntry(id) {
+    return this.library?.machines.find((m) => m.id === id) ?? null;
+  }
+
+  /**
+   * Makes a printer of the library usable: its vendor's file is read (once) and its printers join the known ones.
+   * @returns the printer's profile, or null when it is neither known nor in the library
+   */
+  async useLibrary(id) {
+    if (this.machines.has(id)) return this.machines.get(id);
+    const entry = this.libraryEntry(id);
+    const vendor = entry && this.library.vendors.find((v) => v.id === entry.vendor);
+    if (!vendor) return null;
+    if (!this.vendorFiles.has(vendor.id)) {
+      this.vendorFiles.set(vendor.id, fetch(`${this.libraryBase}/${vendor.file}`).then((r) => {
+        if (!r.ok) throw new Error(`${vendor.file} could not be read (${r.status})`);
+        return r.json();
+      }));
+    }
+    let file;
+    try {
+      file = await this.vendorFiles.get(vendor.id);
+    } catch (e) {
+      this.vendorFiles.delete(vendor.id); // a failed read can be tried again
+      throw e;
+    }
+    for (const machine of file.machines ?? []) {
+      if (this.machines.has(machine.id) || validateMachine(machine).length) continue;
+      this.machines.set(machine.id, machine);
+      this.origins.set(`machines:${machine.id}`, 'library');
+      this.notes.set(`machines:${machine.id}`, machine.notes ?? []);
+    }
+    return this.machines.get(id) ?? null;
   }
 
   map(kind) {

@@ -270,7 +270,12 @@
   <form method="dialog">
     <h2 id="printer-dialog-title">Printer setup</h2>
     <p class="muted">A setup holds the printer's limits, the filament's behaviour and how the layers are printed.</p>
-    <label class="field-row stacked" for="sel-machine"><span>Printer</span><select id="sel-machine"></select></label>
+    <div class="field-row stacked machine-picker">
+      <label for="machine-search">Printer</label>
+      <input id="machine-search" type="search" autocomplete="off" spellcheck="false" placeholder="Search printers: A1 mini, P1S, MK4S, CORE One…" aria-controls="machine-list" aria-describedby="machine-count">
+      <div id="machine-list" class="machine-list" role="group" aria-label="Printers"></div>
+      <p id="machine-count" class="small muted" aria-live="polite"></p>
+    </div>
     <label class="field-row stacked" for="sel-material"><span>Filament</span><select id="sel-material"></select></label>
     <p class="muted small" id="dialog-note"></p>
     <div id="print-setup"></div>
@@ -337,6 +342,6 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-<script type="module" src="src/boot.js?v=20261015-domain-startup"></script>
+<script type="module" src="src/boot.js?v=20261015-printer-library"></script>
 </body>
 </html>
