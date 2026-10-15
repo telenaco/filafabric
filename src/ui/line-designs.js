@@ -70,15 +70,16 @@ LINE_DESIGNS.push(layered({
 }));
 
 const SUNFLOWER = defineControls({
-  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, hub: { min: 0, max: 15, step: 0.5 } },
-  defaults: { width: 100, height: 100, spacing: 4, hub: 3, colorChange: false },
+  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, hub: { min: 0, max: 15, step: 0.1 } },
+  defaults: { width: 100, height: 100, spacing: 4, hub: 0.6, hubStyle: 'solid', colorChange: false },
+  enums: { hubStyle: ['solid', 'open'] },
   bools: ['colorChange'],
   presets: [
-    { id: 'sunflower', name: 'Sunflower', blurb: 'Even seeds, a small centre', patch: { spacing: 4, hub: 3 } },
-    { id: 'fine', name: 'Fine seeds', blurb: 'Close spirals', patch: { spacing: 3, hub: 2 } },
-    { id: 'open', name: 'Open head', blurb: 'Large cells, a wide centre', patch: { spacing: 6, hub: 8 } },
+    { id: 'sunflower', name: 'Sunflower', blurb: 'Even seeds, a closed centre', patch: { spacing: 4, hub: 0.6, hubStyle: 'solid' } },
+    { id: 'fine', name: 'Fine seeds', blurb: 'Close spirals', patch: { spacing: 3, hub: 0.6, hubStyle: 'solid' } },
+    { id: 'open', name: 'Open head', blurb: 'Large cells, a wide open centre', patch: { spacing: 6, hub: 8, hubStyle: 'open' } },
   ],
-  describe: (s) => ({ spacing: `${r1(s.spacing)} mm apart`, hub: s.hub === 0 ? 'Closed' : `${r1(s.hub)} mm` }),
+  describe: (s) => ({ spacing: `${r1(s.spacing)} mm apart`, hub: s.hub === 0 ? (s.hubStyle === 'open' ? 'Closed' : 'No core') : `${r1(s.hub)} mm` }),
 });
 
 LINE_DESIGNS.push(layered({
@@ -91,17 +92,18 @@ LINE_DESIGNS.push(layered({
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
+    { kind: 'choice', key: 'hubStyle', title: 'Centre', options: [{ id: 'solid', label: 'Solid', hint: 'A small filled centre that the first spiral starts from' }, { id: 'open', label: 'Open', hint: 'Leave a hole where the spirals start' }] },
     {
       kind: 'sliders',
       title: 'Look and feel',
       items: [
         { key: 'spacing', label: 'Seed spacing', help: 'Distance between neighbouring seeds.', lo: 'Fine', hi: 'Coarse', unit: 'mm', edit: true },
-        { key: 'hub', label: 'Open centre', help: 'Radius of the open middle, where the spirals start.', lo: 'Closed', hi: 'Wide', unit: 'mm', edit: true },
+        { key: 'hub', label: 'Centre radius', help: '0.4–1 mm gives a centre 0.8–2 mm across. Solid fills it; Open leaves a hole where the spirals start.', lo: 'Closed', hi: 'Wide', unit: 'mm', edit: true },
       ],
     },
     COLOUR,
   ],
-  build: (s, boundary) => sunflowerLayers(boundary, { spacing: s.spacing, hub: s.hub }),
+  build: (s, boundary, { bead } = {}) => sunflowerLayers(boundary, { spacing: s.spacing, hub: s.hub, hubStyle: s.hubStyle, strandWidth: bead }),
   summary: (result) => `a sunflower of ${result.seeds} seeds and ${result.report.crossings} crossings`,
 }));
 
