@@ -34,6 +34,18 @@ export function hashToState(hash) {
   return m ? decodeState(m[1]) : null;
 }
 
+/** Layer thickness (mm) and how many times the pattern is printed on top of itself. Anything else is the default. */
+export const PRINT_DEFAULTS = Object.freeze({ layerHeight: 0.2, layers: 1 });
+export function sanitizePrint(raw) {
+  const out = { ...PRINT_DEFAULTS };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  const h = Number(raw.layerHeight);
+  if (raw.layerHeight !== null && raw.layerHeight !== '' && Number.isFinite(h) && h > 0 && h <= 2) out.layerHeight = h;
+  const n = Math.round(Number(raw.layers));
+  if (Number.isFinite(n) && n >= 1 && n <= 50) out.layers = n;
+  return out;
+}
+
 const MAX_OUTLINE_RINGS = 64;
 const MAX_OUTLINE_POINTS = 2000;
 
@@ -90,5 +102,5 @@ export function sanitizeState(raw, known) {
   for (const d of DESIGNS) {
     if (d.status === 'ready' && !d.legacy) designs[d.id] = d.sanitize(saved[d.id]);
   }
-  return { v: 3, design, machine, material, primary, advanced, squiggle: sanitizeSquiggle(r.squiggle), designs, outline: sanitizeOutline(r.outline), vector: sanitizeSvgLines(r.vector) };
+  return { v: 3, design, machine, material, primary, advanced, squiggle: sanitizeSquiggle(r.squiggle), designs, outline: sanitizeOutline(r.outline), vector: sanitizeSvgLines(r.vector), print: sanitizePrint(r.print) };
 }

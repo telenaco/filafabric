@@ -158,7 +158,8 @@ export function generateCoil(machine, material, params = {}) {
   const cfg = resolveConfig(machine, material, {
     sample_width: width,
     sample_height: height,
-    layer_height: params.layerHeight ?? 0.2,
+    // only when asked for, so the layer thickness the studio chose (on the material) is not overridden
+    ...(params.layerHeight !== undefined ? { layer_height: params.layerHeight } : {}),
   });
   const fit = bedFitErrors(cfg);
   if (fit.length > 0) throw new PreflightError(fit);

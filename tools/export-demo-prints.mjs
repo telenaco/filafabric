@@ -1,7 +1,7 @@
 // Writes a numbered set of small demo prints to DemoTestingPrints/: easiest to hardest, each named after its design
 // and the values of its settings, so they can be printed and laid out in order.
-//   node tools/export-demo-prints.mjs            all twenty, 60 x 60 mm
-//   node tools/export-demo-prints.mjs --size=80  another swatch size (mm)
+//   node tools/export-demo-prints.mjs            all twenty, 100 x 100 mm
+//   node tools/export-demo-prints.mjs --size=60  a smaller swatch (mm), which prints faster
 import fs from 'node:fs';
 import { DESIGNS, designById } from '../src/ui/designs.js';
 
@@ -10,7 +10,7 @@ const machine = profile('machines', 'prusa-mk3s');
 const material = profile('materials', 'filaflex-95-foamy');
 const OUT = new URL('../DemoTestingPrints/', import.meta.url);
 const sizeArg = process.argv.find((a) => a.startsWith('--size='));
-const SIZE = sizeArg ? Number(sizeArg.slice(7)) : 60;
+const SIZE = sizeArg ? Number(sizeArg.slice(7)) : 100;
 if (!(SIZE >= 20 && SIZE <= 200)) throw new Error('--size must be 20 to 200 mm');
 
 /** The set, easiest to hardest. `preset` is a preset id of the design; `patch` changes settings on top of it. */

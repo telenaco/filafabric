@@ -33,7 +33,8 @@ export const PRIMARY_DEFAULTS = Object.freeze({
   patternScale: 1, // stretches the pattern across the fabric
 });
 
-export const SWATCH_SIZES = Object.freeze({ test: [30, 30], mid: [50, 50], full: [100, 100] });
+// every base swatch is 100 x 100 mm (the older 'test' and 'mid' names are kept so saved settings still open)
+export const SWATCH_SIZES = Object.freeze({ test: [100, 100], mid: [100, 100], full: [100, 100] });
 
 /** Amplitudes reached at 100 % variation; editable under Advanced. */
 export const ADVANCED_DEFAULTS = Object.freeze({

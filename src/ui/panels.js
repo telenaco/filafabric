@@ -68,13 +68,15 @@ export class SliderControl extends Control {
     this.input.value = String(binding.get(def.key));
     this.input.addEventListener('input', () => { binding.set(def.key, Number(this.input.value)); this.host.nudge(); });
     this.input.addEventListener('change', () => this.host.commit());
+    this.warn = el('p', { class: 'ctl-warn small', hidden: true });
     this.readout = el('button', { type: 'button', class: 'ctl-readout editable', id: `${this.inputId}-out`, title: 'Click to type a value', 'aria-label': `${def.label}: type an exact value` });
     this.readout.addEventListener('click', () => this.edit());
     return el('div', { class: 'ctl' },
       el('div', { class: 'ctl-top' }, el('label', { class: 'ctl-label', for: this.inputId, text: def.label }), this.readout),
       el('p', { class: 'ctl-help', id: `${this.inputId}-help`, text: def.help }),
       this.input,
-      el('div', { class: 'ctl-ends', 'aria-hidden': 'true' }, el('span', { text: def.lo }), el('span', { text: def.hi })));
+      el('div', { class: 'ctl-ends', 'aria-hidden': 'true' }, el('span', { text: def.lo }), el('span', { text: def.hi })),
+      this.warn);
   }
 
   /** Swap the read-out for a number field so an exact value can be typed; Enter or leaving applies it, Escape cancels. */
@@ -124,6 +126,9 @@ export class SliderControl extends Control {
     const manual = binding.get(def.key) < r.min || binding.get(def.key) > r.max;
     this.readout.classList.toggle('manual-value', manual);
     this.readout.title = manual ? 'Manual value outside the slider range. Click to edit.' : 'Click to type an exact value';
+    // a typed value is used as typed; outside the range it only gets a warning
+    this.warn.hidden = !manual;
+    if (manual) this.warn.textContent = `${text} is outside the slider's usual range (${fmt(r.min)} to ${fmt(r.max)}). It is used as typed: lines may overlap or the print may not fit, so check the preview.`;
   }
 }
 
@@ -138,7 +143,7 @@ export class SizeControl extends Control {
     const b = host.binding(designId).size;
     this.error = el('p', { class: 'field-error', id: `${designId}-size-error`, hidden: true });
     const make = (axis, label, range) => {
-      const input = el('input', { id: `${designId}-${axis}`, type: 'number', inputmode: 'decimal', min: range.min, max: range.max, step: range.step });
+      const input = el('input', { id: `${designId}-${axis}`, type: 'number', inputmode: 'decimal', step: range.step });
       const field = el('label', { class: 'size-field', for: input.id }, el('span', { class: 'size-label', text: label }), input, el('span', { class: 'unit', 'aria-hidden': 'true', text: 'mm' }));
       return { field, input, range, label: label.toLowerCase() };
     };
@@ -148,11 +153,11 @@ export class SizeControl extends Control {
       for (const f of [this.width, this.height]) f.input.removeAttribute('aria-invalid');
       const bad = [this.width, this.height].find((f) => {
         const n = Number(f.input.value);
-        return !f.input.value.trim() || !Number.isFinite(n) || n < f.range.min || n > f.range.max;
+        return !f.input.value.trim() || !Number.isFinite(n) || n <= 0;
       });
       if (bad) {
         bad.input.setAttribute('aria-invalid', 'true');
-        this.error.textContent = `Enter a ${bad.label} from ${bad.range.min} to ${bad.range.max} mm.`;
+        this.error.textContent = `Enter a ${bad.label} greater than 0 mm.`;
         this.error.hidden = false;
         return;
       }
@@ -166,7 +171,8 @@ export class SizeControl extends Control {
     }
     this.inputs = el('div', { class: 'size-inputs' }, this.width.field, el('span', { class: 'times', 'aria-hidden': 'true', text: '×' }), this.height.field);
     this.note = el('p', { class: 'size-follows small muted', hidden: true });
-    this.node = el('div', { class: 'size-control' }, this.inputs, this.note, this.error);
+    this.warn = el('p', { class: 'ctl-warn small', hidden: true });
+    this.node = el('div', { class: 'size-control' }, this.inputs, this.note, this.warn, this.error);
   }
 
   update() {
@@ -182,6 +188,9 @@ export class SizeControl extends Control {
     for (const [f, v] of [[this.width, w], [this.height, h]]) {
       if (document.activeElement !== f.input && f.input.getAttribute('aria-invalid') !== 'true') f.input.value = String(v);
     }
+    const outside = [[this.width, w], [this.height, h]].filter(([f, v]) => v < f.range.min || v > f.range.max);
+    this.warn.hidden = outside.length === 0;
+    if (outside.length) this.warn.textContent = `${outside.map(([f, v]) => `${f.label} ${fmt(v)} mm`).join(' and ')} is outside the usual ${outside[0][0].range.min} to ${outside[0][0].range.max} mm. It is used as typed; the preview shows a 100 mm window of it.`;
   }
 }
 
@@ -457,6 +466,26 @@ export class DesignPanel extends Control {
   }
 }
 
+/**
+ * The setup every design shares: how thick each layer is, and how many times the pattern is printed on top of itself.
+ * One card for the whole studio, so a change is made once. `items` are slider descriptions bound to the host's
+ * 'print' binding.
+ */
+export class PrintSetupCard extends Control {
+  constructor(host, items) {
+    super(host);
+    this.sliders = items.map((def) => new SliderControl(host, 'print', def));
+    this.node = el('section', { class: 'group print-setup', 'aria-labelledby': 'print-setup-title' },
+      el('h2', { class: 'eyebrow', id: 'print-setup-title', text: 'Layers' }),
+      el('p', { class: 'group-hint', text: 'The same for every design: how thick each layer is, and how many times the pattern is printed on top of itself.' }),
+      el('div', { class: 'controls' }, ...this.sliders.map((s) => s.node)));
+  }
+
+  update() {
+    for (const s of this.sliders) s.update();
+  }
+}
+
 /* ---------- the one place a drawing comes in ---------- */
 
 /**
@@ -476,8 +505,9 @@ export class SvgImportCard extends Control {
     this.shapeRow = el('label', { class: 'switch-row', hidden: true }, this.shapeSwitch,
       el('span', {}, el('strong', { text: 'Fill its shapes with this pattern' }), el('small', { text: 'The pattern is cut to the SVG\'s closed shapes, with the shapes drawn as lines round it.' })));
     this.note = el('p', { id: 'svg-preview-note', class: 'small muted', hidden: true });
+    this.template = el('a', { class: 'link small', href: 'templates/swatch-100x100.svg', download: 'swatch-100x100.svg', text: 'Get a 100 × 100 mm template to draw on' });
     this.node = el('section', { class: 'svg-layer-control', 'aria-label': 'SVG import' },
-      el('div', { class: 'svg-layer-actions' }, this.pick, this.remove), this.info, this.shapeRow, this.note);
+      el('div', { class: 'svg-layer-actions' }, this.pick, this.remove), this.info, this.template, this.shapeRow, this.note);
 
     this.input.addEventListener('change', (e) => { if (e.target.files[0]) void host.importSvg(e.target.files[0]); e.target.value = ''; });
     this.remove.addEventListener('click', () => host.removeSvg());

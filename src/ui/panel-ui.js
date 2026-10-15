@@ -49,7 +49,7 @@ export function bindPanelExport({ options, machines, machineId, selectMachine, d
           } else if (data.type === 'done') {
             if (file) { await file.close(); file = null; } else download(name, new Blob(chunks, { type: 'text/plain' }));
             worker?.terminate(); worker = null; controls(false);
-            status(`Saved ${name}. Estimated ${(data.stats.timeSec / 3600).toFixed(1)} h, ${(data.stats.bytes / 1048576).toFixed(1)} MB. Time excludes acceleration.`); toast('Panel G-code saved');
+            status(`Saved ${name}. Estimated ${(data.stats.timeSec / 3600).toFixed(1)} h, ${(data.stats.bytes / 1048576).toFixed(1)} MB. Time excludes acceleration.${data.stats.warnings?.length ? ` Check: ${data.stats.warnings.join('; ')}` : ''}`); toast('Panel G-code saved');
           } else if (data.type === 'error') await fail(data.name === 'AbortError' ? 'Export cancelled.' : data.message);
         } catch (e) { await fail(e.message); }
       };

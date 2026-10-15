@@ -87,3 +87,17 @@ test('a grid of rows over columns finds every crossing once', () => {
   const rows = Array.from({ length: 3 }, (_, j) => line(`r${j}`, 0, 2 + j * 4, 12, 2 + j * 4));
   assert.equal(resolveCrossings([...columns, ...rows]).crossings, 12);
 });
+
+test('a layout with more crossings than the limit is refused plainly instead of being lifted over for minutes', async () => {
+  const { resolveCrossings, MAX_CROSSINGS } = await import('../src/engine/crossings.js');
+  const { ConfigError } = await import('../src/engine/params.js');
+  // a comb of 30 vertical lines crossed by 30 horizontal ones: 900 crossings
+  const lines = [];
+  for (let i = 0; i < 30; i++) {
+    lines.push({ id: `v${i}`, pts: [{ x: i, y: 0, z: 0.2 }, { x: i, y: 29, z: 0.2 }] });
+    lines.push({ id: `h${i}`, pts: [{ x: 0, y: i, z: 0.2 }, { x: 29, y: i, z: 0.2 }] });
+  }
+  assert.ok(MAX_CROSSINGS >= 100000);
+  assert.ok(resolveCrossings(lines, { lift: 0.2, strandWidth: 0.45 }).crossings > 800, 'within the limit it works as before');
+  assert.throws(() => resolveCrossings(lines, { lift: 0.2, strandWidth: 0.45, maxCrossings: 100 }), (e) => e instanceof ConfigError && /cross each other more than 100 times/.test(e.message));
+});

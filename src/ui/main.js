@@ -7,10 +7,10 @@ import { createPreview, ROLES } from './preview.js';
 import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airStrandMm, fitAspect, pileLiftFactor } from './controls.js';
 import { SQ_RANGES, SQUIGGLE_DEFAULTS, describeSquiggle, sizeForAspect } from './squiggle-controls.js';
 import { buildVerdict, buildSquiggleVerdict, formatMinutes } from './verdict.js';
-import { stateToHash, hashToState, sanitizeState } from './share.js';
+import { stateToHash, hashToState, sanitizeState, PRINT_DEFAULTS } from './share.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
 import { $, $$, el, icon, ICONS } from './dom.js';
-import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard } from './panels.js';
+import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard } from './panels.js';
 import { TooltipLayer } from './tooltip.js';
 import { DESIGNS, ESSENTIALS, designById, isReady, baseDesignSettings } from './designs.js';
 import { THUMBS, shapeThumb } from './thumbs.js';
@@ -19,6 +19,7 @@ import { FIELDS, FIELD_IDS, createField } from '../engine/fields.js';
 import { SHAPES, SHAPE_IDS } from '../engine/shapes.js';
 import { readSvgLines } from './svg-lines.js';
 import { composeSvgLines, outlineFromVector } from '../engine/svg-lines.js';
+import { stackLayers } from '../engine/stack.js';
 import { bindPanelExport } from './panel-ui.js';
 
 const STORAGE_KEY = 'filament-textile-studio:v1'; // kept so a returning visitor's last session still opens
@@ -119,6 +120,7 @@ const state = {
   imageBoxOpen: false,
   outline: null, // { name, rings (flat, unit box), rotation }: shared by every design, travels in links
   vector: null,
+  print: { ...PRINT_DEFAULTS }, // layer thickness and how many times the pattern is stacked: the same for every design
   docName: 'Untitled swatch',
   result: null,
   error: null,
@@ -209,6 +211,7 @@ function snapshot() {
     designs: state.designs,
     outline: state.outline,
     vector: state.vector,
+    print: state.print,
     name: state.docName,
   };
 }
@@ -268,6 +271,7 @@ function loadState(data) {
   state.designs = clean.designs;
   state.outline = clean.outline;
   state.vector = clean.vector;
+  state.print = clean.print;
   if (typeof data?.name === 'string') state.docName = data.name.slice(0, 60);
   if (designChanged) resetRoles();
   // a picture never travels in a link or a file, so without one loaded the pattern falls back
@@ -307,9 +311,27 @@ function renderHistoryButtons() {
 /** Every control of every panel, so they can all redraw themselves from the current settings. */
 const controls = [];
 
+const PRINT_RANGES = { layerHeight: { min: 0.1, max: 0.4, step: 0.05 }, layers: { min: 1, max: 10, step: 1 } };
+const PRINT_SLIDERS = [
+  { key: 'layerHeight', label: 'Layer thickness', help: 'How thick every layer is. The printer\'s own is 0.2 mm; thicker prints faster, but strands lie over each other less cleanly.', lo: 'Fine', hi: 'Thick', unit: 'mm', edit: true },
+  { key: 'layers', label: 'Number of layers', help: 'How many times the whole pattern is printed on top of itself: 1 is the pattern as designed, 3 is a fabric three times as thick.', lo: 'One', hi: 'Many', unit: '', edit: true },
+];
+const PRINT_BINDING = {
+  sliders: PRINT_SLIDERS,
+  get: (key) => state.print[key],
+  set: (key, value) => { state.print[key] = key === 'layers' ? Math.max(1, Math.round(value)) : value; },
+  range: (key) => PRINT_RANGES[key],
+  readout: (key) => {
+    if (key === 'layerHeight') return `${Math.round(state.print.layerHeight * 1000) / 1000} mm${state.print.layerHeight === PRINT_DEFAULTS.layerHeight ? ' (the printer\'s own)' : ''}`;
+    const n = state.print.layers;
+    const kept = n > 1 && state.result?.placements?.length && !state.result.stack;
+    return `${n} ${n === 1 ? 'layer' : 'layers'}${kept ? ' (this design keeps its own height)' : ''}`;
+  },
+};
+
 /** What the panel classes need from the studio. */
 const host = {
-  binding: (id) => BINDINGS[id],
+  binding: (id) => (id === 'print' ? PRINT_BINDING : BINDINGS[id]),
   settings: (id) => settingsOf(id),
   change: () => afterDesignChange(),
   nudge: () => afterControl(),
@@ -346,6 +368,10 @@ function buildPanels() {
   const picker = new PatternPicker(host, 'loop-pile', 'pattern', ['none', ...FIELD_IDS], 'lp-pattern-title', { scale: PATTERN_SCALE });
   $('#lp-pattern').replaceChildren(picker.node);
   controls.push(picker);
+  // below whichever design is showing: the layers every design shares
+  const layersCard = new PrintSetupCard(host, PRINT_SLIDERS);
+  $('#settings-body').append(layersCard.node);
+  controls.push(layersCard);
 }
 
 /* ---------- the imported SVG ---------- */
@@ -457,9 +483,16 @@ function parallelDepth() {
   return minCrossingAmplitude(s.height / Math.max(2, Math.floor(s.height / s.spacing)));
 }
 
+/** The chosen material with the chosen layer thickness: every design reads its layer height from the config it makes. */
+function printMaterial() {
+  const base = state.materials.get(state.material);
+  if (!base || state.print.layerHeight === PRINT_DEFAULTS.layerHeight) return base;
+  return { ...base, print_defaults: { ...(base.print_defaults ?? {}), layer_height: state.print.layerHeight } };
+}
+
 function regenerate() {
   const machine = state.machines.get(state.machine);
-  const material = state.materials.get(state.material);
+  const material = printMaterial();
   try {
     let result;
     const mod = designById(state.design);
@@ -501,6 +534,7 @@ function regenerate() {
       // a drawing that is also the outline lies on the boundary itself, so its lines are not trimmed to it
       result = composeSvgLines(result, state.vector, { fullWidth, fullHeight, clipLines: !state.outline?.page });
     }
+    result = stackLayers(result, state.print.layers);
     state.result = result;
     state.error = null;
     preview.update(result);
@@ -571,6 +605,7 @@ function renderErrors() {
 
 /** What in a warning points at a setting, and which settings (by key) a person would change to answer it. */
 const FIXES = [
+  { when: /cross each other more than|overlap far too much|moves; the limit/i, keys: ['rowOverlap', 'size', 'spacing', 'pitch', 'cell', 'block', 'wavelength'], advice: (l) => `Lower "${l}".` },
   { when: /separate|disconnected|region|island/i, keys: ['spacing', 'pitch', 'cell', 'size', 'rowPitch', 'warpPitch', 'wavelength', 'block', 'hub'], advice: (l) => `Lower "${l}" so the lines meet.` },
   { when: /never cross|peeled apart/i, keys: ['angle', 'turn', 'phase', 'second'], advice: (l) => `Change "${l}" so the layers cross each other.` },
   { when: /free strand|without crossing|sag/i, keys: ['spacing', 'pitch', 'cell', 'size', 'rowPitch', 'warpPitch', 'wavelength', 'block'], advice: (l) => `Lower "${l}", or add a direction.` },
@@ -597,7 +632,7 @@ function currentVerdict() {
   const mod = designById(state.design);
   if (fabric && !fabric.exportable) {
     const text = fabric.issues.join('. ') || 'Nothing fits inside this shape.';
-    return { level: 'error', title: 'Structure needs attention', body: text + adviceFor(mod, text), action: null };
+    return { level: 'heads-up', title: 'Check the geometry', body: `${text}.${adviceFor(mod, text)} You can still export it: it is printed as drawn.`.replace('..', '.'), action: null };
   }
   const verdict = !mod.legacy ? mod.verdict(state.result, state.designs[mod.id]) : state.design === 'squiggle'
     ? buildSquiggleVerdict(state.result.stats, { colorChange: state.squiggle.colorChange })
@@ -610,7 +645,9 @@ function renderCheck() {
   const box = $('#check');
   let v = currentVerdict();
   if (!v && state.error) {
-    v = { level: 'error', title: 'Can\'t export yet', body: 'Fix the setting marked in red and the preview and export come back.', action: null };
+    // say what the problem is, and which setting to change: the same words the message above the controls uses
+    const text = Array.isArray(state.error.errors) ? state.error.errors.map((m) => plainError(m).text).join('. ') : String(state.error.message || state.error);
+    v = { level: 'error', title: 'Can\'t build this yet', body: `${text}${adviceFor(designById(state.design), text)}`, action: null };
   }
   if (!v) { box.hidden = true; return; }
   box.hidden = false;
@@ -724,7 +761,7 @@ function renderPlayback() {
 
 function renderExport() {
   const btn = $('#btn-export');
-  const ok = !!state.result && !state.error && state.result.moves.length > 0 && state.result.fabric?.exportable !== false;
+  const ok = !!state.result && !state.error && state.result.moves.length > 0;
   btn.disabled = !ok;
   const bytes = state.result ? state.result.gcode.length : 0;
   $('#export-size').textContent = ok ? (bytes > 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`) : '';
@@ -1138,7 +1175,7 @@ function currentSwatch() {
     if (JSON.stringify(settings) === JSON.stringify({ primary: mod.defaults(), advanced: {} })) preset = 'default';
   }
   if (state.result) size = [state.result.cfg.t.sample_width, state.result.cfg.t.sample_height];
-  return swatchCode(mod.file, { ...settings, vector: state.vector }, { size, preset, outline: state.outline });
+  return swatchCode(mod.file, { ...settings, vector: state.vector, print: state.print }, { size, preset, outline: state.outline });
 }
 
 function resetRoles() {
@@ -1291,7 +1328,7 @@ function download(name, blob) {
 }
 
 function exportGcode() {
-  if (!state.result || state.error || state.result.fabric?.exportable === false) return;
+  if (!state.result || state.error || state.result.moves.length === 0) return;
   const code = currentSwatch();
   const name = `${slug(state.docName)}_${code}_${state.material}.gcode`;
   // name the swatch inside the file too, so a printed sample can be matched to its settings from the G-code alone
@@ -1503,7 +1540,7 @@ async function init() {
   renderTiles();
   bindStatic();
   bindPanelExport({
-    options: (width = 100, height = 100) => ({ machine: state.machines.get(state.machine), material: state.materials.get(state.material), design: state.design, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : state.design === 'squiggle' ? state.squiggle : state.designs[state.design], outline: placedOutline(width, height), vector: state.vector, shapeOutline: !!state.outline?.page, image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale, panelSize: state.design === 'loop-pile' ? sampleSize(state.primary) : [settingsOf(state.design).width, settingsOf(state.design).height] }),
+    options: (width = 100, height = 100) => ({ machine: state.machines.get(state.machine), material: printMaterial(), design: state.design, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : state.design === 'squiggle' ? state.squiggle : state.designs[state.design], outline: placedOutline(width, height), vector: state.vector, shapeOutline: !!state.outline?.page, layers: state.print.layers, image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale, panelSize: state.design === 'loop-pile' ? sampleSize(state.primary) : [settingsOf(state.design).width, settingsOf(state.design).height] }),
     machines: () => state.machines, machineId: () => state.machine,
     selectMachine: (id) => { state.machine = id; schedule(); commit(); },
     download, filename: (w, h) => `${slug(state.docName)}_${state.design}_${w}x${h}mm.gcode`, toast,

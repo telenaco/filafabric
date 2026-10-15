@@ -51,13 +51,27 @@ peaks, lotus petals, lightning bolts, plus soft noise, bumps and stripes.
 
 ## The list
 
-The design list opens with the **essentials** (Zigzag mesh, Coil, Star lattice, Dip weave, Halftone net, Meander): flat lines in one or two layers with only a few controls. Everything else follows,
+The design list opens with the **essentials** (Zigzag mesh, Squiggle & Gyroid, Coil, Star lattice, Dip weave, Halftone net,
+Meander, Turing stripes): flat lines in one or two layers with only a few controls. Everything else follows,
 easiest first. Where a card used to have both a "Start from" row and a choice that said the same thing (the curve of
 the Meander, the tiling of the Star lattice, the map of the Conformal mesh), the choice now carries the sizes that
 suit it and the row is gone. The Meander and Turing stripes are held by a wavy backing: a sine wave whose depth and
 length you set (the default), the fixed lines of a gyroid slice, or straight lines. One backing makes two layers with the
 curve; *Backing layers: two* adds a second backing turned across the first, a third layer. Layer thickness is the
 printer's *layer height* in the advanced settings.
+
+**Layers.** One card below every design sets the *layer thickness* (the printer's own is 0.2 mm; it reaches every design
+through the material, so each design lays its first layer that thick) and the *number of layers*: how many times the whole
+pattern is printed on top of itself, each copy one layer above the one before and lifting over what it crosses. Designs of
+raised loops keep their own height and say so.
+
+**Typed values.** A number typed past a slider's range, or a size past the usual range, is used as typed and the panel
+warns; it never refuses. Geometry problems (lines that overlap, a pile that leaves its outline) show *Check the geometry*
+with the setting to change, and the export stays available. Only what cannot be built is refused, with the setting to
+change: a bed the swatch does not fit, more moves than the budget, or more than 120,000 crossings (lines laid on top of
+each other that many times take minutes to lift over each other).
+
+**Swatches** are 100 × 100 mm everywhere, and `templates/swatch-100x100.svg` is a page of that size to draw on.
 
 Crosshatch & isogrid is kept in the code and left out of the list for now (`hidden: true` on its card); its tests still
 run.

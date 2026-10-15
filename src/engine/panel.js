@@ -7,6 +7,7 @@ import { PolygonBoundary } from './boundary.js';
 import { clipStrands, contactGraph, segmentInside, orderStrands } from './fabric.js';
 import { createField } from './fields.js';
 import { classifyPaths } from './svg-lines.js';
+import { stackStrands } from './stack.js';
 
 const rectangle = (w, h, x = 0, y = 0) => [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];
 const bounds = (s) => ({ minX: Math.min(s.pts[0].x, s.pts.at(-1).x), maxX: Math.max(s.pts[0].x, s.pts.at(-1).x), minY: Math.min(s.pts[0].y, s.pts.at(-1).y), maxY: Math.max(s.pts[0].y, s.pts.at(-1).y) });
@@ -69,7 +70,9 @@ function textureResult(options, repeat) {
 /** Bounded-memory panel export. Texture repeats per section; full-document SVG strokes never repeat. */
 export async function exportPanel(options, { write, progress = () => {}, signal = null } = {}) {
   const { machine, material, width, height, repeat = 50, outline = null, vector = null, backingSpacing = 5, shapeOutline = false } = options;
-  if (![width, height].every((v) => Number.isFinite(v) && v >= 10 && v <= 1000) || !Number.isFinite(repeat) || repeat < 20 || repeat > 100 || !Number.isFinite(backingSpacing) || backingSpacing < 0.8 || backingSpacing > 8) throw new ConfigError(['Panel dimensions must be 10–1000 mm; repeat 20–100 mm; backing spacing 0.8–8 mm.']);
+  // the ranges the dialog suggests are not limits: anything that is a sensible size is used as typed (the bed and the
+  // move budget still say no where the print could not happen)
+  if (![width, height].every((v) => Number.isFinite(v) && v >= 1 && v <= 5000) || !Number.isFinite(repeat) || repeat < 5 || repeat > 500 || !Number.isFinite(backingSpacing) || backingSpacing < 0.3 || backingSpacing > 50) throw new ConfigError(['Panel dimensions must be 1–5000 mm, the repeat 5–500 mm and the backing spacing 0.3–50 mm.']);
   if (typeof write !== 'function') throw new Error('A writable output is required');
   const initialCfg = resolveConfig(machine, material, { sample_width: width, sample_height: height }), fit = bedFitErrors(initialCfg);
   if (fit.length) throw new PreflightError(fit);
@@ -77,6 +80,11 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   const texture = textureResult(options, repeat);
   const cfg = resolveConfig(machine, material, { ...texture.cfg.t, sample_width: width, sample_height: height });
   const h = cfg.t.layer_height, bead = cfg.t.extrusion_width, boundary = new PolygonBoundary(outline ?? [rectangle(width, height)]);
+  // number of layers: the texture of every section is printed that many times on top of itself
+  const layers = Math.max(1, Math.round(options.layers ?? 1));
+  const stackIf = (strands) => (layers > 1 && !texture.placements?.length ? stackStrands(strands, layers, { layerHeight: h, strandWidth: bead }) : strands);
+  texture.strands = stackIf(texture.strands);
+  const warnings = [...(texture.fabric?.issues ?? [])];
   const writer = new GcodeWriter(cfg), cols = Math.ceil(width / repeat), rows = Math.ceil(height / repeat), total = cols * rows;
   let buffer = '', bytes = 0, peakSectionMoves = 0, sections = 0, last = null, maxPrintedZ = 0;
   const check = () => { if (signal?.aborted) throw new DOMException('Export cancelled', 'AbortError'); };
@@ -101,7 +109,9 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   check();
   await add(writer.header({ comments: [`Garment panel ${width} x ${height} mm; ${options.design}; repeat ${repeat} mm`, 'Continuous crossed backing; texture repeats in sections; physical swatch qualification required', `settings ${JSON.stringify(options.settings ?? {})}`] }));
   const basis = backingLines(boundary, backingSpacing, h, vector ? h : 0, bead);
-  if (!basis.length || contactGraph(basis, { strandWidth: bead, layerHeight: h, cellSize: Math.max(5, backingSpacing) }).components !== 1) throw new ConfigError(['The backing is disconnected in this outline. Use finer spacing or export separate garment pieces.']);
+  if (!basis.length) throw new ConfigError(['No backing fits this outline. Use finer backing spacing or a larger panel.']);
+  if (contactGraph(basis, { strandWidth: bead, layerHeight: h, cellSize: Math.max(5, backingSpacing) }).components !== 1) warnings.push('The backing is in separate pieces in this outline: use finer spacing or export separate garment pieces.');
+  if (warnings.length) await add(warnings.map((w) => `; WARNING ${w}`));
   if (vector) {
     // a drawing that is also the outline keeps its closed shapes whole: they lie on the boundary they define
     const shapeSet = shapeOutline ? new Set(classifyPaths(vector.paths).closed.map((ring) => ring[0])) : new Set();
@@ -112,12 +122,11 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     await emit(vertical); await emit(anchorTexture(vertical, source, boundary, h, bead, true));
     await emit(basis.filter((s) => s.layer === 1));
   } else { progress({ phase: 'backing', done: 0, total }); await emit(basis); }
-  if (texture.fabric?.reversedCrossings || texture.fabric?.outsideSegments || texture.fabric?.maxSlopeDeg > 25.1) throw new ConfigError(texture.fabric.issues);
   peakSectionMoves = texture.moves.length;
   // a picture is one picture across the whole panel, so every section is made from its own window onto it
   const pictured = options.design === 'squiggle' && options.settings?.pattern === 'image' && !!options.image;
   const sectionStrands = (x, y, w, ht) => (pictured
-    ? generateSquiggle(machine, material, { ...options.settings, width: w, height: ht, sampler: createImageSampler(options.image, width, height, { offsetX: x, offsetY: y, yUp: true }), colorChange: false }).strands
+    ? stackIf(generateSquiggle(machine, material, { ...options.settings, width: w, height: ht, sampler: createImageSampler(options.image, width, height, { offsetX: x, offsetY: y, yUp: true }), colorChange: false }).strands)
     : texture.strands);
   const cache = new Map(), zOffset = (vector ? 3 : 2) * h;
   // Flat patterns start at the lower-left. Raised textures retain far-to-near shingle order.
@@ -147,5 +156,5 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     await flush(); progress({ phase: 'texture', done: sections, total });
   }
   await add([`; panel estimate (no acceleration): ${(writer.timeSec / 60).toFixed(1)} min; filament ${writer.cumE.toFixed(1)} mm`, ...writer.footer()]); await flush();
-  return { sections, peakSectionMoves, bytes, moves: writer.moves, filamentMm: writer.cumE, timeSec: writer.timeSec, physicallyVerified: false };
+  return { sections, peakSectionMoves, bytes, moves: writer.moves, filamentMm: writer.cumE, timeSec: writer.timeSec, warnings, physicallyVerified: false };
 }

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!--
+  A 100 x 100 mm page to draw a printable swatch on. Draw lines (they print as lines) and closed shapes (they can be
+  filled with the pattern or with an infill pattern), then import the file in Filafabric: the swatch takes this size.
+  Text must be converted to paths first. The guide rectangle below is hidden, so it is not printed.
+-->
+<svg
+   width="100mm"
+   height="100mm"
+   viewBox="0 0 100 100"
+   version="1.1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd">
+  <sodipodi:namedview
+     id="namedview"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     inkscape:document-units="mm"
+     showgrid="false" />
+  <g inkscape:label="Draw here" inkscape:groupmode="layer" id="layer1">
+    <rect x="0" y="0" width="100" height="100" style="display:none;fill:none;stroke:#999999;stroke-width:0.2" id="guide" />
+  </g>
+</svg>

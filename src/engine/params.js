@@ -161,7 +161,8 @@ export function resolveConfig(machine, material, overrides = {}) {
     ...validateMachine(machine).map((e) => `machine: ${e}`),
     ...validateMaterial(material).map((e) => `material: ${e}`),
   ];
-  const t = { ...DEFAULT_TEXTILE, ...overrides };
+  // a material may carry `print_defaults` (the studio puts the chosen layer thickness there); a design's own overrides win
+  const t = { ...DEFAULT_TEXTILE, ...(material?.print_defaults ?? {}), ...overrides };
   const errors = [...profileErrors, ...validateTextile(t)];
   if (errors.length) throw new ConfigError(errors);
 

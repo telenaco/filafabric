@@ -10,6 +10,15 @@
  * carry `cls: 'supported'` so the speed, flow and preview treat them as strand lying on strand.
  */
 
+import { ConfigError } from './params.js';
+
+/**
+ * The most crossings one layout may have. Settings are free to be typed beyond their sliders, so lines may overlap as
+ * much as they like; but past this many crossings the lifts alone take minutes and hundreds of thousands of moves, so
+ * the layout is refused with a plain message instead of freezing the page.
+ */
+export const MAX_CROSSINGS = 120000;
+
 const smooth = (t) => 0.5 * (1 + Math.cos(Math.PI * t)); // 1 at t = 0, 0 at t = 1
 
 /** Height weight 0..1 at distance `d` from a bump centre: flat for `plateau`, then a raised-cosine fall over `ramp`. */
@@ -47,7 +56,7 @@ function intersect(ax, ay, bx, by, cx, cy, dx, dy) {
  * @returns { found, arcs }: found is [{ sa, sb, arcA, arcB, x, y, angle }] sorted in print order (angle: the acute
  *          angle between the strands in degrees); arcs[i][k] is the distance along strand i to its point k
  */
-export function findCrossings(strands, { strandWidth = 0.5, cell = 1, mergeDistance = strandWidth } = {}) {
+export function findCrossings(strands, { strandWidth = 0.5, cell = 1, mergeDistance = strandWidth, limit = Infinity } = {}) {
   const minArc = 3 * strandWidth;
 
   // cumulative arc length of every point, and one record per segment in print order
@@ -115,6 +124,8 @@ export function findCrossings(strands, { strandWidth = 0.5, cell = 1, mergeDista
         if (near) near.push(c);
         else recent.set(key, [c]);
         found.push(c);
+        // past the limit the caller only needs to know it was passed, not every crossing
+        if (found.length > limit) return { found, arcs, exceeded: true };
     }
   }
   // deterministic order whatever the grid iteration was
@@ -130,7 +141,10 @@ export function findCrossings(strands, { strandWidth = 0.5, cell = 1, mergeDista
  */
 export function resolveCrossings(strands, opts = {}) {
   const { lift = 0.25, ramp = 1.6, strandWidth = 0.5, cell = 1, arch = 1, archSpan = 3, archRamp = 3, decide = null } = opts;
-  const { found, arcs } = findCrossings(strands, { strandWidth, cell, ...(opts.follow ? { mergeDistance: 1e-6 } : {}) });
+  const { found, arcs, exceeded } = findCrossings(strands, { strandWidth, cell, limit: opts.maxCrossings ?? MAX_CROSSINGS, ...(opts.follow ? { mergeDistance: 1e-6 } : {}) });
+  if (exceeded) {
+    throw new ConfigError([`These lines cross each other more than ${(opts.maxCrossings ?? MAX_CROSSINGS).toLocaleString('en')} times: they overlap far too much to lift over each other. Widen the line spacing, make the loops or waves smaller, or use a smaller swatch.`]);
+  }
   if (opts.follow) return followSupports(strands, found.filter((c) => !(strands[c.sa].fixed && strands[c.sb].fixed)), arcs, { lift, ramp, preserve: opts.preserve ?? false });
 
   // bumps per strand

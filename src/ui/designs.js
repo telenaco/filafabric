@@ -286,7 +286,7 @@ DESIGNS.push(...BASIC_DESIGNS, ...SVG_DESIGNS, ...MORE_DESIGNS, ...LINE_DESIGNS,
  * The essentials: flat structures of lines in one or two layers with only a few controls, listed first and in this
  * order. Every other card is a variation, an experiment or a structure that needs more care.
  */
-export const ESSENTIALS = Object.freeze(['zigzag', 'coil', 'starlattice', 'dipweave', 'halftone', 'meander']);
+export const ESSENTIALS = Object.freeze(['zigzag', 'squiggle', 'coil', 'starlattice', 'dipweave', 'halftone', 'meander', 'turing']);
 
 const BY_ID = new Map(DESIGNS.map((d) => [d.id, d]));
 

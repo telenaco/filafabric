@@ -354,7 +354,8 @@ export function generateSquiggle(machine, material, squiggleParams = {}) {
   const cfg = resolveConfig(machine, material, {
     sample_width: width,
     sample_height: height,
-    layer_height: squiggleParams.layerHeight ?? 0.2,
+    // only when asked for, so the layer thickness the studio chose (on the material) is not overridden
+    ...(squiggleParams.layerHeight !== undefined ? { layer_height: squiggleParams.layerHeight } : {}),
   });
   const fit = bedFitErrors(cfg);
   if (fit.length > 0) throw new PreflightError(fit);
