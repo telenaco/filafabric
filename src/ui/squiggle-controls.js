@@ -18,15 +18,15 @@ export const SQ_MODES = Object.freeze(['cross', 'parallel']);
 /** How each line wanders: the sine wave it always was, or a shape from the strand-shape library. */
 export const SQ_SHAPES = SHAPE_IDS;
 
-/** Procedural patterns plus 'image' (a picture the person drops in; it never travels in a link). */
-export const SQ_PATTERNS = Object.freeze(['centerSpot', 'gradientX', 'gradientY', 'waves', 'uniform', ...FIELD_IDS, 'image']);
+/** Procedural patterns plus 'image' (a picture the person drops in; it never travels in a link), plainest first. */
+export const SQ_PATTERNS = Object.freeze(['uniform', 'gradientX', 'gradientY', 'centerSpot', 'waves', ...FIELD_IDS, 'image']);
 
 export const SQUIGGLE_DEFAULTS = Object.freeze({
   mode: 'cross',
   shape: 'wave',
   width: 100,
   height: 100,
-  pattern: 'centerSpot',
+  pattern: 'uniform', // every wave the same: the plainest design, symmetric and undeformed
   spacing: 2.5, // mm between neighbouring wavy lines
   amplitude: 1.2, // mm of side-to-side swing
   wavelength: 4, // mm per full wave

@@ -156,13 +156,29 @@ export function validateTextile(t) {
   return errors;
 }
 
+/**
+ * The layer thicknesses (mm) a nozzle of this diameter can lay down: from a quarter to five eighths of its width, in
+ * steps of 0.05. A 0.4 mm nozzle prints 0.10, 0.15, 0.20 and 0.25; thicker and the bead cannot be pressed onto the layer
+ * below, thinner and the nozzle drags through what it just laid.
+ */
+export function layerHeightOptions(nozzle = 0.4) {
+  const d = Number(nozzle) > 0 ? Number(nozzle) : 0.4;
+  const step = 0.05;
+  const lo = Math.max(step, Math.ceil((d * 0.25) / step - 1e-9) * step);
+  const hi = Math.max(lo, Math.floor((d * 0.625) / step + 1e-9) * step);
+  const out = [];
+  for (let v = lo; v <= hi + 1e-9; v += step) out.push(Math.round(v * 100) / 100);
+  return out;
+}
+
 export function resolveConfig(machine, material, overrides = {}) {
   const profileErrors = [
     ...validateMachine(machine).map((e) => `machine: ${e}`),
     ...validateMaterial(material).map((e) => `material: ${e}`),
   ];
   // a material may carry `print_defaults` (the studio puts the chosen layer thickness there); a design's own overrides win
-  const t = { ...DEFAULT_TEXTILE, ...(material?.print_defaults ?? {}), ...overrides };
+  // a printer profile may say what nozzle it has (an imported slicer printer does); a design's own overrides win
+  const t = { ...DEFAULT_TEXTILE, ...(machine?.nozzle_diameter > 0 ? { nozzle_diameter: machine.nozzle_diameter } : {}), ...(material?.print_defaults ?? {}), ...overrides };
   const errors = [...profileErrors, ...validateTextile(t)];
   if (errors.length) throw new ConfigError(errors);
 

@@ -12,14 +12,15 @@
  *           and below. The ring is walked in a short window of progress, so the line carries on right after it.
  */
 
+// listed from the plainest to the most involved: a picker shows them in this order
 export const SHAPES = Object.freeze({
-  looped: { id: 'looped', label: 'Looped', hint: 'One line that circles over itself' },
-  figure8: { id: 'figure8', label: 'Figure-8', hint: 'Crossing S-curves in a chain' },
-  zigzag: { id: 'zigzag', label: 'Zigzag', hint: 'Straight diagonals, soft corners' },
-  honeycomb: { id: 'honeycomb', label: 'Honeycomb', hint: 'Flat tops and bottoms, so neighbouring layers stack' },
-  ring: { id: 'ring', label: 'Rings', hint: 'A straight line with a round ring on it' },
   wave: { id: 'wave', label: 'Wave', hint: 'A smooth sine wave' },
+  zigzag: { id: 'zigzag', label: 'Zigzag', hint: 'Straight diagonals, soft corners' },
   square: { id: 'square', label: 'Square', hint: 'Steps with rounded corners' },
+  honeycomb: { id: 'honeycomb', label: 'Honeycomb', hint: 'Flat tops and bottoms, so neighbouring layers stack' },
+  figure8: { id: 'figure8', label: 'Figure-8', hint: 'Crossing S-curves in a chain' },
+  ring: { id: 'ring', label: 'Rings', hint: 'A straight line with a round ring on it' },
+  looped: { id: 'looped', label: 'Looped', hint: 'One line that circles over itself' },
 });
 
 export const SHAPE_IDS = Object.freeze(Object.keys(SHAPES));

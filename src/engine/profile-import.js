@@ -192,6 +192,7 @@ function machineFrom(get, { id, name, source, notes }) {
   const bed = pick(bedFromShape(get('bed_shape') ?? get('printable_area')), null);
   if (!bed) throw new ProfileImportError(['no bed shape in this file (bed_shape / printable_area), so it is not a printer profile']);
   const flavor = String(get('gcode_flavor') ?? 'marlin2').toLowerCase();
+  const nozzle = num(get('nozzle_diameter'));
   const x0 = Math.min(10, bed.width / 4);
   const machine = {
     id,
@@ -204,6 +205,7 @@ function machineFrom(get, { id, name, source, notes }) {
     output: { format: 'gcode', extension: '.gcode' },
     limits: limitsFrom(get),
     printer_model_check: String(get('printer_model') ?? ''),
+    ...(nozzle >= 0.1 && nozzle <= 2 ? { nozzle_diameter: nozzle } : {}),
     // no purge area is known: the prime line goes along the front edge, inside the bed
     prime: { x0, x1: Math.min(bed.width - 10, x0 + 60), y: 1, liftZ: 2, filamentMm: 12 },
     start_gcode: startBlock(get('start_gcode') ?? get('machine_start_gcode'), notes, name),

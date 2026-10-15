@@ -145,20 +145,21 @@ const SPATIAL = {
   },
 };
 
+// listed from the plainest to the busiest: a picker shows them in this order
 export const FIELDS = Object.freeze({
-  deepSpiral: { id: 'deepSpiral', label: 'Deep spiral', hint: 'Diagonal bands that sweep across' },
+  stripes: { id: 'stripes', label: 'Stripes', hint: 'Parallel ridges, for pleats and ribs' },
+  bumps: { id: 'bumps', label: 'Bumps', hint: 'Staggered round bobbles' },
   brick: { id: 'brick', label: 'Brick', hint: 'Offset rows of blocks' },
   diamondGrid: { id: 'diamondGrid', label: 'Diamond grid', hint: 'A lattice of diamonds' },
-  tribalFeathers: { id: 'tribalFeathers', label: 'Tribal feathers', hint: 'Layered feather strokes' },
-  circuitBoard: { id: 'circuitBoard', label: 'Circuit board', hint: 'Straight traces in a grid' },
-  oceanWaves: { id: 'oceanWaves', label: 'Ocean waves', hint: 'Rolling waves with foam' },
   hexagonCells: { id: 'hexagonCells', label: 'Hexagon cells', hint: 'Honeycomb cells' },
+  noise: { id: 'noise', label: 'Soft noise', hint: 'Organic, uneven patches' },
+  deepSpiral: { id: 'deepSpiral', label: 'Deep spiral', hint: 'Diagonal bands that sweep across' },
+  oceanWaves: { id: 'oceanWaves', label: 'Ocean waves', hint: 'Rolling waves with foam' },
+  circuitBoard: { id: 'circuitBoard', label: 'Circuit board', hint: 'Straight traces in a grid' },
   mountainPeaks: { id: 'mountainPeaks', label: 'Mountain peaks', hint: 'Sharp ridges and valleys' },
   lotusPetals: { id: 'lotusPetals', label: 'Lotus petals', hint: 'Rounded petals in rings' },
   lightningBolts: { id: 'lightningBolts', label: 'Lightning bolts', hint: 'Sparse jagged streaks' },
-  noise: { id: 'noise', label: 'Soft noise', hint: 'Organic, uneven patches' },
-  bumps: { id: 'bumps', label: 'Bumps', hint: 'Staggered round bobbles' },
-  stripes: { id: 'stripes', label: 'Stripes', hint: 'Parallel ridges, for pleats and ribs' },
+  tribalFeathers: { id: 'tribalFeathers', label: 'Tribal feathers', hint: 'Layered feather strokes' },
 });
 
 export const FIELD_IDS = Object.freeze(Object.keys(FIELDS));
