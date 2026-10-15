@@ -71,6 +71,13 @@ test('the page loads the studio only through the gate', () => {
 
 test('boot.js imports the studio dynamically, so nothing of it runs behind the gate', () => {
   const boot = fs.readFileSync(path.join(projectRoot, 'src', 'boot.js'), 'utf8');
-  assert.match(boot, /await import\('\.\/ui\/main\.js'\)/);
+  const studioSrc = boot.match(/await import\('([^']+)'\)/)?.[1];
+  const studioUrl = new URL(studioSrc, 'http://localhost/src/boot.js');
+  assert.equal(studioUrl.pathname, '/src/ui/main.js');
+  const html = fs.readFileSync(path.join(projectRoot, 'index.html'), 'utf8');
+  const bootSrc = html.match(/<script type="module" src="([^"]+)"/)?.[1];
+  const bootUrl = new URL(bootSrc, 'http://localhost/');
+  assert.ok(studioUrl.searchParams.get('v'), 'a returning browser must not reuse the old unversioned studio loader');
+  assert.equal(studioUrl.searchParams.get('v'), bootUrl.searchParams.get('v'), 'page, bootstrap and studio load the same release');
   assert.equal(/^import .* from '\.\/ui\/main\.js'/m.test(boot), false);
 });
