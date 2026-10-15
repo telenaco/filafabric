@@ -427,9 +427,10 @@ function schedule() {
   genTimer = setTimeout(regenerate, 140);
 }
 
-function squiggleSampler() {
+/** The tone of the squiggle pattern across the swatch as it is previewed (a window at most 100 mm across). */
+function squiggleSampler(width = state.squiggle.width, height = state.squiggle.height) {
   const s = state.squiggle;
-  if (s.pattern === 'image' && state.image) return createImageSampler(state.image.data, s.width, s.height);
+  if (s.pattern === 'image' && state.image) return createImageSampler(state.image.data, width, height, { yUp: true });
   return SAMPLERS[s.pattern] ?? SAMPLERS.centerSpot;
 }
 
@@ -473,17 +474,21 @@ function regenerate() {
       result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height), vector: mod.usesVector ? state.vector : null });
     } else if (state.design === 'squiggle') {
       const s = state.squiggle;
+      // a picture is shown whole: the preview is the whole swatch at the shape it has, shrunk to fit the window
+      const shrink = s.pattern === 'image' && state.image ? Math.min(1, cap / Math.max(s.width, s.height)) : null;
+      const pw = shrink ? Math.max(10, Math.round(s.width * shrink)) : Math.min(s.width, cap);
+      const ph = shrink ? Math.max(10, Math.round(s.height * shrink)) : Math.min(s.height, cap);
       result = generateSquiggle(machine, material, {
-        width: Math.min(s.width, cap),
-        height: Math.min(s.height, cap),
+        width: pw,
+        height: ph,
         mode: s.mode,
         shape: s.shape,
         spacing: s.spacing,
         amplitude: s.amplitude,
         wavelength: s.wavelength,
-        sampler: squiggleSampler(),
+        sampler: squiggleSampler(pw, ph),
         colorChange: s.colorChange,
-        outline: placedOutline(Math.min(s.width, cap), Math.min(s.height, cap)),
+        outline: placedOutline(pw, ph),
       });
     } else {
       const [w, h] = sampleSize(state.primary);
@@ -775,9 +780,9 @@ function renderSquiggleChoices() {
   $('#sq-drop-label').textContent = state.image ? 'Drop another picture, or browse' : 'Drop a picture here, or browse';
   if (state.image) {
     $('#sq-img-name').textContent = state.image.name;
-    const [w, h] = sizeForAspect(...state.image.px);
-    const matched = s.width === w && s.height === h;
-    $('#sq-img-size').textContent = `${state.image.px[0]} × ${state.image.px[1]} px${matched ? ', swatch matches its shape' : ''}`;
+    // the picture spans the swatch whatever its shape; matching the shape just stops it being stretched
+    const matched = Math.abs(s.width / s.height - state.image.px[0] / state.image.px[1]) < 0.02;
+    $('#sq-img-size').textContent = `${state.image.px[0]} × ${state.image.px[1]} px${matched ? ', the swatch has its shape' : ', stretched to fill the swatch'}`;
     $('#sq-img-match').hidden = matched;
   }
 }
@@ -1208,9 +1213,7 @@ function loadPicture(file) {
     const side = Math.min(natW, natH);
     thumb.getContext('2d').drawImage(img, (natW - side) / 2, (natH - side) / 2, side, side, 0, 0, 112, 112);
     state.image = { data: ctx.getImageData(0, 0, canvas.width, canvas.height), name: file.name, px: [natW, natH], thumb };
-    const [w, h] = sizeForAspect(natW, natH);
-    state.squiggle.width = w;
-    state.squiggle.height = h;
+    // the picture adapts to the swatch: the size you set stays, whatever the picture's own size
     state.squiggle.pattern = 'image';
     state.imageBoxOpen = false;
     $('#sq-thumb').getContext('2d').drawImage(thumb, 0, 0, 112, 112);
@@ -1218,7 +1221,7 @@ function loadPicture(file) {
     renderSizes();
     schedule();
     commit();
-    toast(`Swatch set to ${w} × ${h} mm to match the picture's shape`);
+    toast(`Picture fitted to the ${state.squiggle.width} × ${state.squiggle.height} mm swatch`);
   };
   img.onerror = () => { URL.revokeObjectURL(url); toast('That picture could not be opened.'); };
   img.src = url;
@@ -1254,7 +1257,8 @@ function bindSquiggle() {
   });
   $('#sq-img-match').addEventListener('click', () => {
     if (!state.image) return;
-    const [w, h] = sizeForAspect(...state.image.px);
+    // keep the size you have set, and give it the picture's shape
+    const [w, h] = sizeForAspect(...state.image.px, Math.max(state.squiggle.width, state.squiggle.height));
     state.squiggle.width = w;
     state.squiggle.height = h;
     renderSizes();

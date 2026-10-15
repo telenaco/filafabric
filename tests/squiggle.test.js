@@ -218,3 +218,19 @@ test('a big swatch of tight loops is refused plainly instead of building million
   );
   assert.ok(Date.now() - started < 5000, 'and it says so quickly');
 });
+
+test('createImageSampler: a window onto the picture, and the right way up when y grows upward', () => {
+  // 2x2 mock image: top-left dark, top-right light, bottom-left light, bottom-right dark
+  const data = new Uint8ClampedArray([0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 255]);
+  const img = { data, width: 2, height: 2 };
+  const up = createImageSampler(img, 10, 10, { yUp: true });
+  assert.ok(up(1, 9) > 0.95, 'near the top (large y), the left is dark');
+  assert.ok(up(1, 1) < 0.05, 'near the bottom (small y), the left is light');
+  // a 20 mm swatch seen through a 10 mm window that starts 10 mm in
+  const window = createImageSampler(img, 20, 20, { offsetX: 10, offsetY: 0, yUp: true });
+  assert.ok(window(1, 19) < 0.05, 'top, right half: light');
+  assert.ok(window(1, 1) > 0.95, 'bottom, right half: dark');
+  // the picture spans whatever size it is given: a 1 px wide picture fills a 1000 mm swatch
+  const wide = createImageSampler({ data: new Uint8ClampedArray([0, 0, 0, 255, 255, 255, 255, 255]), width: 2, height: 1 }, 1000, 1000);
+  assert.ok(wide(100, 500) > 0.95 && wide(900, 500) < 0.05);
+});

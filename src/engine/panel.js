@@ -60,7 +60,7 @@ function anchorTexture(backing, texture, boundary, h, width, sourcePrinted = fal
 function textureResult(options, repeat) {
   const { machine, material, design, settings = {} } = options;
   if (design === 'loop-pile') { const field = options.pilePattern && options.pilePattern !== 'none' ? createField(options.pilePattern, { scale: options.pilePatternScale ?? 1 }) : null; return generate(machine, material, { ...settings, sample_width: repeat, sample_height: repeat, boundary_policy: 'footprint' }, { liftAt: field ? (x, y) => 0.3 + 0.7 * field(x, y) : null }); }
-  if (design === 'squiggle') return generateSquiggle(machine, material, { ...settings, width: repeat, height: repeat, sampler: settings.pattern === 'image' && options.image ? createImageSampler(options.image, repeat, repeat) : SAMPLERS[settings.pattern] ?? SAMPLERS.centerSpot, colorChange: false });
+  if (design === 'squiggle') return generateSquiggle(machine, material, { ...settings, width: repeat, height: repeat, sampler: settings.pattern === 'image' && options.image ? createImageSampler(options.image, options.width ?? repeat, options.height ?? repeat, { yUp: true }) : SAMPLERS[settings.pattern] ?? SAMPLERS.centerSpot, colorChange: false });
   const d = DESIGNS.find((d) => d.id === design && d.status === 'ready');
   if (!d) throw new ConfigError(['Choose a supported fabric design.']);
   return d.generate(machine, material, { ...d.defaults(), ...settings, width: repeat, height: repeat, colorChange: false });
@@ -114,6 +114,11 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   } else { progress({ phase: 'backing', done: 0, total }); await emit(basis); }
   if (texture.fabric?.reversedCrossings || texture.fabric?.outsideSegments || texture.fabric?.maxSlopeDeg > 25.1) throw new ConfigError(texture.fabric.issues);
   peakSectionMoves = texture.moves.length;
+  // a picture is one picture across the whole panel, so every section is made from its own window onto it
+  const pictured = options.design === 'squiggle' && options.settings?.pattern === 'image' && !!options.image;
+  const sectionStrands = (x, y, w, ht) => (pictured
+    ? generateSquiggle(machine, material, { ...options.settings, width: w, height: ht, sampler: createImageSampler(options.image, width, height, { offsetX: x, offsetY: y, yUp: true }), colorChange: false }).strands
+    : texture.strands);
   const cache = new Map(), zOffset = (vector ? 3 : 2) * h;
   // Flat patterns start at the lower-left. Raised textures retain far-to-near shingle order.
   for (let rowIndex = 0; rowIndex < rows; rowIndex++) for (let j = 0; j < cols; j++) {
@@ -122,12 +127,12 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     const w = Math.min(repeat, width - x), ht = Math.min(repeat, height - y);
     const cellBoundary = new PolygonBoundary([rectangle(w, ht)]), phaseX = ((x - basis[0].pts[0].x) % backingSpacing + backingSpacing) % backingSpacing, phaseY = y % backingSpacing;
     const key = `${w}:${ht}:${phaseX.toFixed(5)}:${phaseY.toFixed(5)}`;
-    let local = !outline ? cache.get(key) : null;
+    let local = !outline && !pictured ? cache.get(key) : null;
     if (!local) {
-      local = clipStrands(texture.strands.map((s) => ({ ...s, pts: s.pts.map((p) => ({ ...p, z: p.z + zOffset })) })), cellBoundary, bead / 2);
+      local = clipStrands(sectionStrands(x, y, w, ht).map((s) => ({ ...s, pts: s.pts.map((p) => ({ ...p, z: p.z + zOffset })) })), cellBoundary, bead / 2);
       const localBasis = basis.filter((s) => { const b = bounds(s); return b.maxX >= x && b.minX <= x + w && b.maxY >= y && b.minY <= y + ht; }).map((s) => ({ ...s, pts: s.pts.map((p) => ({ ...p, x: Math.max(0, Math.min(w, p.x - x)), y: Math.max(0, Math.min(ht, p.y - y)) })) })).filter((s) => Math.hypot(s.pts[1].x - s.pts[0].x, s.pts[1].y - s.pts[0].y) > 0.1);
       if (!outline) local = [...anchorTexture(localBasis, local, cellBoundary, h, bead), ...local];
-      if (!outline) { if (cache.size >= 4) cache.delete(cache.keys().next().value); cache.set(key, local); }
+      if (!outline && !pictured) { if (cache.size >= 4) cache.delete(cache.keys().next().value); cache.set(key, local); }
     }
     let placed = local.map((s) => ({ ...s, id: `section-${sections}-${s.id}`, pts: s.pts.map((p) => ({ ...p, x: p.x + x, y: p.y + y })) }));
     if (outline) {

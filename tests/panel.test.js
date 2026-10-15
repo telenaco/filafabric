@@ -87,3 +87,16 @@ test('panel outlines clip texture first, then tie every remaining region to the 
     assert.equal(ended, true);
   }
 });
+
+test('a picture spans the whole panel: each section is its own window onto it, not the picture again', async () => {
+  const { machine, material } = defaultProfiles();
+  // 2 x 1 px: black on the left, white on the right
+  const image = { width: 2, height: 1, data: new Uint8ClampedArray([0, 0, 0, 255, 255, 255, 255, 255]) };
+  let text = '';
+  await exportPanel({ machine, material, design: 'squiggle', width: 60, height: 30, repeat: 30, settings: { pattern: 'image', mode: 'cross', width: 60, height: 30, spacing: 3, amplitude: 1.2, wavelength: 4 }, image }, { write: async (s) => { text += s; } });
+  const parts = text.split(/; texture section \d+; origin [\d.,]+\n/);
+  assert.equal(parts.length >= 3, true, 'two sections');
+  const filament = (chunk) => [...chunk.matchAll(/ E(-?\d+\.\d+)/g)].reduce((n, m) => n + Math.max(0, Number(m[1])), 0);
+  const left = filament(parts[1]), right = filament(parts[2]);
+  assert.ok(left > right * 1.03, `the dark left half uses more line than the light right half (${left.toFixed(1)} vs ${right.toFixed(1)})`);
+});

@@ -43,13 +43,19 @@ export const SAMPLERS = {
 for (const id of FIELD_IDS) SAMPLERS[id] = createField(id);
 
 /**
- * Creates an image-based tone sampler from Canvas ImageData (grayscale darkness 0..1).
+ * Creates an image-based tone sampler from Canvas ImageData (grayscale darkness 0..1). The picture spans the whole
+ * `widthMm` x `heightMm`, whatever its own size in pixels: it adapts to the swatch, the swatch does not adapt to it.
+ *
+ * @param offsetX, offsetY  where the sampled window starts inside the swatch (mm), for a section of a larger panel
+ * @param yUp  true when y grows upward (the printer's way): the picture's top row is at y = heightMm. Without it
+ *             y counts down from the top of the picture, as pixels do.
  */
-export function createImageSampler(imageData, widthMm, heightMm) {
+export function createImageSampler(imageData, widthMm, heightMm, { offsetX = 0, offsetY = 0, yUp = false } = {}) {
   const { data, width: imgW, height: imgH } = imageData;
   return (xMm, yMm) => {
-    const u = Math.max(0, Math.min(1, xMm / widthMm));
-    const v = Math.max(0, Math.min(1, yMm / heightMm));
+    const y = yUp ? heightMm - (yMm + offsetY) : yMm + offsetY;
+    const u = Math.max(0, Math.min(1, (xMm + offsetX) / widthMm));
+    const v = Math.max(0, Math.min(1, y / heightMm));
     const px = Math.min(imgW - 1, Math.floor(u * imgW));
     const py = Math.min(imgH - 1, Math.floor(v * imgH));
     const idx = (py * imgW + px) * 4;
