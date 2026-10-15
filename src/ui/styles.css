@@ -54,14 +54,23 @@ h1, h2, h3 { margin: 0; }
 .section-fold-toggle[aria-expanded="true"] > svg { transform: rotate(0); }
 .section-fold-body { margin-top: 12px; }
 .section-fold-toggle:focus-visible, .svg-import:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
-.export-actions { display: grid; grid-template-columns: 1.25fr 1fr; gap: 8px; }
 .study-notice { margin: 0 0 10px; font-size: 12px; line-height: 1.4; }
 .study-notice a { color: var(--accent); }
 .study-page { max-width: 720px; margin: 0 auto; padding: 40px 24px 64px; }
 .study-page h1 { font-size: 30px; margin-top: 28px; }
 .study-page h2 { font-size: 19px; margin-top: 28px; }
 .study-page p { margin: 12px 0; }
-.export-actions .export { font-size: 14px; min-height: 46px; padding: 8px; }
+.export-group .export { gap: 10px; font-size: 16px; min-height: 52px; }
+.export-mode { width: 100%; margin: 14px 0; }
+.export-mode button { min-height: 44px; }
+.export-rows { margin: 0 0 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-2); }
+.export-rows > div { display: flex; justify-content: space-between; gap: 16px; padding: 12px 14px; border-top: 1px solid var(--line); }
+.export-rows > div:first-child { border-top: 0; }
+.export-rows dt { color: var(--muted); }
+.export-rows dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.export-setup { display: flex; align-items: center; gap: 12px; margin: 14px 0; padding: 10px 10px 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-2); }
+.export-setup-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+.export-warn { margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-bd); font-weight: 600; }
 .panel-dimensions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 #panel-dialog { max-width: min(560px, calc(100vw - 28px)); max-height: calc(100dvh - 32px); overflow: auto; }
 #panel-dialog input { width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid var(--line-2); border-radius: 8px; font: inherit; background: var(--panel); color: var(--ink); }
@@ -480,7 +489,7 @@ dialog p { margin: 6px 0; }
   }
   .app:has(#study-notice:not([hidden])) { padding-bottom: 170px; }
   body:has(#study-notice:not([hidden])) .toast { bottom: 166px; }
-  .export-actions .export { position: static; min-width: 0; }
+  .export-group .export { min-width: 0; }
   .adv-fields { grid-template-columns: 1fr; }
   .toast { bottom: 84px; }
 }
