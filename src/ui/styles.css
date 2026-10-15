@@ -7,9 +7,12 @@
   --danger-bg: #fbe3df; --danger-ink: #8e2b15; --danger-bd: #e5a69b;
   --role-base: #27366b; --role-anchored: #1f8179; --role-lifting: #b87400; --role-free: #b0316f;
   --radius: 12px; --shadow: 0 12px 32px rgba(20, 26, 40, 0.16);
+  /* scrollbars, number fields and menus are drawn by the browser in the page's scheme */
+  color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;
     --ground: #0f131a; --panel: #171c26; --panel-2: #131822; --ink: #e6e9ef; --ink-2: #c3cad6; --muted: #9aa4b5;
     --line: #2a3242; --line-2: #3a4458; --seg-bg: #222a38;
     --accent: #8fa6f5; --accent-ink: #0f131a; --focus: #8fa6f5; --accent-soft: #1e2640;
@@ -40,20 +43,45 @@ h1, h2, h3 { margin: 0; }
 .pattern-about { margin-top: 6px; font-size: 13px; color: var(--muted); }
 .pattern-about summary { cursor: pointer; width: fit-content; }
 .pattern-about p { max-width: 65ch; margin: 8px 0 0; }
-.svg-layer-control { background: var(--panel); }
+/* the SVG import is a drop target: a dashed card with the button in it */
+.svg-layer-control { padding: 12px; border: 1.5px dashed var(--line-2); border-radius: var(--radius); background: transparent; transition: border-color 0.15s, background-color 0.15s; }
 .svg-layer-control p { margin: 6px 0 0; overflow-wrap: anywhere; }
 .svg-layer-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.svg-import { cursor: pointer; font-size: 13px; min-height: 40px; }
-.svg-layer-control.dragover { outline: 2px solid var(--accent); outline-offset: -2px; }
+.svg-import { cursor: pointer; font-size: 13.5px; min-height: 40px; }
+.svg-import svg { color: var(--accent); flex: none; }
+.svg-layer-control.dragover { border-color: var(--accent); background: var(--accent-soft); }
 .size-source-divider { display: flex; align-items: center; gap: 10px; margin: 10px 0; font-size: 12px; color: var(--muted); }
 .size-source-divider::before, .size-source-divider::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
 .svg-layer-control .switch-row { margin-top: 12px; }
-.section-fold > .eyebrow { margin: 0; }
-.section-fold-toggle { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 36px; padding: 0; border: 0; background: transparent; text-align: left; font: inherit; color: inherit; }
-.section-fold-toggle > svg { flex: none; transform: rotate(-90deg); transition: transform 0.15s; }
-.section-fold-toggle[aria-expanded="true"] > svg { transform: rotate(0); }
-.section-fold-body { margin-top: 12px; }
-.section-fold-toggle:focus-visible, .svg-import:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+/* each section of a design's panel is a card; its header names it, pictures it and, while closed, says what it is set to */
+.panel > .group { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.panel > .group:not(.section-fold) { padding: 12px 14px; }
+.panel > .group.advanced { padding: 0 14px; }
+.section-fold > .eyebrow { margin: 0; font: inherit; color: inherit; }
+.section-fold-toggle {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 0 14px; border: 0;
+  border-radius: calc(var(--radius) - 1px); background: transparent; text-align: left; font: inherit; color: var(--ink);
+}
+.section-fold-toggle:hover { background: color-mix(in srgb, var(--seg-bg) 60%, transparent); }
+.section-icon { flex: none; color: var(--muted); }
+.section-fold-title { flex: none; font-size: 15px; font-weight: 700; }
+.section-fold-summary {
+  flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right;
+  font-size: 13.5px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums;
+}
+.section-fold-toggle > svg:last-child { flex: none; color: var(--muted); transition: transform 0.15s; }
+.section-fold-toggle[aria-expanded="true"] > svg:last-child { transform: rotate(180deg); }
+/* open, the values are in view below, so the header only names the section */
+.section-fold-toggle[aria-expanded="true"] .section-fold-summary { visibility: hidden; }
+.section-fold:has(.section-fold-toggle[aria-expanded="true"]) { border-color: var(--line-2); }
+.section-fold-body { padding: 2px 14px 16px; }
+.section-fold-toggle:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+.svg-import:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+/* a slider's help is a tooltip on its label */
+.ctl-label[data-tip] { cursor: help; text-decoration: underline dotted transparent 1.5px; text-underline-offset: 4px; }
+.ctl-label[data-tip]:hover { text-decoration-color: var(--muted); }
+/* thin scrollbars in the line colour, in both themes */
+.designs, .settings-body, .design-list, #panel-dialog { scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; }
 .study-notice { margin: 0 0 10px; font-size: 12px; line-height: 1.4; }
 .study-notice a { color: var(--accent); }
 .study-page { max-width: 720px; margin: 0 auto; padding: 40px 24px 64px; }
@@ -152,7 +180,8 @@ h1, h2, h3 { margin: 0; }
 .designs { flex: 0 0 312px; padding: 20px 14px; border-right: 1px solid var(--line); }
 .stage { flex: 1 1 auto; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .settings {
-  flex: 0 0 380px; display: flex; flex-direction: column; min-height: 0;
+  /* min-width 0: a long section summary is cut short with an ellipsis instead of widening the column */
+  flex: 0 0 380px; display: flex; flex-direction: column; min-height: 0; min-width: 0;
   border-left: 1px solid var(--line); background: var(--panel-2);
 }
 .settings-body { flex: 1 1 auto; padding: 20px 20px 28px; display: flex; flex-direction: column; gap: 16px; }
@@ -241,9 +270,9 @@ input[type="range"] { width: 100%; height: 28px; margin: 0; accent-color: var(--
 .time { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; min-width: 110px; text-align: right; }
 
 /* ---------- settings ---------- */
-.panel { display: flex; flex-direction: column; gap: 20px; }
+.panel { display: flex; flex-direction: column; gap: 10px; }
+.panel-head { margin-bottom: 6px; }
 .panel-head p { margin: 4px 0 0; }
-.group + .group { border-top: 1px solid var(--line); padding-top: 18px; }
 .group-hint { margin: -4px 0 10px; font-size: 13px; color: var(--muted); }
 .errors { padding: 12px 14px; border-radius: var(--radius); background: var(--danger-bg); color: var(--danger-ink); border: 1px solid var(--danger-bd); display: flex; flex-direction: column; gap: 4px; }
 
@@ -412,11 +441,12 @@ input[role="switch"]:checked::before { transform: translateX(16px); }
 .check-link { min-height: 40px; padding: 0 4px; background: transparent; border: 0; text-decoration: underline; text-underline-offset: 3px; font-weight: 600; color: inherit; }
 .check-explain { margin-top: 10px !important; font-size: 13.5px; }
 .figures-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
-.figures { display: flex; gap: 22px; }
+.figures { display: flex; gap: 18px; }
 .figures.stale { opacity: 0.45; }
-.fig-value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; }
+/* a number keeps its unit on its own line */
+.fig-value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; white-space: nowrap; }
 .fig-unit { font-size: 13px; font-weight: 600; color: var(--muted); }
-.fig-label { font-size: 12.5px; color: var(--muted); }
+.fig-label { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
 .details { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; font-size: 13px; padding: 10px 12px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); }
 .details .k { color: var(--muted); }
 .details .v { font-weight: 700; font-variant-numeric: tabular-nums; }
