@@ -43,6 +43,27 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "halftone",
+    "score": 16.274673241090362,
+    "components": 1,
+    "joints": 1,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 3.000000000000341,
+    "maxSlopeDeg": 10.224673241089679,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 1,
+    "moves": 12228,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 97.70020470807624,
+      "afterMm": 97.70020470807624
+    }
+  },
+  {
     "id": "crosshatch",
     "score": 16.66504074856722,
     "components": 1,
@@ -542,6 +563,42 @@ export const PRINTABILITY = [
       "beforeMm": 8978.463437857845,
       "afterMm": 7484.7548188531655
     }
+  },
+  {
+    "id": "pillarweave",
+    "score": 111.38286755574445,
+    "components": 1,
+    "joints": 2004,
+    "reversedCrossings": 0,
+    "separatedCrossings": 45472,
+    "longestUnsupported": 5.591433777872226,
+    "maxSlopeDeg": 0,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 2004,
+    "moves": 48764,
+    "clearanceFlags": 0,
+    "routing": null
+  },
+  {
+    "id": "spacer",
+    "score": 112.67799810680674,
+    "components": 1,
+    "joints": 1801,
+    "reversedCrossings": 0,
+    "separatedCrossings": 55879,
+    "longestUnsupported": 6,
+    "maxSlopeDeg": 10.62799810680674,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 1801,
+    "moves": 41819,
+    "clearanceFlags": 0,
+    "routing": null
   },
   {
     "id": "loop-pile",

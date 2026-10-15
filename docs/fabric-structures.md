@@ -12,9 +12,12 @@ Nothing here has been printed yet: every drape or handle description below is a 
 | **Loop pile** | Soft raised arches anchored on an open base; each loop arches over the lines beneath it | base + arches | pile height, loop size, spacing, base openness, strand thickness, variation, **pattern** (raises some loops, lowers others) |
 | **Squiggle & Gyroid** | Two fused layers of lines (columns then rows, or two offset rows that cross) | 2 | mode, strand shape, pattern, line spacing, wave depth and length, two colours |
 | **SVG design** | Bring a drawing: its lines print as drawn and its closed shapes (holes included) can be filled with any of the 17 PrusaSlicer infill patterns; then one or two backing layers go on top, each with its own infill pattern, spacing and angle, over the whole swatch, the shapes only or the drawing's box | 1 + 1 or 2 | drawing becomes (lines, fill, both), fill pattern, spacing and angle, backing layers, backing area, each backing's pattern, spacing and angle |
+| **Halftone net** | Two layers of lines whose thickness (flow, with speed following) carries a pattern: the topology never changes, so the fabric holds the same everywhere; the second layer can be the complement of the first so two colours trade thickness. Straight, wave or zigzag lines | 2 | pattern, line shape, same or complement, spacing, thinnest and thickest flow, grid angle |
+| **Spacer net** | A net on the bed, a pillar of stacked rings on its nodes (or every second or third), and a second net on the pillars' tops, printed layer by layer | 2 nets + pillars | net spacing, pillar height, pillar radius, pillar every |
+| **Pillar weave** | Pillars on a grid and a serpentine fibre that passes each pillar on one side on one layer and the other side on the next, so the fibre layers lock round the pillars | layers + pillars | pillar spacing, layers, pillar radius |
 | **Zigzag mesh** | Squiggle & Gyroid, parallel mode, zigzag strand: two anti-phase layers that open into diamonds | 2 | as Squiggle & Gyroid |
 | **Coil** | Flat rows of one continuous looped strand; where it crosses itself or the row before it lifts over by about a layer | 1 (+ lift at crossings) | presets (Open chain, Overlapping, Dense), strand shape, loop size and spacing, **row overlap**, crossing lift, pattern |
-| **Weave** | Warp and weft lines over and under each other: plain, twill 2/1, twill 2/2, basket, satin. Printed in two passes by level, a lift for every piece | 2 levels | binding, line spacing |
+| **Weave** | Warp and weft lines over and under each other: plain, twill 2/1, twill 2/2, basket, satin, herringbone, diamond twill, crepe. Printed in two passes by level, a lift for every piece | 2 levels | binding, line spacing |
 | **Spiral panel** | Rings that follow the edge of the panel, nested inwards and joined by short jogs: one strand, no lifts | 1 | ring spacing, any SVG outline |
 | **Bouclé & picots** | Rows of line with a round ring standing on it, alternately above and below, as one strand | 1 (+ lift where rings meet a row) | presets (Picot trim, Bouclé, Curls), ring size and spacing, row spacing, pattern |
 | **Relief** | Rows of one strand that rise and fall with a pattern: bobbles, puckered stripes, pleats | 1 + Z | presets (Seersucker, Bobbles, Pleats), relief height, row spacing, pattern |
@@ -44,6 +47,15 @@ bottoms, so neighbouring layers stack), wave, square and rings.
 Patterns (a brightness map that shrinks or deepens the loops, waves, lifts or relief) are ported from the Blender
 ceramics add-on: deep spiral, brick, diamond grid, tribal feathers, circuit board, ocean waves, hexagon cells, mountain
 peaks, lotus petals, lightning bolts, plus soft noise, bumps and stripes.
+
+## The publications
+
+`reference/publications-to-patterns-2026-10-15.md` says which of the papers in `reference/publications/` became a card
+(halftone net, spacer net, pillar weave, the three new weave bindings) and which were only context.
+
+Flow: a strand's points may carry a `flow` multiplier (1 = nominal bead). It scales the extruded volume of the move
+ending at that point, lowers its speed through the volumetric limit, and widens the strand in the 3D preview. Moves with
+no `flow` produce exactly the G-code they always did.
 
 ## The infill library
 

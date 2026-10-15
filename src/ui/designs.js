@@ -32,6 +32,7 @@ import { bindingThumb } from './thumbs.js';
 import { MORE_DESIGNS } from './more-designs.js';
 import { LINE_DESIGNS } from './line-designs.js';
 import { SVG_DESIGNS } from './svg-design.js';
+import { PUBLICATION_DESIGNS } from './pub-designs.js';
 import {
   RELIEF_CONTROLS, FRINGE_CONTROLS, BOUCLE_CONTROLS, SPIRAL_CONTROLS, WEAVE_CONTROLS,
 } from './structure-controls.js';
@@ -278,7 +279,7 @@ export const DESIGNS = [
 ];
 
 // the SVG design card comes first after the original structures, then the line-algorithm library and the newer line designs
-DESIGNS.push(...SVG_DESIGNS, ...MORE_DESIGNS, ...LINE_DESIGNS);
+DESIGNS.push(...SVG_DESIGNS, ...MORE_DESIGNS, ...LINE_DESIGNS, ...PUBLICATION_DESIGNS);
 
 const BY_ID = new Map(DESIGNS.map((d) => [d.id, d]));
 

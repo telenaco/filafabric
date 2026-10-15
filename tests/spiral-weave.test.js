@@ -66,7 +66,7 @@ test('generateSpiral returns moves, stats and G-code', () => {
 });
 
 test('every binding is a real binding, with ties in the right proportion', () => {
-  assert.deepEqual([...WEAVE_BINDING_IDS].sort(), ['basket', 'plain', 'satin', 'twill21', 'twill22']);
+  assert.deepEqual([...WEAVE_BINDING_IDS].sort(), ['basket', 'crepe', 'diamond', 'herringbone', 'plain', 'satin', 'twill21', 'twill22']);
   const share = (id) => {
     let over = 0, n = 0;
     for (let i = 0; i < 20; i++) for (let j = 0; j < 20; j++) { n++; if (WEAVE_BINDINGS[id].over(i, j)) over++; }
@@ -77,6 +77,28 @@ test('every binding is a real binding, with ties in the right proportion', () =>
   assert.equal(share('twill22'), 0.5);
   assert.equal(share('basket'), 0.5);
   assert.ok(Math.abs(share('satin') - 0.8) < 0.01);
+  assert.equal(share('herringbone'), 0.5);
+  assert.equal(share('diamond'), 0.5);
+  assert.ok(Math.abs(share('crepe') - 0.5) < 0.1);
+});
+
+test('no line of any binding floats for more than six crossings, and every line is tied down somewhere', () => {
+  for (const id of WEAVE_BINDING_IDS) {
+    for (const along of ['warp', 'weft']) {
+      for (let line = 0; line < 24; line++) {
+        let prev = null, run = 0, longest = 0, over = 0, under = 0;
+        for (let k = 0; k < 48; k++) {
+          const up = along === 'warp' ? !WEAVE_BINDINGS[id].over(line, k) : WEAVE_BINDINGS[id].over(k, line);
+          if (up) over++; else under++;
+          run = up === prev ? run + 1 : 1;
+          prev = up;
+          longest = Math.max(longest, run);
+        }
+        assert.ok(over > 0 && under > 0, `${id} ${along} ${line} never changes level`);
+        assert.ok(longest <= 6, `${id} ${along} ${line} floats for ${longest} crossings`);
+      }
+    }
+  }
 });
 
 test('at every crossing the upper strand is printed after the lower one, and lies one layer higher', () => {

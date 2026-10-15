@@ -19,12 +19,26 @@ import { finishFabric } from './fabric-result.js';
  * looks and how its strands float far more than how it stretches.
  */
 
+/** 0, 1, 2, 3, 3, 2, 1, 0, 0, 1 ...: a line number folded back on itself every `period` lines (a pointed draft). */
+const fold = (n, period) => {
+  const m = ((n % period) + period) % period;
+  return m < period / 2 ? m : period - 1 - m;
+};
+/**
+ * A crepe: no diagonal and no short repeat to follow. It is a quadratic in the line numbers taken mod 16, which is
+ * irregular to the eye yet fixed, half over and half under, with no float longer than four crossings.
+ */
+const crepe = (i, j) => (3 * i * i + 6 * j * j + 4 * i * j + i + 2 * j) % 16 < 8;
+
 export const WEAVE_BINDINGS = Object.freeze({
   plain: { id: 'plain', label: 'Plain', hint: 'Over one, under one', over: (i, j) => (i + j) % 2 === 0 },
   twill21: { id: 'twill21', label: 'Twill 2/1', hint: 'Over two, under one, stepping across', over: (i, j) => (i + j) % 3 !== 0 },
   twill22: { id: 'twill22', label: 'Twill 2/2', hint: 'Over two, under two', over: (i, j) => (i + j) % 4 < 2 },
   basket: { id: 'basket', label: 'Basket', hint: 'Pairs over pairs', over: (i, j) => (Math.floor(i / 2) + Math.floor(j / 2)) % 2 === 0 },
   satin: { id: 'satin', label: 'Satin', hint: 'Long floats with rare ties', over: (i, j) => (i + 2 * j) % 5 !== 0 },
+  herringbone: { id: 'herringbone', label: 'Herringbone', hint: 'Twill 2/2 that turns round every four lines', over: (i, j) => (fold(i, 8) + j) % 4 < 2 },
+  diamond: { id: 'diamond', label: 'Diamond twill', hint: 'Twill that turns round both ways, drawing diamonds', over: (i, j) => (fold(i, 8) + fold(j, 8)) % 4 < 2 },
+  crepe: { id: 'crepe', label: 'Crepe', hint: 'Short floats in an irregular order: no twill line to follow', over: crepe },
 });
 
 export const WEAVE_BINDING_IDS = Object.freeze(Object.keys(WEAVE_BINDINGS));
