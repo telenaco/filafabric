@@ -304,6 +304,8 @@ export function simplifyStrands(strands, tolerance = 0.02) {
     if (pts.length < 3) return s;
     const keep = new Uint8Array(pts.length), stack = [[0, pts.length - 1]];
     keep[0] = keep[pts.length - 1] = 1;
+    // where a strand's flow changes both ends of the change stay, or the thickness would be smeared along the line
+    for (let i = 1; i < pts.length; i++) if ((pts[i].flow ?? 1) !== (pts[i - 1].flow ?? 1)) keep[i] = keep[i - 1] = 1;
     while (stack.length) {
       const [lo, hi] = stack.pop(), a = pts[lo], b = pts[hi], dx = b.x - a.x, dy = b.y - a.y, dz = (b.z ?? 0) - (a.z ?? 0), len = dx * dx + dy * dy + dz * dz;
       let best = tolerance * tolerance, at = -1;

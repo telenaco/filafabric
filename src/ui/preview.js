@@ -128,7 +128,10 @@ export function createPreview(container) {
     for (let i = 1; i < moves.length; i++) {
       const a = moves[i - 1], b = moves[i];
       if (b.extrude) {
-        const bk = buckets[ROLE_OF[b.cls]];
+        // flow within 10% of nominal draws at the role's width; any other flow is drawn in quarter steps
+        const flow = b.flow !== undefined && Math.abs(b.flow - 1) >= 0.1 ? Math.max(0.25, Math.round(b.flow * 4) / 4) : 1;
+        const key = flow === 1 ? ROLE_OF[b.cls] : `${ROLE_OF[b.cls]}@${flow}`;
+        const bk = (buckets[key] ??= { pos: [], idx: [] });
         bk.pos.push(a.x, a.y, a.z, b.x, b.y, b.z);
         bk.idx.push(i);
       } else {
@@ -151,19 +154,23 @@ export function createPreview(container) {
 
     const centreline = state.layers.strand;
     const widths = strandWidths(cfg);
-    for (const role of ROLES) {
-      const { pos } = buckets[role];
+    for (const key of Object.keys(buckets)) {
+      const [role, flowText] = key.split('@');
+      const flow = flowText ? Number(flowText) : 1;
+      // flat strands widen with flow; strands in the air grow as the square root of the volume
+      const width = widths[role] * (role === 'base' || role === 'anchored' ? flow : Math.sqrt(flow));
+      const { pos } = buckets[key];
       // thin path line (the exact nozzle route)
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
       const thin = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: centreline ? pal.centreline : pal[role] }));
-      state.thin[role] = add(thin);
+      state.thin[key] = add(thin);
       // strand at true width, in millimetres
       const sg = new LineSegmentsGeometry();
       if (pos.length) sg.setPositions(pos);
-      const sm = new LineMaterial({ color: pal[role], linewidth: widths[role], worldUnits: true });
+      const sm = new LineMaterial({ color: pal[role], linewidth: width, worldUnits: true });
       materials.push(sm);
-      state.fat[role] = add(new LineSegments2(sg, sm));
+      state.fat[key] = add(new LineSegments2(sg, sm));
     }
 
     const tg = new THREE.BufferGeometry();
@@ -208,10 +215,10 @@ export function createPreview(container) {
   }
 
   function applyVisibility() {
-    for (const role of ROLES) {
-      const on = state.roleVisible[role] && state.buckets[role]?.idx.length > 0;
-      if (state.thin[role]) state.thin[role].visible = on && state.layers.path;
-      if (state.fat[role]) state.fat[role].visible = on && state.layers.strand;
+    for (const key of Object.keys(state.thin)) {
+      const on = state.roleVisible[key.split('@')[0]] && state.buckets[key]?.idx.length > 0;
+      if (state.thin[key]) state.thin[key].visible = on && state.layers.path;
+      if (state.fat[key]) state.fat[key].visible = on && state.layers.strand;
     }
     if (state.travel) state.travel.visible = state.layers.travel && state.buckets.travel.idx.length > 0;
     if (state.hops) state.hops.visible = state.layers.hops && state.buckets.hops.idx.length > 0;
@@ -221,10 +228,10 @@ export function createPreview(container) {
 
   function applyRange() {
     const k = state.moveIndex;
-    for (const role of ROLES) {
-      const n = countBelow(state.buckets[role].idx, k);
-      state.thin[role].geometry.setDrawRange(0, n * 2);
-      state.fat[role].geometry.instanceCount = n;
+    for (const key of Object.keys(state.thin)) {
+      const n = countBelow(state.buckets[key].idx, k);
+      state.thin[key].geometry.setDrawRange(0, n * 2);
+      state.fat[key].geometry.instanceCount = n;
     }
     state.travel.geometry.setDrawRange(0, countBelow(state.buckets.travel.idx, k) * 2);
     state.hops.geometry.instanceCount = countBelow(state.buckets.hops.idx, k);
@@ -270,7 +277,7 @@ export function createPreview(container) {
   return {
     update,
     /** Roles that have at least one move in the current result, in legend order. */
-    presentRoles() { return ROLES.filter((role) => state.buckets[role]?.idx.length > 0); },
+    presentRoles() { return ROLES.filter((role) => Object.keys(state.buckets).some((key) => key.split('@')[0] === role && state.buckets[key].idx?.length > 0)); },
     setCamera(name) { state.camera = name; if (state.result) frame(true); },
     setLayers(layers) { state.layers = { ...state.layers, ...layers }; if (state.result) { build(state.result); applyVisibility(); applyRange(); } },
     setRoles(roles) { state.roleVisible = { ...state.roleVisible, ...roles }; applyVisibility(); },

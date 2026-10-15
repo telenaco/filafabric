@@ -144,8 +144,8 @@ export class GcodeWriter {
     if(ds<1e-9)return out;
     const parts=['G1'],X=fmt(m.x+o.x,3),Y=fmt(m.y+o.y,3),Z=fmt(m.z,3);
     if(X!==this.outX){parts.push('X'+X);this.outX=X;} if(Y!==this.outY){parts.push('Y'+Y);this.outY=Y;} if(Z!==this.outZ){parts.push('Z'+Z);this.outZ=Z;}
-    if(m.extrude){this.extrudingMoves++;this.cumE+=segmentE(ds,m.cls,this.cfg);const target=roundTo(this.cumE,5);parts.push('E'+fmt(target-this.emittedE,5));this.emittedE=target;}
-    const speed=moveSpeed(m.cls,dx,dy,dz,this.cfg),F=Math.round(speed*60);this.timeSec+=ds/speed;
+    if(m.extrude){this.extrudingMoves++;this.cumE+=segmentE(ds,m.cls,this.cfg,m.flow??1);const target=roundTo(this.cumE,5);parts.push('E'+fmt(target-this.emittedE,5));this.emittedE=target;}
+    const speed=moveSpeed(m.cls,dx,dy,dz,this.cfg,m.flow??1),F=Math.round(speed*60);this.timeSec+=ds/speed;
     if(F!==this.outF){parts.push('F'+F);this.outF=F;}
     if(parts.length>1)out.push(parts.join(' '));return out;
   }

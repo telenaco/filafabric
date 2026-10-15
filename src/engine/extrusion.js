@@ -21,8 +21,8 @@ export function classFlow(cls, t) {
 }
 
 /** Actual deposited volume per mm of path (after the material's flow multiplier and any extra flow in the air). */
-export function volumePerMm(cls, cfg) {
-  return strandArea(cls, cfg) * cfg.derived.multiplier * classFlow(cls, cfg.t);
+export function volumePerMm(cls, cfg, flow = 1) {
+  return strandArea(cls, cfg) * cfg.derived.multiplier * classFlow(cls, cfg.t) * flow;
 }
 
 /**
@@ -34,9 +34,9 @@ export function airStrandDiameter(cls, cfg) {
   return cfg.derived.freeDiameter * Math.sqrt(foam * classFlow(cls, cfg.t));
 }
 
-/** Filament length (mm, relative E) for a move of 3D length `ds`. */
-export function segmentE(ds, cls, cfg) {
-  return (ds * volumePerMm(cls, cfg)) / filamentArea(cfg.derived.filamentDiameter);
+/** Filament length (mm, relative E) for a move of 3D length `ds`; `flow` scales the bead (1 = nominal). */
+export function segmentE(ds, cls, cfg, flow = 1) {
+  return (ds * volumePerMm(cls, cfg, flow)) / filamentArea(cfg.derived.filamentDiameter);
 }
 
 export function classTargetSpeed(cls, t) {
@@ -52,7 +52,7 @@ export function classTargetSpeed(cls, t) {
 }
 
 /** Linear speed (mm/s along the 3D vector) after all clamps. */
-export function moveSpeed(cls, dx, dy, dz, cfg) {
+export function moveSpeed(cls, dx, dy, dz, cfg, flow = 1) {
   const ds = Math.hypot(dx, dy, dz);
   let v = classTargetSpeed(cls, cfg.t);
   if (ds === 0) return v;
@@ -64,7 +64,7 @@ export function moveSpeed(cls, dx, dy, dz, cfg) {
   cap(lim.y, Math.abs(dy));
   cap(lim.z, Math.abs(dz));
   if (EXTRUDING.has(cls)) {
-    const vol = volumePerMm(cls, cfg);
+    const vol = volumePerMm(cls, cfg, flow);
     v = Math.min(v, cfg.derived.maxVolActual / vol);
     v = Math.min(v, (lim.e * filamentArea(cfg.derived.filamentDiameter)) / vol);
   }

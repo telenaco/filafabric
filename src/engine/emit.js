@@ -36,6 +36,7 @@ export function emitStrands(strands, { startLift = 5, travelLift = 3, retraction
     for (let i = 1; i < strand.pts.length; i++) {
       const p = strand.pts[i];
       const move = { x: p.x, y: p.y, z: p.z, cls: p.cls ?? kindClass, extrude: true, tag: strand.id };
+      if (p.flow !== undefined && p.flow !== 1) move.flow = p.flow;
       if (i === 1 && pendingUnretract) {
         move.retract = 'unretract';
         pendingUnretract = false;

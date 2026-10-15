@@ -37,9 +37,9 @@ export function computeStats(moves, cfg, placements) {
     if (m.retract === 'unretract') timeSec += r.length / r.deretractSpeed;
     if (m.violation) violations++;
     if (ds < 1e-9) continue;
-    timeSec += ds / moveSpeed(m.cls, dx, dy, dz, cfg);
+    timeSec += ds / moveSpeed(m.cls, dx, dy, dz, cfg, m.flow ?? 1);
     lengthByClass[m.cls] += ds;
-    if (m.extrude) filamentMm += segmentE(ds, m.cls, cfg);
+    if (m.extrude) filamentMm += segmentE(ds, m.cls, cfg, m.flow ?? 1);
   }
 
   let maxSlope = 0;
