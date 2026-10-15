@@ -442,6 +442,27 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "svgdesign",
+    "score": 51.605706270223024,
+    "components": 1,
+    "joints": 59,
+    "reversedCrossings": 0,
+    "separatedCrossings": 1,
+    "longestUnsupported": 11.827853135111468,
+    "maxSlopeDeg": 25.00000000000009,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 59,
+    "moves": 4418,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 2702.4599672075797,
+      "afterMm": 638.030497370624
+    }
+  },
+  {
     "id": "voronoi",
     "score": 57.92450820000029,
     "components": 1,

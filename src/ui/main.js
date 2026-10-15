@@ -140,9 +140,12 @@ function bindingFor(mod) {
   const scale = mod.controls.find((c) => c.kind === 'pattern')?.scale;
   const sliders = scale ? [...items, scale] : items;
   const own = () => state.designs[mod.id];
+  // each sliders group has its own host: the first keeps the plain id
+  const groups = mod.controls.filter((c) => c.kind === 'sliders').map((c, k) => ({ host: `#${mod.id}-sliders${k ? `-${k}` : ''}`, items: c.items }));
   return {
     sliders,
     build: items,
+    groups,
     host: `#${mod.id}-sliders`,
     get: (key) => own()[key],
     set: (key, value) => { own()[key] = value; },
@@ -375,8 +378,10 @@ function regenerate() {
     if (!mod.legacy) {
       const own = state.designs[mod.id];
       const [w, h] = mod.size(own);
-      const previewState = { ...own, width: Math.min(w, 100), height: Math.min(h, 100) };
-      result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height) });
+      // the preview of most designs is a 100 mm window; a design that works from the imported drawing is shown whole
+      const cap = mod.fullSize ? Infinity : 100;
+      const previewState = { ...own, width: Math.min(w, cap), height: Math.min(h, cap) };
+      result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height), vector: mod.usesVector ? state.vector : null });
     } else if (state.design === 'squiggle') {
       const s = state.squiggle;
       result = generateSquiggle(machine, material, {
@@ -397,7 +402,7 @@ function regenerate() {
       textile.sample_width = Math.min(w, 100); textile.sample_height = Math.min(h, 100);
       result = generate(machine, material, textile, { outline: placedOutline(textile.sample_width, textile.sample_height), liftAt: pileLiftFactor(state.primary) });
     }
-    if (state.vector) {
+    if (state.vector && !designById(state.design).usesVector) {
       const [fullWidth, fullHeight] = BINDINGS[state.design].size.get();
       result = composeSvgLines(result, state.vector, { fullWidth, fullHeight });
     }
@@ -601,9 +606,11 @@ function renderExport() {
   btn.disabled = !ok;
   const bytes = state.result ? state.result.gcode.length : 0;
   $('#export-size').textContent = ok ? (bytes > 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`) : '';
-  $('#svg-lines-info').textContent = state.vector ? `${state.vector.name} · ${state.vector.width.toFixed(1)} × ${state.vector.height.toFixed(1)} mm · ${state.vector.paths.length} paths` : 'Print SVG strokes first, with this pattern above.';
+  const fromDrawing = !!designById(state.design).usesVector;
+  const idleNote = designById(state.design).svgNote ?? 'Print SVG strokes first, with this pattern above.';
+  $('#svg-lines-info').textContent = state.vector ? `${state.vector.name} · ${state.vector.width.toFixed(1)} × ${state.vector.height.toFixed(1)} mm · ${state.vector.paths.length} paths` : idleNote;
   $('#svg-lines-remove').hidden = !state.vector;
-  $('#svg-preview-note').hidden = !state.vector;
+  $('#svg-preview-note').hidden = !state.vector || fromDrawing;
   if (state.vector) $('#svg-preview-note').textContent = `Preview sample: ${state.result?.cfg.t.sample_width ?? 100} × ${state.result?.cfg.t.sample_height ?? 100} mm. Full SVG: ${state.vector.width.toFixed(1)} × ${state.vector.height.toFixed(1)} mm.`;
 }
 
@@ -808,7 +815,8 @@ function editValue(id, def, readout) {
 
 function buildSliders(id) {
   const b = BINDINGS[id];
-  $(b.host).replaceChildren(...(b.build ?? b.sliders).map((def) => buildSlider(id, def)));
+  if (b.groups?.length) for (const g of b.groups) $(g.host).replaceChildren(...g.items.map((def) => buildSlider(id, def)));
+  else $(b.host).replaceChildren(...(b.build ?? b.sliders).map((def) => buildSlider(id, def)));
 }
 
 function buildSize(id) {
@@ -1259,6 +1267,7 @@ function showDesign() {
     if (panel) panel.hidden = d.id !== state.design;
   }
   $('#tight-option').hidden = state.design !== 'loop-pile';
+  $('#btn-panel').hidden = designById(state.design).panel === false;
   if (state.design !== 'loop-pile' && state.showTight) setShowTight(false);
 }
 
@@ -1334,6 +1343,9 @@ function patternPicker(id, c, patterns, titleId) {
   return [grid, el('div', { id: `${id}-pattern-scale`, class: 'pattern-scale' })];
 }
 
+/** Control groups that show only while their when(settings) is true: { node, id, when }. */
+const conditionalGroups = [];
+
 function buildDesignPanel(mod) {
   const id = mod.id;
   const panel = el('div', { id: `panel-${id}`, class: 'panel', hidden: true },
@@ -1342,8 +1354,11 @@ function buildDesignPanel(mod) {
       el('details', { class: 'pattern-about' }, el('summary', { text: 'About this pattern' }), el('p', { class: 'muted', text: mod.about }))));
   mod.controls.forEach((c, n) => {
     const titleId = `${id}-group-${n}-title`;
-    const group = (...kids) => el('section', { class: 'group', 'aria-labelledby': titleId },
-      el('h2', { class: 'eyebrow', id: titleId, text: c.title }), ...kids);
+    const group = (...kids) => {
+      const node = el('section', { class: 'group', 'aria-labelledby': titleId }, el('h2', { class: 'eyebrow', id: titleId, text: c.title }), ...kids);
+      if (typeof c.when === 'function') conditionalGroups.push({ node, id, when: c.when });
+      return node;
+    };
     if (c.kind === 'presets') {
       const grid = el('div', { class: 'patterns', role: 'group', 'aria-labelledby': titleId, id: `${id}-presets` });
       for (const p of mod.presets) {
@@ -1378,7 +1393,8 @@ function buildDesignPanel(mod) {
       input.addEventListener('change', () => { state.designs[id][c.key] = input.checked; afterDesignChange(); });
       panel.append(group(el('label', { class: 'switch-row' }, input, el('span', {}, el('strong', { text: c.label }), el('small', { text: c.help })))));
     } else if (c.kind === 'sliders') {
-      panel.append(group(el('div', { id: `${id}-sliders`, class: 'controls' })));
+      const k = mod.controls.slice(0, n).filter((x) => x.kind === 'sliders').length;
+      panel.append(group(el('div', { id: `${id}-sliders${k ? `-${k}` : ''}`, class: 'controls' })));
     } else if (c.kind === 'pattern') {
       panel.append(group(c.hint ? el('p', { class: 'group-hint', text: c.hint }) : null, ...patternPicker(id, c, mod.patterns, titleId)));
     }
@@ -1410,6 +1426,7 @@ function renderDesignChoices() {
     for (const btn of $$(`#${mod.id}-presets [data-preset]`)) btn.setAttribute('aria-pressed', String(btn.dataset.preset === active));
     const scale = $(`#${mod.id}-pattern-scale`);
     if (scale) scale.hidden = !s.pattern || s.pattern === 'none';
+    for (const g of conditionalGroups) if (g.id === mod.id) g.node.hidden = !g.when(s);
   }
 }
 

@@ -54,9 +54,14 @@ export function layered(def) {
     setSize: (s, w, h) => { s.width = w; s.height = h; },
     patterns: def.patterns,
     controls: def.controls,
-    generate: (machine, material, s, { outline = null } = {}) => {
-      const built = def.build(s, boundaryFor(s.width, s.height, outline));
-      return layeredResult(machine, material, {
+    // a design that works from the imported drawing says so, and then the studio hands it the drawing and the real size
+    usesVector: !!def.usesVector,
+    fullSize: !!def.fullSize,
+    panel: def.panel,
+    svgNote: def.svgNote,
+    generate: (machine, material, s, { outline = null, vector = null } = {}) => {
+      const built = def.build(s, boundaryFor(s.width, s.height, outline), { vector });
+      const result = layeredResult(machine, material, {
         width: s.width,
         height: s.height,
         layers: built.layers,
@@ -65,6 +70,8 @@ export function layered(def) {
         extra: { layerCount: built.layers.length, ...(built.extra ?? {}) },
         ramp: def.ramp ?? 1.6,
       });
+      if (built.warnings?.length) result.warnings.push(...built.warnings);
+      return result;
     },
     verdict: (result, s) => (def.verdict ? def.verdict(result, s) : buildLayeredVerdict(result)),
     figure: (result) => (def.figure ? def.figure(result) : { value: result.report.perCm2.toFixed(1), unit: 'per cm²', label: 'Crossings' }),
