@@ -28,6 +28,7 @@ import { stackLayers } from '../engine/stack.js';
 import { windowRings } from '../engine/window.js';
 import { bindPanelExport } from './panel-ui.js';
 import { createStudyRecorder } from './study.js';
+import { buildSwatch } from './export-builder.js';
 import { classifyBuildError, DiagnosticLog, suggestRecovery } from './diagnostics.js';
 
 const STORAGE_KEY = 'filament-textile-studio:v1'; // kept so a returning visitor's last session still opens
@@ -132,6 +133,7 @@ const state = {
   print: { ...PRINT_DEFAULTS }, // layer thickness and how many times the pattern is stacked: the same for every design
   docName: 'Untitled swatch',
   result: null,
+  resultKey: null,
   error: null,
   fraction: 1,
   playing: false,
@@ -178,6 +180,10 @@ function bindingFor(mod) {
 for (const mod of DESIGNS) if (mod.status === 'ready' && !mod.legacy) BINDINGS[mod.id] = bindingFor(mod);
 
 let preview = null;
+let previewBuild = null;
+let exporting = false;
+let exportController = null;
+let exportLabel = '';
 let rafId = 0;
 let lastFrame = 0;
 const undoLog = { stack: [], cursor: -1 };
@@ -508,10 +514,64 @@ function setShapeOutline(on) {
 /* ---------- generation ---------- */
 let genTimer = null;
 function schedule() {
-  $('#busy-chip').hidden = false;
-  $('#stage').setAttribute('aria-busy', 'true');
+  previewBuild?.controller.abort();
+  previewBuild = null;
+  exportController?.abort();
   clearTimeout(genTimer);
   genTimer = setTimeout(regenerate, 140);
+  renderBusy();
+}
+
+function renderBusy() {
+  const busy = !!genTimer || !!previewBuild || exporting;
+  $('#busy-chip').hidden = !busy;
+  $('#busy-chip').textContent = exporting ? exportLabel : 'Updating…';
+  if (busy) $('#stage').setAttribute('aria-busy', 'true');
+  else $('#stage').removeAttribute('aria-busy');
+}
+
+/** A captured design at its selected size, shared by preview and direct export workers. */
+function exportOptions(width = null, height = null) {
+  const size = BINDINGS[state.design].size.get();
+  width ??= size[0]; height ??= size[1];
+  return {
+    machine: state.machines.get(state.machine), material: printMaterial(), design: state.design,
+    width, height, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : settingsOf(state.design),
+    studySettings: { ...settingsOf(state.design) }, outline: placedOutline(width, height),
+    vector: state.vector, shapeOutline: !!state.outline?.page, layers: state.print.layers,
+    image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale,
+    panelSize: size,
+  };
+}
+
+function showGenerated(result, key) {
+  state.result = result;
+  state.resultKey = key;
+  state.error = null;
+  preview.update(result);
+  applyScrub();
+}
+
+/** Full ordinary-size designs build off the UI thread; obsolete slider jobs are terminated. */
+function previewAtSelectedSize(input) {
+  state.error = null;
+  const key = snapshotKey(), controller = new AbortController();
+  const job = { key, controller, promise: null };
+  previewBuild = job;
+  job.promise = buildSwatch(input, { signal: controller.signal, preview: true }).then((result) => {
+    if (previewBuild === job && snapshotKey() === key) showGenerated(result, key);
+    return result;
+  }).catch((error) => {
+    if (error.name !== 'AbortError' && previewBuild === job) {
+      state.error = error;
+      recordBuildFailure(error, { ...input, operation: 'preview' });
+    }
+    throw error;
+  }).finally(() => {
+    if (previewBuild === job) { previewBuild = null; renderBusy(); render(); }
+  });
+  void job.promise.catch(() => {});
+  renderBusy();
 }
 
 /** The tone of the squiggle pattern across the swatch as it is previewed (a window at most 100 mm across). */
@@ -558,12 +618,21 @@ function printMaterial() {
 }
 
 function regenerate() {
+  genTimer = null;
+  previewBuild?.controller.abort();
+  previewBuild = null;
   const machine = state.machines.get(state.machine);
   const material = printMaterial();
   try {
     let result;
     const mod = designById(state.design);
     followVectorSize();
+    const [selectedWidth, selectedHeight] = BINDINGS[state.design].size.get();
+    const wholePreview = Math.max(selectedWidth, selectedHeight) <= 250 && selectedWidth <= machine.bed.width && selectedHeight <= machine.bed.depth;
+    if (wholePreview && Math.max(selectedWidth, selectedHeight) > 100) {
+      previewAtSelectedSize(exportOptions(selectedWidth, selectedHeight));
+      return;
+    }
     // Every design uses a bounded preview window. Imported drawings keep their full scale within it.
     // Ordinary SVG swatches show the complete drawing; garment-size files retain a bounded pattern sample.
     const cap = state.vector && Math.max(state.vector.width, state.vector.height) <= 250 && state.vector.width <= machine.bed.width && state.vector.height <= machine.bed.depth ? 250 : 100;
@@ -604,17 +673,13 @@ function regenerate() {
     }
     result = stackLayers(result, state.print.layers);
     if (state.vector) result.documentSize = [state.vector.width, state.vector.height];
-    state.result = result;
-    state.error = null;
-    preview.update(result);
-    applyScrub();
+    showGenerated(result, snapshotKey());
   } catch (e) {
     state.error = e;
     recordBuildFailure(e);
     if (!(e && Array.isArray(e.errors))) console.error(e);
   }
-  $('#busy-chip').hidden = true;
-  $('#stage').removeAttribute('aria-busy');
+  renderBusy();
   render();
 }
 
@@ -641,7 +706,11 @@ function renderErrors() {
   if (!state.error) {
     box.hidden = true;
     box.replaceChildren();
-    $('#canvas-note').hidden = true;
+    const [w, h] = BINDINGS[state.design].size.get();
+    const t = state.result?.cfg.t;
+    const sampled = t && (t.sample_width !== w || t.sample_height !== h);
+    $('#canvas-note').hidden = !sampled;
+    if (sampled) $('#canvas-note').textContent = `Preview ${t.sample_width} × ${t.sample_height} mm portion · exports ${w} × ${h} mm`;
     $('#canvas-wrap').classList.remove('dimmed');
     return;
   }
@@ -669,6 +738,7 @@ function renderErrors() {
   box.hidden = general.length === 0;
   box.replaceChildren(...general.map((t) => el('div', { text: t })));
   const hasPreview = !!state.result;
+  $('#canvas-note').textContent = 'Showing your last valid settings';
   $('#canvas-note').hidden = !hasPreview;
   $('#canvas-wrap').classList.toggle('dimmed', hasPreview);
 }
@@ -794,14 +864,16 @@ function renderFigures() {
   const { stats, cfg } = state.result;
   const t = cfg.t;
   const isSq = state.design === 'squiggle';
+  const selected = BINDINGS[state.design].size.get();
+  const sampled = t.sample_width !== selected[0] || t.sample_height !== selected[1];
   const mod = designById(state.design);
   const fig = (value, unit, label) => el('div', { class: 'figure' },
     el('div', { class: 'fig-value' }, value, unit ? el('span', { class: 'fig-unit', text: ` ${unit}` }) : null),
     el('div', { class: 'fig-label', text: label }));
   host.classList.toggle('stale', !!state.error);
   host.replaceChildren(
-    fig(formatMinutes(stats.timeSec / 60), 'min', 'Print time'),
-    fig(grams(stats.filamentGrams), 'g', 'Filament'),
+    fig(formatMinutes(stats.timeSec / 60), 'min', sampled ? 'Preview print time' : 'Print time'),
+    fig(grams(stats.filamentGrams), 'g', sampled ? 'Preview filament' : 'Filament'),
     !mod.legacy
       ? (() => { const f = mod.figure(state.result); return fig(f.value, f.unit, f.label); })()
       : isSq ? fig('2', '', 'Layers') : fig(stats.loops.toLocaleString('en'), '', 'Loops'),
@@ -814,8 +886,8 @@ function renderFigures() {
   if (state.details) {
     const item = (k, v) => el('div', {}, el('div', { class: 'k', text: k }), el('div', { class: 'v', text: v }));
     d.replaceChildren(
-      item('Swatch', `${t.sample_width} × ${t.sample_height} mm`),
-      item('Swatch code', currentSwatch()),
+      item('Preview size', `${t.sample_width} × ${t.sample_height} mm`),
+      item('Design code', currentSwatch()),
       item('Filament length', `${Math.round(stats.filamentMm).toLocaleString('en')} mm`),
       item('Strands', String(stats.strands)),
       item('Nozzle lifts', String(stats.hops)),
@@ -843,23 +915,9 @@ function renderPlayback() {
 function renderExport() {
   const btn = $('#btn-export');
   const ok = !!state.result && !state.error && state.result.moves.length > 0;
-  // one Export button: a swatch needs a build that worked, a panel only needs a design that can be one
-  btn.disabled = !(ok || designById(state.design).panel !== false);
-}
-
-/** What the Export dialog shows of this swatch, or null when it cannot be exported. */
-function swatchInfo() {
-  const ok = !!state.result && !state.error && state.result.moves.length > 0;
-  if (!ok) return null;
-  const cfg = state.result.cfg;
-  const [w, h] = [cfg.t.sample_width, cfg.t.sample_height];
-  const bytes = state.result.gcode.length;
-  const size = bytes > 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  const stats = state.result.stats;
-  const mm = (n) => String(Math.round(n * 10) / 10);
-  const doc = state.result.documentSize;
-  const context = doc && (doc[0] > w || doc[1] > h) ? `This exports the ${mm(w)} × ${mm(h)} mm sample. Choose Full panel for the complete ${mm(doc[0])} × ${mm(doc[1])} mm SVG.` : '';
-  return { design: designById(state.design).name, dims: `${mm(w)} × ${mm(h)} mm`, context, estimate: `${formatMinutes(stats.timeSec / 60)} min · ${stats.filamentGrams.toFixed(2)} g · ${size}`, name: swatchFileName() };
+  // Export can build a selected design independently of its bounded or pending preview.
+  btn.disabled = exporting || !(ok || isReady(state.design));
+  $('#btn-panel').hidden = designById(state.design).panel === false;
 }
 
 /** The print setup in two lines: what the printer chip holds, repeated in the Export dialog so it can be checked. */
@@ -1325,7 +1383,6 @@ function currentSwatch() {
     size = sampleSize(state.primary);
     if (JSON.stringify(settings) === JSON.stringify({ primary: mod.defaults(), advanced: {} })) preset = 'default';
   }
-  if (state.result) size = [state.result.cfg.t.sample_width, state.result.cfg.t.sample_height];
   return swatchCode(mod.file, { ...settings, vector: state.vector, print: state.print }, { size, preset, outline: state.outline });
 }
 
@@ -1481,7 +1538,7 @@ function recordBuildFailure(error, input = null) {
     design: captured.design,
     settings: {
       ...settings,
-      operation: input ? 'panel' : 'preview',
+      operation: input?.operation ?? (input ? 'panel' : 'preview'),
       print: { layers: captured.layers, layerHeight: captured.material?.print_defaults?.layer_height },
       machine: captured.machine?.id, material: captured.material?.id,
       ...(input ? { repeat: captured.repeat, backingSpacing: captured.backingSpacing } : state.design === 'loop-pile' ? { advanced: { ...state.advanced } } : {}),
@@ -1541,10 +1598,10 @@ function download(name, blob) {
 
 function reportStudyExport(exportType, options = {}, stats = state.result?.stats) {
   if (!studyRecorder) return;
-  const cfg = state.result?.cfg;
+  const cfg = options.cfg ?? state.result?.cfg;
   const [width, height] = ['settings-json', 'build-error'].includes(exportType) ? BINDINGS[state.design].size.get() : [cfg?.t.sample_width, cfg?.t.sample_height];
   const vector = options.vector ?? state.vector;
-  let print = stats?.print ?? { layerHeight: cfg?.t.layer_height, layers: state.print.layers, nozzleDiameter: cfg?.t.nozzle_diameter, extrusionWidth: cfg?.t.extrusion_width };
+  let print = stats?.print ?? { layerHeight: cfg?.t.layer_height, layers: options.layers ?? state.print.layers, nozzleDiameter: cfg?.t.nozzle_diameter, extrusionWidth: cfg?.t.extrusion_width };
   if (exportType === 'build-error') {
     print = { layerHeight: options.material?.print_defaults?.layer_height ?? state.print.layerHeight, layers: options.layers ?? state.print.layers };
     try {
@@ -1558,7 +1615,7 @@ function reportStudyExport(exportType, options = {}, stats = state.result?.stats
     properties: {
       settings: exportType === 'gcode-panel' ? { ...(options.studySettings ?? settingsOf(state.design)), colorChange: false } : options.studySettings ?? settingsOf(state.design),
       print,
-      metrics: exportType === 'build-error' ? {} : { timeSec: stats?.timeSec, filamentMm: stats?.filamentMm, moves: stats?.moves ?? state.result?.moves?.length },
+      metrics: exportType === 'build-error' ? {} : { timeSec: stats?.timeSec, filamentMm: stats?.filamentMm, moves: stats?.moves ?? options.moveCount ?? state.result?.moves?.length },
       sources: { svg: !!vector, image: (options.design ?? state.design) === 'squiggle' && (options.settings ?? state.squiggle).pattern === 'image' && !!(options.image ?? state.image), ...(vector ? { svgPaths: vector.paths.length, svgPoints: vector.paths.reduce((n, p) => n + p.length, 0), svgGuides: interpretDrawing(vector).guides.length } : {}) },
       panel: { repeat: options.repeat, backingSpacing: options.backingSpacing },
       ...(exportType === 'build-error' ? { error: options.error } : {}),
@@ -1585,20 +1642,46 @@ function exportName(size, panel = false, panelSettings = {}) {
 }
 
 function swatchFileName() {
-  const cfg = state.result?.cfg;
-  return exportName(cfg ? [cfg.t.sample_width, cfg.t.sample_height] : BINDINGS[state.design].size.get());
+  return exportName(BINDINGS[state.design].size.get());
 }
 
-function exportGcode(fileName = null) {
-  if (!state.result || state.error || state.result.moves.length === 0) return;
-  const code = currentSwatch();
-  const name = fileName || swatchFileName();
-  // name the swatch inside the file too, so a printed sample can be matched to its settings from the G-code alone
-  const settings = JSON.stringify({ design: state.design, settings: settingsOf(state.design), print: state.print, machine: state.machine, material: state.material });
-  const text = state.result.gcode.replace('; Textile G-code generator v1\n', (head) => `${head}; swatch ${code}\n; name ${state.docName.replace(/[\r\n]+/g, ' ')}\n; studio settings ${settings}\n`);
-  download(name, new Blob([text], { type: 'text/plain' }));
-  reportStudyExport('gcode-swatch');
-  toast(`Saved ${name}`);
+async function exportGcode() {
+  if (exporting) return;
+  let input;
+  const controller = new AbortController();
+  exportController = controller;
+  exporting = true;
+  try {
+    input = structuredClone(exportOptions());
+    const key = snapshotKey(), code = currentSwatch(), name = swatchFileName();
+    const title = state.docName.replace(/[\r\n]+/g, ' ');
+    const settings = JSON.stringify({ design: input.design, settings: input.studySettings, print: { ...state.print }, machine: input.machine.id, material: input.material.id });
+    exportLabel = `Preparing ${input.width} × ${input.height} mm…`;
+    renderBusy(); renderExport();
+    let result;
+    const fullPreview = !genTimer && !previewBuild && state.result && !state.error && state.resultKey === key && state.result.cfg.t.sample_width === input.width && state.result.cfg.t.sample_height === input.height;
+    if (fullPreview) result = state.result;
+    else if (previewBuild?.key === key) result = await previewBuild.promise;
+    else result = await buildSwatch(input, { signal: controller.signal });
+    if (controller.signal.aborted || snapshotKey() !== key) throw new DOMException('The design changed during export.', 'AbortError');
+    const moveCount = result.moveCount ?? result.moves?.length ?? 0;
+    if (!moveCount) throw new Error('Nothing to print for this design and size.');
+    const text = result.gcode.replace('; Textile G-code generator v1\n', (head) => `${head}; swatch ${code}\n; name ${title}\n; studio settings ${settings}\n`);
+    download(name, new Blob([text], { type: 'text/plain' }));
+    reportStudyExport('gcode-swatch', { ...input, cfg: result.cfg, moveCount }, result.stats);
+    toast(`Saved ${input.width} × ${input.height} mm: ${name}`);
+  } catch (error) {
+    if (error.name === 'AbortError') toast('Export cancelled because the design changed.');
+    else {
+      state.error = error;
+      recordBuildFailure(error, { ...input, operation: 'design-export' });
+      toast(`Could not export: ${error.message}`);
+    }
+  } finally {
+    exporting = false;
+    exportController = null;
+    renderBusy(); render();
+  }
 }
 
 async function shareLink() {
@@ -1742,6 +1825,8 @@ function bindStatic() {
 
   $('#btn-undo').addEventListener('click', undo);
   $('#btn-redo').addEventListener('click', redo);
+  $('#btn-export').addEventListener('click', () => { void exportGcode(); });
+  $('#btn-panel').addEventListener('click', closeMenus);
   $('#btn-share').addEventListener('click', shareLink);
   $('#btn-details').addEventListener('click', () => { state.details = !state.details; renderFigures(); });
   $('#btn-advanced').addEventListener('click', () => openAdvanced($('#advanced-body').hidden));
@@ -1834,9 +1919,9 @@ async function init() {
   renderTiles();
   bindStatic();
   bindPanelExport({
-    options: (width = state.vector?.width ?? 100, height = state.vector?.height ?? 100) => ({ machine: state.machines.get(state.machine), material: printMaterial(), design: state.design, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : state.design === 'squiggle' ? state.squiggle : state.designs[state.design], studySettings: { ...settingsOf(state.design) }, outline: placedOutline(width, height), vector: state.vector, shapeOutline: !!state.outline?.page, layers: state.print.layers, image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale, panelSize: state.design === 'loop-pile' ? sampleSize(state.primary) : [settingsOf(state.design).width, settingsOf(state.design).height] }),
+    options: exportOptions,
     machines: () => state.machines, machineId: () => state.machine,
-    saveSwatch: (name) => exportGcode(name), swatchInfo, setupSummary,
+    setupSummary,
     openSetup: () => $('#btn-printer').click(),
     panelAvailable: () => designById(state.design).panel !== false,
     download, filename: (w, h, repeat, backingSpacing) => exportName([w, h], true, { repeat, backingSpacing }), toast,

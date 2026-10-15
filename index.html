@@ -42,6 +42,7 @@
       <label class="gate-remember"><input id="gate-remember" type="checkbox" checked> Stay unlocked on this device</label>
     </form>
     <p class="gate-note">An early preview for testers. If you were given a link and a password, this is the place for it.</p>
+    <p class="site-credit"><a href="https://www.bubaki.com/" target="_blank" rel="noopener">© 2026 Bubaki</a></p>
   </div>
 </main>
 
@@ -71,6 +72,7 @@
 </header>
 
 <div id="more-menu" class="menu" popover>
+  <button type="button" class="menu-item" id="btn-panel">Export repeating garment panel…</button>
   <button type="button" class="menu-item" id="btn-help"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M6.2 6.2a1.9 1.9 0 113 1.5c-.8.5-1.2.9-1.2 1.7M8 11.6v.1"/></svg>Getting started</button>
   <div class="menu-sep" role="separator"></div>
   <button type="button" class="menu-item" id="btn-save-file"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7M5 7l3 3 3-3M3 12.5h10"/></svg>Save settings file</button>
@@ -87,6 +89,7 @@
     <h2 class="eyebrow" id="designs-title" title="Essentials first, then the rest easiest first. Every design opens at 100 × 100 mm. The order ranks the default geometry by free spans, slopes, nozzle lifts and clearance flags; physical testing pending.">Designs</h2>
     <div class="design-list" id="design-list"></div>
     <p class="more-designs">More structures are on the way.</p>
+    <p class="site-credit"><a href="https://www.bubaki.com/" target="_blank" rel="noopener">© 2026 Bubaki</a></p>
   </aside>
 
   <main class="stage" id="stage" aria-label="Preview">
@@ -282,20 +285,7 @@
 </dialog>
 
 <dialog id="panel-dialog" aria-labelledby="panel-title">
-  <h2 id="panel-title">Export G-code</h2>
-  <div class="seg two export-mode" role="group" aria-label="What to export" id="export-mode">
-    <button type="button" id="export-mode-swatch" aria-pressed="true">This swatch</button>
-    <button type="button" id="export-mode-panel" aria-pressed="false">Full panel</button>
-  </div>
-
-  <div id="export-swatch-fields">
-  <dl class="export-rows">
-    <div><dt>Design</dt><dd id="export-design"></dd></div>
-    <div><dt>Size</dt><dd id="export-dims"></dd></div>
-    <div><dt>Estimate</dt><dd id="export-estimate"></dd></div>
-  </dl>
-  <p id="export-window-note" class="muted small" hidden></p>
-  </div>
+  <h2 id="panel-title">Export repeating garment panel</h2>
 
   <div id="export-panel-fields" hidden>
     <p class="muted small">A continuous crossed backing with this texture repeated above it, exported in sections. The preview stays a swatch.</p>

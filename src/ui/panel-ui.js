@@ -1,9 +1,9 @@
 /**
- * The one Export dialog. The Export button opens it; it offers this swatch (saved at once) or a full garment panel
- * (built in a worker, with chunk acknowledgements for backpressure to the file writer). The printer, filament, layer
+ * Advanced repeating garment panel export, opened from More. It builds in a worker, with chunk acknowledgements
+ * for backpressure to the file writer. Legacy hosts may supply saveSwatch to retain a mode chooser. The printer, filament, layer
  * thickness and layer count are not asked here: they live in the printer setup, which the dialog only names and links.
  *
- * What it asks of the page (element ids): btn-export, panel-dialog, export-mode-swatch / export-mode-panel,
+ * What it asks of the page (element ids): btn-panel, panel-dialog, export-mode-swatch / export-mode-panel,
  * export-swatch-fields, export-panel-fields, export-design / export-dims / export-estimate, export-fit,
  * export-setup-name / export-setup-sub / export-change-setup, export-filename, panel-width / -height / -repeat /
  * -backing, panel-svg-note, panel-progress, panel-status, panel-close / -cancel / -start. Every export-* element is
@@ -110,7 +110,7 @@ export function bindPanelExport({
     setMode(hasSwatch && info ? (mode === 'panel' && canPanel ? 'panel' : 'swatch') : 'panel');
     dialog.showModal();
   };
-  (document.getElementById('btn-export') ?? $('btn-panel'))?.addEventListener('click', open);
+  (hasSwatch ? $('btn-export') : ($('btn-panel') ?? $('btn-export')))?.addEventListener('click', open);
   $('export-mode-swatch')?.addEventListener('click', () => setMode('swatch'));
   $('export-mode-panel')?.addEventListener('click', () => setMode('panel'));
   $('export-change-setup')?.addEventListener('click', () => { dialog.close(); openSetup?.(); });

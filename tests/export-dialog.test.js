@@ -7,31 +7,105 @@ import { exportPanel } from '../src/engine/panel.js';
 import { defaultProfiles } from './helpers.js';
 
 const source = fs.readFileSync(new URL('../src/ui/main.js', import.meta.url), 'utf8');
-const uiFunction = (name) => source.match(new RegExp(`function ${name}\\([^]*?\\n}`))[0];
+const uiFunction = (name) => source.match(new RegExp(`(?:async )?function ${name}\\([^]*?\\n}`))[0];
 
-test('a sampled large SVG is labelled and named with the size actually saved', () => {
-  const state = { design: 'zigzag', result: { documentSize: [400, 400], cfg: { t: { sample_width: 100, sample_height: 100 } }, moves: [{}], gcode: 'G1 X1', stats: { timeSec: 120, filamentGrams: 0.4 } } };
+test('a sampled large SVG is named with the complete selected size', () => {
+  const state = { design: 'zigzag' };
   let named;
-  const host = { state, designById: () => ({ name: 'Zigzag mesh' }), formatMinutes: String, exportName(size) { named = Array.from(size); return 'sample.gcode'; } };
-  const info = runInNewContext(`${uiFunction('swatchFileName')}\n${uiFunction('swatchInfo')}\nswatchInfo();`, host);
-  assert.deepEqual(named, [100, 100]);
-  assert.equal(info.dims, '100 × 100 mm');
-  assert.match(info.context, /complete 400 × 400 mm SVG/);
+  const host = { state, BINDINGS: { zigzag: { size: { get: () => [400, 400] } } }, exportName(size) { named = Array.from(size); return 'design.gcode'; } };
+  runInNewContext(`${uiFunction('swatchFileName')}\nswatchFileName();`, host);
+  assert.deepEqual(named, [400, 400]);
 });
 
-test('swatch G-code keeps exact design settings even when its readable name is shortened', async () => {
-  const settings = { backing1Spacing: 5.12345, pattern: 'none' };
-  let saved;
+test('the design identifier uses selected dimensions rather than a sampled preview', () => {
+  let size;
   const host = {
-    Blob, state: { design: 'svgdesign', docName: 'Sample', machine: 'prusa-mk3s', material: 'tpu', print: { layerHeight: 0.2, layers: 2 }, result: { moves: [{}], gcode: '; Textile G-code generator v1\nG90\n' } },
-    settingsOf: () => settings, currentSwatch: () => 'test', swatchFileName: () => 'short.gcode',
-    download(name, blob) { saved = { name, blob }; }, reportStudyExport() {}, toast() {},
+    state: { design: 'crosshatch', designs: { crosshatch: { width: 400, height: 300 } }, print: {}, result: { cfg: { t: { sample_width: 100, sample_height: 100 } } } },
+    designById: () => ({ id: 'crosshatch', file: 'crosshatch', size: (s) => [s.width, s.height] }),
+    swatchCode(file, settings, options) { size = Array.from(options.size); return 'code'; },
   };
-  runInNewContext(`${uiFunction('exportGcode')}\nexportGcode();`, host);
-  const line = (await saved.blob.text()).split('\n').find((s) => s.startsWith('; studio settings '));
+  runInNewContext(`${uiFunction('currentSwatch')}\ncurrentSwatch();`, host);
+  assert.deepEqual(size, [400, 300]);
+});
+
+function exportHost({ size = 200, previewSize = 100, pending = null, timer = null, fail = false } = {}) {
+  const result = (width) => ({ cfg: { t: { sample_width: width, sample_height: width } }, moves: [{}], gcode: '; Textile G-code generator v1\nG90\n', stats: { moves: 1, timeSec: 123 } });
+  const host = {
+    Blob, AbortController, DOMException, structuredClone,
+    exporting: false, exportController: null, exportLabel: '', genTimer: timer,
+    previewBuild: pending, state: { design: 'svgdesign', docName: 'Sample', print: { layerHeight: 0.2, layers: 2 }, resultKey: 'current', result: result(previewSize) },
+    exportOptions: () => ({ design: 'svgdesign', width: size, height: size, machine: { id: 'printer' }, material: { id: 'tpu' }, studySettings: { backing1Spacing: 5.12345, pattern: 'none' } }),
+    snapshotKey: () => 'current', currentSwatch: () => 'test', swatchFileName: () => 'short.gcode',
+    renderBusy() {}, renderExport() {}, render() {}, toast() {},
+    async buildSwatch(input) { host.built = input; if (fail) throw new Error('Too large'); return result(input.width); },
+    download(name, blob) { host.saved = { name, blob }; },
+    reportStudyExport(type, input, stats) { host.recorded = { type, input, stats }; },
+    recordBuildFailure(error, input) { host.failure = { error, input }; },
+  };
+  host.run = () => runInNewContext(`${uiFunction('exportGcode')}\nexportGcode();`, host);
+  return host;
+}
+
+test('Export builds the selected size directly and preserves exact settings in the header', async () => {
+  const settings = { backing1Spacing: 5.12345, pattern: 'none' };
+  const host = exportHost();
+  await host.run();
+  assert.equal(host.built.width, 200);
+  assert.equal(host.recorded.input.cfg.t.sample_width, 200);
+  const line = (await host.saved.blob.text()).split('\n').find((s) => s.startsWith('; studio settings '));
   const metadata = JSON.parse(line.slice('; studio settings '.length));
   assert.deepEqual(metadata.settings, settings);
   assert.equal(metadata.print.layers, 2);
+});
+
+test('Export reuses a matching full-size preview', async () => {
+  const host = exportHost({ previewSize: 200 });
+  await host.run();
+  assert.ok(host.saved);
+  assert.equal(host.built, undefined);
+});
+
+test('Export waits for the current full-size preview instead of saving stale geometry', async () => {
+  let complete;
+  const promise = new Promise((resolve) => { complete = resolve; });
+  const host = exportHost({ pending: { key: 'current', promise } });
+  const run = host.run();
+  assert.equal(host.saved, undefined);
+  complete({ cfg: { t: { sample_width: 200 } }, gcode: '; Textile G-code generator v1\n', moves: [{}], stats: {} });
+  await run;
+  assert.ok(host.saved);
+  assert.equal(host.built, undefined);
+});
+
+test('scheduled edits prevent reuse of the previous preview', async () => {
+  const host = exportHost({ previewSize: 200, timer: 1 });
+  await host.run();
+  assert.equal(host.built.width, 200);
+});
+
+test('generation errors are logged and never download a smaller fallback', async () => {
+  const host = exportHost({ fail: true });
+  await host.run();
+  assert.equal(host.saved, undefined);
+  assert.equal(host.failure.input.operation, 'design-export');
+  assert.equal(host.exporting, false);
+});
+
+test('changed settings cancel a pending export without a download', async () => {
+  const host = exportHost();
+  host.buildSwatch = async () => { host.snapshotKey = () => 'changed'; return {}; };
+  await host.run();
+  assert.equal(host.saved, undefined);
+  assert.equal(host.failure, undefined);
+});
+
+test('input errors are caught and recorded before a worker is started', async () => {
+  const host = exportHost();
+  host.exportOptions = () => { throw new Error('Invalid outline'); };
+  await host.run();
+  assert.equal(host.saved, undefined);
+  assert.equal(host.failure.error.message, 'Invalid outline');
+  assert.equal(host.exporting, false);
 });
 
 test('export modes retain separate custom names across toggles, dimensions and setup reopening', async (t) => {

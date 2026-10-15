@@ -107,7 +107,7 @@ Bed size, nozzle and filament diameter, temperatures, flow, retraction, machine 
 
 Colour comes from the fill, or from the stroke when the fill is `none`; the stroke width of a red or blue shape is only a marker. Physical document dimensions, margins and transforms are retained; resizing the design scales the drawing (and its line widths) too. A drawing that carries no colours at all (an older saved file) keeps the previous rule: closed paths are shapes and shapes inside shapes alternate fill, hole. **Fill its shapes with this pattern** cuts the pattern to the red area, less the blue holes in it. Save/Open settings includes the imported paths and their colours; share links omit them to keep links small. `tests/fixtures/red-blue-lines.svg` is a small example of all of this.
 
-The live preview and a swatch export are bounded to 100 × 100 mm. **Export** opens one dialog: **This swatch** saves the G-code at once, and **Full panel** exports the selected texture as repeated sections over one continuous crossed backing, with the SVG drawing printed once across the full document. Radial motifs repeat per section. A panel runs in a worker with progress and cancellation, streams to a file in supported browsers, and limits the download fallback to 128 MB. Full panels currently use one filament. The dialog names the printer, filament, layer thickness and layers (a **Change** button opens the printer setup, which is where they are set) and warns when the panel does not fit the bed. The generic 1000 × 1000 × 300 mm profile is a template: add your own printer from a slicer export (see *Printers and filaments*) or edit its startup, levelling and priming.
+**Export** saves the selected design at its chosen dimensions and settings directly. It never substitutes the preview dimensions or repeats a smaller motif. Previews up to 250 × 250 mm that fit the bed show the whole design; larger designs show a labelled 100 × 100 mm portion. Full-size generation runs in a worker, and machine limits or generation budgets produce an error rather than a smaller file. **More → Export repeating garment panel** is a separate advanced tool for repeating texture sections over one continuous crossed backing, with the SVG drawing printed once across the full document. Radial motifs repeat per section in that tool. Repeating panels use one filament, support progress and cancellation, and stream to a file in supported browsers with a 128 MB download fallback limit. The generic 1000 × 1000 × 300 mm profile is a template: add your own printer from a slicer export (see *Printers and filaments*) or edit its startup, levelling and priming.
 
 The gallery lists estimated easier prints first, using the default 100 mm geometry: connection faults, unsupported spans, slopes, starts and loop-pile clearance flags. This is a comparative screen, not physical qualification. Details show the actual geometry and between-path travel for the current settings. Flat patterns start near the lower-left corner and choose the nearest remaining endpoint or closed-loop seam within each pass; raised pile and fringe preserve safe row order. Short structural ties connect isolated motifs, and crossing heights follow the previously printed material.
 
@@ -115,11 +115,9 @@ Spacing sliders reach 0.8 mm. Click any slider value to enter an exact value bey
 
 ## Local files
 
-G-code names describe the design, preset, actual exported dimensions, relevant settings and print setup. The Export
-dialog lets you replace the suggested name. Long suggestions retain a compact settings identifier so two different
+G-code names describe the design, preset, actual exported dimensions, relevant settings and print setup. Long suggestions retain a compact settings identifier so two different
 designs do not acquire the same shortened name; the G-code header keeps the complete settings. Full-panel names
-include texture repeat and backing spacing, and describe their single-filament output. An SVG sample's name and size
-describe the exported window; use Full panel to export the complete document.
+include texture repeat and backing spacing, and describe their single-filament output. Imported SVG designs also export at the selected document dimensions.
 
 To count designs and settings in a folder of automatically named exports, run:
 
