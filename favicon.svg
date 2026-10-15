@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <title>Filafabric</title>
+  <rect width="32" height="32" rx="7" fill="#171c26"/>
+  <g transform="translate(1 -2.75)" fill="none" stroke-linecap="round" stroke-width="2.8">
+    <path d="M3 22C3 8 12 8 12 22" stroke="#8fa6f5"/>
+    <path d="M10 22C10 8 19 8 19 22" stroke="#4fc3b8"/>
+    <path d="M17 22C17 8 26 8 26 22" stroke="#8fa6f5"/>
+    <path d="M2 26H28" stroke="#8fa6f5" stroke-opacity="0.7"/>
+  </g>
+</svg>
