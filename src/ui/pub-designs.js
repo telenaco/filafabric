@@ -95,7 +95,8 @@ export const PUBLICATION_DESIGNS = [
       },
       COLOUR,
     ],
-    build: (s, boundary) => halftoneLayers(boundary, {
+    build: (s, boundary, { bead } = {}) => halftoneLayers(boundary, {
+      bead,
       spacing: s.spacing,
       angle: s.angle,
       crossing: 90,

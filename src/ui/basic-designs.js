@@ -15,7 +15,7 @@ export const BASIC_DESIGNS = [];
 const ZIGZAG = defineControls({
   ranges: {
     ...SIZE,
-    spacing: { min: 1, max: 10, step: 0.1 },
+    spacing: { min: 0.8, max: 10, step: 0.1 },
     depth: { min: 0.4, max: 8, step: 0.1 },
     wavelength: { min: 2, max: 20, step: 0.5 },
   },

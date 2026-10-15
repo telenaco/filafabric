@@ -78,19 +78,21 @@ export function layered(def) {
     hidden: !!def.hidden,
     // a design that works from the imported drawing says so, and then the studio hands it the drawing and the real size
     usesVector: !!def.usesVector,
+    vectorGuides: !!def.vectorGuides,
     fullSize: !!def.fullSize,
     panel: def.panel,
     svgNote: def.svgNote,
-    generate: (machine, material, s, { outline = null, vector = null } = {}) => {
+    generate: (machine, material, s, { outline = null, vector = null, vectorSize = null, vectorOffset = [0, 0], includeLines = true } = {}) => {
       // a drawing's lines print as many passes as their width asks for, and a pass is as wide as this filament's bead
-      const bead = def.usesVector ? resolveConfig(machine, material, { sample_width: s.width, sample_height: s.height }).t.extrusion_width : undefined;
-      const built = def.build(s, boundaryFor(s.width, s.height, outline), { vector, bead });
+      const bead = resolveConfig(machine, material, { sample_width: s.width, sample_height: s.height }).t.extrusion_width;
+      const built = def.build(s, boundaryFor(s.width, s.height, outline), { vector, bead, vectorSize, vectorOffset, includeLines });
       const result = layeredResult(machine, material, {
         width: s.width,
         height: s.height,
         layers: built.layers,
         colorChange: !!s.colorChange,
-        outline,
+        outline: built.outline ?? outline,
+        inset: def.usesVector ? 0 : undefined,
         extra: { layerCount: built.layers.length, ...(built.extra ?? {}) },
         ramp: def.ramp ?? 1.6,
       });
@@ -254,8 +256,9 @@ MORE_DESIGNS.push(layered({
 }));
 
 const WEB = defineControls({
-  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, spokes: { min: 8, max: 48, step: 4 }, hub: { min: 1, max: 10, step: 0.5 }, tooth: { min: 0, max: 2, step: 0.25 } },
-  defaults: { width: 100, height: 100, spacing: 4, spokes: 24, hub: 3, tooth: 0, colorChange: false },
+  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, spokes: { min: 8, max: 48, step: 4 }, hub: { min: 0, max: 10, step: 0.1 }, tooth: { min: 0, max: 2, step: 0.25 } },
+  defaults: { width: 100, height: 100, spacing: 4, spokes: 24, hub: 0.6, hubStyle: 'solid', tooth: 0, colorChange: false },
+  enums: { hubStyle: ['solid', 'open'] },
   bools: ['colorChange'],
   presets: [
     { id: 'spiderweb', name: 'Spiderweb', blurb: 'Smooth turns, many spokes', patch: { spacing: 4, spokes: 24, tooth: 0 } },
@@ -275,19 +278,20 @@ MORE_DESIGNS.push(layered({
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
+    { kind: 'choice', key: 'hubStyle', title: 'Centre', options: [{ id: 'solid', label: 'Solid', hint: 'A small filled centre that holds the spokes' }, { id: 'open', label: 'Open', hint: 'Leave the centre open' }] },
     {
       kind: 'sliders',
       title: 'Look and feel',
       items: [
         { key: 'spacing', label: 'Turn spacing', help: 'How far the spiral moves outwards each turn.', lo: 'Tight', hi: 'Open', unit: 'mm', edit: true },
         { key: 'spokes', label: 'Spokes', help: 'How many times the zigzag crosses a turn.', lo: 'Few', hi: 'Many', unit: '', edit: true },
-        { key: 'hub', label: 'Hub hole', help: 'Radius left empty in the middle, where spokes would crowd.', lo: 'Small', hi: 'Large', unit: 'mm', edit: true },
+        { key: 'hub', label: 'Centre radius', help: '0.4–1 mm gives a centre 0.8–2 mm across. Solid fills it; Open leaves a hole.', lo: 'Small', hi: 'Large', unit: 'mm', edit: true },
         { key: 'tooth', label: 'Sawtooth', help: 'A small in-and-out wobble of each turn, lined up with the spokes.', lo: 'Smooth', hi: 'Toothed', unit: 'mm', edit: true },
       ],
     },
     COLOUR,
   ],
-  build: (s, boundary) => webLayers(boundary, { spacing: s.spacing, spokes: s.spokes, hub: s.hub, tooth: s.tooth }),
+  build: (s, boundary, { bead } = {}) => webLayers(boundary, { spacing: s.spacing, spokes: s.spokes, hub: s.hub, hubStyle: s.hubStyle, tooth: s.tooth, strandWidth: bead }),
   summary: (result) => `a spiderweb of ${result.report.crossings} crossings`,
 }));
 

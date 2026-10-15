@@ -11,6 +11,7 @@ import { parquetLayers, TILINGS, TILING_IDS } from '../engine/parquet.js';
 import { spirographLayers } from '../engine/spirograph.js';
 import { starLayers, STAR_TILINGS, STAR_TILING_IDS } from '../engine/starlattice.js';
 import { FIELD_IDS, createField } from '../engine/fields.js';
+import { interpretDrawing } from '../engine/drawing.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const PATTERN_SCALE = { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false };
@@ -39,6 +40,8 @@ LINE_DESIGNS.push(layered({
   blurb: 'A square grid that bends round holes and poles',
   about: 'The two layers are the level lines of the two halves of one complex function, so wherever the grid bends they still cross at exactly 90° and the cells stay square, only larger or smaller. Bend it round a buttonhole, round two holes, round two poles like the field of a magnet, or into two families of spirals. Every hole gets a ring round it, a hem, held by the lines that run into it.',
   file: 'conformal',
+  vectorGuides: true,
+  svgNote: 'Red defines the fabric, blue leaves holes, and green closed contours guide the conformal mesh. Stroke width sets wall passes.',
   c: CONFORMAL,
   bundle: 'map',
   controls: [
@@ -57,7 +60,12 @@ LINE_DESIGNS.push(layered({
     },
     COLOUR,
   ],
-  build: (s, boundary) => conformalLayers(boundary, { map: s.map, spacing: s.spacing, feature: s.feature, arms: s.arms, twist: s.twist }),
+  build: (s, boundary, { vector = null, vectorSize = null, vectorOffset = [0, 0], bead = 0.45 } = {}) => {
+    const [width, height] = vectorSize ?? [s.width, s.height];
+    const model = vector ? interpretDrawing(vector, { scaleX: width / vector.width, scaleY: height / vector.height }) : null;
+    const guides = model?.guides.map((g) => ({ ...g, ring: g.ring.map((p) => ({ x: p.x - vectorOffset[0], y: p.y - vectorOffset[1] })) })) ?? [];
+    return conformalLayers(boundary, { map: s.map, spacing: s.spacing, feature: s.feature, arms: s.arms, twist: s.twist, guides, guideHems: false, strandWidth: bead });
+  },
   summary: (result) => `a conformal mesh with ${result.report.crossings} right-angle crossings`,
 }));
 
@@ -98,8 +106,9 @@ LINE_DESIGNS.push(layered({
 }));
 
 const ROSETTE = defineControls({
-  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, lobes: { min: 6, max: 48, step: 1 }, depth: { min: 0.5, max: 3, step: 0.1 }, hub: { min: 0, max: 20, step: 0.5 } },
-  defaults: { width: 100, height: 100, spacing: 4, lobes: 18, depth: 1.4, hub: 4, colorChange: false },
+  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, lobes: { min: 6, max: 48, step: 1 }, depth: { min: 0.5, max: 3, step: 0.1 }, hub: { min: 0, max: 20, step: 0.1 } },
+  defaults: { width: 100, height: 100, spacing: 4, lobes: 18, depth: 1.4, hub: 0.6, hubStyle: 'solid', colorChange: false },
+  enums: { hubStyle: ['solid', 'open'] },
   bools: ['colorChange'],
   presets: [
     { id: 'rosette', name: 'Rosette', blurb: 'Eighteen lobes a turn', patch: { spacing: 4, lobes: 18, depth: 1.4 } },
@@ -119,6 +128,7 @@ LINE_DESIGNS.push(layered({
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
+    { kind: 'choice', key: 'hubStyle', title: 'Centre', options: [{ id: 'solid', label: 'Solid', hint: 'A tiny filled centre, with waves easing out from it' }, { id: 'open', label: 'Open', hint: 'Leave the chosen centre open' }] },
     {
       kind: 'sliders',
       title: 'Look and feel',
@@ -126,12 +136,12 @@ LINE_DESIGNS.push(layered({
         { key: 'spacing', label: 'Turn spacing', help: 'How far each spiral moves out per turn.', lo: 'Dense', hi: 'Airy', unit: 'mm', edit: true },
         { key: 'lobes', label: 'Lobes', help: 'How many times each turn swings in and out.', lo: 'Few', hi: 'Many', unit: '', edit: true },
         { key: 'depth', label: 'Swing', help: 'How far the spiral swings in and out; raised if needed so the layers always cross.', lo: 'Subtle', hi: 'Deep', unit: 'mm', edit: true },
-        { key: 'hub', label: 'Open centre', help: 'Radius of the open middle; widened so no wave gets too short.', lo: 'Small', hi: 'Wide', unit: 'mm', edit: true },
+        { key: 'hub', label: 'Centre radius', help: '0.4–1 mm gives a centre 0.8–2 mm across. Inner waves taper to fit this size.', lo: 'Small', hi: 'Wide', unit: 'mm', edit: true },
       ],
     },
     COLOUR,
   ],
-  build: (s, boundary) => rosetteLayers(boundary, { spacing: s.spacing, lobes: s.lobes, depth: s.depth, hub: s.hub }),
+  build: (s, boundary, { bead } = {}) => rosetteLayers(boundary, { spacing: s.spacing, lobes: s.lobes, depth: s.depth, hub: s.hub, hubStyle: s.hubStyle, strandWidth: bead }),
   summary: (result) => `a rosette of ${Math.round(result.turns)} turns and ${result.report.crossings} crossings`,
 }));
 
@@ -262,8 +272,9 @@ LINE_DESIGNS.push(layered({
 }));
 
 const SPIRO = defineControls({
-  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, loop: { min: 0.6, max: 2.5, step: 0.1 }, hub: { min: 0, max: 15, step: 0.5 } },
-  defaults: { width: 100, height: 100, spacing: 4, loop: 1.5, hub: 3, colorChange: false },
+  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, loop: { min: 0.6, max: 2.5, step: 0.1 }, hub: { min: 0, max: 15, step: 0.1 } },
+  defaults: { width: 100, height: 100, spacing: 4, loop: 1.5, hub: 0.6, hubStyle: 'solid', colorChange: false },
+  enums: { hubStyle: ['solid', 'open'] },
   bools: ['colorChange'],
   presets: [
     { id: 'loops', name: 'Loops', blurb: 'Rings of small curls', patch: { spacing: 4, loop: 1.5 } },
@@ -284,18 +295,19 @@ LINE_DESIGNS.push(layered({
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
+    { kind: 'choice', key: 'hubStyle', title: 'Centre', options: [{ id: 'solid', label: 'Solid', hint: 'A tiny filled centre connected to the inner ring' }, { id: 'open', label: 'Open', hint: 'Leave the chosen centre open' }] },
     {
       kind: 'sliders',
       title: 'Look and feel',
       items: [
         { key: 'spacing', label: 'Ring spacing', help: 'Distance between neighbouring rings of one layer.', lo: 'Dense', hi: 'Airy', unit: 'mm', edit: true },
         { key: 'loop', label: 'Curl', help: 'Below 1 the rings wave; above 1 every swing curls into a loop, larger the higher it goes.', lo: 'Waves', hi: 'Big curls', unit: '', edit: true },
-        { key: 'hub', label: 'Open centre', help: 'Radius of the open middle; widened if the first ring would be too small.', lo: 'Small', hi: 'Wide', unit: 'mm', edit: true },
+        { key: 'hub', label: 'Centre radius', help: '0.4–1 mm gives a centre 0.8–2 mm across. Rings start at this size.', lo: 'Small', hi: 'Wide', unit: 'mm', edit: true },
       ],
     },
     COLOUR,
   ],
-  build: (s, boundary) => spirographLayers(boundary, { spacing: s.spacing, loop: s.loop, hub: s.hub }),
+  build: (s, boundary, { bead } = {}) => spirographLayers(boundary, { spacing: s.spacing, loop: s.loop, hub: s.hub, hubStyle: s.hubStyle, strandWidth: bead }),
   summary: (result) => `${result.rings} rings of curls with ${result.report.crossings} crossings`,
 }));
 

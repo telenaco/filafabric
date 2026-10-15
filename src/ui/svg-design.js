@@ -95,7 +95,7 @@ export const SVG_DESIGNS = [
     c: SVGDESIGN,
     usesVector: true,
     fullSize: true,
-    panel: false,
+    panel: true,
     svgNote: 'Bring a drawing: red closed shapes are filled, blue ones are left empty, and lines print as drawn.',
     controls: [
       { kind: 'presets', title: 'Start from' },
@@ -165,7 +165,7 @@ export const SVG_DESIGNS = [
       },
       { kind: 'switch', key: 'colorChange', label: 'Two colours', help: 'Pause after the drawing so you can load a second filament (M600) for the backing.' },
     ],
-    build: (s, boundary, { vector = null, bead } = {}) => svgDesignLayers(boundary, s, vector, { bead }),
+    build: (s, boundary, options = {}) => svgDesignLayers(boundary, s, options.vector, options),
     verdict: (result) => buildLayeredVerdict(result),
     figure: (result) => ({ value: result.report.perCm2.toFixed(1), unit: 'per cm²', label: 'Crossings' }),
     summary: (result) => {
