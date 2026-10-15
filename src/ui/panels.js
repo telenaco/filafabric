@@ -222,6 +222,68 @@ function drawFieldThumb(canvas, field) {
   }
 }
 
+/* ---------- a long list of options behind one line ---------- */
+
+/** A list with more options than this sits behind one line that names the chosen option. */
+export const FOLD_AFTER = 4;
+
+const CHEVRON = '<svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l5 5 5-5"/></svg>';
+
+/**
+ * Folds a grid of option buttons (the chosen one has aria-pressed) behind a single line showing the chosen option's
+ * picture and name. Choosing an option closes it again, so a long list never takes the panel's room.
+ * The grid is moved into the fold, wherever it was.
+ */
+export class OptionFold extends Control {
+  constructor(host, grid, { id = 'options', none = 'Custom' } = {}) {
+    super(host);
+    this.grid = grid;
+    this.none = none;
+    if (!grid.id) grid.id = `${id}-options`;
+    this.picture = el('span', { class: 'fold-picture', 'aria-hidden': 'true' });
+    this.name = el('span', { class: 'disc-title' });
+    this.sub = el('span', { class: 'disc-sub' });
+    this.button = el('button', { type: 'button', class: 'option-fold-button', 'aria-expanded': 'false', 'aria-controls': grid.id },
+      this.picture, el('span', { class: 'disc-text' }, this.name, this.sub));
+    this.button.insertAdjacentHTML('beforeend', CHEVRON);
+    this.node = el('div', { class: 'option-fold' }, this.button);
+    if (grid.parentNode) grid.parentNode.insertBefore(this.node, grid);
+    this.node.append(grid);
+    this.setOpen(false);
+    this.button.addEventListener('click', () => this.setOpen(this.grid.hidden));
+    grid.addEventListener('click', (e) => { if (e.target.closest('button')) this.setOpen(false); });
+    this.update();
+  }
+
+  setOpen(open) {
+    this.grid.hidden = !open;
+    this.button.setAttribute('aria-expanded', String(open));
+  }
+
+  update() {
+    const buttons = [...this.grid.querySelectorAll('button')];
+    const chosen = buttons.find((b) => b.getAttribute('aria-pressed') === 'true');
+    const labels = chosen ? [...chosen.children].filter((c) => c.tagName === 'SPAN' && !c.classList.contains('pattern-thumb')) : [];
+    this.name.textContent = chosen ? (labels.at(-1)?.textContent ?? chosen.textContent).trim() : this.none;
+    this.sub.textContent = `${buttons.length} options`;
+    this.button.title = chosen?.title ?? '';
+    this.picture.replaceChildren();
+    const pic = chosen?.querySelector('svg, canvas, .pattern-thumb');
+    if (pic) {
+      let copy;
+      if (pic.tagName === 'CANVAS') {
+        copy = el('canvas', { class: 'pattern-thumb', width: pic.width, height: pic.height });
+        copy.getContext('2d').drawImage(pic, 0, 0);
+      } else copy = pic.cloneNode(true);
+      this.picture.append(copy);
+    }
+  }
+
+  redraw() {
+    this.update();
+  }
+}
+
 /** The grid of pattern fields, and beside it the pattern-size slider (shown only while a pattern is chosen). */
 export class PatternPicker extends Control {
   /** @param scale the slider description of the pattern size, or null */
@@ -242,16 +304,19 @@ export class PatternPicker extends Control {
     this.scaleBox = el('div', { id: `${designId}-pattern-scale`, class: 'pattern-scale' });
     this.scale = scale ? new SliderControl(host, designId, scale) : null;
     if (this.scale) this.scaleBox.append(this.scale.node);
-    this.node = el('div', { class: 'pattern-picker' }, this.grid, this.scaleBox);
+    this.fold = patterns.length > FOLD_AFTER ? new OptionFold(host, this.grid, { id: `${designId}-${key}`, none: 'Plain' }) : null;
+    this.node = el('div', { class: 'pattern-picker' }, this.fold ? this.fold.node : this.grid, this.scaleBox);
   }
 
   redraw() {
     for (const { btn, field } of this.buttons) drawFieldThumb(btn.querySelector('canvas'), field);
+    this.fold?.update();
   }
 
   update() {
     const s = this.host.settings(this.designId);
     for (const { btn, field } of this.buttons) btn.setAttribute('aria-pressed', String(String(s[this.key]) === field));
+    this.fold?.update();
     this.scaleBox.hidden = !s.pattern || s.pattern === 'none';
     this.scale?.update();
   }
@@ -320,11 +385,14 @@ class OptionSection extends Section {
       this.grid.append(btn);
       return { btn, opt };
     });
-    return [this.hint(), this.grid];
+    // a long list is kept behind one line that names the chosen option
+    this.fold = this.buttons.length > FOLD_AFTER ? new OptionFold(this.host, this.grid, { id: this.titleId }) : null;
+    return [this.hint(), this.fold ? this.fold.node : this.grid];
   }
 
   refresh() {
     for (const { btn, opt } of this.buttons) btn.setAttribute('aria-pressed', String(opt.pressed()));
+    this.fold?.update();
   }
 }
 
@@ -467,22 +535,58 @@ export class DesignPanel extends Control {
 }
 
 /**
- * The setup every design shares: how thick each layer is, and how many times the pattern is printed on top of itself.
- * One card for the whole studio, so a change is made once. `items` are slider descriptions bound to the host's
- * 'print' binding.
+ * The layer setup every design shares, kept in the printer setup: how thick each layer is (only the thicknesses the
+ * nozzle can lay down are offered) and how many times the pattern is printed on top of itself. One card for the whole
+ * studio, so a change is made once. The host's 'print' binding gives { get, set, range, readout, options(), note() }.
+ * @param defs { thickness: { label, help }, layers: a slider description }
  */
 export class PrintSetupCard extends Control {
-  constructor(host, items) {
+  constructor(host, { thickness, layers }) {
     super(host);
-    this.sliders = items.map((def) => new SliderControl(host, 'print', def));
-    this.node = el('section', { class: 'group print-setup', 'aria-labelledby': 'print-setup-title' },
-      el('h2', { class: 'eyebrow', id: 'print-setup-title', text: 'Layers' }),
-      el('p', { class: 'group-hint', text: 'The same for every design: how thick each layer is, and how many times the pattern is printed on top of itself.' }),
-      el('div', { class: 'controls' }, ...this.sliders.map((s) => s.node)));
+    this.layers = new SliderControl(host, 'print', layers);
+    this.readout = el('span', { class: 'ctl-readout', id: 'layer-thickness-value' });
+    this.note = el('p', { class: 'ctl-help', id: 'layer-thickness-note' });
+    this.grid = el('div', { class: 'patterns layer-choices', id: 'layer-thickness-choices', role: 'group', 'aria-labelledby': 'layer-thickness-label' });
+    this.built = '';
+    this.fold = null;
+    this.node = el('section', { class: 'print-setup', 'aria-labelledby': 'print-setup-title' },
+      el('h3', { id: 'print-setup-title', text: 'Layers' }),
+      el('div', { class: 'ctl' },
+        el('div', { class: 'ctl-top' }, el('span', { class: 'ctl-label', id: 'layer-thickness-label', text: thickness.label }), this.readout),
+        el('p', { class: 'ctl-help', text: thickness.help }),
+        this.grid,
+        this.note),
+      this.layers.node);
+  }
+
+  get binding() {
+    return this.host.binding('print');
+  }
+
+  build(options) {
+    const { binding } = this;
+    this.grid.replaceChildren(...options.map((v) => {
+      const btn = el('button', { type: 'button', class: 'pattern', 'data-layer-height': String(v), 'aria-pressed': 'false', text: `${v} mm` });
+      btn.addEventListener('click', () => { binding.set('layerHeight', v); this.host.nudge(); this.host.commit(); });
+      return btn;
+    }));
+    this.built = options.join(',');
+    if (!this.fold && options.length > FOLD_AFTER) this.fold = new OptionFold(this.host, this.grid, { id: 'layer-thickness' });
   }
 
   update() {
-    for (const s of this.sliders) s.update();
+    const { binding } = this;
+    const options = binding.options();
+    if (options.join(',') !== this.built) this.build(options);
+    for (const btn of this.grid.children) btn.setAttribute('aria-pressed', String(Number(btn.dataset.layerHeight) === binding.get('layerHeight')));
+    this.readout.textContent = binding.readout('layerHeight');
+    this.note.textContent = binding.note();
+    this.fold?.update();
+    this.layers.update();
+  }
+
+  redraw() {
+    this.fold?.update();
   }
 }
 

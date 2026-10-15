@@ -60,10 +60,19 @@ length you set (the default), the fixed lines of a gyroid slice, or straight lin
 curve; *Backing layers: two* adds a second backing turned across the first, a third layer. Layer thickness is the
 printer's *layer height* in the advanced settings.
 
-**Layers.** One card below every design sets the *layer thickness* (the printer's own is 0.2 mm; it reaches every design
-through the material, so each design lays its first layer that thick) and the *number of layers*: how many times the whole
-pattern is printed on top of itself, each copy one layer above the one before and lifting over what it crosses. Designs of
-raised loops keep their own height and say so.
+**Layers.** The printer setup (the printer chip in the header) sets the *layer thickness* for every design and the *number
+of layers*. Thickness is limited to what the nozzle can lay down: from a quarter to five eighths of its diameter in steps
+of 0.05 mm (`layerHeightOptions` in `src/engine/params.js`), so a 0.4 mm nozzle offers 0.10, 0.15, 0.20 and 0.25 mm. A
+printer profile may say its `nozzle_diameter` (an imported slicer printer does); otherwise it is 0.4 mm. The thickness
+reaches every design through the material, so each design lays its first layer that thick. The number of layers is how
+many times the whole pattern is printed on top of itself, each copy one layer above the one before and lifting over what
+it crosses. Designs of raised loops keep their own height and say so.
+
+**Long lists fold.** Any picker with more than four options (`FOLD_AFTER` in `src/ui/panels.js`) is one line showing the
+chosen option's picture and name, which opens to the whole list and closes again when one is chosen. Options are listed
+from the plainest to the most involved: strand shapes start with the sine wave, patterns with the one that leaves every
+wave the same. The Squiggle & Gyroid panel follows the same order and opens symmetric and undeformed (crossed, sine wave,
+even pattern): size, structure, look and feel, then strand shape, then pattern.
 
 **Typed values.** A number typed past a slider's range, or a size past the usual range, is used as typed and the panel
 warns; it never refuses. Geometry problems (lines that overlap, a pile that leaves its outline) show *Check the geometry*
@@ -91,7 +100,9 @@ extrusion width, rounded, at least one). The file is read by `src/engine/svg-par
 What tells the flat line cards apart: **Crosshatch & isogrid** lays straight lines at chosen angles in each layer, so
 the angle is the design; **Dip weave** is a straight warp with a weft that dips to the bed between every warp, the
 over-and-under look in one layer; **Halftone net** is the same crossed net with its line thickness (flow) carrying a
-pattern; **Weave** goes over and under in two printed levels.
+pattern, and each of its two layers is printed as one continuous line (the lines stay inside the outline, so nothing
+is cut into pieces, whatever the line shape and grid angle; only an outline with a dent in it needs a few more);
+**Weave** goes over and under in two printed levels.
 
 ## The publications
 

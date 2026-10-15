@@ -308,6 +308,24 @@ input[role="switch"]::before {
 input[role="switch"]:checked { background: var(--accent); }
 input[role="switch"]:checked::before { transform: translateX(16px); }
 
+/* a long list of options behind one line (src/ui/panels.js OptionFold) */
+.option-fold-button {
+  width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 12px; text-align: left;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink);
+}
+.option-fold-button:hover { border-color: var(--line-2); }
+.option-fold-button svg:last-child { margin-left: auto; flex: none; transition: transform 0.15s; }
+.option-fold-button[aria-expanded="true"] svg:last-child { transform: rotate(180deg); }
+.option-fold-button .disc-text { min-width: 0; }
+.option-fold > .patterns { margin-top: 8px; }
+.fold-picture { display: flex; align-items: center; justify-content: center; width: 44px; height: 36px; flex: none; }
+.fold-picture:empty { display: none; }
+.fold-picture .pattern-thumb { width: 36px; height: 36px; }
+.fold-picture .shape-thumb { max-width: 44px; height: auto; }
+.layer-choices { grid-template-columns: repeat(4, 1fr); margin-top: 6px; }
+.layer-choices .pattern { min-height: 44px; padding: 6px 4px; }
+.print-setup h3 { margin: 16px 0 6px; font-size: 16px; }
+
 /* advanced */
 .disclosure {
   width: 100%; min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px;

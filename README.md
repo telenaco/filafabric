@@ -70,8 +70,12 @@ The preview opens on the strands at their true thickness; drag to turn, scroll t
 and press play to watch the print order. The **View** menu adds the nozzle path, travel moves, lifts, exaggerated
 height and the red tight-spot marks (the clearance model's moves that come too close to printed strands; "Show
 where" in the check turns them on too). For the loop pile, everything else lives under Advanced settings (38
-settings in groups that show what you changed). The printer chip in the header opens the printer setup; the
-**···** menu has Getting started, Save/Open settings file and Reset this design. Undo/redo and **Share** (a link that
+settings in groups that show what you changed). The page always opens on the Zigzag mesh (what was set in the other
+designs is kept for when you choose them; a shared link opens the design it was made from). The printer chip in the
+header opens the printer setup: printer, filament, the **layer thickness** (only what the nozzle can lay down: a 0.4 mm
+nozzle prints 0.10, 0.15, 0.20 and 0.25 mm) and the **number of layers**. A list of more than four options (patterns,
+strand shapes, "Start from") sits behind one line that names the chosen option and opens to show them all; choosing
+one closes it again. The **···** menu has Getting started, Save/Open settings file and Reset this design. Undo/redo and **Share** (a link that
 reopens the design and its settings) work for every design. Every exported file records its full parameter set
 and seed in comment lines.
 

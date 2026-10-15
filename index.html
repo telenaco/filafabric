@@ -198,15 +198,20 @@
           <p class="group-hint after" id="sq-mode-note"></p>
         </section>
 
+        <section class="group" aria-labelledby="sq-look-title">
+          <h2 class="eyebrow" id="sq-look-title">Look and feel</h2>
+          <div id="sq-sliders" class="controls"></div>
+        </section>
+
         <section class="group" aria-labelledby="sq-shape-title">
           <h2 class="eyebrow" id="sq-shape-title">Strand shape</h2>
-          <p class="group-hint">How each line wanders. Looped circles over itself, and lifts over its own earlier pass.</p>
+          <p class="group-hint">How each line wanders, plainest first. Looped circles over itself, and lifts over its own earlier pass.</p>
           <div class="patterns" role="group" aria-labelledby="sq-shape-title" id="sq-shapes"></div>
         </section>
 
         <section class="group" aria-labelledby="sq-pattern-title">
           <h2 class="eyebrow" id="sq-pattern-title">Pattern</h2>
-          <p class="group-hint" id="sq-pattern-hint">Darker parts of the pattern get deeper, tighter waves.</p>
+          <p class="group-hint" id="sq-pattern-hint">Every wave is the same, so the fabric is symmetric. Choose a pattern to make some parts deeper.</p>
           <div class="patterns" role="group" aria-labelledby="sq-pattern-title" id="sq-patterns"></div>
           <div id="sq-image-box" class="image-box" hidden>
             <div id="sq-img-info" class="img-info" hidden>
@@ -227,11 +232,6 @@
               <input type="file" id="sq-file-input" accept="image/*" class="visually-hidden">
             </label>
           </div>
-        </section>
-
-        <section class="group" aria-labelledby="sq-look-title">
-          <h2 class="eyebrow" id="sq-look-title">Look and feel</h2>
-          <div id="sq-sliders" class="controls"></div>
         </section>
 
         <section class="group" aria-labelledby="sq-colour-title">
@@ -262,10 +262,11 @@
 <dialog id="printer-dialog" aria-labelledby="printer-dialog-title">
   <form method="dialog">
     <h2 id="printer-dialog-title">Printer setup</h2>
-    <p class="muted">A setup holds the printer's limits and the filament's behaviour, so there is nothing to tune here.</p>
+    <p class="muted">A setup holds the printer's limits, the filament's behaviour and how the layers are printed.</p>
     <label class="field-row stacked" for="sel-machine"><span>Printer</span><select id="sel-machine"></select></label>
     <label class="field-row stacked" for="sel-material"><span>Filament</span><select id="sel-material"></select></label>
     <p class="muted small" id="dialog-note"></p>
+    <div id="print-setup"></div>
     <div class="profile-add">
       <label class="btn" for="profile-file">Add a printer or filament file…</label>
       <input type="file" id="profile-file" class="visually-hidden" accept=".ini,.json,.gcode,.cfg,.txt" multiple>

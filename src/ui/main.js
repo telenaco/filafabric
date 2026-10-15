@@ -10,7 +10,8 @@ import { buildVerdict, buildSquiggleVerdict, formatMinutes } from './verdict.js'
 import { stateToHash, hashToState, sanitizeState, PRINT_DEFAULTS } from './share.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
 import { $, $$, el, icon, ICONS } from './dom.js';
-import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard } from './panels.js';
+import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, OptionFold } from './panels.js';
+import { layerHeightOptions } from '../engine/params.js';
 import { TooltipLayer } from './tooltip.js';
 import { ProfileStore } from './profile-store.js';
 import { DESIGNS, ESSENTIALS, designById, isReady, baseDesignSettings } from './designs.js';
@@ -44,12 +45,13 @@ const SQ_SLIDERS = [
   { key: 'wavelength', label: 'Wave length', help: 'Length of one full wave.', lo: 'Tight', hi: 'Stretched', unit: 'mm', edit: true },
 ];
 const PATTERN_SCALE = { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false };
+// plainest first: the first one leaves every wave the same, the last ones need a picture
 const PATTERNS = [
-  { id: 'centerSpot', label: 'Centre spot' },
+  { id: 'uniform', label: 'Even' },
   { id: 'gradientX', label: 'Fade across' },
   { id: 'gradientY', label: 'Fade up' },
+  { id: 'centerSpot', label: 'Centre spot' },
   { id: 'waves', label: 'Ripples' },
-  { id: 'uniform', label: 'Even' },
   ...FIELD_IDS.map((id) => ({ id, label: FIELDS[id].label })),
   { id: 'image', label: 'Your picture' },
 ];
@@ -249,7 +251,8 @@ const grams = (g) => (g < 1 ? g.toFixed(2) : g.toFixed(1));
 
 /* ---------- history (undo / redo) ---------- */
 function snapshotKey() {
-  return JSON.stringify({ d: state.design, m: state.machine, t: state.material, p: state.primary, a: state.advanced, s: state.squiggle, g: state.designs, o: state.outline, v: state.vector });
+  // the layer setup is part of what is saved and undone, like everything else that changes the print
+  return JSON.stringify({ d: state.design, m: state.machine, t: state.material, p: state.primary, a: state.advanced, s: state.squiggle, g: state.designs, o: state.outline, v: state.vector, y: state.print });
 }
 
 function commit() {
@@ -283,6 +286,7 @@ function loadState(data) {
   state.outline = clean.outline;
   state.vector = clean.vector;
   state.print = clean.print;
+  normalisePrint();
   if (typeof data?.name === 'string') state.docName = data.name.slice(0, 60);
   if (designChanged) resetRoles();
   // a picture never travels in a link or a file, so without one loaded the pattern falls back
@@ -322,18 +326,38 @@ function renderHistoryButtons() {
 /** Every control of every panel, so they can all redraw themselves from the current settings. */
 const controls = [];
 
-const PRINT_RANGES = { layerHeight: { min: 0.1, max: 0.4, step: 0.05 }, layers: { min: 1, max: 10, step: 1 } };
-const PRINT_SLIDERS = [
-  { key: 'layerHeight', label: 'Layer thickness', help: 'How thick every layer is. The printer\'s own is 0.2 mm; thicker prints faster, but strands lie over each other less cleanly.', lo: 'Fine', hi: 'Thick', unit: 'mm', edit: true },
-  { key: 'layers', label: 'Number of layers', help: 'How many times the whole pattern is printed on top of itself: 1 is the pattern as designed, 3 is a fabric three times as thick.', lo: 'One', hi: 'Many', unit: '', edit: true },
-];
+const PRINT_RANGES = { layers: { min: 1, max: 10, step: 1 } };
+const PRINT_THICKNESS = { label: 'Layer thickness', help: 'How thick every layer is. Thinner prints cleaner and slower; thicker is quick, but strands lie over each other less cleanly.' };
+const PRINT_LAYERS = { key: 'layers', label: 'Number of layers', help: 'How many times the whole pattern is printed on top of itself: 1 is the pattern as designed, 3 is a fabric three times as thick.', lo: 'One', hi: 'Many', unit: '', edit: true };
+
+/** The nozzle of the chosen printer (0.4 mm unless its profile says otherwise). */
+const nozzleDiameter = () => state.machines.get(state.machine)?.nozzle_diameter ?? 0.4;
+
+/** The layer thicknesses that nozzle can lay down. */
+const layerChoices = () => layerHeightOptions(nozzleDiameter());
+
+/** The nearest thickness the nozzle can print: a value from a link or a saved file, or left over from another nozzle. */
+function nearestLayerHeight(h) {
+  const list = layerChoices();
+  return list.reduce((best, v) => (Math.abs(v - h) < Math.abs(best - h) ? v : best), list[0]);
+}
+
+function normalisePrint() {
+  const h = nearestLayerHeight(state.print.layerHeight);
+  if (h !== state.print.layerHeight) state.print.layerHeight = h;
+}
+
 const PRINT_BINDING = {
-  sliders: PRINT_SLIDERS,
   get: (key) => state.print[key],
   set: (key, value) => { state.print[key] = key === 'layers' ? Math.max(1, Math.round(value)) : value; },
   range: (key) => PRINT_RANGES[key],
+  options: () => layerChoices(),
+  note: () => {
+    const list = layerChoices();
+    return `A ${nozzleDiameter()} mm nozzle prints layers from ${list[0]} to ${list.at(-1)} mm.`;
+  },
   readout: (key) => {
-    if (key === 'layerHeight') return `${Math.round(state.print.layerHeight * 1000) / 1000} mm${state.print.layerHeight === PRINT_DEFAULTS.layerHeight ? ' (the printer\'s own)' : ''}`;
+    if (key === 'layerHeight') return `${Math.round(state.print.layerHeight * 1000) / 1000} mm${state.print.layerHeight === PRINT_DEFAULTS.layerHeight ? ' (the usual)' : ''}`;
     const n = state.print.layers;
     const kept = n > 1 && state.result?.placements?.length && !state.result.stack;
     return `${n} ${n === 1 ? 'layer' : 'layers'}${kept ? ' (this design keeps its own height)' : ''}`;
@@ -379,9 +403,9 @@ function buildPanels() {
   const picker = new PatternPicker(host, 'loop-pile', 'pattern', ['none', ...FIELD_IDS], 'lp-pattern-title', { scale: PATTERN_SCALE });
   $('#lp-pattern').replaceChildren(picker.node);
   controls.push(picker);
-  // below whichever design is showing: the layers every design shares
-  const layersCard = new PrintSetupCard(host, PRINT_SLIDERS);
-  $('#settings-body').append(layersCard.node);
+  // the layers every design shares live in the printer setup
+  const layersCard = new PrintSetupCard(host, { thickness: PRINT_THICKNESS, layers: PRINT_LAYERS });
+  $('#print-setup').replaceChildren(layersCard.node);
   controls.push(layersCard);
 }
 
@@ -516,6 +540,7 @@ function parallelDepth() {
 /** The chosen material with the chosen layer thickness: every design reads its layer height from the config it makes. */
 function printMaterial() {
   const base = state.materials.get(state.material);
+  normalisePrint();
   if (!base || state.print.layerHeight === PRINT_DEFAULTS.layerHeight) return base;
   return { ...base, print_defaults: { ...(base.print_defaults ?? {}), layer_height: state.print.layerHeight } };
 }
@@ -830,9 +855,11 @@ function renderSquiggleChoices() {
   $('#sq-mode-note').textContent = floor === null
     ? 'Layer 1 runs in columns and layer 2 in rows, so the two cross everywhere.'
     : `Layer 2 runs halfway between the layer 1 lines, in opposite phase. Waves stay at least ${floor.toFixed(2)} mm deep so every line crosses the lines on both sides.`;
-  $('#sq-pattern-hint').textContent = floor === null
-    ? 'Darker parts of the pattern get deeper, tighter waves.'
-    : 'Darker parts of the pattern get deeper waves.';
+  $('#sq-pattern-hint').textContent = s.pattern === 'uniform'
+    ? 'Every wave is the same, so the fabric is symmetric. Choose a pattern to make some parts deeper.'
+    : floor === null
+      ? 'Darker parts of the pattern get deeper, tighter waves.'
+      : 'Darker parts of the pattern get deeper waves.';
   for (const btn of $$('[data-sqmode]')) btn.setAttribute('aria-pressed', String(btn.dataset.sqmode === s.mode));
   for (const btn of $$('[data-sqshape]')) btn.setAttribute('aria-pressed', String(btn.dataset.sqshape === s.shape));
   for (const btn of $$('[data-pattern]')) btn.setAttribute('aria-pressed', String(btn.dataset.pattern === s.pattern));
@@ -849,6 +876,7 @@ function renderSquiggleChoices() {
     $('#sq-img-size').textContent = `${state.image.px[0]} × ${state.image.px[1]} px${matched ? ', the swatch has its shape' : ', stretched to fill the swatch'}`;
     $('#sq-img-match').hidden = matched;
   }
+  for (const fold of squiggleFolds.values()) fold.update();
 }
 
 function renderAdvancedSummary() {
@@ -1018,6 +1046,15 @@ function drawPatternThumb(canvas, sampler) {
   }
 }
 
+/** The squiggle panel's long lists sit behind one line that names the chosen option, like every other design's. */
+const squiggleFolds = new Map();
+function foldSquiggle(id) {
+  if (squiggleFolds.has(id)) return;
+  const fold = new OptionFold(host, $(`#${id}`), { id });
+  squiggleFolds.set(id, fold);
+  controls.push(fold);
+}
+
 /** The strand-shape picker of the squiggle panel: the same shapes the Coil card offers. */
 function buildSquiggleShapes() {
   $('#sq-shapes').replaceChildren(...SHAPE_IDS.map((shape) => {
@@ -1031,6 +1068,7 @@ function buildSquiggleShapes() {
     });
     return btn;
   }));
+  foldSquiggle('sq-shapes');
 }
 
 function buildPatterns() {
@@ -1064,6 +1102,7 @@ function buildPatterns() {
     });
     return btn;
   }));
+  foldSquiggle('sq-patterns');
   renderSquiggleChoices();
 }
 
@@ -1114,6 +1153,8 @@ function renderProfileList() {
         profiles.remove(kind, profile.id);
         if (!state.machines.has(state.machine)) state.machine = [...state.machines.keys()][0];
         if (!state.materials.has(state.material)) state.material = [...state.materials.keys()][0];
+        normalisePrint();
+        renderControls();
         fillDialogSelects();
         renderPrinter();
         schedule();
@@ -1547,7 +1588,7 @@ function bindStatic() {
 
   const dialog = $('#printer-dialog');
   $('#btn-printer').addEventListener('click', () => { fillDialogSelects(); dialog.showModal(); });
-  $('#sel-machine').addEventListener('change', (e) => { state.machine = e.target.value; updateDialogNote(); schedule(); commit(); });
+  $('#sel-machine').addEventListener('change', (e) => { state.machine = e.target.value; normalisePrint(); renderControls(); updateDialogNote(); schedule(); commit(); });
   $('#sel-material').addEventListener('change', (e) => { state.material = e.target.value; updateDialogNote(); schedule(); commit(); });
   // a printer or filament profile as the slicers export it: PrusaSlicer .ini or sliced .gcode, Bambu Studio .json
   $('#profile-file').addEventListener('change', async (e) => {
@@ -1562,6 +1603,8 @@ function bindStatic() {
       }
     }
     e.target.value = '';
+    normalisePrint();
+    renderControls();
     fillDialogSelects();
     renderPrinter();
     schedule();
@@ -1592,6 +1635,9 @@ async function init() {
   if (!initial) {
     try { initial = JSON.parse(store.get(STORAGE_KEY) ?? 'null'); } catch { initial = null; }
   }
+  // a page that is opened (not a shared link) lands on the zigzag mesh, whatever was open last; what was set in the
+  // other designs is kept for when they are chosen
+  if (initial && !fromLink) initial.design = 'loop-pile';
   let pictureDropped = false;
   if (initial && !fromLink && initial.sampleDefaults !== 100) {
     for (const settings of [initial.squiggle, ...Object.values(initial.designs ?? {})]) if (settings && settings.width === settings.height && [50, 200].includes(settings.width)) { settings.width = 100; settings.height = 100; }
