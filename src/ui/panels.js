@@ -119,6 +119,9 @@ export class SliderControl extends Control {
 
   update() {
     const { def, binding } = this;
+    const available = binding.available?.(def.key) !== false;
+    this.input.disabled = !available;
+    this.readout.disabled = !available;
     if (document.activeElement !== this.input) this.input.value = String(binding.get(def.key));
     const text = binding.readout(def.key);
     this.input.setAttribute('aria-valuetext', text);
@@ -683,7 +686,7 @@ export class DesignPanel extends Control {
 
 /**
  * The layer setup every design shares, kept in the printer setup: how thick each layer is (only the thicknesses the
- * nozzle can lay down are offered) and how many times the pattern is printed on top of itself. One card for the whole
+ * nozzle can lay down are offered) and how many individual passes to add to the original design. One card for the whole
  * studio, so a change is made once. The host's 'print' binding gives { get, set, range, readout, options(), note() }.
  * @param defs { thickness: { label, help }, layers: a slider description }
  */

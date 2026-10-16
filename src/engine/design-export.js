@@ -6,11 +6,12 @@ import { resolveConfig, ConfigError } from './params.js';
 import { bedFitErrors, PreflightError } from './gcode.js';
 import { applySvgGuides } from './svg-guides.js';
 import { composeSvgLines } from './svg-lines.js';
-import { stackLayers } from './stack.js';
+import { stackLayers, addExtraLayers, nativeLayerInfo } from './stack.js';
 import { applyBrim } from './brim.js';
+import { rotateDesignInput } from './rotate-design.js';
 
 /** Generate the selected design once at its complete size, independently of the preview window. */
-export function generateDesignExport(input) {
+export function generateDesignBase(input) {
   const { machine, material, design, settings = {}, width, height, outline = null, vector = null } = input;
   const mod = designById(design);
   if (!mod || mod.status !== 'ready') throw new ConfigError(['Choose a supported fabric design.']);
@@ -33,20 +34,38 @@ export function generateDesignExport(input) {
     result = mod.generate(machine, material, { ...mod.defaults(), ...settings, width, height }, {
       outline: mod.outline === false ? null : outline,
       vector: mod.usesVector || mod.vectorGuides ? vector : null,
-      vectorSize: [width, height],
+      vectorSize: input.vectorSize ?? [width, height],
+      vectorOffset: input.vectorOffset ?? [0, 0],
       includeLines: !vector,
     });
   }
   if (vector) {
-    result = applySvgGuides(result, vector, { fullWidth: width, fullHeight: height, outline: mod.outline === false ? outline : null });
-    result = composeSvgLines(result, vector, { fullWidth: width, fullHeight: height, clipLines: !input.shapeOutline && !result.guideCount });
+    const [fullWidth, fullHeight] = input.vectorSize ?? [width, height], [offsetX, offsetY] = input.vectorOffset ?? [0, 0];
+    const guideVector = offsetX || offsetY ? { ...vector, paths: vector.paths.map((path) => path.map((p) => ({ ...p, x: p.x - offsetX * vector.width / fullWidth, y: p.y - offsetY * vector.height / fullHeight }))) } : vector;
+    result = applySvgGuides(result, guideVector, { fullWidth, fullHeight, outline: mod.outline === false ? outline : null });
+    result = composeSvgLines(result, vector, { fullWidth, fullHeight, offsetX, offsetY, clipLines: !input.shapeOutline && !result.guideCount });
     result.documentSize = [vector.width, vector.height];
   }
-  return applyBrim(stackLayers(result, input.layers ?? 1), { count: input.brim ?? 2 });
+  return result;
+}
+
+export function generateDesignExport(input) {
+  let result = generateDesignBase(input);
+  if (input.extraLayers === undefined && input.layers !== undefined) {
+    // Older programmatic exporters retain their explicitly requested whole-copy behavior.
+    result = stackLayers(result, input.layers);
+  } else {
+    const info = nativeLayerInfo(result);
+    const count = input.legacyCopies ? (info.repeatable && !info.raised ? info.patternLayers * (input.legacyCopies - 1) : 0) : input.extraLayers ?? 0;
+    result = addExtraLayers(result, count, {
+      rotatedResult: () => generateDesignBase(rotateDesignInput(input)), colorChange: !!input.settings?.colorChange,
+    });
+  }
+  return applyBrim(result, { count: input.brim ?? 2 });
 }
 
 /** The UI only needs printable output and summary data; geometry remains inside the worker. */
 export function compactDesignExport(result) {
   const { moveStartSec, ...stats } = result.stats;
-  return { gcode: result.gcode, cfg: result.cfg, stats, moveCount: result.moves.length, fabric: result.fabric, warnings: result.warnings ?? [] };
+  return { gcode: result.gcode, cfg: result.cfg, stats, moveCount: result.moves.length, fabric: result.fabric, warnings: result.warnings ?? [], layerPlan: result.layerPlan };
 }

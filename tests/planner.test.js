@@ -83,6 +83,22 @@ test('nothing to print plans to an empty move list', () => {
   assert.deepEqual(result.moves, []);
 });
 
+test('composed supplied strands retain extrusion classes and flow while checking clearance and retracts', () => {
+  const s = scene({ sample_width: 20, sample_height: 20, retraction_length: 2.5 });
+  const strands = [
+    { id: 'texture', kind: 'supported', pts: [{ x: 5, y: 5, z: 3 }, { x: 10, y: 5, z: 3, cls: 'unsupported', flow: 1.7 }] },
+    { id: 'low', kind: 'base', pts: [{ x: 5, y: 5.2, z: .2 }, { x: 10, y: 5.2, z: .2 }] },
+  ];
+  const planned = plan(s.cfg, null, [], s.boundary, { strands });
+  const texture = planned.moves.find((m) => m.tag === 'texture');
+  assert.equal(texture.cls, 'unsupported');
+  assert.equal(texture.flow, 1.7);
+  assert.ok(planned.violations > 0, 'the supplied geometry still gets nozzle clearance checks');
+  assert.ok(planned.moves.some((m) => !m.extrude && m.z > 3));
+  assert.equal(planned.moves.filter((m) => m.retract === 'retract').length, planned.moves.filter((m) => m.retract === 'unretract').length);
+  assert.equal(strands[0].pts[1].flow, 1.7);
+});
+
 test('HeightMap: add, query and collision model', () => {
   const map = new HeightMap({ minX: 0, minY: 0, maxX: 20, maxY: 20 });
   map.addSegment({ x: 5, y: 5, z: 3 }, { x: 10, y: 5, z: 3 });

@@ -84,6 +84,30 @@ test('Export reuses a matching full-size preview', async () => {
   assert.equal(host.built, undefined);
 });
 
+test('Export records the actual original, extra and total passes in its header and study event', async () => {
+  const host = exportHost({ previewSize: 200 });
+  host.state.print = { layerHeight: 0.2, extraLayers: 1, brim: 2 };
+  host.state.result.layerPlan = { nativeLayers: 2, extraLayers: 1, totalLayers: 3 };
+  await host.run();
+  const line = (await host.saved.blob.text()).split('\n').find((s) => s.startsWith('; studio settings '));
+  const metadata = JSON.parse(line.slice('; studio settings '.length));
+  assert.deepEqual(metadata.print, { layerHeight: 0.2, extraLayers: 1, brim: 2, nativeLayers: 2, totalLayers: 3 });
+  assert.deepEqual(host.recorded.input.layerPlan, host.state.result.layerPlan);
+});
+
+test('raised export headers identify backing reinforcement and one texture copy', async () => {
+  const host = exportHost({ previewSize: 200 });
+  host.state.print = { layerHeight: 0.2, extraLayers: 2, brim: 2 };
+  host.state.result.layerPlan = { mode: 'backing', nativeLayers: null, extraLayers: 2, totalLayers: null, backingLayers: 2, totalBackingLayers: 4 };
+  await host.run();
+  const line = (await host.saved.blob.text()).split('\n').find((s) => s.startsWith('; studio settings '));
+  const metadata = JSON.parse(line.slice('; studio settings '.length));
+  assert.equal(metadata.print.backingLayers, 2);
+  assert.equal(metadata.print.totalBackingLayers, 4);
+  assert.equal(metadata.print.textureCopies, 1);
+  assert.equal(metadata.print.totalLayers, null);
+});
+
 test('Export waits for the current full-size preview instead of saving stale geometry', async () => {
   let complete;
   const promise = new Promise((resolve) => { complete = resolve; });

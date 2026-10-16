@@ -83,7 +83,7 @@ where" in the check turns them on too). For the loop pile, everything else lives
 settings in groups that show what you changed). The page always opens on the Zigzag mesh (what was set in the other
 designs is kept for when you choose them; a shared link opens the design it was made from). The printer chip in the
 header opens the printer setup: printer, filament, the **layer thickness** (only what the nozzle can lay down: a 0.4 mm
-nozzle prints 0.10, 0.15, 0.20 and 0.25 mm) and the **number of layers**. Settings sections start folded under a title
+nozzle prints 0.10, 0.15, 0.20 and 0.25 mm) and **Extra layers**. Settings sections start folded under a title
 and a summary of their current values. Open a section to see its cards or sliders; choosing a card keeps the section
 open. Option and preset pictures use the same line colours as the preview. The **···** menu has Getting started,
 Save/Open settings file, Download error log and Reset this design. Undo/redo and **Share** (a link that
@@ -216,10 +216,20 @@ sit inside the selected outline, including hole edges, so the chosen dimensions 
 to turn it off, or type an exact count up to 50. Short connections join exposed fabric ends where needed; complete
 motifs and native raised paths keep their geometry. Very narrow outline features may accommodate fewer runs.
 
-## Open requests
+## Extra layers
 
-Follow-up: make **Number of layers** understand each design's native structural layer count. It currently counts
-copies of the complete pattern; this brim addition deliberately leaves that behavior unchanged.
+Printer setup shows the original pass count, the extra passes and their total. **0** keeps the original design.
+A one-pass pattern alternates with a regenerated 90° pass that fills the same outline, including rectangular
+pieces and SVG holes. Multi-pass patterns continue their original order: A/B plus one extra becomes A/B/A.
+Added paths follow the actual native heights and lift at crossings to stay bonded. The imported SVG paths and
+brim print once. For raised designs, extra passes reinforce the bottom backing, while the raised texture prints
+once above it with its original height and density. The readout shows backing counts separately. Counts above
+the slider's 0–10 range can be typed, up to 250, subject to the
+normal geometry and move budgets. Old saved whole-copy counts migrate using the selected design's native passes.
+Exported settings and anonymous study records include original, extra and total pass counts. These are logical
+pattern passes: local crossing lifts can make the finished fabric taller than the count times the layer height.
+
+## Open requests
 
 A PrusaSlicer-sliced `.gcode` made with **Filaflex Foamy 95** (not Generic FLEX) on the MK3S would let the Foamy
 values be checked against a real profile; the MK3S machine and Generic FLEX values already come from the sample

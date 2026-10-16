@@ -120,20 +120,19 @@ test('coil settings travel in a link and are sanitised', () => {
   assert.deepEqual(sanitizeState(round, known).designs.coil, s.designs.coil);
 });
 
-test('the layer thickness and number of layers travel in a link and fall back when they make no sense', () => {
-  assert.deepEqual(sanitizeState({ v: 3, print: { layerHeight: 0.3, layers: 4 } }, known).print, { layerHeight: 0.3, layers: 4, brim: 2 });
-  assert.deepEqual(sanitizeState({ v: 3, print: { layerHeight: -1, layers: 0 } }, known).print, { layerHeight: 0.2, layers: 1, brim: 2 });
-  assert.deepEqual(sanitizeState({ v: 3 }, known).print, { layerHeight: 0.2, layers: 1, brim: 2 });
-  assert.equal(sanitizeState({ v: 3, print: { layers: 2.6 } }, known).print.layers, 3);
+test('layer thickness and additional layers use defaults when absent or invalid', () => {
+  assert.deepEqual(sanitizeState({ print: { layerHeight: 0.3, extraLayers: 4 } }, known).print, { layerHeight: 0.3, extraLayers: 4, brim: 2 });
+  assert.deepEqual(sanitizeState({ print: { layerHeight: -1, extraLayers: -1 } }, known).print, { layerHeight: 0.2, extraLayers: 0, brim: 2 });
+  assert.deepEqual(sanitizeState({}, known).print, { layerHeight: 0.2, extraLayers: 0, brim: 2 });
 });
 
-test('brim count survives sharing and saving independently of repeated layers', () => {
+test('brim count survives sharing and saving independently of additional layers', () => {
   for (const brim of [0, 1, 2, 50]) {
-    const state = sanitizeState({ print: { layerHeight: 0.3, layers: 4, brim } }, known);
+    const state = sanitizeState({ print: { layerHeight: 0.3, extraLayers: 4, brim } }, known);
     const saved = sanitizeState(decodeState(encodeState(state)), known);
     const shared = sanitizeState(hashToState(stateToHash(state)), known);
-    assert.deepEqual(saved.print, { layerHeight: 0.3, layers: 4, brim });
-    assert.deepEqual(shared.print, { layerHeight: 0.3, layers: 4, brim });
+    assert.deepEqual(saved.print, { layerHeight: 0.3, extraLayers: 4, brim });
+    assert.deepEqual(shared.print, { layerHeight: 0.3, extraLayers: 4, brim });
   }
 });
 
@@ -150,4 +149,61 @@ test('finite brim counts within the run budget are rounded to whole runs', () =>
   for (const [brim, expected] of [[0.4, 0], [2.6, 3], [49.6, 50], ['4', 4]]) {
     assert.equal(sanitizeState({ print: { brim } }, known).print.brim, expected);
   }
+});
+
+
+test('additional layer counts retain zero and round finite values within the layer budget', () => {
+  for (const [extraLayers, expected] of [[0, 0], [0.4, 0], [2.6, 3], [49.6, 50], [50, 50], [52, 52], [249.6, 250], [250, 250], ['4', 4]]) {
+    const print = sanitizeState({ print: { extraLayers } }, known).print;
+    assert.equal(print.extraLayers, expected);
+    assert.equal(Object.hasOwn(print, 'layers'), false);
+  }
+  for (const extraLayers of [undefined, null, '', ' ', true, false, [], {}, 'bad', NaN, Infinity, -Infinity, -1, -0.1, 250.1, 251]) {
+    assert.equal(sanitizeState({ print: { extraLayers } }, known).print.extraLayers, 0, `invalid extra layers ${String(extraLayers)}`);
+  }
+});
+
+test('additional layers survive saving and sharing without becoming whole-pattern copies', () => {
+  for (const extraLayers of [0, 1, 50, 52, 250]) {
+    const raw = { print: { layerHeight: 0.3, extraLayers, brim: 0 } };
+    const print = { layerHeight: 0.3, extraLayers, brim: 0 };
+    assert.deepEqual(sanitizeState(hashToState(stateToHash(raw)), known).print, print);
+    assert.deepEqual(sanitizeState(decodeState(encodeState(raw)), known).print, print);
+  }
+});
+
+test('legacy whole-pattern copies retain their intent until native layer count is known', () => {
+  for (const [layers, legacyCopies] of [[2, 2], [2.6, 3], [50, 50], ['4', 4]]) {
+    const print = sanitizeState({ print: { layerHeight: 0.3, layers, brim: 0 } }, known).print;
+    assert.deepEqual(print, { layerHeight: 0.3, extraLayers: 0, brim: 0, legacyCopies });
+    assert.deepEqual(sanitizeState(decodeState(encodeState({ print })), known).print, print, 'unresolved migration survives saving');
+    assert.deepEqual(sanitizeState(hashToState(stateToHash({ print })), known).print, print, 'unresolved migration survives sharing');
+  }
+  for (const layers of [undefined, 1, 0, -1, 51, null, '', true, [], 'bad']) {
+    assert.deepEqual(sanitizeState({ print: { layers } }, known).print, { layerHeight: 0.2, extraLayers: 0, brim: 2 });
+  }
+});
+
+test('explicit additional layers override legacy copies except a valid unresolved marker at zero', () => {
+  for (const extraLayers of [0, 3]) {
+    assert.deepEqual(sanitizeState({ print: { extraLayers, layers: 4 } }, known).print, { layerHeight: 0.2, extraLayers, brim: 2 });
+  }
+  assert.deepEqual(sanitizeState({ print: { extraLayers: 3, legacyCopies: 4 } }, known).print, { layerHeight: 0.2, extraLayers: 3, brim: 2 });
+  assert.deepEqual(sanitizeState({ print: { extraLayers: 0, legacyCopies: 4 } }, known).print, { layerHeight: 0.2, extraLayers: 0, brim: 2, legacyCopies: 4 });
+  for (const legacyCopies of [undefined, null, 0, 1, -1, 2.6, 51, true, [], '4', 'bad']) {
+    assert.equal(Object.hasOwn(sanitizeState({ print: { extraLayers: 0, legacyCopies } }, known).print, 'legacyCopies'), false);
+  }
+});
+
+
+test('migrated legacy copies above fifty additional layers survive saving and sharing', () => {
+  const print = sanitizeState({ print: { layers: 27 } }, known).print;
+  assert.equal(print.legacyCopies, 27);
+  // Two native flat passes printed 27 times require 52 additional passes.
+  print.extraLayers = 52;
+  delete print.legacyCopies;
+  const expected = { layerHeight: 0.2, extraLayers: 52, brim: 2 };
+  assert.deepEqual(sanitizeState({ print }, known).print, expected);
+  assert.deepEqual(sanitizeState(decodeState(encodeState({ print })), known).print, expected);
+  assert.deepEqual(sanitizeState(hashToState(stateToHash({ print })), known).print, expected);
 });

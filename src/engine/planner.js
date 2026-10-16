@@ -122,15 +122,15 @@ function classify(strand, a, b, cfg) {
  * Turns the base and the placed loops into one ordered list of moves (each the target of a G1).
  * Strands print in the given order; travels lift over what is already printed.
  */
-export function plan(cfg, base, placements, boundary) {
+export function plan(cfg, base, placements, boundary, { strands: supplied = null } = {}) {
   const { t, derived } = cfg;
   const map = new HeightMap(boundary.bbox(), 0.5, heightMapMargin(cfg));
   const model = clearanceModel(cfg);
   const moves = [];
-  const strands = [];
+  const strands = supplied ?? [];
   // an outline can need several base strands (one per region a single serpentine can cover)
-  if (base) (base.strands ?? [base.points]).forEach((pts, i) => strands.push({ kind: 'base', id: i === 0 ? 'base' : `base-${i + 1}`, pts, lift: 0 }));
-  for (const p of placements) {
+  if (!supplied && base) (base.strands ?? [base.points]).forEach((pts, i) => strands.push({ kind: 'base', id: i === 0 ? 'base' : `base-${i + 1}`, pts, lift: 0 }));
+  for (const p of supplied ? [] : placements) {
     strands.push({
       kind: 'loop',
       id: p.id,
@@ -186,7 +186,8 @@ export function plan(cfg, base, placements, boundary) {
     // --- extrude the strand
     for (let i = 1; i < strand.pts.length; i++) {
       const a = strand.pts[i - 1], b = strand.pts[i];
-      const move = { x: b.x, y: b.y, z: b.z, cls: classify(strand, a, b, cfg), extrude: true, tag: strand.id };
+      const move = { x: b.x, y: b.y, z: b.z, cls: supplied ? b.cls ?? (strand.kind === 'base' ? 'base' : 'supported') : classify(strand, a, b, cfg), extrude: true, tag: strand.id };
+      if (b.flow !== undefined && b.flow !== 1) move.flow = b.flow;
       if (i === 1 && pendingUnretract) {
         move.retract = 'unretract';
         pendingUnretract = false;

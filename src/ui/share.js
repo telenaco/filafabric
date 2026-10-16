@@ -34,15 +34,22 @@ export function hashToState(hash) {
   return m ? decodeState(m[1]) : null;
 }
 
-/** Layer thickness (mm), repeated pattern copies, and side-by-side brim runs. Invalid values use the defaults. */
-export const PRINT_DEFAULTS = Object.freeze({ layerHeight: 0.2, layers: 1, brim: 2 });
+/** Layer thickness (mm), additional layers above the native design, and side-by-side brim runs. Invalid values use the defaults. */
+export const PRINT_DEFAULTS = Object.freeze({ layerHeight: 0.2, extraLayers: 0, brim: 2 });
 export function sanitizePrint(raw) {
   const out = { ...PRINT_DEFAULTS };
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
   const h = Number(raw.layerHeight);
   if (raw.layerHeight !== null && raw.layerHeight !== '' && Number.isFinite(h) && h > 0 && h <= 2) out.layerHeight = h;
-  const n = Math.round(Number(raw.layers));
-  if (Number.isFinite(n) && n >= 1 && n <= 50) out.layers = n;
+  const e = raw.extraLayers;
+  const extra = (typeof e === 'number' || typeof e === 'string' && e.trim() !== '') ? Number(e) : NaN;
+  if (Number.isFinite(extra) && extra >= 0 && extra <= 250) out.extraLayers = Math.round(extra);
+  // Native layer count is only known after generation. Keep old copies unresolved until the pipeline can migrate them.
+  if (out.extraLayers === 0 && Number.isInteger(raw.legacyCopies) && raw.legacyCopies >= 2 && raw.legacyCopies <= 50) out.legacyCopies = raw.legacyCopies;
+  else if (!Object.hasOwn(raw, 'extraLayers')) {
+    const copies = Math.round(Number(raw.layers));
+    if (Number.isFinite(copies) && copies >= 2 && copies <= 50) out.legacyCopies = copies;
+  }
   const b = raw.brim;
   const count = (typeof b === 'number' || typeof b === 'string' && b.trim() !== '') ? Number(b) : NaN;
   if (Number.isFinite(count) && count >= 0 && count <= 50) out.brim = Math.round(count);

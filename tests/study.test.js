@@ -11,6 +11,18 @@ test('study records retain the brim run count, including disabled brim', () => {
     assert.equal(sanitizeStudyRecord(raw).properties.print.brim, brim);
   }
 });
+
+test('study records distinguish native layers, extra layers and the resulting total', () => {
+  const raw = valid();
+  raw.properties.print = { nativeLayers: 2, extraLayers: 1, totalLayers: 3 };
+  assert.deepEqual(sanitizeStudyRecord(raw).properties.print, raw.properties.print);
+});
+
+test('raised study records report reinforcing backing without inventing flat texture layers', () => {
+  const raw = valid();
+  raw.properties.print = { nativeLayers: null, totalLayers: null, backingLayers: 2, extraLayers: 1, totalBackingLayers: 3 };
+  assert.deepEqual(sanitizeStudyRecord(raw).properties.print, { backingLayers: 2, extraLayers: 1, totalBackingLayers: 3 });
+});
 import { createStudyRecorder } from '../src/ui/study.js';
 import { onRequest } from '../functions/api/study/exports.js';
 import { onRequestGet } from '../functions/api/study/status.js';

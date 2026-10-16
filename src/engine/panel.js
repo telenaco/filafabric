@@ -7,7 +7,8 @@ import { PolygonBoundary } from './boundary.js';
 import { clipStrands, contactGraph, segmentInside, orderStrands, finishAtPrintedBoundary } from './fabric.js';
 import { createField } from './fields.js';
 import { drawingPolylines, interpretDrawing } from './drawing.js';
-import { stackStrands } from './stack.js';
+import { stackStrands, nativeLayerInfo, addExtraLayers } from './stack.js';
+import { rotateDesignInput } from './rotate-design.js';
 import { conformalGuideRegion, repelGuideStrands } from './conformal.js';
 import { resolveCrossings } from './crossings.js';
 import { joinStrokes } from './travel.js';
@@ -65,18 +66,19 @@ function anchorTexture(backing, texture, boundary, h, width, sourcePrinted = fal
 
 function textureResult(options, repeat, offsetX = 0, offsetY = 0) {
   const { machine, material, design, settings = {} } = options;
-  if (design === 'loop-pile') { const field = options.pilePattern && options.pilePattern !== 'none' ? createField(options.pilePattern, { scale: options.pilePatternScale ?? 1 }) : null; return generate(machine, material, { ...settings, sample_width: repeat, sample_height: repeat, boundary_policy: 'footprint' }, { liftAt: field ? (x, y) => 0.3 + 0.7 * field(x, y) : null }); }
-  if (design === 'squiggle') return generateSquiggle(machine, material, { ...settings, width: repeat, height: repeat, sampler: settings.pattern === 'image' && options.image ? createImageSampler(options.image, options.width ?? repeat, options.height ?? repeat, { yUp: true }) : SAMPLERS[settings.pattern] ?? SAMPLERS.centerSpot, colorChange: false });
+  const tileWidth = options.sectionWidth ?? repeat, tileHeight = options.sectionHeight ?? repeat;
+  if (design === 'loop-pile') { const field = options.pilePattern && options.pilePattern !== 'none' ? createField(options.pilePattern, { scale: options.pilePatternScale ?? 1 }) : null; return generate(machine, material, { ...settings, sample_width: tileWidth, sample_height: tileHeight, boundary_policy: 'footprint' }, { liftAt: field ? (x, y) => 0.3 + 0.7 * field(x, y) : null }); }
+  if (design === 'squiggle') return generateSquiggle(machine, material, { ...settings, width: tileWidth, height: tileHeight, sampler: settings.pattern === 'image' && options.image ? createImageSampler(options.image, options.width ?? repeat, options.height ?? repeat, { yUp: true }) : SAMPLERS[settings.pattern] ?? SAMPLERS.centerSpot, colorChange: false });
   const d = DESIGNS.find((d) => d.id === design && d.status === 'ready');
   if (!d) throw new ConfigError(['Choose a supported fabric design.']);
-  try { return d.generate(machine, material, { ...d.defaults(), ...settings, width: repeat, height: repeat, colorChange: false }, {
+  try { return d.generate(machine, material, { ...d.defaults(), ...settings, width: tileWidth, height: tileHeight, colorChange: false }, {
     vector: options.vector,
-    vectorSize: [options.width ?? repeat, options.height ?? repeat],
-    vectorOffset: [offsetX, offsetY],
+    vectorSize: options.vectorSize ?? [options.width ?? repeat, options.height ?? repeat],
+    vectorOffset: options.vectorOffset ?? [offsetX, offsetY],
     // The full-document strokes print once before the panel backing, rather than once per texture section.
     includeLines: !options.vector,
   }); } catch (error) {
-    if (d.vectorGuides && error.errors?.some((message) => /green openings fill/i.test(message))) return { cfg: resolveConfig(machine, material, { sample_width: repeat, sample_height: repeat }), strands: [], moves: [], fabric: { issues: [] } };
+    if (d.vectorGuides && error.errors?.some((message) => /green openings fill/i.test(message))) return { cfg: resolveConfig(machine, material, { sample_width: tileWidth, sample_height: tileHeight }), strands: [], moves: [], fabric: { issues: [] } };
     throw error;
   }
 }
@@ -87,11 +89,12 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   // the ranges the dialog suggests are not limits: anything that is a sensible size is used as typed (the bed and the
   // move budget still say no where the print could not happen)
   if (![width, height].every((v) => Number.isFinite(v) && v >= 1 && v <= 5000) || !Number.isFinite(repeat) || repeat < 5 || repeat > 500 || !Number.isFinite(backingSpacing) || backingSpacing < 0.3 || backingSpacing > 50) throw new ConfigError(['Panel dimensions must be 1–5000 mm, the repeat 5–500 mm and the backing spacing 0.3–50 mm.']);
+  if (options.extraLayers !== undefined && (!Number.isInteger(options.extraLayers) || options.extraLayers < 0 || options.extraLayers > 250)) throw new ConfigError(['Extra layers must be an integer from 0 to 250.']);
   if (typeof write !== 'function') throw new Error('A writable output is required');
   const initialCfg = resolveConfig(machine, material, { sample_width: width, sample_height: height }), fit = bedFitErrors(initialCfg);
   if (fit.length) throw new PreflightError(fit);
   if (signal?.aborted) throw new DOMException('Export cancelled', 'AbortError');
-  const texture = textureResult(options, repeat);
+  let texture = textureResult(options, repeat);
   const cfg = resolveConfig(machine, material, { ...texture.cfg.t, sample_width: width, sample_height: height });
   const h = cfg.t.layer_height, bead = cfg.t.extrusion_width;
   const model = vector ? interpretDrawing(vector, { scaleX: width / vector.width, scaleY: height / vector.height }) : null;
@@ -99,10 +102,42 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   const boundary = guides.length ? conformalGuideRegion(outerBoundary, guides) : outerBoundary;
   const brim = options.brim ?? 2;
   const brimStrands = buildBrimStrands(boundary.rings, { count: brim, strandWidth: bead, layerHeight: h });
-  // number of layers: the texture of every section is printed that many times on top of itself
-  const layers = Math.max(1, Math.round(options.layers ?? 1));
-  const stackIf = (strands) => (layers > 1 && !texture.placements?.length ? stackStrands(strands, layers, { layerHeight: h, strandWidth: bead }) : strands);
-  texture.strands = stackIf(texture.strands);
+  // Older callers may still request whole copies; explicit extraLayers takes precedence.
+  const legacyMode = options.extraLayers === undefined && options.layers !== undefined;
+  const layers = legacyMode ? Math.max(1, Math.round(options.layers ?? 1)) : 1;
+  const rotatedTexture = (x = 0, y = 0, w = repeat, ht = repeat) => {
+    const rotated = rotateDesignInput({ ...options, width: w, height: ht, outline: null,
+      vectorSize: [width, height], vectorOffset: [x, y] });
+    return textureResult({ ...rotated, sectionWidth: rotated.width, sectionHeight: rotated.height }, repeat);
+  };
+  const withTextureLayers = (result, rotatedResult) => {
+    const info = nativeLayerInfo(result);
+    if (legacyMode) {
+      const copies = layers > 1 && !result.placements?.length ? layers : 1;
+      const extra = info.patternLayers === null ? 0 : info.patternLayers * (copies - 1);
+      return { ...result, strands: copies > 1 ? stackStrands(result.strands, copies, { layerHeight: h, strandWidth: bead }) : result.strands,
+        layerPlan: { ...info, extraLayers: extra, totalLayers: info.nativeLayers === null ? null : info.nativeLayers + extra,
+          sequence: info.patternLayers === null ? [] : Array.from({ length: info.patternLayers * copies }, (_, k) => k % info.patternLayers),
+          rotations: info.patternLayers === null ? [] : Array(info.patternLayers * copies).fill(0) } };
+    }
+    const requested = options.extraLayers === 0 && options.legacyCopies > 1
+      ? (info.repeatable && !info.raised ? info.patternLayers * (Math.round(options.legacyCopies) - 1) : 0) : options.extraLayers ?? 0;
+    if (!info.repeatable) return { ...addExtraLayers(result, 0), layerPlan: { ...info, extraLayers: 0, requestedExtraLayers: requested, totalLayers: info.nativeLayers, sequence: [], rotations: [] } };
+    return addExtraLayers(result, requested, { rotatedResult, colorChange: false });
+  };
+  texture = withTextureLayers(texture, () => rotatedTexture());
+  const globalLayers = vector ? 3 : 2;
+  const print = { layerHeight: h, layers, brim, nozzleDiameter: cfg.t.nozzle_diameter, extrusionWidth: bead };
+  const recordPlan = (result) => {
+    const plan = result.layerPlan;
+    if (!plan || (print.patternLayers !== undefined && (plan.patternLayers ?? -1) < (print.patternLayers ?? -1))) return;
+    delete print.reason; delete print.requestedExtraLayers;
+    Object.assign(print, plan, { fixedLayers: globalLayers + plan.fixedLayers,
+      nativeLayers: plan.nativeLayers === null ? null : globalLayers + plan.nativeLayers,
+      totalLayers: plan.totalLayers === null ? null : globalLayers + plan.totalLayers,
+      ...(plan.mode === 'backing' ? { backingLayers: 2 + plan.backingLayers, totalBackingLayers: 2 + plan.totalBackingLayers } : {}) });
+  };
+  recordPlan(texture);
   const warnings = [...(texture.fabric?.issues ?? [])];
   const writer = new GcodeWriter(cfg), cols = Math.ceil(width / repeat), rows = Math.ceil(height / repeat), total = cols * rows;
   let buffer = '', bytes = 0, peakSectionMoves = 0, sections = 0, last = null, maxPrintedZ = 0;
@@ -128,7 +163,7 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   };
   check();
   const exportedSettings = { ...(options.settings ?? {}), colorChange: false };
-  await add(writer.header({ comments: [`Garment panel ${width} x ${height} mm; ${options.design}; repeat ${repeat} mm`, 'Continuous crossed backing; texture repeats in sections; physical swatch qualification required', `settings ${JSON.stringify(exportedSettings)}`, `studio settings ${JSON.stringify({ design: options.design, settings: { ...(options.studySettings ?? exportedSettings), colorChange: false }, width, height, repeat, backingSpacing, print: { layerHeight: h, layers, brim, nozzleDiameter: cfg.t.nozzle_diameter, extrusionWidth: bead }, material: material.id })}`] }));
+  await add(writer.header({ comments: [`Garment panel ${width} x ${height} mm; ${options.design}; repeat ${repeat} mm`, 'Continuous crossed backing; texture repeats in sections; physical swatch qualification required', `settings ${JSON.stringify(exportedSettings)}`, `studio settings ${JSON.stringify({ design: options.design, settings: { ...(options.studySettings ?? exportedSettings), colorChange: false }, width, height, repeat, backingSpacing, print, material: material.id })}`] }));
   await emit(brimStrands);
   let basis = backingLines(boundary, backingSpacing, h, vector ? h : 0, shapeOutline ? 0 : bead);
   if (guides.length) basis = resolveCrossings(repelGuideStrands(basis, guides, { boundary, strandWidth: bead }), { follow: true, preserve: true, lift: h, strandWidth: bead }).strands;
@@ -154,11 +189,15 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   const pictured = options.design === 'squiggle' && options.settings?.pattern === 'image' && !!options.image;
   const designModule = DESIGNS.find((d) => d.id === options.design);
   const drawn = !!vector && (designModule?.usesVector || designModule?.vectorGuides);
-  const sectionStrands = (x, y, w, ht) => (drawn
-    ? stackIf(textureResult(options, repeat, x, y).strands)
-    : pictured
-    ? stackIf(generateSquiggle(machine, material, { ...options.settings, width: w, height: ht, sampler: createImageSampler(options.image, width, height, { offsetX: x, offsetY: y, yUp: true }), colorChange: false }).strands)
-    : texture.strands);
+  const sectionStrands = (x, y, w, ht) => {
+    if (!drawn && !pictured) return texture.strands;
+    const local = drawn ? textureResult({ ...options, ...(legacyMode ? {} : { sectionWidth: w, sectionHeight: ht }) }, repeat, x, y)
+      : generateSquiggle(machine, material, { ...options.settings, width: w, height: ht,
+        sampler: createImageSampler(options.image, width, height, { offsetX: x, offsetY: y, yUp: true }), colorChange: false });
+    const layered = withTextureLayers(local, () => rotatedTexture(x, y, legacyMode ? repeat : w, legacyMode ? repeat : ht));
+    recordPlan(layered);
+    return layered.strands;
+  };
   const cache = new Map(), zOffset = (vector ? 3 : 2) * h;
   // Flat patterns start at the lower-left. Raised textures retain far-to-near shingle order.
   for (let rowIndex = 0; rowIndex < rows; rowIndex++) for (let j = 0; j < cols; j++) {
@@ -195,6 +234,6 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     await emit(placed); sections++;
     await flush(); progress({ phase: 'texture', done: sections, total });
   }
-  await add([`; panel estimate (no acceleration): ${(writer.timeSec / 60).toFixed(1)} min; filament ${writer.cumE.toFixed(1)} mm`, ...writer.footer()]); await flush();
-  return { sections, peakSectionMoves, bytes, moves: writer.moves, filamentMm: writer.cumE, timeSec: writer.timeSec, guideCount: guides.length, print: { layerHeight: h, nozzleDiameter: cfg.t.nozzle_diameter, extrusionWidth: bead, layers, brim }, warnings, physicallyVerified: false };
+  await add([`; actual print ${JSON.stringify(print)}`, `; panel estimate (no acceleration): ${(writer.timeSec / 60).toFixed(1)} min; filament ${writer.cumE.toFixed(1)} mm`, ...writer.footer()]); await flush();
+  return { sections, peakSectionMoves, bytes, moves: writer.moves, filamentMm: writer.cumE, timeSec: writer.timeSec, guideCount: guides.length, print, warnings, physicallyVerified: false };
 }

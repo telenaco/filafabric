@@ -26,7 +26,9 @@ import { readSvgLines } from './svg-lines.js';
 import { composeSvgLines, outlineFromVector, vectorPatternRings } from '../engine/svg-lines.js';
 import { applySvgGuides, vectorGuides } from '../engine/svg-guides.js';
 import { summariseDrawing, describeDrawing, interpretDrawing } from '../engine/drawing.js';
-import { stackLayers } from '../engine/stack.js';
+import { addExtraLayers, nativeLayerInfo } from '../engine/stack.js';
+import { generateDesignBase } from '../engine/design-export.js';
+import { rotateDesignInput } from '../engine/rotate-design.js';
 import { applyBrim } from '../engine/brim.js';
 import { boundaryFor } from '../engine/layers.js';
 import { conformalGuideRegion } from '../engine/conformal.js';
@@ -135,7 +137,7 @@ const state = {
   imageBoxOpen: false,
   outline: null, // { name, rings (flat, unit box), rotation }: shared by every design, travels in links
   vector: null,
-  print: { ...PRINT_DEFAULTS }, // layer thickness and how many times the pattern is stacked: the same for every design
+  print: { ...PRINT_DEFAULTS }, // layer thickness and extra fabric or backing passes, shared across designs
   docName: 'Untitled swatch',
   result: null,
   resultKey: null,
@@ -345,9 +347,10 @@ const controls = [];
 let svgImportCard = null;
 let studyRecorder = null;
 
-const PRINT_RANGES = { layers: { min: 1, max: 10, step: 1 }, brim: { min: 0, max: 8, step: 1 } };
+const RAISED_DESIGNS = new Set(['loop-pile', 'relief', 'fringe', 'spacer', 'pillarweave']);
+const PRINT_RANGES = { extraLayers: { min: 0, max: 10, step: 1 }, brim: { min: 0, max: 8, step: 1 } };
 const PRINT_THICKNESS = { label: 'Layer thickness', help: 'How thick every layer is. Thinner prints cleaner and slower; thicker is quick, but strands lie over each other less cleanly.' };
-const PRINT_LAYERS = { key: 'layers', label: 'Number of layers', help: 'How many times the whole pattern is printed on top of itself: 1 is the pattern as designed, 3 is a fabric three times as thick.', lo: 'One', hi: 'Many', unit: '', edit: true };
+const PRINT_LAYERS = { key: 'extraLayers', label: 'Extra layers', help: '0 keeps the original design. One-layer patterns alternate with a regenerated 90° pass across the same outline. Multi-layer patterns continue their original sequence: A–B–A–B. For raised designs, extra passes reinforce the backing beneath the texture; the texture prints once. The brim and imported SVG paths print once.', lo: 'Original', hi: 'More', unit: '', edit: true };
 
 /** The nozzle of the chosen printer (0.4 mm unless its profile says otherwise). */
 const nozzleDiameter = () => state.machines.get(state.machine)?.nozzle_diameter ?? 0.4;
@@ -364,14 +367,29 @@ function nearestLayerHeight(h) {
 function normalisePrint() {
   const h = nearestLayerHeight(state.print.layerHeight);
   if (h !== state.print.layerHeight) state.print.layerHeight = h;
+  // Whole-copy settings previously left raised textures unchanged; migrating them keeps that behavior.
+  if (RAISED_DESIGNS.has(state.design) && state.print.legacyCopies) { state.print.extraLayers = 0; delete state.print.legacyCopies; }
+}
+
+function layerSetupText() {
+  const plan = state.result?.designId === state.design ? state.result.layerPlan : null;
+  if (plan?.mode === 'backing' && plan.repeatable) return `${plan.backingLayers} backing + ${state.print.extraLayers} extra = ${plan.backingLayers + state.print.extraLayers} · texture once`;
+  if (plan && !plan.repeatable) return plan.nativeLayers === null ? 'Original raised structure' : `${plan.nativeLayers} original · SVG only`;
+  if (plan) return `${plan.nativeLayers} + ${state.print.extraLayers} extra = ${plan.nativeLayers + state.print.extraLayers} layers`;
+  return RAISED_DESIGNS.has(state.design) ? `${state.print.extraLayers} extra backing layers · texture once` : `${state.print.extraLayers} extra layers`;
 }
 
 const PRINT_BINDING = {
   get: (key) => state.print[key],
   set: (key, value) => {
     if (key === 'brim' && value > 50) { toast('Brim: enter a count from 0 to 50.'); return; }
-    state.print[key] = key === 'layers' ? Math.max(1, Math.round(value)) : key === 'brim' ? Math.max(0, Math.round(value)) : value;
+    if (key === 'extraLayers') {
+      if (value > 250) { toast('Extra layers: enter a count from 0 to 250.'); return; }
+      delete state.print.legacyCopies;
+    }
+    state.print[key] = ['extraLayers', 'brim'].includes(key) ? Math.max(0, Math.round(value)) : value;
   },
+  available: (key) => key !== 'extraLayers' || !(state.result?.designId === state.design && state.result.layerPlan?.repeatable === false),
   range: (key) => PRINT_RANGES[key],
   options: () => layerChoices(),
   note: () => {
@@ -381,9 +399,7 @@ const PRINT_BINDING = {
   readout: (key) => {
     if (key === 'brim') return state.print.brim ? `${state.print.brim} ${state.print.brim === 1 ? 'line' : 'lines'}` : 'Off';
     if (key === 'layerHeight') return `${Math.round(state.print.layerHeight * 1000) / 1000} mm${state.print.layerHeight === PRINT_DEFAULTS.layerHeight ? ' (the usual)' : ''}`;
-    const n = state.print.layers;
-    const kept = n > 1 && state.result?.placements?.length && !state.result.stack;
-    return `${n} ${n === 1 ? 'layer' : 'layers'}${kept ? ' (this design keeps its own height)' : ''}`;
+    return layerSetupText();
   },
 };
 
@@ -547,13 +563,20 @@ function exportOptions(width = null, height = null) {
     machine: state.machines.get(state.machine), material: printMaterial(), design: state.design,
     width, height, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : settingsOf(state.design),
     studySettings: { ...settingsOf(state.design) }, outline: placedOutline(width, height),
-    vector: state.vector, shapeOutline: !!state.outline?.page, layers: state.print.layers, brim: state.print.brim,
+    vector: state.vector, shapeOutline: !!state.outline?.page, extraLayers: state.print.extraLayers, legacyCopies: state.print.legacyCopies, brim: state.print.brim,
     image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale,
     panelSize: size,
   };
 }
 
 function showGenerated(result, key) {
+  result.designId = state.design;
+  if (state.print.legacyCopies && result.layerPlan) {
+    state.print.extraLayers = result.layerPlan.extraLayers;
+    delete state.print.legacyCopies;
+    key = snapshotKey();
+    store.set(STORAGE_KEY, JSON.stringify(snapshot()));
+  }
   state.result = result;
   state.resultKey = key;
   state.error = null;
@@ -681,7 +704,13 @@ function regenerate() {
       // a drawing that is also the outline lies on the boundary itself, so its lines are not trimmed to it
       result = composeSvgLines(result, state.vector, { fullWidth, fullHeight, clipLines: !state.outline?.page && !result.guideCount });
     }
-    result = stackLayers(result, state.print.layers);
+    const native = nativeLayerInfo(result);
+    const extras = state.print.legacyCopies ? (native.repeatable && !native.raised ? native.patternLayers * (state.print.legacyCopies - 1) : 0) : state.print.extraLayers;
+    result = addExtraLayers(result, extras, {
+      rotatedResult: () => generateDesignBase(rotateDesignInput({ ...exportOptions(), width: result.cfg.t.sample_width, height: result.cfg.t.sample_height,
+        outline: result.outline, vectorSize: [selectedWidth, selectedHeight] })),
+      colorChange: !!settingsOf(state.design).colorChange,
+    });
     // Offset the selected outline before clipping: a bounded preview must never invent an edge at its crop.
     const pictured = state.design === 'squiggle' && state.squiggle.pattern === 'image' && state.image && !state.vector;
     const fullWidth = pictured ? result.cfg.t.sample_width : selectedWidth;
@@ -936,7 +965,7 @@ function renderExport() {
   const btn = $('#btn-export');
   const ok = !!state.result && !state.error && state.result.moves.length > 0;
   // Export can build a selected design independently of its bounded or pending preview.
-  btn.disabled = exporting || !(ok || isReady(state.design));
+  btn.disabled = exporting || !!state.print.legacyCopies || !(ok || isReady(state.design));
   $('#btn-panel').hidden = designById(state.design).panel === false;
 }
 
@@ -944,8 +973,7 @@ function renderExport() {
 function setupSummary() {
   const machine = state.machines.get(state.machine), material = state.materials.get(state.material);
   if (!machine || !material) return null;
-  const n = state.print.layers;
-  return { name: `${shortMachine(machine.name)} · ${material.name}`, sub: `${state.print.layerHeight} mm layers · ${n} ${n === 1 ? 'layer' : 'layers'}` };
+  return { name: `${shortMachine(machine.name)} · ${material.name}`, sub: `${state.print.layerHeight} mm thickness · ${layerSetupText()}` };
 }
 
 const shortMachine = (name) => name.replace('Original ', '').replace(' i3', '').replace(' / MK3S+', '');
@@ -956,12 +984,11 @@ function renderPrinter() {
   const material = state.materials.get(state.material);
   if (!machine || !material) return;
   // the chip says what the setup holds, so the layers are never a thing to look for elsewhere
-  const n = state.print.layers;
-  const layers = `${state.print.layerHeight} mm · ${n} ${n === 1 ? 'layer' : 'layers'}`;
+  const layers = `${state.print.layerHeight} mm · ${layerSetupText()}`;
   $('#printer-name').textContent = shortMachine(machine.name);
   $('#printer-material').textContent = `${shortMaterial(material.name)} · ${layers}`;
   $('#printer-dot').className = 'status-dot ok';
-  $('#btn-printer').title = 'Printer, filament, layer thickness and number of layers. Add your own printer or filament from a PrusaSlicer or Bambu Studio export.';
+  $('#btn-printer').title = 'Printer, filament, layer thickness and extra layers above the original design. Add your own printer or filament from a PrusaSlicer or Bambu Studio export.';
   $('#btn-printer').setAttribute('aria-label', `Printer setup: ${shortMachine(machine.name)} with ${shortMaterial(material.name)}, ${layers}`);
 }
 
@@ -1620,7 +1647,7 @@ function recordBuildFailure(error, input = null) {
   const [width, height] = input ? [input.width, input.height] : BINDINGS[state.design].size.get();
   const captured = input ?? {
     design: state.design, width, height, studySettings: { ...settingsOf(state.design) },
-    machine: state.machines.get(state.machine), material: printMaterial(), layers: state.print.layers, brim: state.print.brim,
+    machine: state.machines.get(state.machine), material: printMaterial(), extraLayers: state.print.extraLayers, brim: state.print.brim,
     vector: state.vector, outline: state.outline?.rings,
   };
   const vector = captured.vector, sourcePaths = vector?.paths ?? [];
@@ -1630,7 +1657,7 @@ function recordBuildFailure(error, input = null) {
     settings: {
       ...settings,
       operation: input?.operation ?? (input ? 'panel' : 'preview'),
-      print: { layers: captured.layers, brim: captured.brim, layerHeight: captured.material?.print_defaults?.layer_height },
+      print: { layers: captured.layers, extraLayers: captured.extraLayers, brim: captured.brim, layerHeight: captured.material?.print_defaults?.layer_height },
       machine: captured.machine?.id, material: captured.material?.id,
       ...(input ? { repeat: captured.repeat, backingSpacing: captured.backingSpacing } : state.design === 'loop-pile' ? { advanced: { ...state.advanced } } : {}),
     },
@@ -1692,9 +1719,10 @@ function reportStudyExport(exportType, options = {}, stats = state.result?.stats
   const cfg = options.cfg ?? state.result?.cfg;
   const [width, height] = ['settings-json', 'build-error'].includes(exportType) ? BINDINGS[state.design].size.get() : [cfg?.t.sample_width, cfg?.t.sample_height];
   const vector = options.vector ?? state.vector;
-  let print = stats?.print ?? { layerHeight: cfg?.t.layer_height, layers: options.layers ?? state.print.layers, brim: options.brim ?? state.print.brim, nozzleDiameter: cfg?.t.nozzle_diameter, extrusionWidth: cfg?.t.extrusion_width };
+  const plan = options.layerPlan ?? state.result?.layerPlan;
+  let print = stats?.print ?? { layerHeight: cfg?.t.layer_height, extraLayers: plan?.extraLayers ?? options.extraLayers ?? state.print.extraLayers, nativeLayers: plan?.nativeLayers, totalLayers: plan?.totalLayers, backingLayers: plan?.backingLayers, totalBackingLayers: plan?.totalBackingLayers, brim: options.brim ?? state.print.brim, nozzleDiameter: cfg?.t.nozzle_diameter, extrusionWidth: cfg?.t.extrusion_width };
   if (exportType === 'build-error') {
-    print = { layerHeight: options.material?.print_defaults?.layer_height ?? state.print.layerHeight, layers: options.layers ?? state.print.layers, brim: options.brim ?? state.print.brim };
+    print = { layerHeight: options.material?.print_defaults?.layer_height ?? state.print.layerHeight, extraLayers: options.extraLayers ?? state.print.extraLayers, brim: options.brim ?? state.print.brim };
     try {
       const current = resolveConfig(options.machine ?? state.machines.get(state.machine), options.material ?? printMaterial());
       Object.assign(print, { nozzleDiameter: current.t.nozzle_diameter, extrusionWidth: current.t.extrusion_width });
@@ -1746,7 +1774,7 @@ async function exportGcode() {
     input = structuredClone(exportOptions());
     const key = snapshotKey(), code = currentSwatch(), name = swatchFileName();
     const title = state.docName.replace(/[\r\n]+/g, ' ');
-    const settings = JSON.stringify({ design: input.design, settings: input.studySettings, print: { ...state.print }, machine: input.machine.id, material: input.material.id });
+    const savedPrint = { ...state.print };
     exportLabel = `Preparing ${input.width} × ${input.height} mm…`;
     renderBusy(); renderExport();
     let result;
@@ -1757,9 +1785,12 @@ async function exportGcode() {
     if (controller.signal.aborted || snapshotKey() !== key) throw new DOMException('The design changed during export.', 'AbortError');
     const moveCount = result.moveCount ?? result.moves?.length ?? 0;
     if (!moveCount) throw new Error('Nothing to print for this design and size.');
+    const settings = JSON.stringify({ design: input.design, settings: input.studySettings, print: { ...savedPrint,
+      ...(result.layerPlan ? { extraLayers: result.layerPlan.extraLayers, nativeLayers: result.layerPlan.nativeLayers, totalLayers: result.layerPlan.totalLayers,
+        ...(result.layerPlan.mode === 'backing' ? { backingLayers: result.layerPlan.backingLayers, totalBackingLayers: result.layerPlan.totalBackingLayers, textureCopies: 1 } : {}) } : {}) }, machine: input.machine.id, material: input.material.id });
     const text = result.gcode.replace('; Textile G-code generator v1\n', (head) => `${head}; swatch ${code}\n; name ${title}\n; studio settings ${settings}\n`);
     download(name, new Blob([text], { type: 'text/plain' }));
-    reportStudyExport('gcode-swatch', { ...input, cfg: result.cfg, moveCount }, result.stats);
+    reportStudyExport('gcode-swatch', { ...input, cfg: result.cfg, moveCount, layerPlan: result.layerPlan }, result.stats);
     toast(`Saved ${input.width} × ${input.height} mm: ${name}`);
   } catch (error) {
     if (error.name === 'AbortError') toast('Export cancelled because the design changed.');

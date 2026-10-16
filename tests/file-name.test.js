@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { DESIGNS, designById } from '../src/ui/designs.js';
 import { relevantKeys, settingsFileName, exportFileName, parseFileName, ownName } from '../src/ui/file-name.js';
 
-const PRINT = { layerHeight: 0.2, layers: 1, brim: 2 };
+const PRINT = { layerHeight: 0.2, extraLayers: 0, brim: 2 };
 const MATERIAL = 'filaflex-95-foamy';
 
 /** A design's settings as the demo exporter makes them: its defaults, a preset, a patch, at 100 x 100 mm. */
@@ -29,7 +29,7 @@ test('the demo prints keep the names they had: the studio and the demo exporter 
 test('an exported swatch is named after its design, preset, size, every look-and-feel value and the print setup', () => {
   const { mod, s } = settingsFor('coil', 'overlapping');
   const name = exportFileName(mod, s, relevantKeys(mod, s), { size: [100, 100], print: PRINT, material: MATERIAL, docName: 'Untitled swatch' });
-  assert.equal(name, 'coil_overlapping_100x100mm_shape-looped_size3_pitch5_overlap30_lift0.25_pattern-none_scale1_brim2_lh0.2_layers1_filaflex-95-foamy.gcode');
+  assert.equal(name, 'coil_overlapping_100x100mm_shape-looped_size3_pitch5_overlap30_lift0.25_pattern-none_scale1_brim2_lh0.2_extra0_filaflex-95-foamy.gcode');
 });
 
 test('moving a slider changes its value in the name, and the preset becomes custom', () => {
@@ -70,7 +70,8 @@ test('every design gives a short, safe name that reads back to the same design a
     assert.equal(back.design, mod.file, mod.id);
     assert.deepEqual(back.size, mod.size(s), mod.id);
     assert.equal(back.layerHeight, 0.2);
-    assert.equal(back.layers, 1);
+    assert.equal(back.layers, null);
+    assert.equal(back.extraLayers, 0);
     assert.equal(back.brim, 2);
     assert.equal(back.material, MATERIAL);
     // every setting that made it into the name reads back with the value it was written with
@@ -204,7 +205,7 @@ test('export filenames distinguish brim off and run counts without changing pres
   const names = [0, 2, 5].map((brim) => {
     const name = exportFileName(mod, s, relevantKeys(mod, s), { size: [100, 100], print: { ...PRINT, brim }, material: MATERIAL, docName: 'Brim trial' });
     assert.match(name, /^coil_overlapping_/);
-    assert.ok(name.includes(`_brim${brim}_lh0.2_layers1_`));
+    assert.ok(name.includes(`_brim${brim}_lh0.2_extra0_`));
     const back = parseFileName(name);
     assert.equal(back.brim, brim);
     assert.equal(back.material, MATERIAL);
@@ -220,6 +221,7 @@ test('older filenames without brim still read their filament and swatch name', (
   assert.equal(back.layers, 1);
   assert.equal(back.material, MATERIAL);
   assert.equal(back.swatchName, 'trial');
+  assert.equal(Object.hasOwn(back, 'extraLayers'), false);
   const namedBrim = parseFileName('coil_custom_100x100mm_lh0.2_layers1_brim2_trial.gcode');
   assert.equal(namedBrim.material, 'brim2');
   assert.equal(namedBrim.swatchName, 'trial');
@@ -236,4 +238,32 @@ test('shortened export names preserve brim count and their length budget', () =>
     return name;
   });
   assert.equal(new Set(names).size, 3);
+});
+
+
+test('export filenames distinguish additional layers including zero from legacy copies', () => {
+  const { mod, s } = settingsFor('coil', 'overlapping');
+  const names = [0, 3, 250].map((extraLayers) => {
+    const name = exportFileName(mod, s, relevantKeys(mod, s), { size: [100, 100], print: { ...PRINT, extraLayers, layers: 7 }, material: MATERIAL });
+    assert.ok(name.includes(`_brim2_lh0.2_extra${extraLayers}_`));
+    const back = parseFileName(name);
+    assert.equal(back.extraLayers, extraLayers);
+    assert.equal(back.layers, null);
+    assert.equal(back.brim, 2);
+    assert.equal(back.material, MATERIAL);
+    assert.equal(back.preset, 'overlapping');
+    return name;
+  });
+  assert.equal(new Set(names).size, 3);
+});
+
+test('legacy export callers keep their copies token and parser return shape', () => {
+  const { mod, s } = settingsFor('coil', 'overlapping');
+  const name = exportFileName(mod, s, relevantKeys(mod, s), { size: [100, 100], print: { layerHeight: 0.3, layers: 4, brim: 0 }, material: MATERIAL });
+  assert.match(name, /_brim0_lh0\.3_layers4_filaflex-95-foamy\.gcode$/);
+  const back = parseFileName(name);
+  assert.equal(back.layers, 4);
+  assert.equal(back.brim, 0);
+  assert.equal(back.material, MATERIAL);
+  assert.equal(Object.hasOwn(back, 'extraLayers'), false);
 });
