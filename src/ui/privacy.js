@@ -29,7 +29,7 @@ export function bindPrivacyNotice(banner, { storage, onChange, openFeedback, toa
     const choice = readPrivacyChoice(storage);
     status.hidden = !reopened || !choice;
     if (choice) status.textContent = choice.stats ? 'Right now your exports are counted, anonymously.' : 'Right now your exports are not counted.';
-    accept.textContent = reopened && choice?.stats === false ? 'Count my exports' : 'OK';
+    accept.textContent = reopened && choice?.stats === false ? 'I\'d love to contribute' : 'OK, I\'d love to contribute';
     banner.hidden = false;
     if (reopened) accept.focus();
   }

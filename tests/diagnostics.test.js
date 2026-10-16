@@ -141,7 +141,7 @@ test('the UI recovery action keeps the exact failed attempt available through Un
     applySnapshot(data) { restored = JSON.parse(JSON.stringify(data)); },
     store: { set(key, value) { stored = JSON.parse(value); } }, STORAGE_KEY: 'test', location: { hash: '' },
   };
-  runInNewContext(['snapshot', 'snapshotKey', 'commit', 'undo', 'applyBuildRecovery'].map(uiFunction).join('\n') + '\napplyBuildRecovery(recovery); undo();', host);
+  runInNewContext(['snapshot', 'snapshotKey', 'commit', 'undo', 'applySettingsPatch', 'applyBuildRecovery'].map(uiFunction).join('\n') + '\napplyBuildRecovery(recovery); undo();', host);
   assert.equal(generated.pitch, recovery.patch.pitch);
   assert.equal(generated.width, 60.12345);
   assert.equal(stored.designs.coil.pitch, recovery.patch.pitch);

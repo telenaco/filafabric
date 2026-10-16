@@ -39,6 +39,7 @@ import { buildSwatch } from './export-builder.js';
 import { classifyBuildError, DiagnosticLog, suggestRecovery, safeMetadata } from './diagnostics.js';
 import { bindFeedback, problemReport } from './feedback.js';
 import { bindPrivacyNotice, statsAllowed } from './privacy.js';
+import { describeFabric, fixCandidates, problemScore, describeChanges } from './fix-geometry.js';
 
 // the release this page loaded (boot.js imports this file with ?v=), so feedback says which version it is about
 const RELEASE = new URL(import.meta.url).searchParams.get('v') ?? 'dev';
@@ -544,6 +545,7 @@ function setShapeOutline(on) {
 /* ---------- generation ---------- */
 let genTimer = null;
 function schedule() {
+  fixJob?.controller.abort(); // the settings changed under the search: what it would fix is gone
   previewBuild?.controller.abort();
   previewBuild = null;
   exportController?.abort();
@@ -825,8 +827,13 @@ function currentVerdict() {
   const fabric = state.result.fabric;
   const mod = designById(state.design);
   if (fabric && !fabric.exportable) {
-    const text = fabric.issues.join('. ') || 'Nothing fits inside this shape.';
-    return { level: 'heads-up', title: 'Check the geometry', body: `${text}.${adviceFor(mod, text)} You can still export it: it is printed as drawn.`.replace('..', '.'), action: null };
+    const advice = adviceFor(mod, fabric.issues.join('. '));
+    const fix = fabric.issues.length > 0 && !!BINDINGS[state.design]?.sliders?.length;
+    return {
+      level: 'heads-up', title: 'Check the geometry', fix,
+      body: `${describeFabric(fabric)}${advice}${fix ? ' Fix it tries small changes to the settings and keeps the first one that clears this.' : ''} You can also export it as it is: it prints as drawn.`,
+      action: null,
+    };
   }
   const verdict = !mod.legacy ? mod.verdict(state.result, state.designs[mod.id]) : state.design === 'squiggle'
     ? buildSquiggleVerdict(state.result.stats, { colorChange: state.squiggle.colorChange })
@@ -860,6 +867,12 @@ function renderCheck() {
     const simplify = el('button', { type: 'button', class: 'check-btn', title: recovery.description, text: recovery.label });
     simplify.addEventListener('click', () => applyBuildRecovery(recovery));
     row.append(simplify);
+  }
+  if (v.fix) {
+    const label = fixJob ? `Stop looking (${Math.min(fixJob.tried + 1, fixJob.total)} of ${fixJob.total})` : 'Fix it';
+    const fix = el('button', { type: 'button', class: 'check-btn', id: 'check-fix', title: 'Tries small changes to this design\'s settings and keeps the first one after which the check passes. Undo brings your settings back.', text: label });
+    fix.addEventListener('click', () => { if (fixJob) fixJob.controller.abort(); else void fixGeometry(); });
+    row.append(fix);
   }
   if (v.action === 'roomy-on') {
     const quick = el('button', { type: 'button', class: 'check-btn', title: `${v.actionLabel}: 1.5 mm between loop feet`, text: 'Add room' });
@@ -1677,6 +1690,12 @@ function recordBuildFailure(error, input = null) {
 }
 
 function applyBuildRecovery(recovery) {
+  applySettingsPatch(recovery.patch);
+  if (!state.error) toast('Pattern simplified. Undo restores your previous settings.');
+}
+
+/** Changes some of this design's settings as one step that Undo takes back, and rebuilds. */
+function applySettingsPatch(patch) {
   // Failed edits may not have reached the normal history. Keep this exact state so Undo restores the attempt.
   const key = snapshotKey();
   if (undoLog.stack[undoLog.cursor]?.key !== key) {
@@ -1685,14 +1704,69 @@ function applyBuildRecovery(recovery) {
     if (undoLog.stack.length > 100) undoLog.stack.shift();
     undoLog.cursor = undoLog.stack.length - 1;
   }
-  Object.assign(settingsOf(state.design), recovery.patch);
+  Object.assign(settingsOf(state.design), patch);
   clearTimeout(genTimer);
   syncControls();
   renderControls();
   regenerate();
   commit();
   renderHistoryButtons();
-  if (!state.error) toast('Pattern simplified. Undo restores your previous settings.');
+}
+
+/* ---------- Fix it: the geometry check, answered by trying settings ---------- */
+let fixJob = null; // { controller, tried, total } while a search runs
+
+/** The design as its preview builds it (the same size or window), for a worker to build and check. */
+function previewInput() {
+  const machine = state.machines.get(state.machine);
+  const [w, h] = BINDINGS[state.design].size.get();
+  const whole = Math.max(w, h) <= 250 && w <= machine.bed.width && h <= machine.bed.depth;
+  const cap = state.vector && Math.max(state.vector.width, state.vector.height) <= 250 && state.vector.width <= machine.bed.width && state.vector.height <= machine.bed.depth ? 250 : 100;
+  const pw = whole ? w : Math.min(w, cap), ph = whole ? h : Math.min(h, cap);
+  return { ...exportOptions(pw, ph), outline: placedOutline(pw, ph, w, h), vectorSize: [w, h] };
+}
+
+/** Builds the design with some settings changed, without changing them: the job captures its input at once. */
+function buildWithPatch(patch, signal) {
+  const binding = BINDINGS[state.design], saved = {};
+  for (const [k, value] of Object.entries(patch)) { saved[k] = binding.get(k); binding.set(k, value); }
+  try { return buildSwatch(previewInput(), { signal }); }
+  finally { for (const [k, value] of Object.entries(saved)) binding.set(k, value); }
+}
+
+async function fixGeometry() {
+  const fabric = state.result?.fabric, binding = BINDINGS[state.design];
+  if (!fabric || fabric.exportable || fixJob) return;
+  const unitOf = (key) => binding.sliders.find((s) => s.key === key)?.unit ?? '';
+  const advice = adviceFor(designById(state.design), fabric.issues.join('. '));
+  const candidates = fixCandidates(fabric, { sliders: binding.sliders, get: binding.get, range: binding.range });
+  if (!candidates.length) { toast(`None of this design's settings is likely to change this.${advice}`); return; }
+  const key = snapshotKey(), controller = new AbortController(), before = problemScore(fabric);
+  fixJob = { controller, tried: 0, total: candidates.length };
+  renderCheck();
+  let best = null;
+  try {
+    for (const candidate of candidates) {
+      let score = Infinity;
+      try { score = problemScore((await buildWithPatch(candidate.patch, controller.signal)).fabric); }
+      catch (error) { if (error.name === 'AbortError') throw error; } // a try that cannot build is not a fix
+      if (controller.signal.aborted || snapshotKey() !== key) throw new DOMException('Stopped', 'AbortError');
+      fixJob.tried++;
+      renderCheck();
+      if (score < (best?.score ?? before)) best = { ...candidate, score };
+      if (score === 0) break;
+    }
+  } catch (error) {
+    if (error.name !== 'AbortError') throw error;
+    fixJob = null;
+    renderCheck();
+    return;
+  }
+  fixJob = null;
+  if (!best) { renderCheck(); toast(`No small change cleared it.${advice || ' Try a simpler shape or a larger swatch.'}`); return; }
+  applySettingsPatch(best.patch);
+  const changed = describeChanges(best.changes, unitOf);
+  toast(best.score === 0 ? `Fixed: ${changed}. Undo brings your settings back.` : `Better, though not cleared: ${changed}. Undo brings your settings back.`);
 }
 
 function saveErrorLog() {

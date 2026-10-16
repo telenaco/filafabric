@@ -24,7 +24,7 @@ const keep = {
 async function openStudio() {
   document.body.classList.remove('locked');
   $('gate')?.remove();
-  await import('./ui/main.js?v=20261016-privacy');
+  await import('./ui/main.js?v=20261016-fix-it');
   $('btn-lock')?.addEventListener('click', () => {
     keep.clear();
     location.reload();

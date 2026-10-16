@@ -63,6 +63,14 @@ The site sets no cookies and loads nothing from other sites (its font, Instrumen
 and to the feedback form, and *Don't count my exports* turns the statistics off for that browser. ⋯ › *Privacy and
 cookies* brings it back. Bump `PRIVACY_VERSION` there to show the notice again to everyone after changing what is counted.
 
+## Check the geometry: Fix it
+
+When the fabric check finds a problem (pieces that don't touch, strands steeper than 25°, strands leaving the outline,
+or crossings under a strand already printed), the summary says so in plain words and offers *Fix it*
+(`src/ui/fix-geometry.js`). It builds up to 14 variants in the background worker, each moving one of the design's own
+sliders a little, then more, then several together, and applies the first one after which the check passes, as one step
+that Undo takes back. Changing any setting, or *Stop looking*, ends the search.
+
 ## Run it
 
 Double-click `Run Textile Tool.bat` (needs Node 20 or newer). It starts a small local server and opens
