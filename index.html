@@ -9,9 +9,7 @@
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#171c26">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link rel="preload" href="vendor/fonts/instrument-sans/instrument-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="src/ui/styles.css">
 <script type="importmap">
 { "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
@@ -76,6 +74,7 @@
 <div id="more-menu" class="menu" popover>
   <button type="button" class="menu-item" id="btn-panel">Export repeating garment panel…</button>
   <button type="button" class="menu-item" id="btn-help"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M6.2 6.2a1.9 1.9 0 113 1.5c-.8.5-1.2.9-1.2 1.7M8 11.6v.1"/></svg>Getting started</button>
+  <button type="button" class="menu-item" id="btn-privacy"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.8l5 2v4c0 3-2.2 5.3-5 6.4-2.8-1.1-5-3.4-5-6.4v-4z"/><path d="M5.8 8l1.6 1.6 2.9-3"/></svg>Privacy and cookies</button>
   <div class="menu-sep" role="separator"></div>
   <button type="button" class="menu-item" id="btn-save-file"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7M5 7l3 3 3-3M3 12.5h10"/></svg>Save settings file</button>
   <button type="button" class="menu-item" id="btn-error-log" title="Downloads recent local errors and current settings, including the current drawing. Share this file only when you want to share that drawing."><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7M5 7l3 3 3-3M3 12.5h10"/></svg>Download error log</button>
@@ -365,8 +364,20 @@
   </form>
 </dialog>
 
+<section id="privacy-banner" class="privacy-banner" aria-labelledby="privacy-title" hidden>
+  <h2 id="privacy-title">Cookies and privacy</h2>
+  <p>Filafabric uses no cookies, ads or trackers. Your settings are kept in this browser, so the studio opens where you left it.</p>
+  <p>When you export, we anonymously count which design and settings you used, to see which structures get printed most over time and which tools matter. Your drawings and files are never part of it. <a href="study.html" target="_blank" rel="noopener">What is counted</a></p>
+  <p>We would also love to hear what you make: <button type="button" class="link inline-link" id="privacy-feedback">send feedback</button>.</p>
+  <p id="privacy-state" class="privacy-state" hidden></p>
+  <div class="privacy-actions">
+    <button type="button" class="btn" id="privacy-decline">Don't count my exports</button>
+    <button type="button" class="btn primary" id="privacy-accept">OK</button>
+  </div>
+</section>
+
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-<script type="module" src="src/boot.js?v=20261016-feedback"></script>
+<script type="module" src="src/boot.js?v=20261016-privacy"></script>
 </body>
 </html>

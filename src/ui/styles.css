@@ -1,3 +1,15 @@
+/* Instrument Sans served from this site (SIL Open Font License, vendor/fonts/instrument-sans/OFL.txt), so no visitor
+   address goes to a font service. One variable file covers weights 400 to 700; the second adds wider Latin accents. */
+@font-face {
+  font-family: 'Instrument Sans'; font-style: normal; font-weight: 400 700; font-display: swap;
+  src: url('../../vendor/fonts/instrument-sans/instrument-sans-latin-wght-normal.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Instrument Sans'; font-style: normal; font-weight: 400 700; font-display: swap;
+  src: url('../../vendor/fonts/instrument-sans/instrument-sans-latin-ext-wght-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
 :root {
   --ground: #f2f3f0; --panel: #ffffff; --panel-2: #fbfbf9; --ink: #1c2330; --ink-2: #3b4558; --muted: #566074;
   --line: #d9dcd4; --line-2: #b9bea3; --seg-bg: #e6e8e1;
@@ -529,7 +541,20 @@ dialog p { margin: 6px 0; }
 .feedback-status { min-height: 1.4em; }
 .feedback-status.error { color: var(--danger-ink); }
 .feedback-actions { gap: 8px; }
+/* the cookies and privacy notice: a card in the corner until answered, back from ⋯ › Privacy and cookies */
+.privacy-banner {
+  position: fixed; left: 16px; bottom: 16px; z-index: 45; width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto;
+  padding: 18px 20px 16px; border-radius: var(--radius); background: var(--panel); color: var(--ink); border: 1px solid var(--line-2);
+  box-shadow: var(--shadow); font-size: 14px; line-height: 1.45;
+}
+.privacy-banner h2 { margin: 0 0 6px; font-size: 17px; }
+.privacy-banner p { margin: 0 0 8px; }
+.privacy-banner a { color: var(--accent); font-weight: 600; }
+.privacy-banner .inline-link { min-height: 0; padding: 0; font-size: inherit; display: inline; }
+.privacy-state { font-weight: 600; }
+.privacy-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 @media (max-width: 480px) {
+  .privacy-actions .btn { flex: 1 1 auto; justify-content: center; }
   .feedback-kinds { grid-template-columns: 1fr; }
   .feedback-kind span { flex-direction: row; justify-content: flex-start; min-height: 48px; padding: 8px 12px; text-align: left; }
 }

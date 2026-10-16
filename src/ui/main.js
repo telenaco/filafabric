@@ -38,6 +38,7 @@ import { createStudyRecorder } from './study.js';
 import { buildSwatch } from './export-builder.js';
 import { classifyBuildError, DiagnosticLog, suggestRecovery, safeMetadata } from './diagnostics.js';
 import { bindFeedback, problemReport } from './feedback.js';
+import { bindPrivacyNotice, statsAllowed } from './privacy.js';
 
 // the release this page loaded (boot.js imports this file with ?v=), so feedback says which version it is about
 const RELEASE = new URL(import.meta.url).searchParams.get('v') ?? 'dev';
@@ -2046,8 +2047,10 @@ async function init() {
   preview = createPreview($('#preview'));
   svgImportCard = new SvgImportCard(host);
   controls.push(svgImportCard);
-  studyRecorder = createStudyRecorder($('#study-notice'));
+  studyRecorder = createStudyRecorder($('#study-notice'), { allowed: () => statsAllowed() });
   void studyRecorder.init();
+  const privacy = bindPrivacyNotice($('#privacy-banner'), { onChange: () => studyRecorder.refresh(), openFeedback: () => feedback?.open(), toast });
+  $('#btn-privacy').addEventListener('click', () => { closeMenus(); privacy.open(); });
 
   // start from: a shared link, then the last session, then the defaults
   const fromLink = hashToState(location.hash);

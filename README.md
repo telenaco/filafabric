@@ -55,6 +55,14 @@ filled in. A problem report (also opened by *Report this problem* when a design 
 history and the current settings, shown in full before sending; never the drawing. These messages are separate from the
 anonymous export statistics in `STUDY_SETUP.md`.
 
+## Privacy notice
+
+The site sets no cookies and loads nothing from other sites (its font, Instrument Sans, is served from
+`vendor/fonts/instrument-sans/` under the SIL Open Font License). A first visit shows a short *Cookies and privacy* notice
+(`src/ui/privacy.js`): it says what stays in the browser and that exports are counted anonymously, links to `study.html`
+and to the feedback form, and *Don't count my exports* turns the statistics off for that browser. ⋯ › *Privacy and
+cookies* brings it back. Bump `PRIVACY_VERSION` there to show the notice again to everyone after changing what is counted.
+
 ## Run it
 
 Double-click `Run Textile Tool.bat` (needs Node 20 or newer). It starts a small local server and opens
