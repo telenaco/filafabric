@@ -111,7 +111,10 @@ the printing temperature is sent once extrusion rises above the bed layer, inclu
 
 ## Printable SVG and garment panels
 
-**Import SVG** sits above the pattern settings. Colour and stroke width say what each part of the drawing does:
+**Import SVG** sits above the pattern settings. No drawing to hand? `samples/filafabric-sample.svg` is a 200 × 200 mm
+sample with every colour in it (red shapes to fill, a blue star cut out of one, green guides, wide red lines): the import
+card offers to try it in one click or to download it and open it in Inkscape or Illustrator to see how it is set up.
+Colour and stroke width say what each part of the drawing does:
 
 | In the drawing | What it prints |
 |---|---|

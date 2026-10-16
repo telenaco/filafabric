@@ -742,6 +742,9 @@ export class PrintSetupCard extends Control {
 
 /* ---------- the one place a drawing comes in ---------- */
 
+/** The sample drawing on the site (samples/), to try or to open and copy: red fills, a blue hole, green guides, lines. */
+export const SAMPLE_SVG = 'samples/filafabric-sample.svg';
+
 /**
  * The SVG import. A drawing comes in once, here, and does three things everywhere in the studio: its lines print first,
  * the swatch takes its size, and (if you ask) the pattern is cut to its closed shapes. `host.svg()` describes the
@@ -763,8 +766,22 @@ export class SvgImportCard extends Control {
     this.shapeRow = el('label', { class: 'switch-row', hidden: true, title: 'Cut this pattern to the red SVG shapes, leaving blue holes empty. Pattern ends meet the printed borders.' }, this.shapeSwitch,
       el('span', {}, el('strong', { text: 'Fill its shapes with this pattern' })));
     this.note = el('p', { id: 'svg-preview-note', class: 'small muted', hidden: true });
+    // a drawing to try, for whoever has none: every colour the studio reads, in one file that can be opened to see how
+    this.tryButton = el('button', { type: 'button', id: 'svg-sample-try', class: 'link small', text: 'Try the sample drawing' });
+    this.sample = el('p', { class: 'svg-sample small muted' }, 'No drawing yet? ', this.tryButton, ' or ',
+      el('a', { href: SAMPLE_SVG, download: 'filafabric-sample.svg', class: 'link small', id: 'svg-sample-download', text: 'download it' }),
+      ' to see how its colours work: red is filled, blue is a hole, green bends the pattern, and the lines print as paths.');
     this.node = el('div', { class: 'svg-layer-control', 'aria-label': 'SVG import' },
-      el('div', { class: 'svg-layer-actions' }, this.pick, this.dropHint, this.remove), this.info, this.shapeRow, this.note);
+      el('div', { class: 'svg-layer-actions' }, this.pick, this.dropHint, this.remove), this.sample, this.info, this.shapeRow, this.note);
+    this.tryButton.addEventListener('click', async () => {
+      try {
+        const res = await fetch(SAMPLE_SVG);
+        if (!res.ok) throw new Error(`${res.status}`);
+        await host.importSvg(new File([await res.text()], 'filafabric-sample.svg', { type: 'image/svg+xml' }));
+      } catch {
+        host.toast('The sample drawing could not be loaded. Download it and import it instead.');
+      }
+    });
 
     this.input.addEventListener('change', (e) => { if (e.target.files[0]) void host.importSvg(e.target.files[0]); e.target.value = ''; });
     this.pick.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.input.click(); } });
@@ -785,6 +802,7 @@ export class SvgImportCard extends Control {
     this.pick.setAttribute('aria-description', this.pick.dataset.tip);
     this.remove.hidden = !v;
     this.dropHint.hidden = !!v;
+    this.sample.hidden = !!v;
     this.pickText.textContent = v ? 'Replace SVG' : 'Import SVG';
     // a design that draws the SVG itself has its own say about shapes; the others can be cut to them
     this.shapeRow.hidden = !(v && s.allowsOutline && !s.usesVector);
