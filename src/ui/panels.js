@@ -767,10 +767,14 @@ export class SvgImportCard extends Control {
       el('span', {}, el('strong', { text: 'Fill its shapes with this pattern' })));
     this.note = el('p', { id: 'svg-preview-note', class: 'small muted', hidden: true });
     // a drawing to try, for whoever has none: every colour the studio reads, in one file that can be opened to see how
-    this.tryButton = el('button', { type: 'button', id: 'svg-sample-try', class: 'link small', text: 'Try the sample drawing' });
-    this.sample = el('p', { class: 'svg-sample small muted' }, 'No drawing yet? ', this.tryButton, ' or ',
-      el('a', { href: SAMPLE_SVG, download: 'filafabric-sample.svg', class: 'link small', id: 'svg-sample-download', text: 'download it' }),
-      ' to see how its colours work: red is filled, blue is a hole, green bends the pattern, and the lines print as paths.');
+    this.tryButton = el('button', { type: 'button', id: 'svg-sample-try', class: 'link small', text: 'use the sample drawing' });
+    const download = el('a', { href: SAMPLE_SVG, download: 'filafabric-sample.svg', class: 'link small svg-sample-download', id: 'svg-sample-download',
+      title: 'A 200 x 200 mm drawing with every colour: red shapes are filled, the blue star is a hole, green bends the pattern, and the lines print as paths. Open it in Inkscape or Illustrator to see how it is set up.' });
+    download.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7M5 7l3 3 3-3M3 12.5h10"/></svg>';
+    download.append('Download the SVG sample with colours');
+    this.sample = el('div', { class: 'svg-sample small muted' },
+      el('p', {}, 'or ', this.tryButton),
+      el('p', {}, download));
     this.node = el('div', { class: 'svg-layer-control', 'aria-label': 'SVG import' },
       el('div', { class: 'svg-layer-actions' }, this.pick, this.dropHint, this.remove), this.sample, this.info, this.shapeRow, this.note);
     this.tryButton.addEventListener('click', async () => {
