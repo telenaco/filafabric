@@ -5,6 +5,9 @@
   ],
   "materials": [
     "filaflex-95-foamy.json",
-    "generic-flex-mk3.json"
+    "generic-flex-mk3.json",
+    "generic-pla.json",
+    "generic-tpe.json",
+    "ninjatek-ninjaflex-85a.json"
   ]
 }

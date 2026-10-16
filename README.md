@@ -102,6 +102,13 @@ The printer and filament lists are the files in `profiles/machines/` and `profil
 
 Bed size, nozzle and filament diameter, temperatures, flow, retraction, machine limits and start/end G-code are read; the slicer's own start and end G-code is kept where its placeholders can be filled and the rest is left out, with a note saying so. Run `node tools/profiles-index.mjs` (or `npm run profiles`) after adding or removing a file to refresh `profiles/index.json`; the local server does it on the fly. In the printer setup dialog **Add a printer or filament file…** keeps a file in this browser only, with a **Remove** button; to share it, put the file in the folder.
 
+The bundled filament choices include **NinjaTek NinjaFlex 85A (Midnight Black)**, **Generic TPE Flexible**, and
+**Generic PLA**, alongside the existing Filaflex and Generic FLEX profiles. These use PrusaResearch 2.5.12's
+classic MK3 / 0.4 mm reference settings. Generic TPE is a labelled Generic FLEX starting point for an unspecified
+spool; PLA is rigid. [Material sources and adaptations](profiles/MATERIAL_SOURCES.md) record the pinned upstream
+revision and how cooling is mapped to this tool's path roles. First-layer heat is retained through bed extrusion;
+the printing temperature is sent once extrusion rises above the bed layer, including streamed exports.
+
 ## Printable SVG and garment panels
 
 **Import SVG** sits above the pattern settings. Colour and stroke width say what each part of the drawing does:

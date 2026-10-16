@@ -1,10 +1,30 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { writeGcode, preflight, PreflightError } from '../src/engine/gcode.js';
+import { writeGcode, preflight, PreflightError, GcodeWriter } from '../src/engine/gcode.js';
+import { resolveConfig } from '../src/engine/params.js';
 import { plan } from '../src/engine/planner.js';
 import { computeStats } from '../src/engine/stats.js';
 import { defaultProfiles } from './helpers.js';
 import { scene } from './scene.js';
+
+test('printing temperature changes once when extrusion leaves the bed layer, never for a travel hop', () => {
+  const { machine, material } = defaultProfiles();
+  material.temperature = { first_layer: 215, print: 210 };
+  const writer = new GcodeWriter(resolveConfig(machine, material));
+  assert.ok(writer.header().some((line) => line.startsWith('M109 S215')));
+  const move = (z, extrude = false) => ({ x: 10, y: 10, z, extrude, cls: extrude ? 'supported' : 'travel' });
+  assert.ok(!writer.move(move(5)).some((line) => line.startsWith('M104')));
+  assert.ok(!writer.move(move(0.2, true)).some((line) => line.startsWith('M104')));
+  assert.ok(writer.move(move(0.4, true)).some((line) => line.startsWith('M104 S210')));
+  assert.ok(!writer.move(move(0.6, true)).some((line) => line.startsWith('M104')));
+  assert.ok(!writer.move(move(0.2, true)).some((line) => line.startsWith('M104')), 'does not toggle temperatures at crossings');
+});
+
+test('equal first-layer and printing temperatures produce no body temperature command', () => {
+  const { machine, material } = defaultProfiles();
+  const writer = new GcodeWriter(resolveConfig(machine, material));
+  assert.ok(!writer.move({ x: 10, y: 10, z: 1, extrude: true, cls: 'supported' }).some((line) => line.startsWith('M104')));
+});
 
 function build(over = {}) {
   const s = scene({ sample_width: 20, sample_height: 20, ...over });

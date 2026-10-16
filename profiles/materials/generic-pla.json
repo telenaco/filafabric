@@ -1,0 +1,43 @@
+{
+  "id": "generic-pla",
+  "name": "Generic PLA",
+  "source": "PrusaResearch 2.5.12 Generic PLA, classic MK3 / 0.4 mm reference; rigid material for comparison samples",
+  "filament_diameter": 1.75,
+  "density": 1.24,
+  "temperature": { "first_layer": 215, "print": 210 },
+  "bed_temperature": 60,
+  "flow": {
+    "multiplier": 1,
+    "reference_line_width": null,
+    "foam_expansion": 1,
+    "max_volumetric_speed_nominal": 15
+  },
+  "retraction": {
+    "length": 0.8,
+    "speed": 35,
+    "deretract_speed": 35,
+    "z_hop": 0.4,
+    "min_travel": 1,
+    "note": "Prusa classic MK3S printer defaults: 0.8 mm at 35 mm/s. Upstream deretract_speed=0 means reuse retract speed."
+  },
+  "fan": { "default": 100 },
+  "print_defaults": {
+    "fan_base": 0,
+    "fan_supported": 100,
+    "fan_nonplanar": 100,
+    "fan_unsupported": 100,
+    "fan_travel": 0
+  },
+  "travel_speed_hint": 150,
+  "pressure_advance_k": null,
+  "notes": "Prusa Generic PLA temperatures, density, multiplier and volumetric cap; classic MK3S retraction reference. Non-foaming, rigid PLA for comparison and articulated geometry, not an elastomer. Cooling follows this engine's path roles: bed/base paths off, supported and raised paths 100%; Prusa's gradual layer fan ramp is not reproduced. Printing temperature changes once extrusion rises above the bed layer. Textile geometry retains its conservative existing speeds. Physically qualify the chosen pattern and spool before a large print.",
+  "provenance": {
+    "repository": "https://github.com/prusa3d/PrusaSlicer-settings-prusa-fff",
+    "revision": "c712aaf177a915da19acad20262ab9379010b3aa",
+    "bundle_version": "2.5.12",
+    "preset": "Generic PLA",
+    "reference_printer": "Original Prusa i3 MK3S & MK3S+ (0.4 mm)",
+    "source_url": "https://github.com/prusa3d/PrusaSlicer-settings-prusa-fff/blob/c712aaf177a915da19acad20262ab9379010b3aa/PrusaResearch/2.5.12.ini",
+    "physically_verified": false
+  }
+}

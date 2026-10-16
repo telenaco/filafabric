@@ -108,7 +108,7 @@ export class GcodeWriter {
   constructor(cfg) {
     const errors = preflight([], cfg); if (errors.length) throw new PreflightError(errors);
     this.cfg=cfg; this.pos=startPosition(cfg); this.outX=null; this.outY=null; this.outZ=null; this.outF=null;
-    this.emittedE=0; this.cumE=0; this.fan=0; this.maxZ=0; this.timeSec=0; this.moves=0; this.extrudingMoves=0;
+    this.emittedE=0; this.cumE=0; this.fan=0; this.maxZ=0; this.timeSec=0; this.moves=0; this.extrudingMoves=0; this.printTemperatureApplied=false;
   }
   vars() {
     const {machine,t,derived}=this.cfg, o=derived.origin;
@@ -139,6 +139,12 @@ export class GcodeWriter {
     if(![m.x,m.y,m.z].every(Number.isFinite) || m.x+o.x < -1e-6 || m.x+o.x > machine.bed.width+1e-6 || m.y+o.y < -1e-6 || m.y+o.y > machine.bed.depth+1e-6 || m.z < -1e-6 || m.z > machine.bed.max_z+1e-6) throw new PreflightError(['A streamed move leaves the printable volume or is not finite']);
     const out=[];this.moves++;this.maxZ=Math.max(this.maxZ,m.z);
     if(m.comment) out.push('; '+m.comment); if(m.customGcode) out.push(m.customGcode);
+    // Crossing lifts and raised fabrics have no simple layer index. Switch once on actual
+    // extrusion above the bed layer; high travel approaches keep the first-layer setting.
+    if(!this.printTemperatureApplied && m.extrude && m.z>t.layer_height+1e-6) {
+      this.printTemperatureApplied=true;
+      if(derived.temperatures.print!==derived.temperatures.first) out.push('M104 S'+derived.temperatures.print+' ; printing temperature');
+    }
     if(m.retract==='retract') {const f=Math.round(r.speed*60);out.push('G1 E-'+fmt(r.length,5)+' F'+f);this.outF=f;this.timeSec+=r.length/r.speed;}
     else if(m.retract==='unretract') {const f=Math.round(r.deretractSpeed*60);out.push('G1 E'+fmt(r.length,5)+' F'+f);this.outF=f;this.timeSec+=r.length/r.deretractSpeed;}
     const want=fanFor(m.cls,t);

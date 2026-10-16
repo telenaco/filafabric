@@ -1,0 +1,45 @@
+{
+  "id": "ninjatek-ninjaflex-85a",
+  "name": "NinjaTek NinjaFlex 85A (Midnight Black)",
+  "source": "PrusaResearch 2.5.12: NinjaTek NinjaFlex TPU, classic MK3 / 0.4 mm; NinjaTek printing guidelines and technical data",
+  "filament_diameter": 1.75,
+  "density": 1.19,
+  "temperature": { "first_layer": 238, "print": 238 },
+  "bed_temperature": 50,
+  "flow": {
+    "multiplier": 1.2,
+    "reference_line_width": null,
+    "foam_expansion": 1,
+    "max_volumetric_speed_nominal": 1.2
+  },
+  "retraction": {
+    "length": 2.5,
+    "speed": 60,
+    "deretract_speed": 25,
+    "z_hop": 0,
+    "min_travel": 3,
+    "note": "Prusa NinjaTek NinjaFlex TPU filament overrides for a classic direct-drive MK3-family setup."
+  },
+  "fan": { "default": 60 },
+  "print_defaults": {
+    "fan_base": 0,
+    "fan_supported": 60,
+    "fan_nonplanar": 60,
+    "fan_unsupported": 60,
+    "fan_travel": 0
+  },
+  "travel_speed_hint": 150,
+  "pressure_advance_k": null,
+  "notes": "Non-foaming 85A TPU. Matches the linked 1.75 mm, 1 kg Midnight Black spool, SKU 3DNF0117510. Temperatures, density, flow cap, multiplier and retraction come from Prusa's NinjaFlex preset. Cooling is adapted to this engine's path roles: bed/base paths off, supported and raised paths 60%; Prusa's gradual layer fan ramp is not reproduced. This is a reference preset, not a physically qualified textile print. Direct-drive reference; other extruders may need tuning.",
+  "provenance": {
+    "repository": "https://github.com/prusa3d/PrusaSlicer-settings-prusa-fff",
+    "revision": "c712aaf177a915da19acad20262ab9379010b3aa",
+    "bundle_version": "2.5.12",
+    "preset": "NinjaTek NinjaFlex TPU",
+    "reference_printer": "Original Prusa i3 MK3S & MK3S+ (0.4 mm)",
+    "source_url": "https://github.com/prusa3d/PrusaSlicer-settings-prusa-fff/blob/c712aaf177a915da19acad20262ab9379010b3aa/PrusaResearch/2.5.12.ini",
+    "manufacturer_urls": ["https://ninjatek.com/support/printing-guidelines/", "https://ninjatek.com/support/technical-specs/"],
+    "product_url": "https://www.123-3d.ie/NinjaTek-NinjaFlex-midnight-black-TPU-filament-1-75mm-1kg-3DNF0117510-i3686.html",
+    "physically_verified": false
+  }
+}
