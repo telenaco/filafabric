@@ -81,3 +81,8 @@ test('boot.js imports the studio dynamically, so nothing of it runs behind the g
   assert.equal(studioUrl.searchParams.get('v'), bootUrl.searchParams.get('v'), 'page, bootstrap and studio load the same release');
   assert.equal(/^import .* from '\.\/ui\/main\.js'/m.test(boot), false);
 });
+
+test('the gate tells a visitor without a password where to ask for one', () => {
+  const html = fs.readFileSync(path.join(projectRoot, 'index.html'), 'utf8');
+  assert.match(html, /class="gate-access"[^>]*>[^<]*<a href="mailto:bubakidesign@gmail\.com[^"]*">bubakidesign@gmail\.com<\/a>/);
+});

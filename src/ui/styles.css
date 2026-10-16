@@ -592,6 +592,8 @@ body:not(.locked) > #gate { display: none; }
 .gate-error { margin: 10px 0 0; padding: 8px 12px; border-radius: 8px; background: var(--danger-bg); color: var(--danger-ink); border: 1px solid var(--danger-bd); font-weight: 600; }
 .gate-remember { display: flex; align-items: center; gap: 8px; margin-top: 14px; color: var(--ink-2); font-size: 13.5px; }
 .gate-note { margin: 18px 0 0; font-size: 13px; color: var(--muted); }
+.gate-access { margin: 8px 0 0; font-size: 14px; color: var(--ink-2); }
+.gate-access a { color: var(--accent); font-weight: 600; text-underline-offset: 3px; }
 @media (max-width: 480px) {
   .gate-card { padding: 24px 20px 22px; }
   .gate-title { font-size: 24px; }
