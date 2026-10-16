@@ -67,6 +67,7 @@
     <span class="sep hide-narrow" aria-hidden="true"></span>
     <button type="button" id="btn-undo" class="icon-btn" aria-label="Undo" title="Undo (Ctrl+Z)" disabled><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4L3 8l4 4"/><path d="M3 8h8a4 4 0 010 8H8"/></svg></button>
     <button type="button" id="btn-redo" class="icon-btn" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4l4 4-4 4"/><path d="M15 8H7a4 4 0 000 8h3"/></svg></button>
+    <button type="button" id="btn-feedback" class="btn" aria-haspopup="dialog" aria-label="Feedback" title="Tell us what works and what doesn't, ask for a pattern, or report a problem"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7.5H7l-3 2.5V11H2.5z"/><path d="M5.5 6.5h5M5.5 8.5h3"/></svg><span class="btn-label">Feedback</span></button>
     <button type="button" id="btn-share" class="btn" title="Copy a link that opens this design with these settings"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 9.5a3 3 0 004.2 0l2.3-2.3a3 3 0 00-4.2-4.2l-.9.9"/><path d="M9.5 6.5a3 3 0 00-4.2 0L3 8.8a3 3 0 004.2 4.2l.9-.9"/></svg><span class="btn-label">Share</span></button>
     <button type="button" id="btn-more" class="icon-btn" popovertarget="more-menu" aria-label="More options"><svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><circle cx="4" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="14" cy="9" r="1.6"/></svg></button>
   </div>
@@ -341,8 +342,31 @@
   </form>
 </dialog>
 
+<dialog id="feedback-dialog" aria-labelledby="feedback-title">
+  <form id="feedback-form" novalidate>
+    <h2 id="feedback-title">Send feedback</h2>
+    <p class="muted small">It goes straight to the Filafabric team at Bubaki, and every message is read.</p>
+    <div class="feedback-kinds" role="radiogroup" aria-label="What is it about?">
+      <label class="feedback-kind"><input type="radio" name="kind" value="opinion" checked><span><svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7.5H7l-3 2.5V11H2.5z"/><path d="M5.5 6.5h5M5.5 8.5h3"/></svg>What works, what doesn't</span></label>
+      <label class="feedback-kind"><input type="radio" name="kind" value="pattern"><span><svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 5c2-2.5 4 2.5 6 0s4 2.5 6 0M2 11c2-2.5 4 2.5 6 0s4 2.5 6 0"/><path d="M8 1.5v3M8 11.5v3"/></svg>Request a pattern</span></label>
+      <label class="feedback-kind"><input type="radio" name="kind" value="problem"><span><svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2L14.5 13.5h-13z"/><path d="M8 6.5v3M8 11.5v.1"/></svg>Report a problem</span></label>
+    </div>
+    <label class="field-row stacked" for="feedback-message"><span id="feedback-prompt">What works well, and what doesn't?</span><textarea id="feedback-message" name="message" rows="5" maxlength="5000"></textarea></label>
+    <p id="feedback-picture" class="feedback-note small" hidden>Have a picture of it? <a id="feedback-mailto" href="mailto:bubakidesign@gmail.com">Email it with your picture</a> instead: your email app opens with this description filled in, so you only attach the image.</p>
+    <div id="feedback-report-box" class="feedback-report-box" hidden>
+      <label class="field-row inline"><input type="checkbox" id="feedback-include" checked><span>Include the error details and current settings</span></label>
+      <details class="feedback-report"><summary>See exactly what is sent</summary><pre id="feedback-report"></pre></details>
+      <p class="small muted">Your drawing itself is never sent. To share it, use More › Download error log and email the file to <a href="mailto:bubakidesign@gmail.com">bubakidesign@gmail.com</a>.</p>
+    </div>
+    <label class="field-row stacked" for="feedback-email"><span>Your email <span class="muted">(optional, for a reply)</span></span><input id="feedback-email" name="email" type="email" autocomplete="email" maxlength="200" spellcheck="false"></label>
+    <input type="text" name="_gotcha" class="visually-hidden" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <p id="feedback-status" class="feedback-status small" role="status" aria-live="polite"></p>
+    <div class="dialog-actions feedback-actions"><button type="button" class="btn" id="feedback-cancel">Cancel</button><button type="submit" class="btn primary" id="feedback-send">Send</button></div>
+  </form>
+</dialog>
+
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-<script type="module" src="src/boot.js?v=20261016-svg-import"></script>
+<script type="module" src="src/boot.js?v=20261016-feedback"></script>
 </body>
 </html>

@@ -49,6 +49,9 @@ function metadata(value, depth = 0) {
   return out;
 }
 
+/** The same guard for anything else leaving the studio, such as a feedback problem report. */
+export const safeMetadata = (value) => metadata(value);
+
 function logEntry(entry) {
   const error = entry.error;
   return {

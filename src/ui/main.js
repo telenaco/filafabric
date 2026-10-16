@@ -36,8 +36,11 @@ import { windowRings } from '../engine/window.js';
 import { bindPanelExport } from './panel-ui.js';
 import { createStudyRecorder } from './study.js';
 import { buildSwatch } from './export-builder.js';
-import { classifyBuildError, DiagnosticLog, suggestRecovery } from './diagnostics.js';
+import { classifyBuildError, DiagnosticLog, suggestRecovery, safeMetadata } from './diagnostics.js';
+import { bindFeedback, problemReport } from './feedback.js';
 
+// the release this page loaded (boot.js imports this file with ?v=), so feedback says which version it is about
+const RELEASE = new URL(import.meta.url).searchParams.get('v') ?? 'dev';
 const STORAGE_KEY = 'filament-textile-studio:v1'; // kept so a returning visitor's last session still opens
 const PLAY_ICON = 'M5 3l10 6-10 6z';
 const PAUSE_ICON = 'M4 3h3.5v12H4zM10.5 3H14v12h-3.5z';
@@ -195,6 +198,7 @@ let rafId = 0;
 let lastFrame = 0;
 const undoLog = { stack: [], cursor: -1 };
 const diagnosticLog = new DiagnosticLog();
+let feedback = null;
 const openAdvancedGroups = new Set();
 
 /* ---------- storage ---------- */
@@ -868,7 +872,9 @@ function renderCheck() {
     if (state.error) {
       const saveLog = el('button', { type: 'button', class: 'check-btn ghost', text: 'Download error log', title: 'Downloads recent local errors and current settings, including the current drawing. Share this file only when you want to share that drawing.' });
       saveLog.addEventListener('click', saveErrorLog);
-      actions.append(saveLog);
+      const report = el('button', { type: 'button', class: 'check-btn ghost', text: 'Report this problem', title: 'Tell us what happened: the error details and settings go with it, never your drawing.' });
+      report.addEventListener('click', () => feedback?.open('problem'));
+      actions.append(saveLog, report);
     }
     if (v.action === 'roomy-off') {
       const btn = el('button', { type: 'button', class: 'check-btn ghost', text: v.actionLabel });
@@ -1701,6 +1707,34 @@ function saveErrorLog() {
   toast(state.vector ? 'Error log saved, including the current drawing.' : 'Error log saved with the current settings.');
 }
 
+/** What the feedback form knows about the studio right now: the design, and for a problem report its settings and recent errors. */
+function feedbackContext() {
+  const mod = designById(state.design);
+  return {
+    designName: mod?.name ?? state.design,
+    release: RELEASE,
+    report: () => {
+      const [width, height] = BINDINGS[state.design].size.get();
+      const paths = state.vector?.paths ?? [];
+      return problemReport({
+        release: RELEASE,
+        browser: navigator.userAgent,
+        screen: `${innerWidth} × ${innerHeight}`,
+        design: state.design,
+        size: { width, height },
+        settings: settingsOf(state.design),
+        print: { extraLayers: state.print.extraLayers, brim: state.print.brim, layerHeight: printMaterial()?.print_defaults?.layer_height },
+        machine: state.machine,
+        material: state.material,
+        // counts only: the drawing stays on this device
+        drawing: state.vector ? { svgPaths: paths.length, svgPoints: paths.reduce((n, p) => n + p.length, 0), width: state.vector.width, height: state.vector.height } : null,
+        error: state.error ? (Array.isArray(state.error.errors) ? state.error.errors.join(' ') : String(state.error.message || state.error)) : null,
+        recent: diagnosticLog.export(),
+      });
+    },
+  };
+}
+
 function slug(s) {
   return (s || 'swatch').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'swatch';
 }
@@ -1960,6 +1994,8 @@ function bindStatic() {
   anchorPopover($('#more-menu'), $('#btn-more'));
   anchorPopover($('#view-menu'), $('#btn-view'));
   $('#btn-help').addEventListener('click', () => { closeMenus(); $('#help-dialog').showModal(); });
+  feedback = bindFeedback($('#feedback-dialog'), { context: feedbackContext, toast });
+  $('#btn-feedback').addEventListener('click', () => feedback.open());
   $('#btn-save-file').addEventListener('click', () => { closeMenus(); saveFile(); });
   $('#btn-error-log').addEventListener('click', () => { closeMenus(); saveErrorLog(); });
   $('#btn-reset').addEventListener('click', () => { closeMenus(); resetDesign(); });

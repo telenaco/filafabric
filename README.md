@@ -45,6 +45,16 @@ names can still download the studio's code. It keeps casual visitors out; for re
 Cloudflare Access (free for small teams) instead of, or as well as, this page. *Lock the studio* in the ⋯ menu locks this
 browser again.
 
+## Feedback
+
+*Feedback* in the top bar opens a short form with three choices: what works and what doesn't, a pattern request, or a
+problem report. Messages go to the Formspree form `https://formspree.io/f/xeaevvbn` (set in `src/ui/feedback.js`), which
+emails them; a reply address is optional, and Formspree makes it the reply-to. The form sends text only (no file uploads,
+which Formspree charges for), so a pattern request offers *Email it with your picture* instead: a mailto to bubakidesign@gmail.com with the description
+filled in. A problem report (also opened by *Report this problem* when a design can't build) carries the recent error
+history and the current settings, shown in full before sending; never the drawing. These messages are separate from the
+anonymous export statistics in `STUDY_SETUP.md`.
+
 ## Run it
 
 Double-click `Run Textile Tool.bat` (needs Node 20 or newer). It starts a small local server and opens
