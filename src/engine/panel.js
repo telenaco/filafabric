@@ -11,6 +11,7 @@ import { stackStrands } from './stack.js';
 import { conformalGuideRegion, repelGuideStrands } from './conformal.js';
 import { resolveCrossings } from './crossings.js';
 import { joinStrokes } from './travel.js';
+import { buildBrimStrands } from './brim.js';
 
 const rectangle = (w, h, x = 0, y = 0) => [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];
 const bounds = (s) => s.pts.reduce((b, p) => ({ minX: Math.min(b.minX, p.x), maxX: Math.max(b.maxX, p.x), minY: Math.min(b.minY, p.y), maxY: Math.max(b.maxY, p.y) }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
@@ -96,6 +97,8 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   const model = vector ? interpretDrawing(vector, { scaleX: width / vector.width, scaleY: height / vector.height }) : null;
   const guides = model?.guides ?? [], outerBoundary = new PolygonBoundary(outline ?? (shapeOutline && model?.rings.length ? model.rings : [rectangle(width, height)]));
   const boundary = guides.length ? conformalGuideRegion(outerBoundary, guides) : outerBoundary;
+  const brim = options.brim ?? 2;
+  const brimStrands = buildBrimStrands(boundary.rings, { count: brim, strandWidth: bead, layerHeight: h });
   // number of layers: the texture of every section is printed that many times on top of itself
   const layers = Math.max(1, Math.round(options.layers ?? 1));
   const stackIf = (strands) => (layers > 1 && !texture.placements?.length ? stackStrands(strands, layers, { layerHeight: h, strandWidth: bead }) : strands);
@@ -109,6 +112,7 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   const emit = async (strands) => {
     for (const s of strands) {
       check(); if (s.pts.length < 2) continue;
+      if (s.brim) await add([`; brim run ${s.id}`]);
       const first = s.pts[0], safe = Math.max(maxPrintedZ, first.z, last?.z ?? 0) + 3;
       if (last) await add(writer.move({ x: last.x, y: last.y, z: safe, cls: 'travel', extrude: false, retract: cfg.derived.retraction.length ? 'retract' : undefined }));
       await add(writer.move({ x: first.x, y: first.y, z: safe, cls: 'travel', extrude: false }));
@@ -124,7 +128,8 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   };
   check();
   const exportedSettings = { ...(options.settings ?? {}), colorChange: false };
-  await add(writer.header({ comments: [`Garment panel ${width} x ${height} mm; ${options.design}; repeat ${repeat} mm`, 'Continuous crossed backing; texture repeats in sections; physical swatch qualification required', `settings ${JSON.stringify(exportedSettings)}`, `studio settings ${JSON.stringify({ design: options.design, settings: { ...(options.studySettings ?? exportedSettings), colorChange: false }, width, height, repeat, backingSpacing, print: { layerHeight: h, layers, nozzleDiameter: cfg.t.nozzle_diameter, extrusionWidth: bead }, material: material.id })}`] }));
+  await add(writer.header({ comments: [`Garment panel ${width} x ${height} mm; ${options.design}; repeat ${repeat} mm`, 'Continuous crossed backing; texture repeats in sections; physical swatch qualification required', `settings ${JSON.stringify(exportedSettings)}`, `studio settings ${JSON.stringify({ design: options.design, settings: { ...(options.studySettings ?? exportedSettings), colorChange: false }, width, height, repeat, backingSpacing, print: { layerHeight: h, layers, brim, nozzleDiameter: cfg.t.nozzle_diameter, extrusionWidth: bead }, material: material.id })}`] }));
+  await emit(brimStrands);
   let basis = backingLines(boundary, backingSpacing, h, vector ? h : 0, shapeOutline ? 0 : bead);
   if (guides.length) basis = resolveCrossings(repelGuideStrands(basis, guides, { boundary, strandWidth: bead }), { follow: true, preserve: true, lift: h, strandWidth: bead }).strands;
   if (!basis.length) throw new ConfigError(['No backing fits this outline. Use finer backing spacing or a larger panel.']);
@@ -191,5 +196,5 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     await flush(); progress({ phase: 'texture', done: sections, total });
   }
   await add([`; panel estimate (no acceleration): ${(writer.timeSec / 60).toFixed(1)} min; filament ${writer.cumE.toFixed(1)} mm`, ...writer.footer()]); await flush();
-  return { sections, peakSectionMoves, bytes, moves: writer.moves, filamentMm: writer.cumE, timeSec: writer.timeSec, guideCount: guides.length, print: { layerHeight: h, nozzleDiameter: cfg.t.nozzle_diameter, extrusionWidth: bead, layers }, warnings, physicallyVerified: false };
+  return { sections, peakSectionMoves, bytes, moves: writer.moves, filamentMm: writer.cumE, timeSec: writer.timeSec, guideCount: guides.length, print: { layerHeight: h, nozzleDiameter: cfg.t.nozzle_diameter, extrusionWidth: bead, layers, brim }, warnings, physicallyVerified: false };
 }

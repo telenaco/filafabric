@@ -7,6 +7,22 @@ import { exportPanel } from '../src/engine/panel.js';
 import { DESIGNS } from '../src/ui/designs.js';
 import { toTextile } from '../src/ui/controls.js';
 
+test('streaming prints a single full-outline brim before backing, and records its setting', async () => {
+  const { machine, material } = defaultProfiles();
+  const options = { machine, material, design: 'crosshatch', width: 60, height: 40, repeat: 20 };
+  let text = '';
+  const stats = await exportPanel(options, { write: async (s) => { text += s; } });
+  assert.equal(stats.print.brim, 2);
+  const tags = [...text.matchAll(/; brim run (brim-[^\n]+)/g)].map((m) => m[1]);
+  assert.equal(tags.length, 2, 'two runs around the complete piece, never around each section');
+  assert.ok(text.indexOf('; brim run brim-') < text.indexOf('; texture section '));
+  let off = '';
+  const noBrim = await exportPanel({ ...options, brim: 0 }, { write: async (s) => { off += s; } });
+  assert.equal(noBrim.print.brim, 0);
+  assert.ok(!off.includes('; brim run brim-'));
+  assert.ok(stats.filamentMm > noBrim.filamentMm);
+});
+
 test('every design exports bounded texture sections with the appropriate row precedence', async () => {
   const { machine, material } = defaultProfiles();
   for (const d of DESIGNS.filter((d) => d.status === 'ready')) {

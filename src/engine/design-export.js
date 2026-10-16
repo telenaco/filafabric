@@ -7,6 +7,7 @@ import { bedFitErrors, PreflightError } from './gcode.js';
 import { applySvgGuides } from './svg-guides.js';
 import { composeSvgLines } from './svg-lines.js';
 import { stackLayers } from './stack.js';
+import { applyBrim } from './brim.js';
 
 /** Generate the selected design once at its complete size, independently of the preview window. */
 export function generateDesignExport(input) {
@@ -41,7 +42,7 @@ export function generateDesignExport(input) {
     result = composeSvgLines(result, vector, { fullWidth: width, fullHeight: height, clipLines: !input.shapeOutline && !result.guideCount });
     result.documentSize = [vector.width, vector.height];
   }
-  return stackLayers(result, input.layers ?? 1);
+  return applyBrim(stackLayers(result, input.layers ?? 1), { count: input.brim ?? 2 });
 }
 
 /** The UI only needs printable output and summary data; geometry remains inside the worker. */

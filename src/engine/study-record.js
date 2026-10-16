@@ -24,7 +24,7 @@ export function sanitizeStudyRecord(raw) {
     design: raw.design, exportType: raw.exportType, dimensions: { width, height },
     properties: {
       settings,
-      print: numeric(p.print, ['layerHeight', 'layers', 'nozzleDiameter', 'extrusionWidth']),
+      print: numeric(p.print, ['layerHeight', 'layers', 'brim', 'nozzleDiameter', 'extrusionWidth']),
       metrics: numeric(p.metrics, ['timeSec', 'filamentMm', 'moves']),
       sources: { svg: p.sources?.svg === true, image: p.sources?.image === true, ...numeric(p.sources, ['svgPaths', 'svgPoints', 'svgGuides']) },
       panel: numeric(p.panel, ['repeat', 'backingSpacing']),

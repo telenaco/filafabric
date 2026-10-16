@@ -24,9 +24,12 @@ import { FIELDS, FIELD_IDS, createField } from '../engine/fields.js';
 import { SHAPES, SHAPE_IDS } from '../engine/shapes.js';
 import { readSvgLines } from './svg-lines.js';
 import { composeSvgLines, outlineFromVector, vectorPatternRings } from '../engine/svg-lines.js';
-import { applySvgGuides } from '../engine/svg-guides.js';
+import { applySvgGuides, vectorGuides } from '../engine/svg-guides.js';
 import { summariseDrawing, describeDrawing, interpretDrawing } from '../engine/drawing.js';
 import { stackLayers } from '../engine/stack.js';
+import { applyBrim } from '../engine/brim.js';
+import { boundaryFor } from '../engine/layers.js';
+import { conformalGuideRegion } from '../engine/conformal.js';
 import { windowRings } from '../engine/window.js';
 import { bindPanelExport } from './panel-ui.js';
 import { createStudyRecorder } from './study.js';
@@ -342,7 +345,7 @@ const controls = [];
 let svgImportCard = null;
 let studyRecorder = null;
 
-const PRINT_RANGES = { layers: { min: 1, max: 10, step: 1 } };
+const PRINT_RANGES = { layers: { min: 1, max: 10, step: 1 }, brim: { min: 0, max: 8, step: 1 } };
 const PRINT_THICKNESS = { label: 'Layer thickness', help: 'How thick every layer is. Thinner prints cleaner and slower; thicker is quick, but strands lie over each other less cleanly.' };
 const PRINT_LAYERS = { key: 'layers', label: 'Number of layers', help: 'How many times the whole pattern is printed on top of itself: 1 is the pattern as designed, 3 is a fabric three times as thick.', lo: 'One', hi: 'Many', unit: '', edit: true };
 
@@ -365,7 +368,10 @@ function normalisePrint() {
 
 const PRINT_BINDING = {
   get: (key) => state.print[key],
-  set: (key, value) => { state.print[key] = key === 'layers' ? Math.max(1, Math.round(value)) : value; },
+  set: (key, value) => {
+    if (key === 'brim' && value > 50) { toast('Brim: enter a count from 0 to 50.'); return; }
+    state.print[key] = key === 'layers' ? Math.max(1, Math.round(value)) : key === 'brim' ? Math.max(0, Math.round(value)) : value;
+  },
   range: (key) => PRINT_RANGES[key],
   options: () => layerChoices(),
   note: () => {
@@ -373,6 +379,7 @@ const PRINT_BINDING = {
     return `A ${nozzleDiameter()} mm nozzle prints layers from ${list[0]} to ${list.at(-1)} mm.`;
   },
   readout: (key) => {
+    if (key === 'brim') return state.print.brim ? `${state.print.brim} ${state.print.brim === 1 ? 'line' : 'lines'}` : 'Off';
     if (key === 'layerHeight') return `${Math.round(state.print.layerHeight * 1000) / 1000} mm${state.print.layerHeight === PRINT_DEFAULTS.layerHeight ? ' (the usual)' : ''}`;
     const n = state.print.layers;
     const kept = n > 1 && state.result?.placements?.length && !state.result.stack;
@@ -540,7 +547,7 @@ function exportOptions(width = null, height = null) {
     machine: state.machines.get(state.machine), material: printMaterial(), design: state.design,
     width, height, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : settingsOf(state.design),
     studySettings: { ...settingsOf(state.design) }, outline: placedOutline(width, height),
-    vector: state.vector, shapeOutline: !!state.outline?.page, layers: state.print.layers,
+    vector: state.vector, shapeOutline: !!state.outline?.page, layers: state.print.layers, brim: state.print.brim,
     image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale,
     panelSize: size,
   };
@@ -601,7 +608,8 @@ function placedOutline(width, height, fullWidth = width, fullHeight = height) {
     if (!cropped.length) throw new Error('The bottom-left preview window contains no filled SVG shape. Use full-panel export for the complete drawing.');
     return cropped;
   }
-  return placeOutline(rings, { rotation: o.rotation, width, height });
+  const placed = placeOutline(rings, { rotation: o.rotation, width: fullWidth, height: fullHeight });
+  return width === fullWidth && height === fullHeight ? placed : windowRings(placed, width, height);
 }
 
 /** In parallel mode, the least wave depth that still lets each line cross its neighbours (mm). */
@@ -646,7 +654,7 @@ function regenerate() {
     } else if (state.design === 'squiggle') {
       const s = state.squiggle;
       // a picture is shown whole: the preview is the whole swatch at the shape it has, shrunk to fit the window
-      const shrink = s.pattern === 'image' && state.image ? Math.min(1, cap / Math.max(s.width, s.height)) : null;
+      const shrink = s.pattern === 'image' && state.image && !state.vector ? Math.min(1, cap / Math.max(s.width, s.height)) : null;
       const pw = shrink ? Math.max(10, Math.round(s.width * shrink)) : Math.min(s.width, cap);
       const ph = shrink ? Math.max(10, Math.round(s.height * shrink)) : Math.min(s.height, cap);
       result = generateSquiggle(machine, material, {
@@ -659,7 +667,7 @@ function regenerate() {
         wavelength: s.wavelength,
         sampler: squiggleSampler(pw, ph),
         colorChange: s.colorChange,
-        outline: placedOutline(pw, ph, s.width, s.height),
+        outline: placedOutline(pw, ph, shrink ? pw : s.width, shrink ? ph : s.height),
       });
     } else {
       const [w, h] = sampleSize(state.primary);
@@ -674,6 +682,16 @@ function regenerate() {
       result = composeSvgLines(result, state.vector, { fullWidth, fullHeight, clipLines: !state.outline?.page && !result.guideCount });
     }
     result = stackLayers(result, state.print.layers);
+    // Offset the selected outline before clipping: a bounded preview must never invent an edge at its crop.
+    const pictured = state.design === 'squiggle' && state.squiggle.pattern === 'image' && state.image && !state.vector;
+    const fullWidth = pictured ? result.cfg.t.sample_width : selectedWidth;
+    const fullHeight = pictured ? result.cfg.t.sample_height : selectedHeight;
+    let brimOutline = result.outline;
+    if (fullWidth !== result.cfg.t.sample_width || fullHeight !== result.cfg.t.sample_height) {
+      const boundary = boundaryFor(fullWidth, fullHeight, placedOutline(fullWidth, fullHeight));
+      brimOutline = state.vector ? conformalGuideRegion(boundary, vectorGuides(state.vector, fullWidth, fullHeight)).rings : boundary.rings;
+    }
+    result = applyBrim(result, { count: state.print.brim, outline: brimOutline, fullWidth, fullHeight });
     if (state.vector) result.documentSize = [state.vector.width, state.vector.height];
     showGenerated(result, snapshotKey());
   } catch (e) {
@@ -1602,7 +1620,7 @@ function recordBuildFailure(error, input = null) {
   const [width, height] = input ? [input.width, input.height] : BINDINGS[state.design].size.get();
   const captured = input ?? {
     design: state.design, width, height, studySettings: { ...settingsOf(state.design) },
-    machine: state.machines.get(state.machine), material: printMaterial(), layers: state.print.layers,
+    machine: state.machines.get(state.machine), material: printMaterial(), layers: state.print.layers, brim: state.print.brim,
     vector: state.vector, outline: state.outline?.rings,
   };
   const vector = captured.vector, sourcePaths = vector?.paths ?? [];
@@ -1612,7 +1630,7 @@ function recordBuildFailure(error, input = null) {
     settings: {
       ...settings,
       operation: input?.operation ?? (input ? 'panel' : 'preview'),
-      print: { layers: captured.layers, layerHeight: captured.material?.print_defaults?.layer_height },
+      print: { layers: captured.layers, brim: captured.brim, layerHeight: captured.material?.print_defaults?.layer_height },
       machine: captured.machine?.id, material: captured.material?.id,
       ...(input ? { repeat: captured.repeat, backingSpacing: captured.backingSpacing } : state.design === 'loop-pile' ? { advanced: { ...state.advanced } } : {}),
     },
@@ -1674,9 +1692,9 @@ function reportStudyExport(exportType, options = {}, stats = state.result?.stats
   const cfg = options.cfg ?? state.result?.cfg;
   const [width, height] = ['settings-json', 'build-error'].includes(exportType) ? BINDINGS[state.design].size.get() : [cfg?.t.sample_width, cfg?.t.sample_height];
   const vector = options.vector ?? state.vector;
-  let print = stats?.print ?? { layerHeight: cfg?.t.layer_height, layers: options.layers ?? state.print.layers, nozzleDiameter: cfg?.t.nozzle_diameter, extrusionWidth: cfg?.t.extrusion_width };
+  let print = stats?.print ?? { layerHeight: cfg?.t.layer_height, layers: options.layers ?? state.print.layers, brim: options.brim ?? state.print.brim, nozzleDiameter: cfg?.t.nozzle_diameter, extrusionWidth: cfg?.t.extrusion_width };
   if (exportType === 'build-error') {
-    print = { layerHeight: options.material?.print_defaults?.layer_height ?? state.print.layerHeight, layers: options.layers ?? state.print.layers };
+    print = { layerHeight: options.material?.print_defaults?.layer_height ?? state.print.layerHeight, layers: options.layers ?? state.print.layers, brim: options.brim ?? state.print.brim };
     try {
       const current = resolveConfig(options.machine ?? state.machines.get(state.machine), options.material ?? printMaterial());
       Object.assign(print, { nozzleDiameter: current.t.nozzle_diameter, extrusionWidth: current.t.extrusion_width });

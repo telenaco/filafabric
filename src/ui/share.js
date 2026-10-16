@@ -34,8 +34,8 @@ export function hashToState(hash) {
   return m ? decodeState(m[1]) : null;
 }
 
-/** Layer thickness (mm) and how many times the pattern is printed on top of itself. Anything else is the default. */
-export const PRINT_DEFAULTS = Object.freeze({ layerHeight: 0.2, layers: 1 });
+/** Layer thickness (mm), repeated pattern copies, and side-by-side brim runs. Invalid values use the defaults. */
+export const PRINT_DEFAULTS = Object.freeze({ layerHeight: 0.2, layers: 1, brim: 2 });
 export function sanitizePrint(raw) {
   const out = { ...PRINT_DEFAULTS };
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
@@ -43,6 +43,9 @@ export function sanitizePrint(raw) {
   if (raw.layerHeight !== null && raw.layerHeight !== '' && Number.isFinite(h) && h > 0 && h <= 2) out.layerHeight = h;
   const n = Math.round(Number(raw.layers));
   if (Number.isFinite(n) && n >= 1 && n <= 50) out.layers = n;
+  const b = raw.brim;
+  const count = (typeof b === 'number' || typeof b === 'string' && b.trim() !== '') ? Number(b) : NaN;
+  if (Number.isFinite(count) && count >= 0 && count <= 50) out.brim = Math.round(count);
   return out;
 }
 

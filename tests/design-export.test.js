@@ -11,7 +11,7 @@ const profiles = defaultProfiles();
 
 test('Bubbles export generates one full-size seeded design beyond the bounded preview', () => {
   const settings = { size: 5, seed: 7, link: true };
-  const input = { ...profiles, design: 'bubbles', settings, width: 200, height: 200 };
+  const input = { ...profiles, design: 'bubbles', settings, width: 200, height: 200, brim: 0 };
   const start = performance.now();
   const result = generateDesignExport(input);
   console.log(`Bubbles 200: ${(performance.now() - start).toFixed(0)} ms, ${result.moves.length} moves`);
@@ -57,11 +57,11 @@ test('SVG guides retain original coordinates and all three green wall passes onc
 test('legacy image sampler and pile fields use full selected dimensions and keep raised classes', () => {
   const image = { width: 2, height: 2, data: new Uint8ClampedArray([0, 0, 0, 255, 255, 255, 255, 255, 255, 255, 255, 255, 0, 0, 0, 255]) };
   const settings = { pattern: 'image', spacing: 3, amplitude: 1, wavelength: 8 };
-  const squiggle = generateDesignExport({ ...profiles, design: 'squiggle', settings, image, width: 25, height: 20 });
+  const squiggle = generateDesignExport({ ...profiles, design: 'squiggle', settings, image, width: 25, height: 20, brim: 0 });
   const directSquiggle = generateSquiggle(profiles.machine, profiles.material, { ...settings, width: 25, height: 20, sampler: createImageSampler(image, 25, 20, { yUp: true }) });
   assert.equal(squiggle.gcode, directSquiggle.gcode);
   const field = createField('bumps', { scale: 2 });
-  const pile = generateDesignExport({ ...profiles, design: 'loop-pile', width: 25, height: 20, pilePattern: 'bumps', pilePatternScale: 2 });
+  const pile = generateDesignExport({ ...profiles, design: 'loop-pile', width: 25, height: 20, pilePattern: 'bumps', pilePatternScale: 2, brim: 0 });
   const directPile = generate(profiles.machine, profiles.material, { sample_width: 25, sample_height: 20 }, { liftAt: (x, y) => 0.3 + 0.7 * field(x, y) });
   assert.equal(pile.gcode, directPile.gcode);
   assert.ok(pile.moves.some((m) => m.extrude && m.cls === 'rising'));
@@ -94,4 +94,24 @@ test('SVG design composes the imported drawing once and legacy pile retains rais
   const pile = generateDesignExport({ ...profiles, design: 'loop-pile', vector, width: 30, height: 30 });
   assert.ok(pile.moves.some((m) => m.extrude && m.cls === 'rising'));
   assert.ok(pile.moves.some((m) => m.extrude && m.cls === 'unsupported'));
+});
+
+test('direct export adds two inside brim runs once, before the repeated fabric, and can disable them', () => {
+  const input = { ...profiles, design: 'crosshatch', width: 30, height: 20, layers: 2 };
+  const plain = generateDesignExport({ ...input, brim: 0 });
+  const framed = generateDesignExport(input);
+  assert.equal(framed.brim.count, 2);
+  assert.equal(framed.brim.overlap, 0.2);
+  assert.equal(framed.strands.filter((s) => s.brim && !s.connection).length, 2);
+  assert.ok(framed.moves.find((m) => m.extrude).tag.startsWith('brim-'));
+  const body = framed.moves.slice(-plain.moves.length);
+  assert.deepEqual(body.map(({ retract, ...move }) => move), plain.moves.map(({ retract, ...move }) => move), 'the native fabric path is preserved');
+  for (let i = 0; i < body.length; i++) {
+    if (body[i].retract === plain.moves[i].retract) continue;
+    assert.equal(i, plain.moves.findIndex((m) => m.extrude));
+    assert.equal(body[i].retract, 'unretract', 'only a balanced first-extrusion prime can be added');
+  }
+  assert.ok(framed.stats.filamentMm > plain.stats.filamentMm);
+  assert.equal(framed.cfg.t.sample_width, 30);
+  assert.equal(plain.brim, undefined);
 });

@@ -201,7 +201,18 @@ Code:
 6. Product shell: design gallery on the left, settings on the right, preconfigured printer bundles, shareable
    links (see `docs/product-direction-2026-10-14.md`, which also lists candidate names)
 
+## Brim
+
+Brim is available in **Size and shape** for every design, including imported SVG outlines. It prints once on the
+bed before the fabric: two adjacent runs by default, overlapping by 20% of the configured extrusion width. Runs
+sit inside the selected outline, including hole edges, so the chosen dimensions stay unchanged. Set Brim to 0
+to turn it off, or type an exact count up to 50. Short connections join exposed fabric ends where needed; complete
+motifs and native raised paths keep their geometry. Very narrow outline features may accommodate fewer runs.
+
 ## Open requests
+
+Follow-up: make **Number of layers** understand each design's native structural layer count. It currently counts
+copies of the complete pattern; this brim addition deliberately leaves that behavior unchanged.
 
 A PrusaSlicer-sliced `.gcode` made with **Filaflex Foamy 95** (not Generic FLEX) on the MK3S would let the Foamy
 values be checked against a real profile; the MK3S machine and Generic FLEX values already come from the sample

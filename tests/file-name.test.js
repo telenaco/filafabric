@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { DESIGNS, designById } from '../src/ui/designs.js';
 import { relevantKeys, settingsFileName, exportFileName, parseFileName, ownName } from '../src/ui/file-name.js';
 
-const PRINT = { layerHeight: 0.2, layers: 1 };
+const PRINT = { layerHeight: 0.2, layers: 1, brim: 2 };
 const MATERIAL = 'filaflex-95-foamy';
 
 /** A design's settings as the demo exporter makes them: its defaults, a preset, a patch, at 100 x 100 mm. */
@@ -29,7 +29,7 @@ test('the demo prints keep the names they had: the studio and the demo exporter 
 test('an exported swatch is named after its design, preset, size, every look-and-feel value and the print setup', () => {
   const { mod, s } = settingsFor('coil', 'overlapping');
   const name = exportFileName(mod, s, relevantKeys(mod, s), { size: [100, 100], print: PRINT, material: MATERIAL, docName: 'Untitled swatch' });
-  assert.equal(name, 'coil_overlapping_100x100mm_shape-looped_size3_pitch5_overlap30_lift0.25_pattern-none_scale1_lh0.2_layers1_filaflex-95-foamy.gcode');
+  assert.equal(name, 'coil_overlapping_100x100mm_shape-looped_size3_pitch5_overlap30_lift0.25_pattern-none_scale1_brim2_lh0.2_layers1_filaflex-95-foamy.gcode');
 });
 
 test('moving a slider changes its value in the name, and the preset becomes custom', () => {
@@ -38,7 +38,7 @@ test('moving a slider changes its value in the name, and the preset becomes cust
   const name = exportFileName(mod, s, relevantKeys(mod, s), { size: [100, 100], print: { layerHeight: 0.15, layers: 2 }, material: MATERIAL });
   assert.match(name, /^coil_custom_100x100mm_/);
   assert.match(name, /_pitch7_/);
-  assert.match(name, /_lh0\.15_layers2_filaflex-95-foamy\.gcode$/);
+  assert.match(name, /_brim2_lh0\.15_layers2_filaflex-95-foamy\.gcode$/);
 });
 
 test('a design left at its defaults is "default"; a name the swatch was given closes the file name', () => {
@@ -71,6 +71,7 @@ test('every design gives a short, safe name that reads back to the same design a
     assert.deepEqual(back.size, mod.size(s), mod.id);
     assert.equal(back.layerHeight, 0.2);
     assert.equal(back.layers, 1);
+    assert.equal(back.brim, 2);
     assert.equal(back.material, MATERIAL);
     // every setting that made it into the name reads back with the value it was written with
     for (const [key, value] of Object.entries(back.settings)) {
@@ -196,4 +197,43 @@ test('all twenty existing demo filenames keep their ordinary names including omi
     const name = settingsFileName({ head, s, keys: relevantKeys(mod, s) });
     assert.equal(name, expected, id);
   }
+});
+
+test('export filenames distinguish brim off and run counts without changing preset identity', () => {
+  const { mod, s } = settingsFor('coil', 'overlapping');
+  const names = [0, 2, 5].map((brim) => {
+    const name = exportFileName(mod, s, relevantKeys(mod, s), { size: [100, 100], print: { ...PRINT, brim }, material: MATERIAL, docName: 'Brim trial' });
+    assert.match(name, /^coil_overlapping_/);
+    assert.ok(name.includes(`_brim${brim}_lh0.2_layers1_`));
+    const back = parseFileName(name);
+    assert.equal(back.brim, brim);
+    assert.equal(back.material, MATERIAL);
+    assert.equal(back.swatchName, 'brim-trial');
+    return name;
+  });
+  assert.equal(new Set(names).size, 3);
+});
+
+test('older filenames without brim still read their filament and swatch name', () => {
+  const back = parseFileName('coil_custom_100x100mm_lh0.2_layers1_filaflex-95-foamy_trial.gcode');
+  assert.equal(back.layerHeight, 0.2);
+  assert.equal(back.layers, 1);
+  assert.equal(back.material, MATERIAL);
+  assert.equal(back.swatchName, 'trial');
+  const namedBrim = parseFileName('coil_custom_100x100mm_lh0.2_layers1_brim2_trial.gcode');
+  assert.equal(namedBrim.material, 'brim2');
+  assert.equal(namedBrim.swatchName, 'trial');
+});
+
+test('shortened export names preserve brim count and their length budget', () => {
+  const mod = designById('svgdesign'), s = mod.defaults();
+  const options = { size: [100, 100], print: PRINT, material: MATERIAL, docName: 'A long swatch name that somebody typed in full' };
+  const names = [0, 2, 50].map((brim) => {
+    const name = exportFileName(mod, s, relevantKeys(mod, s), { ...options, print: { ...PRINT, brim } });
+    assert.ok(name.length <= 186);
+    assert.match(name, /_h-[0-9a-f]{16}_/);
+    assert.equal(parseFileName(name).brim, brim);
+    return name;
+  });
+  assert.equal(new Set(names).size, 3);
 });

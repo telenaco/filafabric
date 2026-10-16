@@ -126,7 +126,7 @@ test('SVG design panel exports the actual document once instead of sample hearts
   const { machine, material } = defaultProfiles(), d = DESIGNS.find((d) => d.id === 'svgdesign');
   const vector = { name: 'single-line.svg', width: 60, height: 30, paths: [[{ x: 2, y: 7 }, { x: 58, y: 7 }]] };
   let text = '';
-  const r = await exportPanel({ machine, material, design: 'svgdesign', settings: { ...d.defaults(), mode: 'outline', backing: 'none' }, width: 60, height: 30, repeat: 30, vector }, { write: async (s) => { text += s; } });
+  const r = await exportPanel({ machine, material, design: 'svgdesign', settings: { ...d.defaults(), mode: 'outline', backing: 'none' }, brim: 0, width: 60, height: 30, repeat: 30, vector }, { write: async (s) => { text += s; } });
   assert.equal(r.sections, 2);
   const sections = text.slice(text.indexOf('; texture section 1'), text.indexOf('; BODY END'));
   assert.doesNotMatch(sections, /\bE\d/, 'no sample geometry in either texture section');

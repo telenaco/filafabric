@@ -52,6 +52,7 @@ h1, h2, h3 { margin: 0; }
 .svg-layer-control.dragover { border-color: var(--accent); background: var(--accent-soft); }
 .size-source-divider { display: flex; align-items: center; gap: 10px; margin: 10px 0; font-size: 12px; color: var(--muted); }
 .size-source-divider::before, .size-source-divider::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
+.brim-control { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
 .svg-layer-control .switch-row { margin-top: 12px; }
 /* each section of a design's panel is a card; its header names it, pictures it and, while closed, says what it is set to */
 .panel > .group { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }

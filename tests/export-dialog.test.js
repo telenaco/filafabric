@@ -17,6 +17,25 @@ test('a sampled large SVG is named with the complete selected size', () => {
   assert.deepEqual(named, [400, 400]);
 });
 
+test('a bounded preview places a custom outline at full size before cropping it to match its brim', () => {
+  let placement, crop;
+  const placed = [[{ x: 20, y: 20 }]], cropped = [[{ x: 20, y: 20 }, { x: 100, y: 20 }]];
+  const host = {
+    state: { outline: { rings: [], rotation: 15 } },
+    unflattenRings: () => [],
+    placeOutline(rings, options) { placement = options; return placed; },
+    windowRings(rings, width, height) { crop = { rings, width, height }; return cropped; },
+  };
+  const actual = runInNewContext(`${uiFunction('placedOutline')}\nplacedOutline(100,100,400,300);`, host);
+  assert.equal(placement.width, 400);
+  assert.equal(placement.height, 300);
+  assert.equal(placement.rotation, 15);
+  assert.equal(crop.width, 100);
+  assert.equal(crop.height, 100);
+  assert.equal(crop.rings, placed);
+  assert.equal(actual, cropped);
+});
+
 test('the design identifier uses selected dimensions rather than a sampled preview', () => {
   let size;
   const host = {

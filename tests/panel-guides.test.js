@@ -48,7 +48,8 @@ test('a conformal panel skips a section entirely covered by a green opening and 
 
 test('green panel wall strokes print once with their selected pass count, including passes inside the centreline', async () => {
   const { machine, material } = defaultProfiles(), width = 40, height = 40;
-  const run = async (strokeWidth) => render({ machine, material, design: 'crosshatch', settings: { spacing: 5 }, width, height, repeat: 20, vector: { name: 'wall.svg', width, height, paths: [ellipse(20, 20, 6)], styles: [{ color: 'green', width: strokeWidth }] } });
+  // Disable the optional frame to count only the original SVG's bed-level wall passes.
+  const run = async (strokeWidth) => render({ machine, material, design: 'crosshatch', settings: { spacing: 5 }, brim: 0, width, height, repeat: 20, vector: { name: 'wall.svg', width, height, paths: [ellipse(20, 20, 6)], styles: [{ color: 'green', width: strokeWidth }] } });
   const thin = await run(0.45), wide = await run(1.35);
   const source = (text) => segments(text, machine, width, height).filter((s) => Math.abs(s.b.z - 0.2) < 1e-6);
   const a = source(thin.text), b = source(wide.text);

@@ -3,6 +3,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { sanitizeStudyRecord, STUDY_NOTICE_VERSION } from '../src/engine/study-record.js';
+
+test('study records retain the brim run count, including disabled brim', () => {
+  for (const brim of [0, 2, 10]) {
+    const raw = valid();
+    raw.properties.print = { brim };
+    assert.equal(sanitizeStudyRecord(raw).properties.print.brim, brim);
+  }
+});
 import { createStudyRecorder } from '../src/ui/study.js';
 import { onRequest } from '../functions/api/study/exports.js';
 import { onRequestGet } from '../functions/api/study/status.js';

@@ -24,7 +24,7 @@ const keep = {
 async function openStudio() {
   document.body.classList.remove('locked');
   $('gate')?.remove();
-  await import('./ui/main.js?v=20261015-printer-library');
+  await import('./ui/main.js?v=20261016-brim');
   $('btn-lock')?.addEventListener('click', () => {
     keep.clear();
     location.reload();

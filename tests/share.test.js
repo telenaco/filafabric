@@ -121,8 +121,33 @@ test('coil settings travel in a link and are sanitised', () => {
 });
 
 test('the layer thickness and number of layers travel in a link and fall back when they make no sense', () => {
-  assert.deepEqual(sanitizeState({ v: 3, print: { layerHeight: 0.3, layers: 4 } }, known).print, { layerHeight: 0.3, layers: 4 });
-  assert.deepEqual(sanitizeState({ v: 3, print: { layerHeight: -1, layers: 0 } }, known).print, { layerHeight: 0.2, layers: 1 });
-  assert.deepEqual(sanitizeState({ v: 3 }, known).print, { layerHeight: 0.2, layers: 1 });
+  assert.deepEqual(sanitizeState({ v: 3, print: { layerHeight: 0.3, layers: 4 } }, known).print, { layerHeight: 0.3, layers: 4, brim: 2 });
+  assert.deepEqual(sanitizeState({ v: 3, print: { layerHeight: -1, layers: 0 } }, known).print, { layerHeight: 0.2, layers: 1, brim: 2 });
+  assert.deepEqual(sanitizeState({ v: 3 }, known).print, { layerHeight: 0.2, layers: 1, brim: 2 });
   assert.equal(sanitizeState({ v: 3, print: { layers: 2.6 } }, known).print.layers, 3);
+});
+
+test('brim count survives sharing and saving independently of repeated layers', () => {
+  for (const brim of [0, 1, 2, 50]) {
+    const state = sanitizeState({ print: { layerHeight: 0.3, layers: 4, brim } }, known);
+    const saved = sanitizeState(decodeState(encodeState(state)), known);
+    const shared = sanitizeState(hashToState(stateToHash(state)), known);
+    assert.deepEqual(saved.print, { layerHeight: 0.3, layers: 4, brim });
+    assert.deepEqual(shared.print, { layerHeight: 0.3, layers: 4, brim });
+  }
+});
+
+test('legacy print settings and malformed brim counts use the default two runs', () => {
+  for (const print of [undefined, null, [], 'bad', {}, { layers: 7 }]) {
+    assert.equal(sanitizeState({ print }, known).print.brim, 2);
+  }
+  for (const brim of [undefined, null, '', ' ', true, false, [], {}, 'bad', NaN, Infinity, -Infinity, -1, -0.1, 50.1, 51]) {
+    assert.equal(sanitizeState({ print: { brim } }, known).print.brim, 2, `invalid brim ${String(brim)}`);
+  }
+});
+
+test('finite brim counts within the run budget are rounded to whole runs', () => {
+  for (const [brim, expected] of [[0.4, 0], [2.6, 3], [49.6, 50], ['4', 4]]) {
+    assert.equal(sanitizeState({ print: { brim } }, known).print.brim, expected);
+  }
 });

@@ -174,11 +174,17 @@ export class SizeControl extends Control {
     this.note = el('p', { class: 'size-follows small muted', hidden: true });
     this.divider = el('div', { class: 'size-source-divider', text: 'or', 'aria-hidden': 'true' });
     this.svgSlot = el('div', { class: 'size-svg-slot' });
+    this.brim = new SliderControl({ ...host, binding: () => host.binding('print') }, `${designId}-edge`, {
+      key: 'brim', label: 'Brim', help: 'Side-by-side runs around the inside edge, printed first to hold the fabric ends. Adjacent runs overlap 20%. Two is the default; 0 turns it off. Type up to 50. These are lines, not vertical layers.',
+      lo: 'Off', hi: 'Wide', unit: 'lines', edit: true,
+    });
+    this.brim.node.classList.add('brim-control');
     this.warn = el('p', { class: 'ctl-warn small', hidden: true });
-    this.node = el('div', { class: 'size-control' }, this.inputs, this.divider, this.svgSlot, this.note, this.warn, this.error);
+    this.node = el('div', { class: 'size-control' }, this.inputs, this.divider, this.svgSlot, this.note, this.warn, this.error, this.brim.node);
   }
 
   update() {
+    this.brim.update();
     const follow = this.host.vectorSize();
     this.inputs.hidden = !!follow;
     this.note.hidden = true;

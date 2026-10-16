@@ -2,7 +2,7 @@
 // setting that shapes it, and last the print setup. A folder of exported files then says by itself which designs, and
 // which looks of them, are printed most:
 //
-//   coil_overlapping_100x100mm_shape-looped_size3_pitch5_overlap30_lift0.25_pattern-none_scale1_lh0.2_layers1_filaflex-95-foamy.gcode
+//   coil_overlapping_100x100mm_shape-looped_size3_pitch5_overlap30_lift0.25_pattern-none_scale1_brim2_lh0.2_layers1_filaflex-95-foamy.gcode
 //
 // Tokens are joined by "_". A number follows its setting's name (pitch5, lift0.25), anything else comes after a hyphen
 // (shape-looped), and a switch is named only while it is on (twoColours-on). The demo prints
@@ -112,14 +112,14 @@ export function untouched(keys, s, defaults) {
  * @param s       its settings
  * @param keys    the settings to name (relevantKeys for a registry design)
  * @param size    [w, h] in mm of what is exported
- * @param print   { layerHeight, layers }, material: the filament id, docName: the swatch's name, panel: a full panel
+ * @param print   { layerHeight, layers, brim }, material: the filament id, docName: the swatch's name, panel: a full panel
  */
 export function exportFileName(design, s, keys, { size, print, material, docName = '', panel = false }) {
   if (panel) s = { ...s, colorChange: false };
   const preset = (design.presetMatch ? design.presetMatch(s) : null) ?? (untouched(keys, s, design.defaults()) ? 'default' : 'custom');
   const mm = (n) => String(n);
   const head = [design.file, preset, `${mm(size[0])}x${mm(size[1])}mm`, panel ? 'panel' : ''].filter(Boolean);
-  const tail = [`lh${showValue(print.layerHeight)}`, `layers${print.layers}`, material, ownName(docName)];
+  const tail = [`brim${print.brim ?? 2}`, `lh${showValue(print.layerHeight)}`, `layers${print.layers}`, material, ownName(docName)];
   return settingsFileName({ head, s, keys, tail }, { max: 180 });
 }
 
@@ -143,10 +143,12 @@ export function parseFileName(name) {
   const panel = tokens[i] === 'panel';
   if (panel) i++;
   const settings = {};
-  let layerHeight = null, layers = null, material = null, swatchName = null, settingsDigest = null;
+  let layerHeight = null, layers = null, brim = null, material = null, swatchName = null, settingsDigest = null;
   for (; i < tokens.length; i++) {
     const t = tokens[i];
     if (/^h-[0-9a-f]{16}$/.test(t)) { settingsDigest = t.slice(2); continue; }
+    // Brim precedes the height/layers pair, leaving legacy material IDs such as 'brim2' unambiguous.
+    if (/^brim\d+$/.test(t) && /^lh\d+(\.\d+)?$/.test(tokens[i + 1] ?? '') && /^layers\d+$/.test(tokens[i + 2] ?? '')) { brim = Number(t.slice(4)); continue; }
     if (/^lh\d+(\.\d+)?$/.test(t) && /^layers\d+$/.test(tokens[i + 1] ?? '')) {
       layerHeight = Number(t.slice(2));
       layers = Number(tokens[i + 1].slice(6));
@@ -159,5 +161,5 @@ export function parseFileName(name) {
     if (number) settings[number[1]] = number[2];
     else if (dash > 0) settings[t.slice(0, dash)] = t.slice(dash + 1);
   }
-  return { design, preset, size: [Number(dims[1]), Number(dims[2])], panel, settings, layerHeight, layers, material, swatchName, ...(settingsDigest ? { settingsDigest } : {}) };
+  return { design, preset, size: [Number(dims[1]), Number(dims[2])], panel, settings, layerHeight, layers, brim, material, swatchName, ...(settingsDigest ? { settingsDigest } : {}) };
 }
