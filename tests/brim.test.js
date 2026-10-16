@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { buildBrimStrands, applyBrim } from '../src/engine/brim.js';
 import { PolygonBoundary } from '../src/engine/boundary.js';
 import { safePoint, segmentInside, contactGraph } from '../src/engine/fabric.js';
@@ -220,4 +221,30 @@ test('a finely sampled concave garment stays within the original material and be
   const strands=buildBrimStrands([ring]),boundary=new PolygonBoundary([ring]);
   assert.equal(strands.length,2);
   for(const s of strands) for(let i=1;i<s.pts.length;i+=7) assert.ok(segmentInside(s.pts[i-1],s.pts[i],boundary,.225));
+});
+
+test('an imported drawing: curved shapes beside a non-convex one still get their brim, inside the outline', () => {
+  // the outline SvgExampleTemplate.svg gives the Zigzag mesh at 200 x 200 mm once its green guides are cut out: the page,
+  // a five-pointed star (not convex) and four finely drawn round contours (0.35 mm edges, 1,156 of them). One non-convex
+  // ring sends every ring down the capsule path, where the tiny edges made too many overlapping capsules to clip, and
+  // the import failed with "too complex".
+  const { rings } = JSON.parse(readFileSync(new URL('./fixtures/svg-template-guided-outline.json', import.meta.url), 'utf8'));
+  const t0 = performance.now();
+  const strands = buildBrimStrands(rings, { count: 2 });
+  assert.ok(performance.now() - t0 < 5000, `${Math.round(performance.now() - t0)} ms`);
+  assert.deepEqual([...new Set(strands.map((s) => s.run))], [0, 1], 'two runs');
+  assert.ok(strands.length >= 2 * rings.length - 2, `${strands.length} contours for ${rings.length} rings`);
+  checkSafe(strands, rings);
+});
+
+test('an outline too detailed to offset leaves the brim out with a warning, and the design still builds', () => {
+  // 4,000 points round an oval, every other one 0.4 mm further out: no chord can skip a spike, so even simplified the
+  // capsules are too many to clip. The brim is an extra: the design itself must still come out, and say why.
+  const ring = Array.from({ length: 4000 }, (_, i) => { const a = i * 2 * Math.PI / 4000, k = i % 2 ? 0.4 : 0; return P(10 + (8 + k) * Math.cos(a), 5 + (3.5 + k) * Math.sin(a)); });
+  assert.throws(() => buildBrimStrands([ring], { count: 2 }), ConfigError, 'the offset itself is still refused');
+  const original = sample();
+  const result = applyBrim(original, { count: 2, outline: [ring] });
+  assert.equal(result.brim, undefined, 'no brim');
+  assert.equal(result.gcode, original.gcode, 'the design as it was');
+  assert.ok(result.warnings.some((w) => /brim was left out/i.test(w)), result.warnings.join(' | '));
 });

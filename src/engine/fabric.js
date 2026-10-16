@@ -66,40 +66,95 @@ export function contactGraph(strands, { strandWidth = 0.45, layerHeight = 0.2, p
   return { components: groups.size, groups: [...groups.values()], labels: strands.map((_, i) => root(i)), joints };
 }
 
+/**
+ * An outline's edges filed on a grid, built once per outline: a question about one place (does this segment cross the
+ * outline, is this point a bead's width from it) reads only the edges near it. A detailed drawing has thousands of
+ * edges, and every strand of a swatch is asked about every quarter millimetre, so reading them all each time was most
+ * of the time it took to build a swatch inside one. The answers are the same; only the edges that cannot matter are
+ * skipped.
+ */
+const edgeGrids = new WeakMap();
+function edgeGrid(boundary) {
+  let grid = edgeGrids.get(boundary);
+  if (grid) return grid;
+  const edges = [];
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const ring of boundary.rings ?? []) for (let i = 0; i < ring.length; i++) {
+    const a = ring[i], b = ring[(i + 1) % ring.length];
+    const e = { a, b, minX: Math.min(a.x, b.x), minY: Math.min(a.y, b.y), maxX: Math.max(a.x, b.x), maxY: Math.max(a.y, b.y), seen: 0 };
+    edges.push(e);
+    minX = Math.min(minX, e.minX); minY = Math.min(minY, e.minY); maxX = Math.max(maxX, e.maxX); maxY = Math.max(maxY, e.maxY);
+  }
+  const area = Math.max(1, (maxX - minX) * (maxY - minY));
+  const cell = Math.max(0.5, Math.sqrt(area / Math.max(1, edges.length)) * 2);
+  const nx = edges.length ? Math.max(1, Math.ceil((maxX - minX) / cell) + 1) : 0, ny = edges.length ? Math.max(1, Math.ceil((maxY - minY) / cell) + 1) : 0;
+  const cells = Array.from({ length: nx * ny }, () => []);
+  for (const e of edges) {
+    for (let j = Math.floor((e.minY - minY) / cell); j <= Math.floor((e.maxY - minY) / cell); j++) {
+      for (let i = Math.floor((e.minX - minX) / cell); i <= Math.floor((e.maxX - minX) / cell); i++) cells[j * nx + i].push(e);
+    }
+  }
+  grid = { cells, cell, minX, minY, nx, ny, stamp: 0 };
+  edgeGrids.set(boundary, grid);
+  return grid;
+}
+
+/** Calls `visit` on each edge whose box meets the given box, once each; stops when `visit` returns true. */
+function someEdgeNear(boundary, x0, y0, x1, y1, visit) {
+  const g = edgeGrid(boundary);
+  if (!g.nx) return false;
+  const i0 = Math.max(0, Math.floor((x0 - g.minX) / g.cell)), i1 = Math.min(g.nx - 1, Math.floor((x1 - g.minX) / g.cell));
+  const j0 = Math.max(0, Math.floor((y0 - g.minY) / g.cell)), j1 = Math.min(g.ny - 1, Math.floor((y1 - g.minY) / g.cell));
+  const stamp = ++g.stamp;
+  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+    for (const e of g.cells[j * g.nx + i]) {
+      if (e.seen === stamp) continue;
+      e.seen = stamp;
+      if (e.maxX < x0 || e.minX > x1 || e.maxY < y0 || e.minY > y1) continue;
+      if (visit(e)) return true;
+    }
+  }
+  return false;
+}
+
 function cutsAlong(a, b, boundary) {
   const cuts = [0, 1], rx = b.x - a.x, ry = b.y - a.y;
-  for (const ring of boundary.rings ?? []) for (let i = 0; i < ring.length; i++) {
-    const p = ring[i], q = ring[(i + 1) % ring.length], sx = q.x - p.x, sy = q.y - p.y;
+  someEdgeNear(boundary, Math.min(a.x, b.x), Math.min(a.y, b.y), Math.max(a.x, b.x), Math.max(a.y, b.y), ({ a: p, b: q }) => {
+    const sx = q.x - p.x, sy = q.y - p.y;
     const den = cross(rx, ry, sx, sy);
-    if (Math.abs(den) < 1e-12) continue;
+    if (Math.abs(den) < 1e-12) return false;
     const t = cross(p.x - a.x, p.y - a.y, sx, sy) / den, u = cross(p.x - a.x, p.y - a.y, rx, ry) / den;
     if (t > 0 && t < 1 && u >= 0 && u <= 1) cuts.push(t);
-  }
+    return false;
+  });
   return [...new Set(cuts)].sort((p, q) => p - q);
+}
+
+/** How far p is from the edge a–b. */
+function edgeDistance(p, a, b) {
+  const t = projection(p, a, b);
+  return Math.hypot(p.x - (a.x + (b.x - a.x) * t), p.y - (a.y + (b.y - a.y) * t));
 }
 
 export function safePoint(p, boundary, inset) {
   if (!boundary.contains(p.x, p.y)) {
-    let edge = false;
-    if (inset === 0) for (const ring of boundary.rings ?? []) for (let i = 0; i < ring.length; i++) {
-      const a = ring[i], b = ring[(i + 1) % ring.length], q = mix(a, b, projection(p, a, b));
-      if (Math.hypot(p.x - q.x, p.y - q.y) <= 1e-7) edge = true;
-    }
-    if (!edge) return false;
+    // outside, only a point on the outline itself counts, and only when no clearance is asked
+    if (inset !== 0) return false;
+    const r = 1e-7;
+    if (!someEdgeNear(boundary, p.x - r, p.y - r, p.x + r, p.y + r, (e) => edgeDistance(p, e.a, e.b) <= r)) return false;
   }
   if (inset <= 0) return true;
-  for (const ring of boundary.rings ?? []) for (let i = 0; i < ring.length; i++) {
-    const a = ring[i], b = ring[(i + 1) % ring.length], q = mix(a, b, projection(p, a, b));
-    if (Math.hypot(p.x - q.x, p.y - q.y) < inset - 1e-8) return false;
-  }
-  return true;
+  return !someEdgeNear(boundary, p.x - inset, p.y - inset, p.x + inset, p.y + inset, (e) => edgeDistance(p, e.a, e.b) < inset - 1e-8);
 }
+
+/** The point t of the way from a to b (x and y only: what safePoint reads). */
+const along = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
 
 export function segmentInside(a, b, boundary, inset = 0) {
   const cuts = cutsAlong(a, b, boundary);
-  for (let i = 1; i < cuts.length; i++) if (!safePoint(mix(a, b, (cuts[i - 1] + cuts[i]) / 2), boundary, inset)) return false;
+  for (let i = 1; i < cuts.length; i++) if (!safePoint(along(a, b, (cuts[i - 1] + cuts[i]) / 2), boundary, inset)) return false;
   const n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 0.25));
-  for (let i = 0; i <= n; i++) if (!safePoint(mix(a, b, i / n), boundary, inset)) return false;
+  for (let i = 0; i <= n; i++) if (!safePoint(along(a, b, i / n), boundary, inset)) return false;
   return true;
 }
 
@@ -304,8 +359,10 @@ export function orderStrands(strands, { start = null, improve = false } = {}) {
       left.forEach((s, i) => {
         if (!s.pts.length) return;
         const a = s.pts[0], b = s.pts.at(-1), loop = Math.hypot(a.x - b.x, a.y - b.y) < 1e-6;
-        const indices = loop ? s.pts.slice(0, -1).map((_, j) => j) : [0, s.pts.length - 1];
-        for (const j of indices) {
+        // a closed loop may start at any vertex but its repeated last one, an open strand at either end (walked in
+        // place: a list of the candidates for every strand at every pick was most of the time a packing of rings took)
+        const last = s.pts.length - 1;
+        for (let j = 0; loop ? j < last : j <= last; j = loop || j === last ? j + 1 : last) {
           const p = s.pts[j], d = Math.hypot(p.x - at.x, p.y - at.y);
           if (d < best - 1e-9) { best = d; pick = i; vertex = j; reverse = !loop && j > 0; closed = loop; }
         }

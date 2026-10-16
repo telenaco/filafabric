@@ -139,7 +139,7 @@ function convexInsets(rings, radius) {
 
 /** RDP chords plus a measured clearance allowance. Every original edge stays within this allowance. */
 function capsuleContour(ring, tolerance) {
-  if (ring.length < 128) return { ring, allowance: 0 };
+  if (ring.length < 16) return { ring, allowance: 0 };
   const points = [...ring, ring[0]], keep = new Set([0, ring.length]), stack = [[0, ring.length]];
   let allowance = 0;
   while (stack.length) {
@@ -161,7 +161,10 @@ function capsuleContour(ring, tolerance) {
 function insetRings(rings, radius) {
   const convex = convexInsets(rings, radius);
   if (convex !== null) return convex;
-  const material = new PolygonBoundary(rings), capsules = [], tolerance = Math.min(0.01, radius * 0.025);
+  // A drawn curve comes in as hundreds of edges a third of a millimetre long, and every edge is a capsule that overlaps
+  // its neighbours: the clipping between them grows far faster than the edges do. Chords within 0.05 mm of the curve
+  // are invisible under a 0.45 mm bead, and the allowance below keeps the result on the safe side of the true inset.
+  const material = new PolygonBoundary(rings), capsules = [], tolerance = Math.min(0.05, radius * 0.2);
   // Inflate each simplified contour's capsules by its measured chord deviation. Since a straight
   // original edge lies within the convex tolerance tube of its chord, the enlarged capsule covers
   // the original radius-wide tube completely. Subtraction can only remove extra material, never add it.
@@ -298,7 +301,14 @@ export function applyBrim(result, { count = 2, outline = result.outline, fullWid
   const { cfg } = result, { extrusion_width: strandWidth, layer_height: layerHeight } = cfg.t;
   const rings = outline ?? [rectangle(fullWidth, fullHeight)], boundary = new PolygonBoundary(rings);
   const viewport = { width: cfg.t.sample_width, height: cfg.t.sample_height };
-  const brim = buildBrimStrands(rings, { count, strandWidth, layerHeight, viewport });
+  let brim;
+  try {
+    brim = buildBrimStrands(rings, { count, strandWidth, layerHeight, viewport });
+  } catch (error) {
+    // the brim is an extra: an outline too detailed to offset leaves it out, and the design itself still prints
+    if (!(error instanceof ConfigError)) throw error;
+    return { ...result, warnings: [...(result.warnings ?? []), `The brim was left out: ${error.errors?.[0] ?? error.message} The design prints without it.`] };
+  }
   const body = result.strands ?? [];
   const connections = brimConnections(brim, body, boundary, { strandWidth, layerHeight, maxTie });
   const added = [...brim, ...connections], strands = [...added, ...body];

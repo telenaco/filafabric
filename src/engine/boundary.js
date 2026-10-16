@@ -57,14 +57,34 @@ export class PolygonBoundary {
   }
 
   contains(x, y) {
+    // a ray to the right crosses only the edges that span this height: they are filed in horizontal bands once, so a
+    // detailed drawing's outline (thousands of edges) is not read whole for every point asked about
+    const bands = this.#bands ??= this.#fileBands();
+    const k = Math.floor((y - this.box.minY) / bands.height);
+    if (!(k >= 0 && k < bands.list.length)) return false;
     let inside = false;
-    for (const ring of this.rings) {
-      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-        const a = ring[i], b = ring[j];
-        if ((a.y > y) !== (b.y > y) && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
-      }
+    for (const [a, b] of bands.list[k]) {
+      if ((a.y > y) !== (b.y > y) && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
     }
     return inside;
+  }
+
+  #bands = null;
+
+  /** Every edge, in each horizontal band its height range touches. */
+  #fileBands() {
+    const edges = [];
+    for (const ring of this.rings) for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) edges.push([ring[i], ring[j]]);
+    const span = Math.max(EPS, this.box.maxY - this.box.minY);
+    const count = Math.max(1, Math.min(4096, Math.ceil(edges.length / 4)));
+    const height = span / count;
+    const list = Array.from({ length: count }, () => []);
+    for (const edge of edges) {
+      const lo = Math.min(edge[0].y, edge[1].y), hi = Math.max(edge[0].y, edge[1].y);
+      const k0 = Math.max(0, Math.floor((lo - this.box.minY) / height)), k1 = Math.min(count - 1, Math.floor((hi - this.box.minY) / height));
+      for (let k = k0; k <= k1; k++) list[k].push(edge);
+    }
+    return { height, list };
   }
 
   containsPolyline(points, policy = 'footprint') {
