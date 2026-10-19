@@ -17,7 +17,7 @@ export function emitStrands(strands, { startLift = 5, travelLift = 3, retraction
     if (cur === null) {
       moves.push(travel(first.x, first.y, first.z + startLift));
       moves.push(travel(first.x, first.y, first.z));
-    } else {
+    } else if (strand.pauseBefore || Math.hypot(first.x - cur.x, first.y - cur.y) >= 1e-6 || Math.abs(first.z - cur.z) >= 1e-6) {
       const safeZ = Math.max(printedMaxZ, cur.z, first.z) + travelLift;
       const lift = travel(cur.x, cur.y, safeZ);
       // a long enough travel retracts first and primes again at the start of the next strand (as the loop pile does)
