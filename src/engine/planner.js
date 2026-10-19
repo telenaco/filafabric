@@ -135,11 +135,13 @@ export function plan(cfg, base, placements, boundary, { strands: supplied = null
       kind: 'loop',
       id: p.id,
       lift: p.lift,
+      row: p.row,
       pts: p.points.map((q) => ({ x: q.x, y: q.y, z: derived.loopBaseZ + q.z })),
     });
   }
 
   let cur = null;
+  let prevStrand = null;
   let violations = 0;
   let pendingUnretract = false;
   const travel = (x, y, z) => ({ x, y, z, cls: 'travel', extrude: false });
@@ -156,7 +158,24 @@ export function plan(cfg, base, placements, boundary, { strands: supplied = null
     } else {
       const dist = Math.hypot(first.x - cur.x, first.y - cur.y);
       const dz = Math.abs(first.z - cur.z);
-      if (dist > 1e-6 || dz > 1e-6) {
+      const isSameRowLoop =
+        prevStrand?.kind === 'loop' &&
+        strand.kind === 'loop' &&
+        strand.row !== undefined &&
+        prevStrand.row === strand.row &&
+        dz < 1e-6;
+
+      if (isSameRowLoop && dist > 1e-6) {
+        moves.push({
+          x: first.x,
+          y: first.y,
+          z: first.z,
+          cls: 'supported',
+          extrude: true,
+          tag: strand.id,
+        });
+        map.addSegment(cur, first);
+      } else if (dist > 1e-6 || dz > 1e-6) {
         const under = dist > 1e-6 ? map.maxAlong(cur, first, model.tipRadius) : map.maxWithin(cur.x, cur.y, model.tipRadius);
         const tz = under > -Infinity ? Math.max(under + model.clearance, cur.z, first.z) : Math.max(cur.z, first.z) + derived.retraction.zHop;
         const seq = [];
@@ -198,6 +217,7 @@ export function plan(cfg, base, placements, boundary, { strands: supplied = null
 
     for (let i = 1; i < strand.pts.length; i++) map.addSegment(strand.pts[i - 1], strand.pts[i]);
     cur = strand.pts[strand.pts.length - 1];
+    prevStrand = strand;
   }
 
   const warnings = [];
