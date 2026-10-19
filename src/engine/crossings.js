@@ -182,6 +182,15 @@ export function resolveCrossings(strands, opts = {}) {
   return { strands: out, crossings: found.length, maxLift, maxSlopeDeg: (Math.atan(maxSlope) * 180) / Math.PI };
 }
 
+function minZ(pts) {
+  let m = Infinity;
+  for (let i = 0; i < pts.length; i++) {
+    const z = pts[i].z ?? 0;
+    if (z < m) m = z;
+  }
+  return m;
+}
+
 /** Exact crossing knots, solved in extrusion order. Ramps never move a previously solved joint. */
 function followSupports(strands, found, arcs, { lift, ramp, preserve = false }) {
   const marks = strands.map(() => new Map());
@@ -196,7 +205,7 @@ function followSupports(strands, found, arcs, { lift, ramp, preserve = false }) 
   }
   let maxLift = 0, maxSlope = 0;
   const out = strands.map((s, si) => {
-    const base = Math.min(...s.pts.map((p) => p.z));
+    const base = minZ(s.pts);
     const knots = [...marks[si].values()].sort((a, b) => a.arc - b.arc);
     const knotArcs = knots.map((k) => k.arc);
     const originalZ = (arc) => {
@@ -205,7 +214,12 @@ function followSupports(strands, found, arcs, { lift, ramp, preserve = false }) 
       return s.pts[i].z + (s.pts[j].z - s.pts[i].z) * t;
     };
     for (const k of knots) {
-      k.z = Math.max(preserve ? originalZ(k.arc) : base, ...k.earlier.map((a) => (a.z ?? base) + lift));
+      let maxZ = preserve ? originalZ(k.arc) : base;
+      for (let e = 0; e < k.earlier.length; e++) {
+        const az = (k.earlier[e].z ?? base) + lift;
+        if (az > maxZ) maxZ = az;
+      }
+      k.z = maxZ;
       maxLift = Math.max(maxLift, k.z - base);
     }
     const zAt = (arc) => {
@@ -220,7 +234,10 @@ function followSupports(strands, found, arcs, { lift, ramp, preserve = false }) 
       }
       return Math.max(base, a ? base + (a.z - base) * bumpWeight(arc - a.arc, 0, ramp) : base, b ? base + (b.z - base) * bumpWeight(arc - b.arc, 0, ramp) : base);
     };
-    const nodes = [...arcs[si], ...knots.map((k) => k.arc)].sort((a, b) => a - b);
+    const nodes = new Float64Array(arcs[si].length + knots.length);
+    nodes.set(arcs[si], 0);
+    for (let k = 0; k < knots.length; k++) nodes[arcs[si].length + k] = knots[k].arc;
+    nodes.sort();
     const pts = [];
     for (const arc of nodes) {
       if (pts.length && Math.abs(arc - pts.at(-1)._arc) < 1e-7) continue;
@@ -253,7 +270,7 @@ function followSupports(strands, found, arcs, { lift, ramp, preserve = false }) 
   }
   maxSlope = 0; maxLift = 0;
   for (let si = 0; si < out.length; si++) {
-    const s = out[si], base = Math.min(...strands[si].pts.map((p) => p.z));
+    const s = out[si], base = minZ(strands[si].pts);
     for (let i = 0; i < s.pts.length; i++) {
       maxLift = Math.max(maxLift, s.pts[i].z - base);
       if (i) { const a = s.pts[i - 1], b = s.pts[i], d = Math.hypot(b.x - a.x, b.y - a.y); if (d > 1e-9) maxSlope = Math.max(maxSlope, Math.abs(b.z - a.z) / d); }

@@ -1,4 +1,4 @@
-import { chainPolylines, clipPolyline, densify } from './layers.js';
+import { chainPolylines, clipPolyline, densify, appendPoints } from './layers.js';
 import { fitCount } from './repeats.js';
 
 /**
@@ -36,7 +36,7 @@ function ringRows(rows, r, boundary) {
     const pts = [];
     for (const c of centres) {
       const top = { x: c.x, y: c.y + r };
-      if (pts.length) pts.push(...densify([pts[pts.length - 1], top]).slice(1));
+      if (pts.length) appendPoints(pts, densify([pts[pts.length - 1], top]), 1);
       else pts.push(top);
       // clockwise from the top, a full turn, so the ring closes on the point it started from
       const n = Math.max(12, Math.ceil((TAU * r) / 0.5));
@@ -45,7 +45,7 @@ function ringRows(rows, r, boundary) {
         pts.push({ x: c.x + r * Math.cos(a), y: c.y + r * Math.sin(a) });
       }
     }
-    polylines.push(...clipPolyline(pts, boundary));
+    appendPoints(polylines, clipPolyline(pts, boundary));
   });
   return chainPolylines(polylines, boundary, 4 * r + 6);
 }

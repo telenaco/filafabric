@@ -10,6 +10,7 @@ import { plan } from './planner.js';
 import { segmentContact } from './fabric.js';
 
 const minimumZ = (s) => s.pts.reduce((z, p) => Math.min(z, p.z), Infinity);
+const maximumZ = (s) => s.pts.reduce((z, p) => Math.max(z, p.z), -Infinity);
 const raisedDesign = (r) => !!(r.placements?.length || r.fringe || r.relief || r.spacer || r.pillarWeave);
 
 /** Backing passes only: exclude the actual raised loops, pillar rings and upper net. */
@@ -69,7 +70,9 @@ function reinforceBacking(result, count, info) {
   const groups = backingGroups(result), { cfg: originalCfg } = result;
   const h = originalCfg.t.layer_height, bead = originalCfg.t.extrusion_width, rise = count * h;
   const original = result.strands.filter((s) => !s.brim), fixed = original.filter((s) => s.fixed);
-  const body = original.filter((s) => !s.fixed), floor = Math.min(...groups.map((g) => Math.min(...g.map(minimumZ))));
+  let floor = Infinity;
+  for (const g of groups) for (const s of g) { const z = minimumZ(s); if (z < floor) floor = z; }
+  const body = original.filter((s) => !s.fixed);
   // Start with the original bottom pass: it also preserves contact with interior SVG strokes below it.
   const phase = 0;
   let budget = original.reduce((n,s)=>n+s.pts.length+4,0);
@@ -92,7 +95,7 @@ function reinforceBacking(result, count, info) {
   if (moves.length > MAX_MOVES) throw new ConfigError(['The reinforced backing exceeds the move limit. Use fewer extra layers or wider spacing.']);
   const placements = result.placements?.length ? strands.filter((s)=>!s.fixed && s.kind!=='base').map((s)=>({
     id:s.id, points:s.pts.map((p)=>({...p,z:p.z-cfg.derived.loopBaseZ})),
-    lift:Math.max(...s.pts.map((p)=>p.z))-cfg.derived.loopBaseZ,
+    lift:maximumZ(s)-cfg.derived.loopBaseZ,
   })) : result.placements;
   const baseStrands = strands.filter((s)=>!s.fixed && s.kind==='base');
   const base = result.base ? { ...result.base, points:baseStrands[0]?.pts??[], strands:baseStrands.map((s)=>s.pts),
