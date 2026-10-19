@@ -1,5 +1,5 @@
 import { PolygonBoundary } from './boundary.js';
-import { hatch, clipPolyline, chainPolylines, densify, trailsFromEdges } from './layers.js';
+import { hatch, clipPolyline, chainPolylines, densify, trailsFromEdges, appendPoints } from './layers.js';
 import { distanceField, contourLoops } from './spiral.js';
 import { hilbertCells } from './meander.js';
 import { createRng } from './rng.js';
@@ -202,7 +202,7 @@ const PATTERNS = {
     const cell = Math.max(0.5, ctx.s / 3, Math.sqrt(((ctx.box.maxX - ctx.box.minX) * (ctx.box.maxY - ctx.box.minY) * Math.max(4, ctx.edges)) / 4e7));
     const field = distanceField(ctx.rings, ctx.B, cell);
     const loops = [];
-    for (let level = 0.4; level < field.max; level += ctx.s) loops.push(...contourLoops(field, level));
+    for (let level = 0.4; level < field.max; level += ctx.s) appendPoints(loops, contourLoops(field, level));
     const ordered = [];
     let at = null;
     for (const loop of loops) {

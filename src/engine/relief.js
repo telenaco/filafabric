@@ -8,6 +8,7 @@ import { fitLanes } from './repeats.js';
 import { MAX_MOVES } from './tiler.js';
 import { crossBase } from './base.js';
 import { finishFabric } from './fabric-result.js';
+import { appendPoints } from './layers.js';
 
 /** The rows of a relief: from one edge to the other, the first and last 0.3 mm in, as near `rowPitch` apart as fits (repeats.js). */
 const rowLanes = (lo, hi, rowPitch) => fitLanes(lo + 0.3, hi - 0.3, rowPitch);
@@ -115,7 +116,7 @@ export function reliefPlacements({ width, height, field = null, relief = 2, rowP
           pts.push({ x: prev.x + (forward ? 1 : -1) * Math.sin(Math.PI * t) * bulge, y: prev.y + (next.y - prev.y) * t, z: 0 });
         }
       }
-      pts.push(...row);
+      appendPoints(pts, row);
       rows++;
     });
     placements.push({ id: 'relief', row: 0, col: 0, footY: lanes[0] ?? 0, points: pts });
@@ -132,7 +133,7 @@ export function reliefPlacements({ width, height, field = null, relief = 2, rowP
           const n = Math.max(1, Math.ceil(Math.hypot(row[0].x - prev.x, row[0].y - prev.y) / STEP));
           for (let i = 1; i < n; i++) pts.push({ x: prev.x + ((row[0].x - prev.x) * i) / n, y: prev.y + ((row[0].y - prev.y) * i) / n, z: 0 });
         }
-        pts.push(...row);
+        appendPoints(pts, row);
         rows++;
       }
       placements.push({ id: index === 0 ? 'relief' : `relief-${index + 1}`, row: 0, col: index, footY: segments[0].c, points: pts });

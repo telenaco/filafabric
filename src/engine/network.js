@@ -15,6 +15,8 @@
 // that `allow` has approved (the studio passes "stays inside the outline"). Only flat, plain strands take part, so a
 // raised or flow-carrying strand is never rebuilt.
 
+import { appendPoints } from './layers.js';
+
 const EPS = 1e-9;
 const dist = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
 
@@ -243,7 +245,10 @@ function network(input, { snap, bridge, allow, maxSegments, maxOdd }) {
       if (e.dummy) { flush(); continue; }
       const pts = e.a === step.from ? e.pts : [...e.pts].reverse();
       if (!current) current = { si: e.si, pts: pts.map((p) => ({ ...p })) };
-      else current.pts.push(...pts.slice(dist(current.pts.at(-1), pts[0]) < snap * 2 ? 1 : 0).map((p) => ({ ...p })));
+      else {
+        const startIdx = dist(current.pts.at(-1), pts[0]) < snap * 2 ? 1 : 0;
+        for (let i = startIdx; i < pts.length; i++) current.pts.push({ ...pts[i] });
+      }
     }
     flush();
   }
@@ -268,7 +273,7 @@ export function joinNetwork(strands, { snap = 0.05, within = 0, allow = null, ma
   const out = [...rest];
   for (const group of groups.values()) {
     const built = group.length > 1 ? network(group, { snap, bridge: within, allow, maxSegments, maxOdd }) : null;
-    if (!built) { out.push(...group); continue; }
+    if (!built) { appendPoints(out, group); continue; }
     const pause = group.some((s) => s.pauseBefore);
     built.forEach((s, i) => out.push(pause ? { ...s, pauseBefore: i === 0 } : { ...s, pauseBefore: false }));
   }

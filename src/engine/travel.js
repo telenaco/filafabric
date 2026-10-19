@@ -79,9 +79,10 @@ export function mergeTouching(strands, { within = 0.1, allow = null } = {}) {
         e.item.used = true;
         joined = true;
         pause = pause || !!e.item.s.pauseBefore;
-        const more = e.end === 0 ? e.item.s.pts : [...e.item.s.pts].reverse();
+        const more = e.end === 0 ? e.item.s.pts : e.item.s.pts.slice().reverse();
         // lines that meet exactly share a point: it is printed once
-        pts = [...pts, ...more.slice(dist(pts.at(-1), more[0]) < 1e-9 ? 1 : 0)];
+        const startIdx = dist(pts.at(-1), more[0]) < 1e-9 ? 1 : 0;
+        for (let i = startIdx; i < more.length; i++) pts.push(more[i]);
       }
       pts.reverse();
     }

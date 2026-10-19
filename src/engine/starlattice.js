@@ -210,7 +210,7 @@ export function starLayers(boundary, { tiling = 'square', size = 8, angle = null
   // only the straps that reach the swatch
   const inside = straps.filter((pts) => pts.some((p) => p.x > plain.minX - size && p.x < plain.maxX + size && p.y > plain.minY - size && p.y < plain.maxY + size)).map((pts) => pts.map(stretch));
   const colour = colourStraps(inside, 4);
-  const count = Math.max(...colour) + 1;
+  const count = colour.length ? colour.reduce((m, c) => Math.max(m, c), -1) + 1 : 0;
   const layers = Array.from({ length: count }, (_, k) => {
     const pieces = inside.filter((_, i) => colour[i] === k).flatMap((pts) => clipPolyline(densify(pts), boundary));
     return chainPolylines(orderLines(pieces), boundary, 0.6 * size);

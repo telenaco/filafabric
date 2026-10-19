@@ -1,5 +1,5 @@
 import { sampleGrid, isoLines } from './isolines.js';
-import { clipPolyline } from './layers.js';
+import { clipPolyline, appendPoints } from './layers.js';
 import { PolygonBoundary } from './boundary.js';
 import { ConfigError } from './params.js';
 import { guidedConformalLayers } from './conformal-guides.js';
@@ -127,7 +127,7 @@ function joinAtBorder(list, outer, region, maxJog) {
       const ok = Math.hypot(start.x - end.x, start.y - end.y) <= maxJog
         && atBorder(end, cur[cur.length - 2]) && atBorder(start, pts[1])
         && region.contains((start.x + end.x) / 2, (start.y + end.y) / 2);
-      if (ok) { cur.push(...pts); continue; }
+      if (ok) { appendPoints(cur, pts); continue; }
       out.push(cur);
     }
     cur = pts.slice();

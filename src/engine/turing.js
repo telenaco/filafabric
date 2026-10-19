@@ -1,6 +1,6 @@
 import { createRng } from './rng.js';
 import { contourLoops } from './spiral.js';
-import { clipPolyline, densify } from './layers.js';
+import { clipPolyline, densify, appendPoints } from './layers.js';
 import { backingStack } from './backing.js';
 
 /**
@@ -72,7 +72,8 @@ function chainLoops(loops, boundary, jog) {
     const rotated = [...loop.slice(at), ...loop.slice(0, at)];
     rotated.push({ ...rotated[0] });
     if (cur && best <= jog && boundary.contains((rotated[0].x + ref.x) / 2, (rotated[0].y + ref.y) / 2)) {
-      cur.push(...densify([ref, rotated[0]]).slice(1), ...rotated.slice(1));
+      appendPoints(cur, densify([ref, rotated[0]]), 1);
+      appendPoints(cur, rotated, 1);
     } else {
       if (cur) strands.push(cur);
       cur = rotated;
