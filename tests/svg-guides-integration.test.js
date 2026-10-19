@@ -67,9 +67,12 @@ test('legacy loop pile and squiggle use the same green repulsion and source comp
   }
 });
 
-test('multipass SVG composition enforces its move budget before crossing analysis', () => {
+test('densely sampled multipass SVG lines retain their shape without the former move ceiling', () => {
   const d = DESIGNS.find((d) => d.id === 'crosshatch');
   const raw = d.generate(machine, material, { ...d.defaults(), width: 10, height: 10 });
   const large = { name: 'dense.svg', width: 10, height: 10, paths: [Array.from({ length: 51000 }, (_, i) => ({ x: 1 + 8 * i / 50999, y: 5 }))], styles: [{ color: 'other', width: 3.6 }] };
-  assert.throws(() => composeSvgLines(raw, large), /SVG composition needs.*moves; the limit is/);
+  const result = composeSvgLines(raw, large);
+  assert.ok(result.gcode.includes('; BODY END'));
+  assert.ok(result.strands.filter(s => s.fixed).length > 0);
+  assert.ok(result.moves.length < 10000, 'exactly straight input samples are simplified before expensive crossing analysis');
 });

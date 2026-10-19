@@ -36,13 +36,11 @@ test('the bed-fit check runs before tiling, so the message is about the bed', ()
   assert.throws(() => generate(machine, material, { sample_width: 10000, sample_height: 10000, include_loops: false }), ConfigError);
 });
 
-test('a tiny curve resolution is refused before any moves are generated', () => {
-  const t0 = Date.now();
-  assert.throws(
-    () => generate(machine, material, { curve_resolution: 0.05 }),
-    (e) => e instanceof ConfigError && /moves/.test(e.message)
-  );
-  assert.ok(Date.now() - t0 < 2000, 'refusal should be immediate');
+test('a valid fine curve resolution is used rather than rejected by a move quota', () => {
+  const result = generate(machine, material, { sample_width: 20, sample_height: 20, curve_resolution: .05 });
+  assert.equal(result.cfg.t.curve_resolution, .05);
+  assert.ok(result.moves.length > 1000);
+  assert.ok(result.gcode.includes('; BODY END'));
 });
 
 test('the prime line purges a useful amount within the volumetric limit', () => {

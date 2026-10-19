@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { generateCoilTextile, generateCoil } from '../src/engine/coil.js';
 import { PolygonBoundary } from '../src/engine/boundary.js';
 import { ConfigError } from '../src/engine/params.js';
+import { MAX_MOVES } from '../src/engine/tiler.js';
 import { defaultProfiles } from './helpers.js';
 
 const base = { width: 50, height: 30, size: 3, pitch: 5, rowOverlap: 0.25 };
@@ -77,9 +78,8 @@ test('a swatch narrower than one loop says so', () => {
   assert.equal(r.loops, 0);
 });
 
-test('too many moves gives the plain budget error', () => {
-  const { machine, material } = defaultProfiles();
-  assert.throws(() => generateCoil(machine, material, { ...base, width: 240, height: 200, size: 1.5, pitch: 3, rowOverlap: 0.6 }), ConfigError);
+test('coil shares the unbounded full-toolpath move policy', () => {
+  assert.equal(MAX_MOVES, Infinity);
 });
 
 test('generateCoil returns moves, stats and G-code', () => {

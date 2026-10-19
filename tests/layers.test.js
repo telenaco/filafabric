@@ -93,7 +93,7 @@ test('a strand that crosses itself lifts over its own earlier pass within a laye
   assert.ok(s.pts.every((p) => p.cls === undefined));
 });
 
-test('layeredResult returns moves, stats, G-code and a report; refuses an absurd count', () => {
+test('layeredResult returns moves, stats, G-code and a report', () => {
   const b = boundaryFor(30, 30);
   const layers = [hatch(b, { angle: 0, spacing: 4 }), hatch(b, { angle: 90, spacing: 4 })];
   const r = layeredResult(machine, material, { width: 30, height: 30, layers });
@@ -101,8 +101,6 @@ test('layeredResult returns moves, stats, G-code and a report; refuses an absurd
   assert.ok(r.report.between > 20);
   assert.equal(r.stats.crossings, r.report.crossings);
   assert.ok(r.gcode.includes('G1'));
-  const dense = [hatch(boundaryFor(240, 200), { angle: 0, spacing: 0.1 })];
-  assert.throws(() => layeredResult(machine, material, { width: 240, height: 200, layers: dense }), ConfigError);
 });
 
 test('boundaryArea matches a rectangle', () => {

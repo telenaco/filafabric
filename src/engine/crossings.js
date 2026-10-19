@@ -17,7 +17,7 @@ import { ConfigError } from './params.js';
  * much as they like; but past this many crossings the lifts alone take minutes and hundreds of thousands of moves, so
  * the layout is refused with a plain message instead of freezing the page.
  */
-export const MAX_CROSSINGS = 120000;
+export const MAX_CROSSINGS = Infinity;
 
 const smooth = (t) => 0.5 * (1 + Math.cos(Math.PI * t)); // 1 at t = 0, 0 at t = 1
 

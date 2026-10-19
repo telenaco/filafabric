@@ -193,6 +193,7 @@ export function stackStrands(strands, count, { layerHeight = 0.2, strandWidth = 
   if (!strands.length) return strands;
   const copies = Math.max(1, Math.round(count));
   const points = strands.reduce((n, s) => n + s.pts.length + 4, 0);
+  if (points * copies > 0xffffffff) throw new ConfigError(['These layers exceed JavaScript array capacity.']);
   if (points * copies > MAX_MOVES) throw new ConfigError([`${copies} layers would need about ${(points * copies).toLocaleString('en')} moves; the limit is ${MAX_MOVES.toLocaleString('en')}. Use fewer layers or a smaller section.`]);
   if (copies <= 1) return strands;
   const all = [];

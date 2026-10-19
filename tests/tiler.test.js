@@ -88,13 +88,11 @@ test('an unresolvable leg gap terminates with a warning', () => {
   assert.ok(warnings.some((w) => /leg gap/i.test(w)));
 });
 
-test('absurd loop counts are refused with a readable error', () => {
-  const { cfg, boundary } = setup({ loop_pitch: 0.05 });
-  assert.throws(() => tile(cfg, boundary, createRng(1)), (e) => {
-    assert.ok(e instanceof ConfigError);
-    assert.match(e.message, new RegExp(String(MAX_LOOPS)));
-    return true;
-  });
+test('loop counts beyond the former 6000-loop ceiling can be generated', () => {
+  const { cfg, boundary } = setup({ loop_pitch: .3, base_spacing: 4, curve_resolution: 5 });
+  const { counts } = tile(cfg, boundary, createRng(1));
+  assert.ok(counts.candidates > 6000);
+  assert.equal(MAX_LOOPS, Infinity);
 });
 
 test('loops that leave the boundary are dropped', () => {

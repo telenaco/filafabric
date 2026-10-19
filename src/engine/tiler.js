@@ -2,8 +2,10 @@ import { sampleFiber } from './fiber.js';
 import { ConfigError } from './params.js';
 
 const EPS = 1e-9;
-export const MAX_LOOPS = 6000;
-export const MAX_MOVES = 400000;
+// Compatibility exports: full toolpaths have no fixed loop/move-count ceiling.
+// Finite geometry, the printer's volume and the JavaScript runtime's actual capacity still apply.
+export const MAX_LOOPS = Infinity;
+export const MAX_MOVES = Infinity;
 const NO_JITTER = Object.freeze({ width: 0, length: 0, lift: 0 });
 
 /** X positions of the two leg lines a loop centred at cx would have. */

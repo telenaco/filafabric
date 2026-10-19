@@ -56,12 +56,11 @@ test('local diagnostics keep the last 50 attempts and handle unavailable storage
   assert.deepEqual(blocked.export(), []);
 });
 
-test('recovery rebuilds a real coil rejected for extreme size, pitch and overlap without changing its dimensions or choices', () => {
+test('legacy move-limit diagnostics still offer recovery without changing dimensions or choices', () => {
   const module = designById('coil'), { machine, material } = defaultProfiles();
   const settings = { ...module.defaults(), width: 60, height: 60, size: 8, pitch: 0.2, rowOverlap: 95, shape: 'looped', pattern: 'stripes', patternScale: 0.75 };
-  let error;
-  try { module.generate(machine, material, settings); } catch (e) { error = e; }
-  assert.ok(error, 'the real extreme configuration must fail');
+  // Old locally saved errors remain readable, but the formerly rejected uncapped job must not be run as a unit fixture.
+  const error = new Error('This layout would need about 2,000,000 moves; the limit is 400,000.');
   assert.equal(classifyBuildError(error).code, 'move-limit');
   const recovery = suggestRecovery(module, settings, error);
   assert.ok(recovery);

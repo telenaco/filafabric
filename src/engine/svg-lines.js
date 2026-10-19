@@ -1,4 +1,4 @@
-import { clipStrands, connectStrands, orderStrands, analyzeFabric, travelDistance, finishAtPrintedBoundary, segmentInside } from './fabric.js';
+import { clipStrands, connectStrands, orderStrands, analyzeFabric, travelDistance, finishAtPrintedBoundary, segmentInside, simplifyStrands } from './fabric.js';
 import { resolveCrossings } from './crossings.js';
 import { PolygonBoundary } from './boundary.js';
 import { simplifyRing, flattenRings } from './outline.js';
@@ -69,7 +69,8 @@ export function composeSvgLines(result, vector, { fullWidth = vector.width, full
   const lines = clipLines
     ? clipStrands(clipped.map(strand), boundary, w / 2)
     : clipStrands(clipped.map(strand), swatch, w / 2).map((s) => ({ ...s, onBoundary: true }));
-  const imported = [...clipStrands(whole.map((poly) => ({ ...strand(poly), onBoundary: true })), swatch, 0), ...lines];
+  // Collapse only exactly collinear samples before crossing analysis; preserve curves and every printed pass.
+  const imported = simplifyStrands([...clipStrands(whole.map((poly) => ({ ...strand(poly), onBoundary: true })), swatch, 0), ...lines], 1e-9);
   const printedBoundary = !clipLines && (model.rings.length || model.guides.length) ? boundary : null;
   const pattern = printedBoundary ? clipStrands(finishAtPrintedBoundary(result.strands, printedBoundary, w), swatch, 0) : result.strands;
   const body = pattern.map((s) => ({ ...s, id: `pattern-${s.id}`, layer: (s.layer ?? 0) + 1, pts: s.pts.map(({ cls, ...p }) => ({ ...p, z: native ? p.z + h : 2 * h, ...(native && cls ? { cls } : {}) })) }));
