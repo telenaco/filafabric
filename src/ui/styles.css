@@ -497,6 +497,9 @@ input[role="switch"]:checked::before { transform: translateX(16px); }
 .check-explain { margin-top: 10px !important; font-size: 13.5px; }
 .figures-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .figures { display: flex; gap: 18px; }
+.figures.overview-figures { flex-wrap: wrap; gap: 10px 18px; }
+.estimate-info { flex-basis: 100%; margin: 0; }
+#calculate-full-estimate { min-height: 44px; }
 .figures.stale { opacity: 0.45; }
 /* a number keeps its unit on its own line */
 .fig-value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.2; white-space: nowrap; }

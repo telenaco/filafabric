@@ -147,7 +147,8 @@ export class SizeControl extends Control {
     const b = host.binding(designId).size;
     this.error = el('p', { class: 'field-error', id: `${designId}-size-error`, hidden: true });
     const make = (axis, label, range) => {
-      const input = el('input', { id: `${designId}-${axis}`, type: 'number', inputmode: 'decimal', step: range.step });
+      const limit = host.sizeLimits?.(designId)?.[axis === 'w' ? 'width' : 'height'];
+      const input = el('input', { id: `${designId}-${axis}`, type: 'number', inputmode: 'decimal', step: range.step, ...(limit !== undefined ? { max: limit } : {}) });
       const field = el('label', { class: 'size-field', for: input.id }, el('span', { class: 'size-label', text: label }), input, el('span', { class: 'unit', 'aria-hidden': 'true', text: 'mm' }));
       return { field, input, range, label: label.toLowerCase() };
     };

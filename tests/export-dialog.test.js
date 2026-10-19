@@ -55,7 +55,7 @@ function exportHost({ size = 200, previewSize = 100, pending = null, timer = nul
     previewBuild: pending, state: { design: 'svgdesign', docName: 'Sample', print: { layerHeight: 0.2, layers: 2 }, resultKey: 'current', result: result(previewSize) },
     exportOptions: () => ({ design: 'svgdesign', width: size, height: size, machine: { id: 'printer' }, material: { id: 'tpu' }, studySettings: { backing1Spacing: 5.12345, pattern: 'none' } }),
     snapshotKey: () => 'current', currentSwatch: () => 'test', swatchFileName: () => 'short.gcode',
-    renderBusy() {}, renderExport() {}, render() {}, toast() {},
+    renderBusy() {}, renderExport() {}, render() {}, toast() {}, printEstimates: { put() {} },
     async buildSwatch(input) { host.built = input; if (fail) throw new Error('Too large'); return result(input.width); },
     download(name, blob) { host.saved = { name, blob }; },
     reportStudyExport(type, input, stats) { host.recorded = { type, input, stats }; },

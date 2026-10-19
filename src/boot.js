@@ -24,7 +24,7 @@ const keep = {
 async function openStudio() {
   document.body.classList.remove('locked');
   $('gate')?.remove();
-  await import('./ui/main.js?v=20261019-whole-piece');
+  await import('./ui/main.js?v=20261019-full-size-estimates');
   $('btn-lock')?.addEventListener('click', () => {
     keep.clear();
     location.reload();

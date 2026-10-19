@@ -7,6 +7,7 @@ import { createPreview, ROLES } from './preview.js';
 import { createOverview } from './overview.js';
 import { useWholeOverview, canSimplifyPreview } from '../engine/overview.js';
 import { bedSizeLimits, printSizeProblem } from './bed-size.js';
+import { PrintEstimates } from './print-estimates.js';
 import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airStrandMm, fitAspect, pileLiftFactor } from './controls.js';
 import { SQ_RANGES, SQUIGGLE_DEFAULTS, describeSquiggle, sizeForAspect } from './squiggle-controls.js';
 import { buildVerdict, buildSquiggleVerdict, formatMinutes } from './verdict.js';
@@ -200,6 +201,7 @@ let previewChoice = 'auto';
 let overviewActive = false;
 let overviewFine = false;
 let overviewStatus = '';
+const printEstimates = new PrintEstimates();
 let previewBuild = null;
 let exporting = false;
 let exportController = null;
@@ -572,10 +574,11 @@ function schedule() {
 function renderBusy() {
   const busy = !!genTimer || !!previewBuild || exporting;
   $('#busy-chip').hidden = !busy;
-  $('#busy-chip').textContent = exporting ? exportLabel : 'Updating…';
+  $('#busy-chip').textContent = exporting ? exportLabel : previewBuild?.estimateOnly ? 'Calculating full estimate…' : 'Updating…';
   if (busy) $('#stage').setAttribute('aria-busy', 'true');
   else $('#stage').removeAttribute('aria-busy');
   $('#preview-cancel').hidden = !previewBuild;
+  $('#preview-cancel').textContent = previewBuild?.estimateOnly ? 'Cancel calculation' : 'Cancel preview';
 }
 
 /** A captured design at its selected size, shared by preview and direct export workers. */
@@ -603,25 +606,30 @@ function showGenerated(result, key) {
   state.result = result;
   state.resultKey = key;
   state.error = null;
+  const [width, height] = BINDINGS[state.design].size.get();
+  printEstimates.put(key, result, width, height);
   preview.update(result);
   applyScrub();
 }
 
 /** Full ordinary-size designs build off the UI thread; obsolete slider jobs are terminated. */
-function previewAtSelectedSize(input) {
+function previewAtSelectedSize(input, { estimateOnly = false } = {}) {
   state.error = null;
   const key = snapshotKey(), controller = new AbortController();
-  const job = { key, controller, promise: null };
+  const job = { key, controller, promise: null, estimateOnly };
   previewBuild = job;
-  job.promise = buildSwatch(input, { signal: controller.signal, preview: true }).then((result) => {
-    if (previewBuild === job && snapshotKey() === key) showGenerated(result, key);
+  job.promise = buildSwatch(input, { signal: controller.signal, preview: !estimateOnly }).then((result) => {
+    if (previewBuild === job && snapshotKey() === key) {
+      if (estimateOnly) printEstimates.put(key, result, input.width, input.height);
+      else showGenerated(result, key);
+    }
     return result;
   }).catch((error) => {
     if (error.name !== 'AbortError' && previewBuild === job) {
-      if (previewChoice === 'auto' && canSimplifyPreview(error)) {
+      if (!estimateOnly && previewChoice === 'auto' && canSimplifyPreview(error)) {
         previewBuild = null;
         showWholeOverview(input);
-        toast('Full 3D reached a geometry limit. Showing a labelled lightweight preview; print settings are unchanged.');
+        toast('Full 3D could not complete. Showing a labelled lightweight preview; print settings are unchanged.');
         return null;
       }
       state.error = error;
@@ -733,7 +741,7 @@ function regenerate() {
     overview.cancel();
     renderPreviewMode();
     const wholePreview = !currentPrintSizeProblem() && previewChoice !== 'sample';
-    if (wholePreview && Math.max(selectedWidth, selectedHeight) > 100) {
+    if (wholePreview) {
       previewAtSelectedSize(exportOptions(selectedWidth, selectedHeight));
       return;
     }
@@ -995,11 +1003,27 @@ function reportItems(r, item) {
 function renderFigures() {
   const host = $('#figures');
   const toggle = $('#btn-details');
+  const fig = (value, unit, label) => el('div', { class: 'figure' },
+    el('div', { class: 'fig-value' }, value, unit ? el('span', { class: 'fig-unit', text: ` ${unit}` }) : null),
+    el('div', { class: 'fig-label', text: label }));
+  host.classList.toggle('overview-figures', overviewActive);
   if (overviewActive) {
     const [w, h] = BINDINGS[state.design].size.get();
-    const bed = state.machines.get(state.machine).bed;
-    const fit = w > bed.width || h > bed.depth ? ` This does not fit the selected ${bed.width} × ${bed.depth} mm bed.` : '';
-    host.replaceChildren(el('p', { class: 'small muted', text: `${w} × ${h} mm whole-piece preview.${fit} Print time and filament are calculated when the full export is built; 3D detail checks a sample.` }));
+    const estimate = printEstimates.get(snapshotKey());
+    const scope = estimate?.full ? 'Full-piece' : 'Sample';
+    host.classList.toggle('stale', !!state.error);
+    host.replaceChildren();
+    if (estimate) host.append(fig(formatMinutes(estimate.timeSec / 60), 'min', `${scope} print time`),
+      fig(grams(estimate.filamentGrams ?? 0), 'g', `${scope} filament`));
+    host.append(el('p', { class: 'estimate-info small muted', text: estimate
+      ? `${estimate.width} × ${estimate.height} mm${estimate.full ? ' full piece. Time excludes acceleration.' : ` sample only — not the whole ${w} × ${h} mm piece.`}`
+      : `${w} × ${h} mm whole piece. Full print time has not been calculated yet.` }));
+    if (!estimate?.full) {
+      const calculate = el('button', { type: 'button', id: 'calculate-full-estimate', class: 'link small', text: previewBuild?.estimateOnly ? 'Calculating…' : 'Calculate full estimate', disabled: !!previewBuild || !!currentPrintSizeProblem() });
+      calculate.title = currentPrintSizeProblem() || 'Build the full toolpath in the background without loading 3D meshes. Can be cancelled.';
+      calculate.addEventListener('click', () => { previewAtSelectedSize(exportOptions(), { estimateOnly: true }); renderFigures(); });
+      host.append(calculate);
+    }
     toggle.hidden = true;
     $('#details').hidden = true;
     return;
@@ -1012,9 +1036,6 @@ function renderFigures() {
   const selected = BINDINGS[state.design].size.get();
   const sampled = t.sample_width !== selected[0] || t.sample_height !== selected[1];
   const mod = designById(state.design);
-  const fig = (value, unit, label) => el('div', { class: 'figure' },
-    el('div', { class: 'fig-value' }, value, unit ? el('span', { class: 'fig-unit', text: ` ${unit}` }) : null),
-    el('div', { class: 'fig-label', text: label }));
   host.classList.toggle('stale', !!state.error);
   host.replaceChildren(
     fig(formatMinutes(stats.timeSec / 60), 'min', sampled ? 'Preview print time' : 'Print time'),
@@ -1986,6 +2007,7 @@ async function exportGcode() {
     const text = result.gcode.replace('; Textile G-code generator v1\n', (head) => `${head}; swatch ${code}\n; name ${title}\n; studio settings ${settings}\n`);
     download(name, new Blob([text], { type: 'text/plain' }));
     reportStudyExport('gcode-swatch', { ...input, cfg: result.cfg, moveCount, layerPlan: result.layerPlan }, result.stats);
+    printEstimates.put(key, result, input.width, input.height);
     toast(`Saved ${input.width} × ${input.height} mm: ${name}`);
   } catch (error) {
     if (error.name === 'AbortError') toast('Export cancelled because the design changed.');
