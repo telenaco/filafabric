@@ -228,20 +228,18 @@ h1, h2, h3 { margin: 0; }
   min-height: 44px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--panel); color: var(--ink); font: inherit; width: 100%;
 }
 .machine-list {
-  max-height: min(300px, 40vh); overflow-y: auto; margin-top: 6px; padding: 4px; border: 1px solid var(--line); border-radius: 10px;
+  max-height: 144px; overflow-y: auto; margin-top: 6px; padding: 4px; border: 1px solid var(--line); border-radius: 10px;
   background: var(--panel-2); scrollbar-width: thin; scrollbar-color: var(--line-2) transparent;
 }
-.machine-group { margin: 8px 8px 2px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
-.machine-group:first-child { margin-top: 4px; }
 .machine-option {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; min-height: 44px; padding: 6px 10px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; min-height: 60px; padding: 8px 10px;
   border: 0; border-radius: 8px; background: transparent; text-align: left; color: var(--ink);
 }
 .machine-option:hover { background: var(--seg-bg); }
 .machine-option[aria-pressed="true"] { background: var(--accent-soft); }
 .machine-option[aria-pressed="true"] .machine-name { color: var(--accent); }
 .machine-option:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
-.machine-name { font-weight: 600; font-size: 14px; }
+.machine-name { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
 .machine-meta { font-size: 12.5px; font-weight: 500; color: var(--muted); }
 .machine-empty { margin: 10px; }
 #machine-count { margin: 6px 0 0; font-weight: 400; }

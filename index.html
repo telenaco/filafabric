@@ -273,7 +273,7 @@
     <p class="muted">A setup holds the printer's limits, the filament's behaviour and how the layers are printed.</p>
     <div class="field-row stacked machine-picker">
       <label for="machine-search">Printer</label>
-      <input id="machine-search" type="search" autocomplete="off" spellcheck="false" placeholder="Search printers: A1 mini, P1S, MK4S, CORE One…" aria-controls="machine-list" aria-describedby="machine-count">
+      <input id="machine-search" type="search" autocomplete="off" spellcheck="false" placeholder="Search printers…" aria-controls="machine-list" aria-describedby="machine-count">
       <div id="machine-list" class="machine-list" role="group" aria-label="Printers"></div>
       <p id="machine-count" class="small muted" aria-live="polite"></p>
     </div>
@@ -282,8 +282,9 @@
     <div id="print-setup"></div>
     <div class="profile-add">
       <label class="btn" for="profile-file">Add a printer or filament file…</label>
-      <input type="file" id="profile-file" class="visually-hidden" accept=".ini,.json,.gcode,.cfg,.txt" multiple>
-      <p class="muted small">Drop in what your slicer exports: a PrusaSlicer config (.ini, or a sliced .gcode, which carries it) or a Bambu Studio preset (.json). To keep them for everyone who opens the studio, put the files in the <code>profiles/machines</code> or <code>profiles/materials</code> folder.</p>
+      <input type="file" id="profile-file" class="visually-hidden" accept=".ini,.json,.gcode" multiple>
+      <p class="muted small">Use a complete PrusaSlicer config (.ini or sliced .gcode) or a self-contained Bambu Studio / OrcaSlicer printer or filament preset (.json). Print/process presets alone and files missing their parent settings are not complete printer profiles. Review import notes before printing.</p>
+      <p class="small"><a class="link" href="samples/printer-profile.ini" download>Download sample .ini</a> · <a class="link" href="samples/printer-profile.json" download>Sample .json</a> · <a class="link" href="profiles/README.md" target="_blank" rel="noopener">Profile requirements</a></p>
       <ul class="profile-list" id="profile-list" hidden></ul>
     </div>
     <div class="dialog-actions"><button class="btn primary" value="close">Done</button></div>
@@ -378,6 +379,6 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-<script type="module" src="src/boot.js?v=20261016-fix-it"></script>
+<script type="module" src="src/boot.js?v=20261019-printer-setup"></script>
 </body>
 </html>

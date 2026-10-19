@@ -161,14 +161,26 @@ export function validateTextile(t) {
  * steps of 0.05. A 0.4 mm nozzle prints 0.10, 0.15, 0.20 and 0.25; thicker and the bead cannot be pressed onto the layer
  * below, thinner and the nozzle drags through what it just laid.
  */
-export function layerHeightOptions(nozzle = 0.4) {
-  const d = Number(nozzle) > 0 ? Number(nozzle) : 0.4;
+export function layerHeightOptions(nozzle = 0.4, profileHeight = null) {
+  const d = Number.isFinite(Number(nozzle)) && Number(nozzle) >= 0.1 && Number(nozzle) <= 2 ? Number(nozzle) : 0.4;
   const step = 0.05;
   const lo = Math.max(step, Math.ceil((d * 0.25) / step - 1e-9) * step);
   const hi = Math.max(lo, Math.floor((d * 0.625) / step + 1e-9) * step);
   const out = [];
   for (let v = lo; v <= hi + 1e-9; v += step) out.push(Math.round(v * 100) / 100);
+  // These buttons are suggestions. Keep an explicit slicer layer height exactly, including non-0.05 mm steps.
+  if (typeof profileHeight === 'number' && Number.isFinite(profileHeight) && profileHeight > 0 && profileHeight <= 0.8 * d + 1e-9 && !out.includes(profileHeight)) out.push(profileHeight);
+  out.sort((a, b) => a - b);
   return out;
+}
+
+/** A slicer's actual print preset wins; a printer-only file falls back to about half its nozzle diameter. */
+export function defaultLayerHeight(machine) {
+  const h = machine?.print_defaults?.layer_height;
+  const choices = layerHeightOptions(machine?.nozzle_diameter, h);
+  if (choices.includes(h)) return h;
+  const nozzle = machine?.nozzle_diameter ?? 0.4;
+  return choices.reduce((best, v) => Math.abs(v - nozzle / 2) < Math.abs(best - nozzle / 2) - 1e-9 ? v : best, choices[0]);
 }
 
 export function resolveConfig(machine, material, overrides = {}) {
@@ -178,7 +190,9 @@ export function resolveConfig(machine, material, overrides = {}) {
   ];
   // a material may carry `print_defaults` (the studio puts the chosen layer thickness there); a design's own overrides win
   // a printer profile may say what nozzle it has (an imported slicer printer does); a design's own overrides win
-  const t = { ...DEFAULT_TEXTILE, ...(machine?.nozzle_diameter > 0 ? { nozzle_diameter: machine.nozzle_diameter } : {}), ...(material?.print_defaults ?? {}), ...overrides };
+  const t = { ...DEFAULT_TEXTILE,
+    ...(machine?.nozzle_diameter > 0 ? { nozzle_diameter: machine.nozzle_diameter, extrusion_width: Math.round(machine.nozzle_diameter * 1.125 * 10000) / 10000 } : {}),
+    layer_height: defaultLayerHeight(machine), ...(material?.print_defaults ?? {}), ...overrides };
   const errors = [...profileErrors, ...validateTextile(t)];
   if (errors.length) throw new ConfigError(errors);
 

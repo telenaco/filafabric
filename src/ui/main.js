@@ -11,11 +11,11 @@ import { stateToHash, hashToState, sanitizeState, PRINT_DEFAULTS } from './share
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
 import { $, $$, el, icon, ICONS } from './dom.js';
 import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, SectionFold } from './panels.js';
-import { layerHeightOptions, resolveConfig } from '../engine/params.js';
+import { layerHeightOptions, defaultLayerHeight, resolveConfig } from '../engine/params.js';
 import { TooltipLayer } from './tooltip.js';
 // versioned with the release in boot.js, so a returning browser never pairs this file with an older printer loader
 import { ProfileStore } from './profile-store.js?v=20261015-printer-library';
-import { searchMachines } from './machine-search.js?v=20261015-printer-library';
+import { machineSuggestions } from './machine-search.js?v=20261019-printer-setup';
 import { DESIGNS, ESSENTIALS, designById, isReady, baseDesignSettings } from './designs.js';
 import { THUMBS, shapeThumb, presetThumb } from './thumbs.js';
 import { swatchCode } from './swatch.js';
@@ -311,6 +311,7 @@ function loadState(data) {
   state.outline = clean.outline;
   state.vector = clean.vector;
   state.print = clean.print;
+  if (data?.print?.layerHeight === undefined) state.print.layerHeight = defaultLayerHeight(state.machines.get(state.machine));
   normalisePrint();
   if (typeof data?.name === 'string') state.docName = data.name.slice(0, 60);
   if (designChanged) resetRoles();
@@ -362,7 +363,7 @@ const PRINT_LAYERS = { key: 'extraLayers', label: 'Extra layers', help: '0 keeps
 const nozzleDiameter = () => state.machines.get(state.machine)?.nozzle_diameter ?? 0.4;
 
 /** The layer thicknesses that nozzle can lay down. */
-const layerChoices = () => layerHeightOptions(nozzleDiameter());
+const layerChoices = () => layerHeightOptions(nozzleDiameter(), state.machines.get(state.machine)?.print_defaults?.layer_height);
 
 /** The nearest thickness the nozzle can print: a value from a link or a saved file, or left over from another nozzle. */
 function nearestLayerHeight(h) {
@@ -399,12 +400,12 @@ const PRINT_BINDING = {
   range: (key) => PRINT_RANGES[key],
   options: () => layerChoices(),
   note: () => {
-    const list = layerChoices();
-    return `A ${nozzleDiameter()} mm nozzle prints layers from ${list[0]} to ${list.at(-1)} mm.`;
+    const machine = state.machines.get(state.machine);
+    return `${nozzleDiameter()} mm nozzle · ${defaultLayerHeight(machine)} mm ${machine?.print_defaults?.layer_height ? 'from the imported print profile' : 'nozzle-based default'}. Choose another thickness above if needed.`;
   },
   readout: (key) => {
     if (key === 'brim') return state.print.brim ? `${state.print.brim} ${state.print.brim === 1 ? 'line' : 'lines'}` : 'Off';
-    if (key === 'layerHeight') return `${Math.round(state.print.layerHeight * 1000) / 1000} mm${state.print.layerHeight === PRINT_DEFAULTS.layerHeight ? ' (the usual)' : ''}`;
+    if (key === 'layerHeight') return `${Math.round(state.print.layerHeight * 1000) / 1000} mm${state.print.layerHeight === defaultLayerHeight(state.machines.get(state.machine)) ? ' (default)' : ''}`;
     return layerSetupText();
   },
 };
@@ -1321,34 +1322,27 @@ function fillDialogSelects() {
 function machineEntries() {
   const own = [...state.machines.values()].filter((m) => profiles.origins.get(`machines:${m.id}`) !== 'library')
     .map((m) => ({ id: m.id, vendor: 'yours', name: m.name, model: m.name, nozzle: m.nozzle_diameter ?? 0.4, bed: [m.bed.width, m.bed.depth, m.bed.max_z] }));
-  return [...own, ...(profiles.library?.machines ?? [])];
+  const ids = new Set(own.map(m => m.id));
+  return [...own, ...(profiles.library?.machines ?? []).filter(m => !ids.has(m.id))];
 }
 
 function renderMachinePicker() {
   const query = $('#machine-search').value;
   const vendors = [{ id: 'yours', name: 'In this studio' }, ...(profiles.library?.vendors ?? [])];
-  const vendorName = new Map(vendors.map((v) => [v.id, v.name]));
   const all = machineEntries();
-  const found = searchMachines(all, query, vendors);
-  $('#machine-search').placeholder = `Search ${all.length} printers: A1 mini, P1S, MK4S, CORE One…`;
+  const found = machineSuggestions(all, query, state.machine, vendors);
+  $('#machine-search').placeholder = `Search ${all.length} printers…`;
   const items = [];
-  let group = null;
   for (const entry of found) {
-    // grouped by vendor while nothing is typed; a search lists the best matches first, each saying its vendor
-    if (!query.trim() && entry.vendor !== group) {
-      group = entry.vendor;
-      items.push(el('p', { class: 'machine-group', 'aria-hidden': 'true', text: vendorName.get(entry.vendor) ?? entry.vendor }));
-    }
     const bed = entry.bed ? `${entry.bed[0]} × ${entry.bed[1]} mm` : '';
     const btn = el('button', { type: 'button', class: 'machine-option', 'data-machine': entry.id, 'aria-pressed': String(entry.id === state.machine) },
       el('span', { class: 'machine-name', text: entry.name }),
-      el('span', { class: 'machine-meta', text: [query.trim() ? vendorName.get(entry.vendor) : null, entry.nozzle ? `${entry.nozzle} mm nozzle` : null, bed].filter(Boolean).join(' · ') }));
+      el('span', { class: 'machine-meta', text: [entry.id === state.machine ? 'In use' : null, entry.nozzle ? `${entry.nozzle} mm nozzle` : null, bed].filter(Boolean).join(' · ') }));
     items.push(btn);
   }
   if (!found.length) items.push(el('p', { class: 'machine-empty small muted', text: 'No printer matches. Try fewer words, or add your printer\'s file below.' }));
   $('#machine-list').replaceChildren(...items);
-  const current = state.machines.get(state.machine);
-  $('#machine-count').textContent = `${current ? `In use: ${current.name}. ` : ''}${query.trim() ? `${found.length} ${found.length === 1 ? 'printer matches' : 'printers match'}.` : `${all.length} printers, by maker.`}`;
+  $('#machine-count').textContent = query.trim() ? `${found.length} ${found.length === 1 ? 'printer matches' : 'printers match'}. Scroll for more matches.` : `Showing ${found.length} of ${all.length}. Type a name, e.g. Ender 3 or MK3.5.`;
 }
 
 async function chooseMachine(id) {
@@ -1358,6 +1352,7 @@ async function chooseMachine(id) {
     toast(`Could not load that printer: ${e.message}`);
     return;
   }
+  if (state.machine !== id) state.print.layerHeight = defaultLayerHeight(state.machines.get(id));
   state.machine = id;
   normalisePrint();
   renderControls();
@@ -2081,7 +2076,7 @@ function bindStatic() {
   });
 
   const dialog = $('#printer-dialog');
-  $('#btn-printer').addEventListener('click', () => { fillDialogSelects(); dialog.showModal(); });
+  $('#btn-printer').addEventListener('click', () => { $('#machine-search').value = ''; fillDialogSelects(); dialog.showModal(); });
   bindMachinePicker();
   $('#sel-material').addEventListener('change', (e) => { state.material = e.target.value; updateDialogNote(); schedule(); commit(); });
   // a printer or filament profile as the slicers export it: PrusaSlicer .ini or sliced .gcode, Bambu Studio .json
@@ -2089,7 +2084,7 @@ function bindStatic() {
     for (const file of [...e.target.files]) {
       try {
         const got = profiles.add(await file.text(), file.name);
-        if (got.machines[0]) state.machine = got.machines[0].id;
+        if (got.machines[0]) { state.machine = got.machines[0].id; state.print.layerHeight = defaultLayerHeight(got.machines[0]); }
         if (got.materials[0]) state.material = got.materials[0].id;
         toast(`Added ${[...got.machines.map((m) => `${m.name} (printer)`), ...got.materials.map((m) => `${m.name} (filament)`)].join(' and ')}`);
       } catch (err) {

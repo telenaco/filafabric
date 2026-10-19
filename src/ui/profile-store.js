@@ -89,7 +89,7 @@ export class ProfileStore {
       for (const profile of got[kind]) {
         this.map(kind).set(profile.id, profile);
         this.origins.set(`${kind}:${profile.id}`, origin);
-        this.notes.set(`${kind}:${profile.id}`, got.notes);
+        this.notes.set(`${kind}:${profile.id}`, got.notes.length ? got.notes : profile.import_notes ?? []);
       }
     }
   }
@@ -136,6 +136,8 @@ export class ProfileStore {
     const got = importProfiles(text, filename);
     for (const kind of ['machines', 'materials']) {
       for (const profile of got[kind]) {
+        // Startup substitutions and guessed defaults must still be visible after this browser is reopened.
+        if (got.notes.length) profile.import_notes = [...got.notes];
         this.user[kind] = [...this.user[kind].filter((p) => p.id !== profile.id), profile];
       }
     }

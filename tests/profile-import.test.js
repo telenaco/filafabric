@@ -7,6 +7,7 @@ import { validateMachine, validateMaterial } from '../src/engine/profiles.js';
 import { buildProfileIndex } from '../tools/profiles-index.mjs';
 import { generateSquiggle } from '../src/engine/squiggle.js';
 import { projectRoot } from './helpers.js';
+import { defaultLayerHeight, resolveConfig } from '../src/engine/params.js';
 
 const fixture = (name) => fs.readFileSync(path.join(projectRoot, 'tests', 'fixtures', name), 'utf8');
 
@@ -133,4 +134,73 @@ test('parseConfigText reads sections and the config trailer of a G-code file', (
   const sections = parseConfigText(fixture('prusa-bundle.ini'));
   assert.deepEqual(sections.map((s) => `${s.kind}:${s.name}`), ['presets:', 'printer:Bench Printer', 'filament:Bench TPU']);
   assert.equal(sections[1].values.start_gcode.split('\n').length, 6, 'the \\n of a config line are newlines');
+});
+
+test('complete configs and sliced trailers retain the print preset layer height', () => {
+  const text = fixture('prusa-config.ini').replace('nozzle_diameter = 0.4', 'nozzle_diameter = 0.9') + '\nlayer_height = 0.45';
+  const got = importProfiles(text, 'MK3.5-0.9.ini');
+  assert.equal(got.machines[0].nozzle_diameter, .9);
+  assert.equal(defaultLayerHeight(got.machines[0]), .45);
+  assert.equal(resolveConfig(got.machines[0], got.materials[0]).t.layer_height, .45);
+  const trailer = '; prusaslicer_config = begin\n' + text.split('\n').map(l => `; ${l}`).join('\n') + '\n; prusaslicer_config = end';
+  assert.equal(importProfiles(trailer, 'part.gcode').machines[0].print_defaults.layer_height, .45);
+});
+
+test('bundles resolve local hidden parents and apply the active print preset without importing parents', () => {
+  const text = `[presets]
+printer = My MK3.5
+print = My 0.28
+[printer:*base*]
+bed_shape = 0x0,250x0,250x210,0x210
+nozzle_diameter = 0.4
+max_print_height = 210
+[printer:My MK3.5]
+inherits = *base*
+[print:*common*]
+layer_height = 0.28
+[print:My 0.28]
+inherits = *common*
+[print:Other]
+layer_height = 0.15`;
+  const got = importProfiles(text, 'bundle.ini');
+  assert.deepEqual(got.machines.map(m => m.name), ['My MK3.5']);
+  assert.equal(got.machines[0].print_defaults.layer_height, .28);
+  assert.throws(() => importProfiles(text.replace('inherits = *base*', 'inherits = missing'), 'missing.ini'), /Missing parent preset/);
+  assert.throws(() => importProfiles(text.replace('[printer:*base*]', '[printer:*base*]\ninherits = My MK3.5'), 'cycle.ini'), /cyclic/);
+});
+
+test('unpaired print presets do not silently set a height for the wrong printer', () => {
+  const text = fixture('prusa-bundle.ini') + '\n[print:Fine]\nlayer_height = 0.15\n[print:Coarse]\nlayer_height = 0.3';
+  assert.equal(importProfiles(text, 'multi.ini').machines[0].print_defaults, undefined);
+});
+
+test('incomplete inherited JSON and process-only presets explain which complete export is needed', () => {
+  assert.throws(() => importProfiles('{"type":"machine","inherits":"System printer","name":"Mine"}', 'child.json'), /inherits.*complete config/);
+  assert.throws(() => importProfiles('{"type":"filament","inherits":"Generic TPU"}', 'child.json'), /missing inherited settings/);
+  assert.throws(() => importProfiles('{"type":"process","layer_height":"0.2"}', 'process.json'), /print\/process preset alone/);
+  const json = JSON.parse(fixture('bambu-printer.json'));
+  json.layer_height = '0.28';
+  assert.equal(importProfiles(JSON.stringify(json), 'full.json').machines[0].print_defaults.layer_height, .28);
+});
+
+test('invalid nozzle diameters and incompatible print heights are reported rather than silently replaced', () => {
+  for (const [key, value] of [['nozzle_diameter', '9'], ['nozzle_diameter', 'nonsense'], ['layer_height', '0.9'], ['layer_height', '0']]) {
+    let text = fixture('prusa-config.ini');
+    text = key === 'layer_height' ? text + `\n${key} = ${value}` : text.replace('nozzle_diameter = 0.4', `${key} = ${value}`);
+    assert.throws(() => importProfiles(text, 'invalid.ini'), new RegExp(key));
+  }
+});
+
+test('both downloadable sample profiles import and generate with their custom nozzle and layer defaults', () => {
+  const { materials } = importProfiles(fixture('prusa-config.ini'), 'filament.ini');
+  for (const filename of ['printer-profile.ini', 'printer-profile.json']) {
+    const text = fs.readFileSync(path.join(projectRoot, 'samples', filename), 'utf8');
+    const got = importProfiles(text, filename);
+    assert.equal(got.machines.length, 1);
+    const r = generateSquiggle(got.machines[0], materials[0], { width: 20, height: 20 });
+    assert.equal(r.cfg.t.nozzle_diameter, .9);
+    assert.equal(r.cfg.t.layer_height, .45);
+    assert.ok(r.gcode.includes('; BODY END'));
+    assert.doesNotMatch(r.gcode, /\{[a-z_]+\}|\[(?:first_layer|nozzle_temperature)/);
+  }
 });
