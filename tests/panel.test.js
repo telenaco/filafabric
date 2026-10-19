@@ -221,22 +221,22 @@ test('manual extra-layer counts above50 and migrated27copy textures retain all52
   }
 });
 
-test('multi-section panels larger than bed size check tile/section fit instead of total panel size', async () => {
+test('panel sections never bypass the physical bed fit check or write an oversized print', async () => {
   const { machine, material } = defaultProfiles();
+  let writes = 0;
+  for (const repeat of [50, 300, 500]) await assert.rejects(
+    exportPanel({ machine, material, design: 'crosshatch', width: 300, height: 300, repeat }, { write: async () => { writes++; } }),
+    (e) => e.name === 'PreflightError' && /does not fit the bed/.test(e.message));
+  assert.equal(writes, 0);
+  assert.equal(machine.bed.width, 250, 'the printer bed is never enlarged to fit the requested panel');
+});
+
+test('a panel beyond the swatch limit stays centered on a real large bed', async () => {
+  const { machine, material } = defaultProfiles();
+  const gantry = { ...machine, bed: { width: 1400, depth: 100, max_z: 300 } };
   let text = '';
-  const stats = await exportPanel({ machine, material, design: 'crosshatch', width: 300, height: 300, repeat: 50 }, { write: async (s) => { text += s; } });
-  assert.equal(stats.sections, 36);
-  assert.match(text, /BODY END/);
-
-  // Single section larger than bed should still be rejected
-  await assert.rejects(
-    exportPanel({ machine, material, design: 'crosshatch', width: 300, height: 300, repeat: 500 }, { write: async () => {} }),
-    (e) => e.name === 'PreflightError' && /does not fit the bed/.test(e.message)
-  );
-
-  // Repeat size exceeding bed should also be rejected
-  await assert.rejects(
-    exportPanel({ machine, material, design: 'crosshatch', width: 600, height: 600, repeat: 300 }, { write: async () => {} }),
-    (e) => e.name === 'PreflightError' && /does not fit the bed/.test(e.message)
-  );
+  await exportPanel({ machine: gantry, material, design: 'crosshatch', width: 1200, height: 20, repeat: 20, brim: 0 }, { write: async (s) => { text += s; } });
+  const lines = extrusions(text.split('; BODY START\n')[1].split('; BODY END')[0]);
+  const xs = lines.flatMap(s => [s.a.x, s.b.x]);
+  assert.ok(Math.min(...xs) >= 100 && Math.max(...xs) <= 1300, 'body uses the true 1200 mm footprint, centered with 100 mm margins');
 });

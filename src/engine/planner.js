@@ -1,4 +1,5 @@
 import { airStrandDiameter } from './extrusion.js';
+import { segmentInside } from './fabric.js';
 
 const Z_MARGIN = 0.05;
 
@@ -165,7 +166,7 @@ export function plan(cfg, base, placements, boundary, { strands: supplied = null
         prevStrand.row === strand.row &&
         dz < 1e-6;
 
-      if (isSameRowLoop && dist > 1e-6) {
+      if (isSameRowLoop && dist > 1e-6 && segmentInside(cur, first, boundary)) {
         moves.push({
           x: first.x,
           y: first.y,

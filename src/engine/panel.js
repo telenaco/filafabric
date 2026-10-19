@@ -91,21 +91,19 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   if (![width, height].every((v) => Number.isFinite(v) && v >= 1 && v <= 5000) || !Number.isFinite(repeat) || repeat < 5 || repeat > 500 || !Number.isFinite(backingSpacing) || backingSpacing < 0.3 || backingSpacing > 50) throw new ConfigError(['Panel dimensions must be 1–5000 mm, the repeat 5–500 mm and the backing spacing 0.3–50 mm.']);
   if (options.extraLayers !== undefined && (!Number.isInteger(options.extraLayers) || options.extraLayers < 0 || options.extraLayers > 250)) throw new ConfigError(['Extra layers must be an integer from 0 to 250.']);
   if (typeof write !== 'function') throw new Error('A writable output is required');
-  const tileWidth = options.sectionWidth ?? repeat, tileHeight = options.sectionHeight ?? repeat;
-  const isMultiSection = width > tileWidth || height > tileHeight;
-  const checkWidth = isMultiSection ? Math.min(width, tileWidth) : width;
-  const checkHeight = isMultiSection ? Math.min(height, tileHeight) : height;
-  const initialCfg = resolveConfig(machine, material, { sample_width: checkWidth, sample_height: checkHeight }), fit = bedFitErrors(initialCfg);
+  // Sections bound memory, not the physical print: backing, brim and texture share one full-panel coordinate system.
+  // Validate other settings with the swatch resolver, then restore the separately validated (up to 5000 mm) panel size.
+  const panelConfig = (settings = {}) => {
+    const cfg = resolveConfig(machine, material, { ...settings, sample_width: Math.min(width, 1000), sample_height: Math.min(height, 1000) });
+    cfg.t = { ...cfg.t, sample_width: width, sample_height: height };
+    cfg.derived.origin = { x: (machine.bed.width - width) / 2, y: (machine.bed.depth - height - cfg.derived.overhang) / 2 };
+    return cfg;
+  };
+  const initialCfg = panelConfig(), fit = bedFitErrors(initialCfg);
   if (fit.length) throw new PreflightError(fit);
   if (signal?.aborted) throw new DOMException('Export cancelled', 'AbortError');
   let texture = textureResult(options, repeat);
-  const effectiveMachine = (width > machine.bed.width || height > machine.bed.depth)
-    ? { ...machine, bed: { ...machine.bed, width: Math.max(machine.bed.width, width), depth: Math.max(machine.bed.depth, height) } }
-    : machine;
-  const cfg = resolveConfig(effectiveMachine, material, { ...texture.cfg.t, sample_width: Math.min(width, 1000), sample_height: Math.min(height, 1000) });
-  if (width > machine.bed.width || height > machine.bed.depth) {
-    cfg.derived.origin = { x: 0, y: 0 };
-  }
+  const cfg = panelConfig(texture.cfg.t);
   const h = cfg.t.layer_height, bead = cfg.t.extrusion_width;
   const model = vector ? interpretDrawing(vector, { scaleX: width / vector.width, scaleY: height / vector.height }) : null;
   const guides = model?.guides ?? [], outerBoundary = new PolygonBoundary(outline ?? (shapeOutline && model?.rings.length ? model.rings : [rectangle(width, height)]));

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { plan, HeightMap, clearanceModel } from '../src/engine/planner.js';
 import { scene } from './scene.js';
+import { PolygonBoundary } from '../src/engine/boundary.js';
 
 const CLASSES = new Set(['base', 'supported', 'rising', 'falling', 'unsupported', 'travel']);
 const near = (a, b, tol = 1e-6) => assert.ok(Math.abs(a - b) <= tol, `${a} vs ${b}`);
@@ -81,6 +82,24 @@ test('base only and loops only both plan', () => {
 test('nothing to print plans to an empty move list', () => {
   const { result } = run({ include_base: false, include_loops: false });
   assert.deepEqual(result.moves, []);
+});
+
+test('same-row loops connect continuously only when the bridge stays inside the outline', () => {
+  const { cfg } = scene({ sample_width: 20, sample_height: 20 });
+  cfg.derived.retraction = { ...cfg.derived.retraction, length: 1, minTravel: 2 };
+  const outer = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 20 }, { x: 0, y: 20 }];
+  const hole = [{ x: 8, y: 4 }, { x: 12, y: 4 }, { x: 12, y: 6 }, { x: 8, y: 6 }];
+  const placements = [
+    { id: 'a', row: 0, lift: 0, points: [{ x: 2, y: 5, z: 0 }, { x: 6, y: 5, z: 0 }] },
+    { id: 'b', row: 0, lift: 0, points: [{ x: 14, y: 5, z: 0 }, { x: 18, y: 5, z: 0 }] },
+  ];
+  for (const hasHole of [false, true]) {
+    const boundary = new PolygonBoundary(hasHole ? [outer, hole] : [outer]);
+    const { moves } = plan(cfg, null, placements, boundary);
+    const bridge = moves.find(m => m.x === 14 && m.y === 5 && m.z === cfg.derived.loopBaseZ);
+    assert.equal(bridge.extrude, !hasHole, 'a hole requires travel rather than an extruded bridge');
+    assert.equal(moves.filter(m => m.retract === 'retract').length, hasHole ? 1 : 0);
+  }
 });
 
 test('composed supplied strands retain extrusion classes and flow while checking clearance and retracts', () => {
