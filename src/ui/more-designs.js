@@ -98,6 +98,7 @@ export function layered(def) {
     fullSize: !!def.fullSize,
     panel: def.panel,
     svgNote: def.svgNote,
+    optimizeTravel: !!def.optimizeTravel,
     generate: (machine, material, s, { outline = null, vector = null, vectorSize = null, vectorOffset = [0, 0], includeLines = true } = {}) => {
       // a drawing's lines print as many passes as their width asks for, and a pass is as wide as this filament's bead
       const bead = resolveConfig(machine, material, { sample_width: s.width, sample_height: s.height }).t.extrusion_width;
@@ -146,6 +147,7 @@ const BACKING_LABELS = {
 export const MORE_DESIGNS = [
   layered({
     id: 'crosshatch',
+    optimizeTravel: true,
     hidden: true, // out of the list for now; the design and its tests stay
     name: 'Crosshatch & isogrid',
     blurb: 'Straight lines at the angles you choose, layer on layer',
@@ -195,6 +197,7 @@ const AUXETIC = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'auxetic',
+  optimizeTravel: true,
   name: 'Auxetic mesh',
   blurb: 'Honeycomb and re-entrant (bow-tie) cells',
   about: 'Rows of zigzag, each the mirror of the one below, and staircases that climb through them. Struts at the waists make an ordinary honeycomb; struts at the wide points make bow-tie cells that widen when pulled, so the fabric spreads under tension and hugs a curve.',
@@ -239,6 +242,7 @@ const DIPWEAVE = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'dipweave',
+  optimizeTravel: true,
   name: 'Dip weave',
   blurb: 'A straight warp with a weft that dips between: over and under in one layer',
   about: 'The over-and-under is the design here, in a single layer: warp lines straight on the bed and weft lines printed after them that ride over each warp and dip back to the bed between, so the fabric is one layer thick except at the crossings. Nothing is printed in mid-air, but the nozzle tip needs room to drop between warps.',
@@ -287,6 +291,7 @@ const WEB = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'web',
+  optimizeTravel: true,
   name: 'Spiderweb',
   blurb: 'A spiral crossed by a radial zigzag',
   about: 'One continuous spiral from the middle outwards, crossed by a zigzag that goes out along one spoke and back along the next. Every spoke crosses every turn at about a right angle, so the layers hold each other: soft along the radius, firm around.',
@@ -326,6 +331,7 @@ const CHAINMAIL = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'chainmail',
+  optimizeTravel: true,
   name: 'Ring mail',
   blurb: 'Overlapping rings, two layers, a chainmail look',
   about: 'Overlapping rings on a hexagonal lattice, with a second layer of rings shifted into the triangular gaps. Each ring of the second layer crosses three rings of the first twice, so the layers hold each other with no straight run of strand: near the same in every direction, with good drape.',
@@ -368,6 +374,7 @@ const MEANDER = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'meander',
+  optimizeTravel: true,
   name: 'Meander',
   blurb: 'A space-filling curve held by a wavy backing',
   about: 'One continuous strand that folds across the fabric and never crosses itself, held by a backing laid over it at an angle, by default the wavy lines of a gyroid, which cross every fold at a different angle and can give along their length (or straight lines, if you prefer): a Hilbert, Moore, Peano, Sierpiński or Gosper curve, a random maze, or one loop through scattered dots (denser where a pattern is bright). The folds give hidden slack, so it stretches by unfolding and reads as lace.',
@@ -425,6 +432,7 @@ const HARMONOGRAPH = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'harmonograph',
+  optimizeTravel: true,
   name: 'Harmonograph',
   blurb: 'One closed curve that crosses itself in diamonds',
   about: 'A Lissajous curve: one closed strand that sweeps across the fabric and back, crossing itself in a diamond lattice with a dense band along the edge, a natural hem. A second curve with its phase turned crosses the first everywhere. It fills the whole swatch; an outline clips it rather than being followed.',
@@ -464,6 +472,7 @@ const TRUCHET = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'truchet',
+  optimizeTravel: true,
   name: 'Truchet tiles',
   blurb: 'Random tiles that flow into curves',
   about: 'A grid where every cell holds one of two orientations of a simple tile, picked at random. Diagonals give an X in every cell; arcs flow into long curves, with the second layer a half tile over so it crosses the first. The same seed always makes the same pattern, so a swatch can be made again.',
@@ -509,6 +518,7 @@ const VORONOI = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'voronoi',
+  optimizeTravel: true,
   name: 'Voronoi lace',
   blurb: 'Even cells with their triangulation across',
   about: 'A relaxed Voronoi tessellation of round, even cells, with its Delaunay triangulation as the second layer. Every cell wall is the perpendicular bisector of a triangle edge, so the layers cross at about a right angle: lace-like, close to the same in every direction, and it can be graded with a pattern so the cells are smaller where it is bright.',
@@ -549,6 +559,7 @@ const TURING = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'turing',
+  optimizeTravel: true,
   name: 'Turing stripes',
   blurb: 'Grown stripes held by a wavy backing',
   about: 'The same chemistry that makes animal stripes and coral: a reaction-diffusion field grown from a few specks until it settles into winding stripes about one wavelength apart, whose edges are the first layer. A gyroid backing (or straight lines) across them is the second. Organic and near the same in every direction. Each number is a different pattern, and the same number always grows the same one.',
