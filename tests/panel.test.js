@@ -220,3 +220,23 @@ test('manual extra-layer counts above50 and migrated27copy textures retain all52
     assert.equal(stats.print.totalLayers,56);
   }
 });
+
+test('multi-section panels larger than bed size check tile/section fit instead of total panel size', async () => {
+  const { machine, material } = defaultProfiles();
+  let text = '';
+  const stats = await exportPanel({ machine, material, design: 'crosshatch', width: 300, height: 300, repeat: 50 }, { write: async (s) => { text += s; } });
+  assert.equal(stats.sections, 36);
+  assert.match(text, /BODY END/);
+
+  // Single section larger than bed should still be rejected
+  await assert.rejects(
+    exportPanel({ machine, material, design: 'crosshatch', width: 300, height: 300, repeat: 500 }, { write: async () => {} }),
+    (e) => e.name === 'PreflightError' && /does not fit the bed/.test(e.message)
+  );
+
+  // Repeat size exceeding bed should also be rejected
+  await assert.rejects(
+    exportPanel({ machine, material, design: 'crosshatch', width: 600, height: 600, repeat: 300 }, { write: async () => {} }),
+    (e) => e.name === 'PreflightError' && /does not fit the bed/.test(e.message)
+  );
+});
