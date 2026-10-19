@@ -265,6 +265,9 @@ h1, h2, h3 { margin: 0; }
 .preview { flex: 1; min-height: 0; }
 .preview-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
 .preview-bar .seg button { min-height: 44px; }
+.preview-bar > .seg { flex-wrap: wrap; }
+.preview-fit { padding: 10px 12px; background: var(--warn-bg); color: var(--warn-ink); border: 1px solid var(--warn-bd); border-radius: 8px; }
+.preview-fit button { min-height: 44px; color: inherit; }
 #overview-actions { display: flex; gap: 12px; }
 #overview-actions button { min-height: 44px; }
 #overview-status { margin: 0; min-height: 20px; overflow-wrap: anywhere; }

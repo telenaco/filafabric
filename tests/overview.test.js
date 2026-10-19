@@ -14,6 +14,7 @@ test('large or out-of-bed pieces automatically use the whole view, with an expli
   assert.equal(useWholeOverview(200, 240, machine), true, 'a preview is still possible when the printer cannot fit it');
   assert.equal(useWholeOverview(400, 700, machine, 'detail'), false);
   assert.equal(useWholeOverview(100, 100, machine, 'overview'), true);
+  assert.equal(useWholeOverview(400, 700, { ...machine, bed: { width: 1000, depth: 1000 } }), false, 'a fitting large piece tries full 3D before reducing detail');
 });
 
 test('full-piece geometry preserves the document size, off-centre shapes, holes and source strokes', () => {

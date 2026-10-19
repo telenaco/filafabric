@@ -6,6 +6,7 @@ import { placeOutline, unflattenRings } from '../engine/outline.js';
 import { createPreview, ROLES } from './preview.js';
 import { createOverview } from './overview.js';
 import { useWholeOverview, canSimplifyPreview } from '../engine/overview.js';
+import { bedSizeLimits, printSizeProblem } from './bed-size.js';
 import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airStrandMm, fitAspect, pileLiftFactor } from './controls.js';
 import { SQ_RANGES, SQUIGGLE_DEFAULTS, describeSquiggle, sizeForAspect } from './squiggle-controls.js';
 import { buildVerdict, buildSquiggleVerdict, formatMinutes } from './verdict.js';
@@ -425,6 +426,8 @@ const host = {
   change: () => afterDesignChange(),
   nudge: () => afterControl(),
   sizeChanged: () => { renderControls(); schedule(); },
+  sizeLimits: (id) => bedSizeLimits(state.machines.get(state.machine), printOverhang(id)),
+  sizeInvalid: () => renderExport(),
   commit: () => commit(),
   toast: (message) => toast(message),
   vectorSize: () => (state.vector ? [state.vector.width, state.vector.height] : null),
@@ -562,6 +565,8 @@ function schedule() {
   clearTimeout(genTimer);
   genTimer = setTimeout(regenerate, 140);
   renderBusy();
+  renderExport();
+  renderPreviewMode();
 }
 
 function renderBusy() {
@@ -570,6 +575,7 @@ function renderBusy() {
   $('#busy-chip').textContent = exporting ? exportLabel : 'Updating…';
   if (busy) $('#stage').setAttribute('aria-busy', 'true');
   else $('#stage').removeAttribute('aria-busy');
+  $('#preview-cancel').hidden = !previewBuild;
 }
 
 /** A captured design at its selected size, shared by preview and direct export workers. */
@@ -615,6 +621,7 @@ function previewAtSelectedSize(input) {
       if (previewChoice === 'auto' && canSimplifyPreview(error)) {
         previewBuild = null;
         showWholeOverview(input);
+        toast('Full 3D reached a geometry limit. Showing a labelled lightweight preview; print settings are unchanged.');
         return null;
       }
       state.error = error;
@@ -682,7 +689,9 @@ function renderPreviewMode() {
   $('#overview-status').hidden = !overviewActive;
   $('#overview-status').textContent = overviewStatus;
   $('#preview-whole').setAttribute('aria-pressed', String(overviewActive));
-  $('#preview-detail').setAttribute('aria-pressed', String(!overviewActive));
+  $('#preview-full').setAttribute('aria-pressed', String(!overviewActive && previewChoice !== 'sample'));
+  $('#preview-full').disabled = !!currentPrintSizeProblem();
+  $('#preview-detail').setAttribute('aria-pressed', String(!overviewActive && previewChoice === 'sample'));
   $('#overview-fine').setAttribute('aria-pressed', String(overviewFine));
   $('.playback').hidden = overviewActive;
   $('.canvas-hint').hidden = overviewActive;
@@ -716,14 +725,14 @@ function regenerate() {
     const mod = designById(state.design);
     followVectorSize();
     const [selectedWidth, selectedHeight] = BINDINGS[state.design].size.get();
-    if (useWholeOverview(selectedWidth, selectedHeight, machine, previewChoice)) {
+    if (useWholeOverview(selectedWidth, selectedHeight, machine, previewChoice) || previewChoice !== 'sample' && currentPrintSizeProblem()) {
       showWholeOverview(exportOptions(selectedWidth, selectedHeight));
       return;
     }
     overviewActive = false;
     overview.cancel();
     renderPreviewMode();
-    const wholePreview = Math.max(selectedWidth, selectedHeight) <= 250 && selectedWidth <= machine.bed.width && selectedHeight <= machine.bed.depth;
+    const wholePreview = !currentPrintSizeProblem() && previewChoice !== 'sample';
     if (wholePreview && Math.max(selectedWidth, selectedHeight) > 100) {
       previewAtSelectedSize(exportOptions(selectedWidth, selectedHeight));
       return;
@@ -1052,8 +1061,23 @@ function renderExport() {
   const btn = $('#btn-export');
   const ok = !!state.result && !state.error && state.result.moves.length > 0;
   // Export can build a selected design independently of its bounded or pending preview.
-  btn.disabled = exporting || (!overviewActive && !!state.print.legacyCopies) || !(ok || isReady(state.design));
+  const problem = currentPrintSizeProblem();
+  const invalidDraft = ['w', 'h'].some(axis => $(`#${state.design}-${axis}`)?.getAttribute('aria-invalid') === 'true');
+  btn.disabled = exporting || !!problem || invalidDraft || (!overviewActive && !!state.print.legacyCopies) || !(ok || isReady(state.design));
+  $('#print-fit-warning').hidden = !problem;
+  $('#print-fit-message').textContent = problem;
   $('#btn-panel').hidden = designById(state.design).panel === false;
+}
+
+function printOverhang(id = state.design) {
+  if (id !== 'loop-pile') return 0;
+  const t = toTextile(state.primary, state.advanced);
+  return (t.include_loops ?? true) && t.boundary_policy === 'feet-only' ? t.loop_length + (t.random_enabled ? t.amp_length : 0) : 0;
+}
+
+function currentPrintSizeProblem() {
+  const [width, height] = BINDINGS[state.design].size.get();
+  return printSizeProblem(width, height, state.machines.get(state.machine), printOverhang());
 }
 
 /** The print setup in two lines: what the printer chip holds, repeated in the Export dialog so it can be checked. */
@@ -2089,8 +2113,11 @@ function closeMenus() {
 }
 
 function bindStatic() {
+  $('#preview-full').addEventListener('click', () => { previewChoice = 'full'; schedule(); });
   $('#preview-whole').addEventListener('click', () => { previewChoice = 'overview'; schedule(); });
-  $('#preview-detail').addEventListener('click', () => { previewChoice = 'detail'; schedule(); });
+  $('#preview-detail').addEventListener('click', () => { previewChoice = 'sample'; schedule(); });
+  $('#preview-cancel').addEventListener('click', () => { previewBuild?.controller.abort(); previewBuild = null; previewChoice = 'overview'; schedule(); });
+  $('#print-fit-printer').addEventListener('click', () => $('#btn-printer').click());
   $('#overview-fine').addEventListener('click', () => { overviewFine = !overviewFine; schedule(); });
   $('#overview-fit').addEventListener('click', () => overview.fit());
   for (const b of $$('[data-camera]')) {

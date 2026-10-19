@@ -163,7 +163,18 @@ export class SizeControl extends Control {
         bad.input.setAttribute('aria-invalid', 'true');
         this.error.textContent = `Enter a ${bad.label} greater than 0 mm.`;
         this.error.hidden = false;
+        this.host.sizeInvalid?.();
         return;
+      }
+      const limits = this.host.sizeLimits?.(this.designId);
+      for (const [f, max] of [[this.width, limits?.width], [this.height, limits?.height]]) {
+        if (max !== undefined && Number(f.input.value) > max) {
+          f.input.setAttribute('aria-invalid', 'true');
+          this.error.textContent = `The selected printer allows at most ${max} mm ${f.label}. This size has not been applied.`;
+          this.error.hidden = false;
+          this.host.sizeInvalid?.();
+          return;
+        }
       }
       this.error.hidden = true;
       b.set(Number(this.width.input.value), Number(this.height.input.value), null);
@@ -188,6 +199,10 @@ export class SizeControl extends Control {
 
   update() {
     this.brim.update();
+    const limits = this.host.sizeLimits?.(this.designId);
+    for (const [f, max] of [[this.width, limits?.width], [this.height, limits?.height]]) {
+      if (max !== undefined) f.input.max = String(max);
+    }
     const follow = this.host.vectorSize();
     this.inputs.hidden = !!follow;
     this.note.hidden = true;
@@ -203,7 +218,7 @@ export class SizeControl extends Control {
     }
     const outside = [[this.width, w], [this.height, h]].filter(([f, v]) => v < f.range.min || v > f.range.max);
     this.warn.hidden = outside.length === 0;
-    if (outside.length) this.warn.textContent = `${outside.map(([f, v]) => `${f.label} ${fmt(v)} mm`).join(' and ')} is outside the usual ${outside[0][0].range.min} to ${outside[0][0].range.max} mm. It is used as typed; the preview shows a 100 mm window of it.`;
+    if (outside.length) this.warn.textContent = `${outside.map(([f, v]) => `${f.label} ${fmt(v)} mm`).join(' and ')} is outside the usual control range. It is used as typed when it fits the selected printer; full-size preview is available.`;
   }
 }
 

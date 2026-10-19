@@ -17,7 +17,7 @@ import { createField } from './fields.js';
 import { spacerStrands, pillarWeaveStrands } from './pillars.js';
 
 export function useWholeOverview(width, height, machine, choice = 'auto') {
-  return choice === 'overview' || choice === 'auto' && (Math.max(width, height) > 250 || width > machine.bed.width || height > machine.bed.depth);
+  return choice === 'overview' || choice === 'auto' && (width > machine.bed.width || height > machine.bed.depth);
 }
 
 /** Do not hide ordinary validation errors behind a successful-looking 2D preview. */
