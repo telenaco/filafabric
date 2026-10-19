@@ -123,6 +123,19 @@ function classify(strand, a, b, cfg) {
  * Turns the base and the placed loops into one ordered list of moves (each the target of a G1).
  * Strands print in the given order; travels lift over what is already printed.
  */
+/**
+ * A same-row bridge is a line printed along the base, at the loops' feet. It must not drag the nozzle beneath what is
+ * already printed above that line (the arch of a loop the next one overlaps). The stretch within a nozzle radius of
+ * each end, where the two loops' own feet and legs stand, is left out: the nozzle is already there, or arrives there.
+ */
+function bridgeClear(map, a, b, model, layerHeight) {
+  const d = Math.hypot(b.x - a.x, b.y - a.y), skip = model.tipRadius + model.clearance;
+  if (d <= 2 * skip) return true;
+  const ux = (b.x - a.x) / d, uy = (b.y - a.y) / d;
+  const under = map.maxAlong({ x: a.x + ux * skip, y: a.y + uy * skip }, { x: b.x - ux * skip, y: b.y - uy * skip }, model.tipRadius);
+  return under <= Math.max(a.z, b.z) + layerHeight;
+}
+
 export function plan(cfg, base, placements, boundary, { strands: supplied = null } = {}) {
   const { t, derived } = cfg;
   const map = new HeightMap(boundary.bbox(), 0.5, heightMapMargin(cfg));
@@ -166,7 +179,7 @@ export function plan(cfg, base, placements, boundary, { strands: supplied = null
         prevStrand.row === strand.row &&
         dz < 1e-6;
 
-      if (isSameRowLoop && dist > 1e-6 && segmentInside(cur, first, boundary)) {
+      if (isSameRowLoop && dist > 1e-6 && segmentInside(cur, first, boundary) && bridgeClear(map, cur, first, model, t.layer_height)) {
         moves.push({
           x: first.x,
           y: first.y,

@@ -96,13 +96,12 @@
   <main class="stage" id="stage" aria-label="Preview">
     <div class="preview-bar">
       <div class="seg" role="group" aria-label="Preview mode">
-        <button type="button" id="preview-full" aria-pressed="true">Full 3D</button>
-        <button type="button" id="preview-whole" aria-pressed="false">Whole piece · 2D</button>
-        <button type="button" id="preview-detail" aria-pressed="false">3D sample</button>
+        <button type="button" id="preview-full" aria-pressed="true" title="The real toolpath of the whole piece, as it prints, with print time and filament">3D</button>
+        <button type="button" id="preview-whole" aria-pressed="false" title="A quick flat drawing of the whole piece at the size it prints, for checking the look. Print time needs the G-code.">2D</button>
+        <button type="button" id="preview-detail" aria-pressed="false" title="The real toolpath of a corner of the piece (100 mm), quick for large pieces">3D sample</button>
       </div>
       <button type="button" id="preview-cancel" class="btn" hidden>Cancel preview</button>
       <div id="overview-actions" hidden>
-        <button type="button" id="overview-fine" class="link" aria-pressed="false">Finer preview</button>
         <button type="button" id="overview-fit" class="link">Fit piece</button>
       </div>
     </div>
@@ -394,6 +393,6 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-<script type="module" src="src/boot.js?v=20261019-full-size-estimates"></script>
+<script type="module" src="src/boot.js?v=20261020-true-scale-2d"></script>
 </body>
 </html>

@@ -3,7 +3,6 @@ import { designById } from '../ui/designs.js';
 import { boundaryFor, hatch } from './layers.js';
 import { interpretDrawing } from './drawing.js';
 import { conformalGuideRegion } from './conformal.js';
-import { simplifyStrands } from './fabric.js';
 import { generateSquiggleTextile, SAMPLERS, createImageSampler } from './squiggle.js';
 import { generateCoilTextile } from './coil.js';
 import { generateSpiralTextile, normalLines } from './spiral.js';
@@ -41,7 +40,7 @@ export function overviewSettings(settings, factor) {
   return Object.fromEntries(Object.entries(settings).map(([key, value]) => [key, LENGTH_KEYS.has(key) && typeof value === 'number' ? value * factor : value]));
 }
 
-function rawLayers(input, shape, factor) {
+export function rawLayers(input, shape, factor) {
   const mod = designById(input.design), { width, height } = shape;
   const s = { ...mod.defaults(), ...overviewSettings(input.settings ?? {}, factor), width, height, colorChange: false };
   const outer = boundaryFor(width, height, shape.rings);
@@ -75,32 +74,58 @@ function rawLayers(input, shape, factor) {
   throw new Error('This design has no lightweight texture preview.');
 }
 
-/** Budget both texture density and transferred vertices. Simplification is visible and never changes print settings. */
-export function buildOverview(input, { fine = false } = {}) {
+/** The pattern sizes the 2D view tries, smallest first: true scale, then larger only when a design refuses or the drawing would be too big. */
+export const OVERVIEW_FACTORS = [1, 1.6, 2.5, 4];
+
+/**
+ * Drops points that lie within `tolerance` of the line from the last kept point to the next one: one pass, so a
+ * zigzag of millions of points thins in a moment (an exact Douglas-Peucker split is far slower on those).
+ */
+export function thinPolyline(pts, tolerance) {
+  if (pts.length < 3) return pts.map(({ x, y }) => ({ x, y }));
+  const out = [{ x: pts[0].x, y: pts[0].y }];
+  let a = pts[0];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const p = pts[i], b = pts[i + 1], dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
+    const off = len > 1e-9 ? Math.abs((p.x - a.x) * dy - (p.y - a.y) * dx) / len : Math.hypot(p.x - a.x, p.y - a.y);
+    if (off > tolerance) { out.push({ x: p.x, y: p.y }); a = p; }
+  }
+  const last = pts[pts.length - 1];
+  out.push({ x: last.x, y: last.y });
+  return out;
+}
+
+/** Packs polylines into flat arrays: cheap to transfer from the worker, and to draw. */
+export function packLines(lines) {
+  const vertices = lines.reduce((n, s) => n + s.pts.length, 0);
+  const xy = new Float32Array(vertices * 2), starts = new Uint32Array(lines.length + 1), layer = new Uint8Array(lines.length);
+  let k = 0;
+  lines.forEach((s, i) => {
+    starts[i] = k / 2; layer[i] = s.layer;
+    for (const p of s.pts) { xy[k++] = p.x; xy[k++] = p.y; }
+  });
+  starts[lines.length] = vertices;
+  return { xy, starts, layer, vertices };
+}
+
+/**
+ * The whole piece's texture in XY, drawn at the size it prints. Only when a design cannot build the whole piece (its own
+ * limits) or the drawing would pass maxVertices is the pattern enlarged, and the result says by how much (factor), so the
+ * view can label it. Lines are never dropped; print settings are never changed.
+ */
+export function buildOverview(input, { maxVertices = 4000000, factors = OVERVIEW_FACTORS } = {}) {
   const shape = overviewShape(input);
-  const budget = fine ? 100000 : 35000;
-  let factor = Math.max(1, Math.sqrt(shape.width * shape.height / (fine ? 160000 : 40000)));
-  let layers, issue = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try { layers = rawLayers(input, shape, factor); break; }
-    catch (error) { issue = error.message; factor *= 2; }
+  // well below a strand's width: simplification never shows at true scale
+  const tolerance = Math.min(0.08, Math.max(0.02, Math.max(shape.width, shape.height) / 20000));
+  let issue = null;
+  const strandWidth = (input.machine?.nozzle_diameter ?? .4) * 1.125;
+  for (const factor of factors) {
+    let layers;
+    try { layers = rawLayers(input, shape, factor); } catch (error) { issue = error.message; continue; }
+    const lines = layers.flatMap((layer, k) => layer.filter(pts => pts.length >= 2).map(pts => ({ layer: k, pts: thinPolyline(pts, tolerance) })));
+    const packed = packLines(lines);
+    if (packed.vertices > maxVertices) { issue = `The texture needs ${packed.vertices.toLocaleString('en')} points to draw at this size.`; continue; }
+    return { ...shape, packed, lines: lines.length, vertices: packed.vertices, factor, strandWidth, shapeOnly: false, issue: factor > 1 ? issue : null };
   }
-  if (!layers) return { ...shape, layers: [], simplified: true, shapeOnly: true, issue };
-  let lines = layers.flatMap((layer, k) => layer.filter(pts => pts.length >= 2).map(pts => ({ layer: k, pts: pts.map(({ x, y }) => ({ x, y })) })));
-  const tolerance = Math.max(shape.width, shape.height) / (fine ? 2400 : 1200);
-  lines = simplifyStrands(lines, tolerance);
-  if (lines.length * 2 > budget) {
-    const every = Math.ceil(lines.length / Math.floor(budget / 2));
-    lines = lines.filter((_, i) => i % every === 0);
-  }
-  const count = lines.reduce((n, s) => n + s.pts.length, 0);
-  // Sample each polyline over its whole length, retaining both ends; never crop to the first N points.
-  if (count > budget) {
-    const interior = count - 2 * lines.length, available = budget - 2 * lines.length;
-    lines = lines.map(s => {
-      const keep = 2 + Math.floor((s.pts.length - 2) * available / interior);
-      return { layer: s.layer, pts: Array.from({ length: keep }, (_, i) => s.pts[Math.round(i * (s.pts.length - 1) / (keep - 1))]) };
-    });
-  }
-  return { ...shape, layers: lines, simplified: true, shapeOnly: false, spacingFactor: factor, vertices: lines.reduce((n, s) => n + s.pts.length, 0) };
+  return { ...shape, packed: packLines([]), lines: 0, vertices: 0, factor: null, strandWidth, shapeOnly: true, issue };
 }

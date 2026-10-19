@@ -31,7 +31,7 @@ import { composeSvgLines, outlineFromVector, vectorPatternRings } from '../engin
 import { applySvgGuides, vectorGuides } from '../engine/svg-guides.js';
 import { summariseDrawing, describeDrawing, interpretDrawing } from '../engine/drawing.js';
 import { addExtraLayers, nativeLayerInfo } from '../engine/stack.js';
-import { generateDesignBase } from '../engine/design-export.js';
+import { generateDesignBase, compactDesignExport } from '../engine/design-export.js';
 import { rotateDesignInput } from '../engine/rotate-design.js';
 import { applyBrim } from '../engine/brim.js';
 import { boundaryFor } from '../engine/layers.js';
@@ -199,10 +199,11 @@ let preview = null;
 let overview = null;
 let previewChoice = 'auto';
 let overviewActive = false;
-let overviewFine = false;
 let overviewStatus = '';
 const printEstimates = new PrintEstimates();
 let previewBuild = null;
+// the G-code a "Generate G-code" step made for these exact settings, so Export saves it without building it again
+let readyGcode = null; // { key, result }
 let exporting = false;
 let exportController = null;
 let exportLabel = '';
@@ -559,6 +560,7 @@ function setShapeOutline(on) {
 /* ---------- generation ---------- */
 let genTimer = null;
 function schedule() {
+  if (readyGcode && readyGcode.key !== snapshotKey()) readyGcode = null; // made for settings that are no longer these
   fixJob?.controller.abort(); // the settings changed under the search: what it would fix is gone
   previewBuild?.controller.abort();
   previewBuild = null;
@@ -574,11 +576,11 @@ function schedule() {
 function renderBusy() {
   const busy = !!genTimer || !!previewBuild || exporting;
   $('#busy-chip').hidden = !busy;
-  $('#busy-chip').textContent = exporting ? exportLabel : previewBuild?.estimateOnly ? 'Calculating full estimate…' : 'Updating…';
+  $('#busy-chip').textContent = exporting ? exportLabel : previewBuild?.estimateOnly ? 'Generating G-code…' : 'Updating…';
   if (busy) $('#stage').setAttribute('aria-busy', 'true');
   else $('#stage').removeAttribute('aria-busy');
   $('#preview-cancel').hidden = !previewBuild;
-  $('#preview-cancel').textContent = previewBuild?.estimateOnly ? 'Cancel calculation' : 'Cancel preview';
+  $('#preview-cancel').textContent = previewBuild?.estimateOnly ? 'Stop generating' : 'Cancel preview';
 }
 
 /** A captured design at its selected size, shared by preview and direct export workers. */
@@ -620,7 +622,7 @@ function previewAtSelectedSize(input, { estimateOnly = false } = {}) {
   previewBuild = job;
   job.promise = buildSwatch(input, { signal: controller.signal, preview: !estimateOnly }).then((result) => {
     if (previewBuild === job && snapshotKey() === key) {
-      if (estimateOnly) printEstimates.put(key, result, input.width, input.height);
+      if (estimateOnly) { printEstimates.put(key, result, input.width, input.height); readyGcode = { key, result }; }
       else showGenerated(result, key);
     }
     return result;
@@ -629,7 +631,7 @@ function previewAtSelectedSize(input, { estimateOnly = false } = {}) {
       if (!estimateOnly && previewChoice === 'auto' && canSimplifyPreview(error)) {
         previewBuild = null;
         showWholeOverview(input);
-        toast('Full 3D could not complete. Showing a labelled lightweight preview; print settings are unchanged.');
+        toast('3D could not finish for this piece, so it shows the 2D drawing. Print settings are unchanged.');
         return null;
       }
       state.error = error;
@@ -700,7 +702,6 @@ function renderPreviewMode() {
   $('#preview-full').setAttribute('aria-pressed', String(!overviewActive && previewChoice !== 'sample'));
   $('#preview-full').disabled = !!currentPrintSizeProblem();
   $('#preview-detail').setAttribute('aria-pressed', String(!overviewActive && previewChoice === 'sample'));
-  $('#overview-fine').setAttribute('aria-pressed', String(overviewFine));
   $('.playback').hidden = overviewActive;
   $('.canvas-hint').hidden = overviewActive;
   if (overviewActive) {
@@ -710,6 +711,11 @@ function renderPreviewMode() {
 }
 
 function showWholeOverview(input) {
+  // a finished whole-piece 3D build already holds the G-code: keep it (without its 3D geometry) for Export
+  const [sw, sh] = BINDINGS[state.design].size.get();
+  if (state.result && !state.error && state.resultKey === snapshotKey() && state.result.cfg.t.sample_width === sw && state.result.cfg.t.sample_height === sh) {
+    readyGcode = { key: state.resultKey, result: compactDesignExport(state.result) };
+  }
   overviewActive = true;
   preview.reset();
   state.playing = false;
@@ -717,7 +723,7 @@ function showWholeOverview(input) {
   state.resultKey = null;
   state.error = null;
   renderPreviewMode();
-  overview.update(input, overviewFine);
+  overview.update(input);
   renderBusy();
   render();
 }
@@ -745,7 +751,7 @@ function regenerate() {
       previewAtSelectedSize(exportOptions(selectedWidth, selectedHeight));
       return;
     }
-    // Detailed 3D uses a bounded sample for large pieces. Whole-piece 2D is the default for those pieces above.
+    // 3D sample is a bounded corner of a large piece. 2D is the default for pieces larger than the bed (above).
     // Imported drawings keep their full scale within the explicitly labelled sample.
     const cap = state.vector && Math.max(state.vector.width, state.vector.height) <= 250 && state.vector.width <= machine.bed.width && state.vector.height <= machine.bed.depth ? 250 : 100;
     if (!mod.legacy) {
@@ -841,7 +847,7 @@ function renderErrors() {
     const t = state.result?.cfg.t;
     const sampled = t && (t.sample_width !== w || t.sample_height !== h);
     $('#canvas-note').hidden = !sampled;
-    if (sampled) $('#canvas-note').textContent = `3D detail: ${t.sample_width} × ${t.sample_height} mm sample · full export ${w} × ${h} mm`;
+    if (sampled) $('#canvas-note').textContent = `3D sample: a ${t.sample_width} × ${t.sample_height} mm corner · Export makes the whole ${w} × ${h} mm`;
     $('#canvas-wrap').classList.remove('dimmed');
     return;
   }
@@ -1008,21 +1014,27 @@ function renderFigures() {
     el('div', { class: 'fig-label', text: label }));
   host.classList.toggle('overview-figures', overviewActive);
   if (overviewActive) {
+    // 2D is a drawing: time and filament come from the G-code, which is one explicit step (and Export reuses it)
     const [w, h] = BINDINGS[state.design].size.get();
-    const estimate = printEstimates.get(snapshotKey());
-    const scope = estimate?.full ? 'Full-piece' : 'Sample';
+    const key = snapshotKey();
+    const estimate = printEstimates.get(key);
+    const generating = !!previewBuild?.estimateOnly;
+    const problem = currentPrintSizeProblem();
+    const scope = estimate?.full ? 'Whole-piece' : 'Sample';
     host.classList.toggle('stale', !!state.error);
     host.replaceChildren();
     if (estimate) host.append(fig(formatMinutes(estimate.timeSec / 60), 'min', `${scope} print time`),
       fig(grams(estimate.filamentGrams ?? 0), 'g', `${scope} filament`));
-    host.append(el('p', { class: 'estimate-info small muted', text: estimate
-      ? `${estimate.width} × ${estimate.height} mm${estimate.full ? ' full piece. Time excludes acceleration.' : ` sample only — not the whole ${w} × ${h} mm piece.`}`
-      : `${w} × ${h} mm whole piece. Full print time has not been calculated yet.` }));
+    const info = generating ? `Generating the G-code for the whole ${w} × ${h} mm piece, the same work Export does. You can keep looking; the time appears when it is done.`
+      : estimate?.full ? `From the G-code for the whole ${w} × ${h} mm piece${readyGcode?.key === key ? ', which is ready: Export saves it straight away' : ''}. Time excludes acceleration.`
+        : estimate ? `From a ${estimate.width} × ${estimate.height} mm 3D sample only, not the whole ${w} × ${h} mm piece.`
+          : `The 2D view is a drawing, so it has no print time. Time and filament come from the G-code for the whole ${w} × ${h} mm piece.`;
+    host.append(el('p', { class: 'estimate-info small muted', text: problem && !estimate?.full ? `${info} ${problem}` : info }));
     if (!estimate?.full) {
-      const calculate = el('button', { type: 'button', id: 'calculate-full-estimate', class: 'link small', text: previewBuild?.estimateOnly ? 'Calculating…' : 'Calculate full estimate', disabled: !!previewBuild || !!currentPrintSizeProblem() });
-      calculate.title = currentPrintSizeProblem() || 'Build the full toolpath in the background without loading 3D meshes. Can be cancelled.';
-      calculate.addEventListener('click', () => { previewAtSelectedSize(exportOptions(), { estimateOnly: true }); renderFigures(); });
-      host.append(calculate);
+      const generate = el('button', { type: 'button', id: 'calculate-full-estimate', class: 'btn', text: generating ? 'Generating G-code…' : 'Generate G-code for time and filament', disabled: generating || !!previewBuild || !!problem });
+      generate.title = problem || 'Works out the whole toolpath in the background: the same work as Export, which then saves it without waiting. You can stop it.';
+      generate.addEventListener('click', () => { previewAtSelectedSize(exportOptions(), { estimateOnly: true }); renderFigures(); });
+      host.append(generate);
     }
     toggle.hidden = true;
     $('#details').hidden = true;
@@ -1085,6 +1097,7 @@ function renderExport() {
   const problem = currentPrintSizeProblem();
   const invalidDraft = ['w', 'h'].some(axis => $(`#${state.design}-${axis}`)?.getAttribute('aria-invalid') === 'true');
   btn.disabled = exporting || !!problem || invalidDraft || (!overviewActive && !!state.print.legacyCopies) || !(ok || isReady(state.design));
+  btn.title = readyGcode?.key === snapshotKey() ? 'The G-code for these settings is ready: Export saves it straight away.' : '';
   $('#print-fit-warning').hidden = !problem;
   $('#print-fit-message').textContent = problem;
   $('#btn-panel').hidden = designById(state.design).panel === false;
@@ -1996,6 +2009,7 @@ async function exportGcode() {
     let result;
     const fullPreview = !genTimer && !previewBuild && state.result && !state.error && state.resultKey === key && state.result.cfg.t.sample_width === input.width && state.result.cfg.t.sample_height === input.height;
     if (fullPreview) result = state.result;
+    else if (readyGcode?.key === key) result = readyGcode.result;
     else if (previewBuild?.key === key) result = await previewBuild.promise;
     else result = await buildSwatch(input, { signal: controller.signal });
     if (controller.signal.aborted || snapshotKey() !== key) throw new DOMException('The design changed during export.', 'AbortError');
@@ -2140,7 +2154,6 @@ function bindStatic() {
   $('#preview-detail').addEventListener('click', () => { previewChoice = 'sample'; schedule(); });
   $('#preview-cancel').addEventListener('click', () => { previewBuild?.controller.abort(); previewBuild = null; previewChoice = 'overview'; schedule(); });
   $('#print-fit-printer').addEventListener('click', () => $('#btn-printer').click());
-  $('#overview-fine').addEventListener('click', () => { overviewFine = !overviewFine; schedule(); });
   $('#overview-fit').addEventListener('click', () => overview.fit());
   for (const b of $$('[data-camera]')) {
     b.addEventListener('click', () => {

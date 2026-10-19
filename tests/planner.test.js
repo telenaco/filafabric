@@ -136,3 +136,18 @@ test('clearanceModel adds a foam pad and converts the cone angle', () => {
   near(m.tanA, Math.tan(Math.PI / 6), 1e-12);
   near(m.clearance, 1 + 0.5 * 0.4 * (Math.sqrt(1.5) - 1), 1e-9);
 });
+
+test('a same-row bridge never drags the nozzle under the arch of a loop it overlaps', () => {
+  const { cfg } = scene({ sample_width: 30, sample_height: 20 });
+  const boundary = new PolygonBoundary([[{ x: 0, y: 0 }, { x: 30, y: 0 }, { x: 30, y: 20 }, { x: 0, y: 20 }]]);
+  const arch = (x0, x1, h) => Array.from({ length: 21 }, (_, i) => ({ x: x0 + (x1 - x0) * i / 20, y: 10, z: h * Math.sin(Math.PI * i / 20) }));
+  // b starts under a's arch: the way back from a's far foot to b's start passes beneath a's 4 mm arch
+  const overlapping = [{ id: 'a', row: 0, lift: 0, points: arch(2, 14, 4) }, { id: 'b', row: 0, lift: 0, points: arch(6, 18, 4) }];
+  const over = plan(cfg, null, overlapping, boundary).moves;
+  const back = over.find((m) => m.x === 6 && m.y === 10 && m.z === cfg.derived.loopBaseZ);
+  assert.notEqual(back.extrude, true, 'travelled over the arch rather than printed under it');
+  // loops side by side still join with a printed line along the base
+  const apart = [{ id: 'a', row: 0, lift: 0, points: arch(2, 10, 4) }, { id: 'b', row: 0, lift: 0, points: arch(14, 22, 4) }];
+  const join = plan(cfg, null, apart, boundary).moves.find((m) => m.x === 14 && m.y === 10 && m.z === cfg.derived.loopBaseZ);
+  assert.equal(join.extrude, true);
+});
