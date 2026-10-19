@@ -77,7 +77,7 @@ const rotate = (p, c, s) => ({ x: p.x * c - p.y * s, y: p.x * s + p.y * c });
  * `whole` (repeats.js): the lanes fill the outline from edge to edge at the nearest spacing that fits, a wavy line kept a
  * full swing in from the edge, and each wavy line is whole periods from end to end.
  */
-export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = null, size = 0, pitch = 4, inset = 0.3, anchor = null, maxJog = null, keepInside = 0, whole = true } = {}) {
+export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = null, size = 0, pitch = 4, inset = 0.3, anchor = null, maxJog = null, keepInside = 0, whole = true, cornerStart = false } = {}) {
   const a = (angle * Math.PI) / 180;
   const c = Math.cos(a), s = Math.sin(a);
   const turned = new PolygonBoundary(boundary.rings.map((ring) => ring.map((p) => rotate(p, c, -s))));
@@ -103,9 +103,16 @@ export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = nu
   } else {
     lanes = [(box.minY + box.maxY) / 2];
   }
-  const chains = serpentineChains(turned, 'y', lanes, { inset, minLength: 1, maxJog: maxJog ?? 3 * spacing });
+  const chains = serpentineChains(turned, 'y', lanes, { inset, minLength: 1, maxJog: maxJog ?? 3 * spacing, cornerStart });
   const clear = (p) => safePoint(rotate(p, c, s), boundary, keepInside);
   return chains.map((segments) => {
+    if (cornerStart && segments.length > 1) {
+      const len0 = Math.abs(segments[0].to - segments[0].from);
+      const lenLast = Math.abs(segments[segments.length - 1].to - segments[segments.length - 1].from);
+      if (lenLast < len0) {
+        segments = segments.slice().reverse().map((seg) => ({ ...seg, from: seg.to, to: seg.from }));
+      }
+    }
     const pts = [];
     for (const seg of segments) {
       let { from, to } = seg;

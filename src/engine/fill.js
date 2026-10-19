@@ -11,7 +11,7 @@
  *                  maxJog: longest allowed shift along the lane between one stretch's end and the next's start
  * @returns strands: arrays of segments { lane, c, from, to }, printed from -> to
  */
-export function serpentineChains(boundary, axis, lanes, { inset = 0, minLength = 1, maxJog = Infinity } = {}) {
+export function serpentineChains(boundary, axis, lanes, { inset = 0, minLength = 1, maxJog = Infinity, cornerStart = false } = {}) {
   const strands = [];
   let open = []; // strands whose last segment is on the previous lane
 
@@ -49,6 +49,21 @@ export function serpentineChains(boundary, axis, lanes, { inset = 0, minLength =
     }
     open = next;
   });
+
+  if (cornerStart) {
+    for (let i = 0; i < strands.length; i++) {
+      const s = strands[i];
+      if (s.length > 1) {
+        const len0 = Math.abs(s[0].to - s[0].from);
+        const lenLast = Math.abs(s[s.length - 1].to - s[s.length - 1].from);
+        if (lenLast < len0) {
+          strands[i] = s.slice().reverse().map((seg) => ({ ...seg, from: seg.to, to: seg.from }));
+        }
+      }
+    }
+    strands.sort((a, b) => Math.abs(a[0].to - a[0].from) - Math.abs(b[0].to - b[0].from));
+  }
+
   return strands;
 }
 
