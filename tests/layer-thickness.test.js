@@ -13,7 +13,7 @@ import { defaultProfiles, projectRoot } from './helpers.js';
 
 const fixture = (name) => fs.readFileSync(path.join(projectRoot, 'tests', 'fixtures', name), 'utf8');
 
-test('a 0.4 mm nozzle prints layers of 0.10, 0.15, 0.20 and 0.25 mm and nothing thicker', () => {
+test('a 0.4 mm nozzle suggests layers of 0.10, 0.15, 0.20 and 0.25 mm by default', () => {
   assert.deepEqual(layerHeightOptions(0.4), [0.1, 0.15, 0.2, 0.25]);
   assert.deepEqual(layerHeightOptions(), [0.1, 0.15, 0.2, 0.25]);
   assert.deepEqual(layerHeightOptions(0.6), [0.15, 0.2, 0.25, 0.3, 0.35]);

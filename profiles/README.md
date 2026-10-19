@@ -29,6 +29,7 @@ rebuilds it (`--all` adds Creality, Anycubic, Elegoo, Voron and a dozen more, ab
 Download [a complete example .ini](../samples/printer-profile.ini) or [a self-contained example .json](../samples/printer-profile.json) from Printer setup. These are **illustrations, not qualified printer presets**. Replace the values and startup/shutdown commands for your actual machine.
 
 Supported formats are PrusaSlicer/Slic3r-style `key = value` configs and bundles, PrusaSlicer text G-code config trailers, Bambu Studio/OrcaSlicer self-contained JSON printer or filament presets, and Filafabric JSON profiles. This is **not a universal importer**: Cura `.curaprofile`, zipped preset bundles, `.3mf`, binary `.bgcode` and arbitrary firmware `.cfg` files are not supported.
+Filafabric generates single-extruder prints: when a slicer supplies arrays of nozzle/filament values, only the first extruder's values are read. A successful import is not physical qualification; check firmware commands, temperatures and the import notes, then print a small swatch.
 
 A usable printer export should include:
 

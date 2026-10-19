@@ -157,9 +157,8 @@ export function validateTextile(t) {
 }
 
 /**
- * The layer thicknesses (mm) a nozzle of this diameter can lay down: from a quarter to five eighths of its width, in
- * steps of 0.05. A 0.4 mm nozzle prints 0.10, 0.15, 0.20 and 0.25; thicker and the bead cannot be pressed onto the layer
- * below, thinner and the nozzle drags through what it just laid.
+ * Conservative suggested layer thicknesses, from a quarter to five eighths of nozzle width, in 0.05 mm steps.
+ * An explicit print profile can add its exact height, up to 80% of nozzle diameter. These are not material guarantees.
  */
 export function layerHeightOptions(nozzle = 0.4, profileHeight = null) {
   const d = Number.isFinite(Number(nozzle)) && Number(nozzle) >= 0.1 && Number(nozzle) <= 2 ? Number(nozzle) : 0.4;

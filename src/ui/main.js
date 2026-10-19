@@ -4,6 +4,8 @@ import { generate } from '../engine/generate.js';
 import { generateSquiggle, SAMPLERS, createImageSampler, minCrossingAmplitude } from '../engine/squiggle.js';
 import { placeOutline, unflattenRings } from '../engine/outline.js';
 import { createPreview, ROLES } from './preview.js';
+import { createOverview } from './overview.js';
+import { useWholeOverview, canSimplifyPreview } from '../engine/overview.js';
 import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airStrandMm, fitAspect, pileLiftFactor } from './controls.js';
 import { SQ_RANGES, SQUIGGLE_DEFAULTS, describeSquiggle, sizeForAspect } from './squiggle-controls.js';
 import { buildVerdict, buildSquiggleVerdict, formatMinutes } from './verdict.js';
@@ -14,7 +16,7 @@ import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, 
 import { layerHeightOptions, defaultLayerHeight, resolveConfig } from '../engine/params.js';
 import { TooltipLayer } from './tooltip.js';
 // versioned with the release in boot.js, so a returning browser never pairs this file with an older printer loader
-import { ProfileStore } from './profile-store.js?v=20261015-printer-library';
+import { ProfileStore } from './profile-store.js?v=20261019-printer-setup';
 import { machineSuggestions } from './machine-search.js?v=20261019-printer-setup';
 import { DESIGNS, ESSENTIALS, designById, isReady, baseDesignSettings } from './designs.js';
 import { THUMBS, shapeThumb, presetThumb } from './thumbs.js';
@@ -192,6 +194,11 @@ function bindingFor(mod) {
 for (const mod of DESIGNS) if (mod.status === 'ready' && !mod.legacy) BINDINGS[mod.id] = bindingFor(mod);
 
 let preview = null;
+let overview = null;
+let previewChoice = 'auto';
+let overviewActive = false;
+let overviewFine = false;
+let overviewStatus = '';
 let previewBuild = null;
 let exporting = false;
 let exportController = null;
@@ -496,7 +503,7 @@ function svgSituation() {
     allowsOutline: true,
     hasShapes: !!(v && shapesOf(v)),
     outlineOn: registered,
-    // most previews are a 100 mm window of a larger swatch; a drawing's own outline is shown whole
+    // Only detailed 3D may show a sample; the lightweight 2D view always shows the complete document.
     window: v && state.result && (v.width > state.result.cfg.t.sample_width || v.height > state.result.cfg.t.sample_height) ? [state.result.cfg.t.sample_width, state.result.cfg.t.sample_height] : null,
   };
 }
@@ -512,6 +519,7 @@ function followVectorSize() {
 async function importSvg(file) {
   try {
     const drawing = await readSvgLines(file);
+    previewChoice = 'auto';
     state.vector = drawing;
     state.outline = shapesOf(drawing); // red contains the pattern and blue cuts it away on import
     followVectorSize();
@@ -549,6 +557,7 @@ function schedule() {
   fixJob?.controller.abort(); // the settings changed under the search: what it would fix is gone
   previewBuild?.controller.abort();
   previewBuild = null;
+  overview?.cancel();
   exportController?.abort();
   clearTimeout(genTimer);
   genTimer = setTimeout(regenerate, 140);
@@ -603,6 +612,11 @@ function previewAtSelectedSize(input) {
     return result;
   }).catch((error) => {
     if (error.name !== 'AbortError' && previewBuild === job) {
+      if (previewChoice === 'auto' && canSimplifyPreview(error)) {
+        previewBuild = null;
+        showWholeOverview(input);
+        return null;
+      }
       state.error = error;
       recordBuildFailure(error, { ...input, operation: 'preview' });
     }
@@ -658,6 +672,39 @@ function printMaterial() {
   return { ...base, print_defaults: { ...(base.print_defaults ?? {}), layer_height: state.print.layerHeight } };
 }
 
+function renderPreviewMode() {
+  $('#overview').hidden = !overviewActive;
+  $('#preview').hidden = overviewActive;
+  preview?.setVisible(!overviewActive);
+  $('#camera-seg').hidden = overviewActive;
+  $('#btn-view').hidden = overviewActive;
+  $('#overview-actions').hidden = !overviewActive;
+  $('#overview-status').hidden = !overviewActive;
+  $('#overview-status').textContent = overviewStatus;
+  $('#preview-whole').setAttribute('aria-pressed', String(overviewActive));
+  $('#preview-detail').setAttribute('aria-pressed', String(!overviewActive));
+  $('#overview-fine').setAttribute('aria-pressed', String(overviewFine));
+  $('.playback').hidden = overviewActive;
+  $('.canvas-hint').hidden = overviewActive;
+  if (overviewActive) {
+    $('#canvas-note').hidden = true;
+    $('#canvas-wrap').classList.remove('dimmed');
+  }
+}
+
+function showWholeOverview(input) {
+  overviewActive = true;
+  preview.reset();
+  state.playing = false;
+  state.result = null;
+  state.resultKey = null;
+  state.error = null;
+  renderPreviewMode();
+  overview.update(input, overviewFine);
+  renderBusy();
+  render();
+}
+
 function regenerate() {
   genTimer = null;
   previewBuild?.controller.abort();
@@ -669,13 +716,20 @@ function regenerate() {
     const mod = designById(state.design);
     followVectorSize();
     const [selectedWidth, selectedHeight] = BINDINGS[state.design].size.get();
+    if (useWholeOverview(selectedWidth, selectedHeight, machine, previewChoice)) {
+      showWholeOverview(exportOptions(selectedWidth, selectedHeight));
+      return;
+    }
+    overviewActive = false;
+    overview.cancel();
+    renderPreviewMode();
     const wholePreview = Math.max(selectedWidth, selectedHeight) <= 250 && selectedWidth <= machine.bed.width && selectedHeight <= machine.bed.depth;
     if (wholePreview && Math.max(selectedWidth, selectedHeight) > 100) {
       previewAtSelectedSize(exportOptions(selectedWidth, selectedHeight));
       return;
     }
-    // Every design uses a bounded preview window. Imported drawings keep their full scale within it.
-    // Ordinary SVG swatches show the complete drawing; garment-size files retain a bounded pattern sample.
+    // Detailed 3D uses a bounded sample for large pieces. Whole-piece 2D is the default for those pieces above.
+    // Imported drawings keep their full scale within the explicitly labelled sample.
     const cap = state.vector && Math.max(state.vector.width, state.vector.height) <= 250 && state.vector.width <= machine.bed.width && state.vector.height <= machine.bed.depth ? 250 : 100;
     if (!mod.legacy) {
       const own = state.designs[mod.id];
@@ -729,9 +783,12 @@ function regenerate() {
       brimOutline = state.vector ? conformalGuideRegion(boundary, vectorGuides(state.vector, fullWidth, fullHeight)).rings : boundary.rings;
     }
     result = applyBrim(result, { count: state.print.brim, outline: brimOutline, fullWidth, fullHeight });
-    if (state.vector) result.documentSize = [state.vector.width, state.vector.height];
+    if (state.vector && result.cfg.t.sample_width === selectedWidth && result.cfg.t.sample_height === selectedHeight) result.documentSize = [state.vector.width, state.vector.height];
     showGenerated(result, snapshotKey());
   } catch (e) {
+    if (previewChoice === 'auto' && canSimplifyPreview(e)) {
+      try { showWholeOverview(exportOptions()); return; } catch { /* invalid document dimensions still report normally */ }
+    }
     state.error = e;
     recordBuildFailure(e);
     if (!(e && Array.isArray(e.errors))) console.error(e);
@@ -767,7 +824,7 @@ function renderErrors() {
     const t = state.result?.cfg.t;
     const sampled = t && (t.sample_width !== w || t.sample_height !== h);
     $('#canvas-note').hidden = !sampled;
-    if (sampled) $('#canvas-note').textContent = `Preview ${t.sample_width} × ${t.sample_height} mm portion · exports ${w} × ${h} mm`;
+    if (sampled) $('#canvas-note').textContent = `3D detail: ${t.sample_width} × ${t.sample_height} mm sample · full export ${w} × ${h} mm`;
     $('#canvas-wrap').classList.remove('dimmed');
     return;
   }
@@ -929,6 +986,15 @@ function reportItems(r, item) {
 function renderFigures() {
   const host = $('#figures');
   const toggle = $('#btn-details');
+  if (overviewActive) {
+    const [w, h] = BINDINGS[state.design].size.get();
+    const bed = state.machines.get(state.machine).bed;
+    const fit = w > bed.width || h > bed.depth ? ` This does not fit the selected ${bed.width} × ${bed.depth} mm bed.` : '';
+    host.replaceChildren(el('p', { class: 'small muted', text: `${w} × ${h} mm whole-piece preview.${fit} Print time and filament are calculated when the full export is built; 3D detail checks a sample.` }));
+    toggle.hidden = true;
+    $('#details').hidden = true;
+    return;
+  }
   if (!state.result) { host.replaceChildren(); toggle.hidden = true; return; }
   toggle.hidden = false;
   const { stats, cfg } = state.result;
@@ -986,7 +1052,7 @@ function renderExport() {
   const btn = $('#btn-export');
   const ok = !!state.result && !state.error && state.result.moves.length > 0;
   // Export can build a selected design independently of its bounded or pending preview.
-  btn.disabled = exporting || !!state.print.legacyCopies || !(ok || isReady(state.design));
+  btn.disabled = exporting || (!overviewActive && !!state.print.legacyCopies) || !(ok || isReady(state.design));
   $('#btn-panel').hidden = designById(state.design).panel === false;
 }
 
@@ -1104,6 +1170,7 @@ function render() {
   renderTilePressed();
   renderAdvancedSummary();
   renderLegend();
+  renderPreviewMode();
 }
 
 /* ---------- controls ---------- */
@@ -2022,6 +2089,10 @@ function closeMenus() {
 }
 
 function bindStatic() {
+  $('#preview-whole').addEventListener('click', () => { previewChoice = 'overview'; schedule(); });
+  $('#preview-detail').addEventListener('click', () => { previewChoice = 'detail'; schedule(); });
+  $('#overview-fine').addEventListener('click', () => { overviewFine = !overviewFine; schedule(); });
+  $('#overview-fit').addEventListener('click', () => overview.fit());
   for (const b of $$('[data-camera]')) {
     b.addEventListener('click', () => {
       for (const o of $$('[data-camera]')) o.setAttribute('aria-pressed', String(o === b));
@@ -2114,6 +2185,7 @@ function bindStatic() {
 async function init() {
   await loadProfiles();
   preview = createPreview($('#preview'));
+  overview = createOverview($('#overview'), text => { overviewStatus = text; if (overviewActive) renderPreviewMode(); });
   svgImportCard = new SvgImportCard(host);
   controls.push(svgImportCard);
   studyRecorder = createStudyRecorder($('#study-notice'), { allowed: () => statsAllowed() });

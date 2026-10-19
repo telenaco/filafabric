@@ -94,8 +94,20 @@
   </aside>
 
   <main class="stage" id="stage" aria-label="Preview">
+    <div class="preview-bar">
+      <div class="seg" role="group" aria-label="Preview mode">
+        <button type="button" id="preview-whole" aria-pressed="false">Whole piece · 2D</button>
+        <button type="button" id="preview-detail" aria-pressed="true">3D detail</button>
+      </div>
+      <div id="overview-actions" hidden>
+        <button type="button" id="overview-fine" class="link" aria-pressed="false">Finer preview</button>
+        <button type="button" id="overview-fit" class="link">Fit piece</button>
+      </div>
+    </div>
+    <p id="overview-status" class="small muted" role="status" aria-live="polite" hidden></p>
     <div class="canvas-wrap" id="canvas-wrap">
       <div id="preview" class="preview" role="img" aria-label="3D preview of the toolpath"></div>
+      <div id="overview" hidden></div>
       <div class="canvas-tools">
         <div class="seg glass" role="group" aria-label="Camera" id="camera-seg">
           <button type="button" data-camera="top" aria-pressed="false">Top</button>
@@ -379,6 +391,6 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-<script type="module" src="src/boot.js?v=20261019-printer-setup"></script>
+<script type="module" src="src/boot.js?v=20261019-whole-piece"></script>
 </body>
 </html>

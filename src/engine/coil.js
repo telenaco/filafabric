@@ -52,6 +52,7 @@ export function generateCoilTextile({
   boundary = null,
   rowPitch: rowPitchOverride = null,
   whole = true,
+  planCrossings = true,
 }) {
   const warnings = [];
   const rowPitch = rowPitchOverride ?? coilRowPitch(size, rowOverlap, strandWidth);
@@ -141,7 +142,7 @@ export function generateCoilTextile({
     if (strands.length === 0) warnings.push('The outline is too small for these loops: nothing to print');
   }
 
-  const resolved = resolveCrossings(strands, { lift, strandWidth });
+  const resolved = planCrossings ? resolveCrossings(strands, { lift, strandWidth }) : { strands, crossings: 0, maxLift: 0, maxSlopeDeg: 0 };
   return {
     strands: resolved.strands,
     rows,
