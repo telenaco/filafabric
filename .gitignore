@@ -8,3 +8,8 @@ node_modules/
 
 # numbered demo prints written by tools/export-demo-prints.mjs (regenerate them; they are local)
 DemoTestingPrints/
+
+# research papers and personal test files: kept on this computer, never committed or published
+reference/publications/
+SvgExampleTemplate.svg
+jpgImageTest.jpg
