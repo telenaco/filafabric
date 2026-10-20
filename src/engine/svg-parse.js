@@ -144,7 +144,7 @@ function rgbOf(value) {
   return null;
 }
 
-/** Semantic red/blue contours and CSS green/lime guides, with a little room for export rounding. */
+/** Semantic red/blue contours and CSS green/lime solids, with a little room for export rounding. */
 function paintClass(value, current) {
   let v = String(value).trim().toLowerCase();
   if (v === 'none' || v === 'transparent') return 'none';

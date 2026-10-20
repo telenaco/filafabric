@@ -91,6 +91,7 @@ end is odd and k strokes are needed for k lines. And where lines meet end to end
 ## Drawing conventions
 
 Colour is how a drawing says what it is: pure **red** closed shapes are filled, **blue** closed shapes are left empty,
-**green** closed contours bend the pattern, and everything else, black above all, is a line printed as a path. A line
+**green** closed shapes print solid on top of the pattern (a coil if round, a zigzag otherwise), and everything else,
+black above all, is a line printed as a path. A line
 as wide as the extrusion is one pass, a wider one several side by side (see the README). Lines that meet or cross in
 any of these are one network to the optimiser.

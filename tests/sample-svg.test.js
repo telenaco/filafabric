@@ -15,7 +15,7 @@ test('the sample drawing on the site shows every colour the studio reads', () =>
   const drawing = interpretDrawing(parseSvg(sampleText(), 'filafabric-sample.svg'));
   assert.ok(drawing.fills.length >= 1, 'red shapes that are filled');
   assert.ok(drawing.fills.some((f) => f.holes.length >= 1), 'a blue hole in one');
-  assert.ok(drawing.guides.length >= 1, 'green guides that bend the pattern');
+  assert.ok(drawing.solids.length >= 1, 'green shapes that print solid');
   assert.ok(drawing.lines.length >= 1, 'lines printed as paths');
 });
 
@@ -25,4 +25,7 @@ test('the sample drawing builds on the zigzag mesh at its own size, brim and all
   const r = generateDesignExport({ machine, material, design: 'zigzag', settings: designById('zigzag').defaults(), width: vector.width, height: vector.height, vector, extraLayers: 0, brim: 2 });
   assert.ok(r.moves.some((m) => m.extrude));
   assert.ok(r.brim, 'with its brim');
+  // three green circles and a green rectangle: coiled and zigzagged, on top of the pattern
+  assert.deepEqual({ count: r.solid.count, coils: r.solid.coils, zigzags: r.solid.zigzags }, { count: 4, coils: 3, zigzags: 1 });
+  assert.match(r.moves.filter((m) => m.extrude).at(-1).tag, /^solid-/, 'the solid shapes print last');
 });

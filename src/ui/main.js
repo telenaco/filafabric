@@ -23,15 +23,14 @@ import { exportFileName, relevantKeys } from './file-name.js';
 import { FIELDS, FIELD_IDS, createField } from '../engine/fields.js';
 import { SHAPES, SHAPE_IDS } from '../engine/shapes.js';
 import { readSvgLines } from './svg-lines.js';
-import { composeSvgLines, outlineFromVector, vectorPatternRings } from '../engine/svg-lines.js';
-import { applySvgGuides, vectorGuides } from '../engine/svg-guides.js';
+import { composeSvgLines, clipResultToOutline, outlineFromVector, vectorPatternRings } from '../engine/svg-lines.js';
+import { applySvgSolids } from '../engine/svg-solids.js';
 import { summariseDrawing, describeDrawing, interpretDrawing } from '../engine/drawing.js';
 import { addExtraLayers, nativeLayerInfo } from '../engine/stack.js';
 import { generateDesignBase } from '../engine/design-export.js';
 import { rotateDesignInput } from '../engine/rotate-design.js';
 import { applyBrim } from '../engine/brim.js';
 import { boundaryFor } from '../engine/layers.js';
-import { conformalGuideRegion } from '../engine/conformal.js';
 import { windowRings } from '../engine/window.js';
 import { bindPanelExport } from './panel-ui.js';
 import { createStudyRecorder } from './study.js';
@@ -680,7 +679,7 @@ function regenerate() {
       const own = state.designs[mod.id];
       const [w, h] = mod.size(own);
       const previewState = { ...own, width: Math.min(w, cap), height: Math.min(h, cap) };
-      result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height, w, h), vector: mod.usesVector || mod.vectorGuides ? state.vector : null, vectorSize: [w, h], includeLines: !state.vector });
+      result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height, w, h), vector: mod.usesVector ? state.vector : null, vectorSize: [w, h], includeLines: !state.vector });
     } else if (state.design === 'squiggle') {
       const s = state.squiggle;
       // a picture is shown whole: the preview is the whole swatch at the shape it has, shrunk to fit the window
@@ -707,9 +706,9 @@ function regenerate() {
     }
     if (state.vector) {
       const [fullWidth, fullHeight] = BINDINGS[state.design].size.get();
-      result = applySvgGuides(result, state.vector, { fullWidth, fullHeight, outline: mod.outline === false ? placedOutline(result.cfg.t.sample_width, result.cfg.t.sample_height, fullWidth, fullHeight) : null });
+      if (mod.outline === false) result = clipResultToOutline(result, placedOutline(result.cfg.t.sample_width, result.cfg.t.sample_height, fullWidth, fullHeight));
       // a drawing that is also the outline lies on the boundary itself, so its lines are not trimmed to it
-      result = composeSvgLines(result, state.vector, { fullWidth, fullHeight, clipLines: !state.outline?.page && !result.guideCount });
+      result = composeSvgLines(result, state.vector, { fullWidth, fullHeight, clipLines: !state.outline?.page });
     }
     const native = nativeLayerInfo(result);
     const extras = state.print.legacyCopies ? (native.repeatable && !native.raised ? native.patternLayers * (state.print.legacyCopies - 1) : 0) : state.print.extraLayers;
@@ -718,6 +717,8 @@ function regenerate() {
         outline: result.outline, vectorSize: [selectedWidth, selectedHeight] })),
       colorChange: !!settingsOf(state.design).colorChange,
     });
+    // green shapes print solid, last, on top of the pattern and any extra layers
+    if (state.vector) result = applySvgSolids(result, state.vector, { fullWidth: selectedWidth, fullHeight: selectedHeight });
     // Offset the selected outline before clipping: a bounded preview must never invent an edge at its crop.
     const pictured = state.design === 'squiggle' && state.squiggle.pattern === 'image' && state.image && !state.vector;
     const fullWidth = pictured ? result.cfg.t.sample_width : selectedWidth;
@@ -725,7 +726,7 @@ function regenerate() {
     let brimOutline = result.outline;
     if (fullWidth !== result.cfg.t.sample_width || fullHeight !== result.cfg.t.sample_height) {
       const boundary = boundaryFor(fullWidth, fullHeight, placedOutline(fullWidth, fullHeight));
-      brimOutline = state.vector ? conformalGuideRegion(boundary, vectorGuides(state.vector, fullWidth, fullHeight)).rings : boundary.rings;
+      brimOutline = boundary.rings;
     }
     result = applyBrim(result, { count: state.print.brim, outline: brimOutline, fullWidth, fullHeight });
     if (state.vector) result.documentSize = [state.vector.width, state.vector.height];
@@ -1844,7 +1845,7 @@ function reportStudyExport(exportType, options = {}, stats = state.result?.stats
       settings: exportType === 'gcode-panel' ? { ...(options.studySettings ?? settingsOf(state.design)), colorChange: false } : options.studySettings ?? settingsOf(state.design),
       print,
       metrics: exportType === 'build-error' ? {} : { timeSec: stats?.timeSec, filamentMm: stats?.filamentMm, moves: stats?.moves ?? options.moveCount ?? state.result?.moves?.length },
-      sources: { svg: !!vector, image: (options.design ?? state.design) === 'squiggle' && (options.settings ?? state.squiggle).pattern === 'image' && !!(options.image ?? state.image), ...(vector ? { svgPaths: vector.paths.length, svgPoints: vector.paths.reduce((n, p) => n + p.length, 0), svgGuides: interpretDrawing(vector).guides.length } : {}) },
+      sources: { svg: !!vector, image: (options.design ?? state.design) === 'squiggle' && (options.settings ?? state.squiggle).pattern === 'image' && !!(options.image ?? state.image), ...(vector ? { svgPaths: vector.paths.length, svgPoints: vector.paths.reduce((n, p) => n + p.length, 0), svgSolids: interpretDrawing(vector).solids.length } : {}) },
       panel: { repeat: options.repeat, backingSpacing: options.backingSpacing },
       ...(exportType === 'build-error' ? { error: options.error } : {}),
     },

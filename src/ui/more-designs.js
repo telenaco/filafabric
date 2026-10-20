@@ -94,7 +94,6 @@ export function layered(def) {
     hidden: !!def.hidden,
     // a design that works from the imported drawing says so, and then the studio hands it the drawing and the real size
     usesVector: !!def.usesVector,
-    vectorGuides: !!def.vectorGuides,
     fullSize: !!def.fullSize,
     panel: def.panel,
     svgNote: def.svgNote,

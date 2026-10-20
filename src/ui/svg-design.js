@@ -98,7 +98,7 @@ export const SVG_DESIGNS = [
     panel: true,
     // a drawing is many separate lines: join the ones that touch and order the rest for the least travel (travel.js)
     optimizeTravel: true,
-    svgNote: 'Bring a drawing: black lines print as paths, red closed shapes are filled, blue ones are left empty and green ones bend the pattern.',
+    svgNote: 'Bring a drawing: black lines print as paths, red closed shapes are filled, blue ones are left empty and green ones print solid on top of the pattern.',
     controls: [
       { kind: 'presets', title: 'Start from' },
       { kind: 'size', title: 'Size and shape' },

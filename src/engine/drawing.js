@@ -3,6 +3,8 @@
 //   - a closed shape in pure RED is filled with the pattern;
 //   - a closed shape in pure BLUE is left empty: a hole. Shapes inside shapes nest like a boolean: the innermost shape
 //     a point lies in decides it, so blue inside red cuts a hole and red inside that blue is filled again;
+//   - a closed shape in GREEN is printed solid, on top of the pattern once the pattern is done: a round shape as a coil,
+//     any other as a zigzag (solid-fill.js). An open green line is a line like any other;
 //   - everything else is a line, and a line is printed as drawn: open paths, and closed shapes of any other colour.
 //     A line about as wide as the extrusion is one pass; a wider one is printed as several passes side by side.
 //
@@ -15,7 +17,7 @@ import { unionFilledRegions } from './polygon-region.js';
 
 export const FILL = 'red';
 export const HOLE = 'blue';
-export const GUIDE = 'green';
+export const SOLID = 'green';
 export const MAX_PASSES = 8;
 
 /* ---------- what is saved of a drawing ---------- */
@@ -131,20 +133,22 @@ function nest(shapes) {
  *   fills:  { ring, holes: ring[] }[],                              the regions to fill: a filled shape and the holes cut out of it
  *   rings:  ring[],                                                 every ring of every region: even-odd gives the filled area
  *   lines:  { pts, width, closed, index }[],                        what prints as lines
+ *   solids: { ring, index }[],                                      closed green shapes, printed solid on top
  *   styled: boolean,                                                the file said which colours its shapes are
  * }}
  */
 export function interpretDrawing(vector, { scaleX = 1, scaleY = 1 } = {}) {
   const widthScale = Math.sqrt(Math.abs(scaleX * scaleY)) || 1;
   const styled = Array.isArray(vector.styles) && vector.styles.length === vector.paths.length;
-  const shapes = [], lines = [], guides = [];
+  const shapes = [], lines = [], solids = [];
   vector.paths.forEach((path, index) => {
     if (path.length < 2) return;
     const pts = path.map((p) => ({ x: p.x * scaleX, y: p.y * scaleY }));
     const style = styled ? vector.styles[index] : null;
     const ring = closedRing(pts);
-    if (ring && style?.color === GUIDE) guides.push({ ring, width: style.width * widthScale, index });
-    if (ring && (!style || style.color === FILL || style.color === HOLE)) shapes.push({ ring, color: style ? style.color : null, index });
+    // a solid shape is all fill: its edge is the fill's own first pass, so it is not printed again as a line
+    if (ring && style?.color === SOLID) solids.push({ ring, index });
+    else if (ring && (!style || style.color === FILL || style.color === HOLE)) shapes.push({ ring, color: style ? style.color : null, index });
     else lines.push({ pts, width: style ? style.width * widthScale : 0, closed: !!ring, index });
   });
 
@@ -172,7 +176,7 @@ export function interpretDrawing(vector, { scaleX = 1, scaleY = 1 } = {}) {
   }
   const rings = unionFilledRegions(fills);
   for (const s of shapes) delete s.samples;
-  return { shapes, fills, rings, lines, guides, styled };
+  return { shapes, fills, rings, lines, solids, styled };
 }
 
 /* ---------- lines and their passes ---------- */
@@ -276,11 +280,11 @@ export function cropToDrawing(vector, { margin = 3 } = {}) {
 
 /* ---------- what the import card says ---------- */
 
-/** { fills, holes, lines, passes } of a drawing: how many shapes are filled, how many holes, how many lines, the most passes any line takes. */
+/** { fills, holes, solids, lines, passes } of a drawing: how many shapes are filled, how many holes, how many solid shapes, how many lines, the most passes any line takes. */
 export function summariseDrawing(vector, { bead = 0.45 } = {}) {
   const m = interpretDrawing(vector);
   const holes = new Set(m.fills.flatMap((f) => f.holes)).size;
-  return { fills: m.fills.length, holes, guides: m.guides.length, lines: m.lines.length, passes: m.lines.reduce((n, l) => Math.max(n, passesFor(l.width, bead)), 1), styled: m.styled };
+  return { fills: m.fills.length, holes, solids: m.solids.length, lines: m.lines.length, passes: m.lines.reduce((n, l) => Math.max(n, passesFor(l.width, bead)), 1), styled: m.styled };
 }
 
 export function describeDrawing(s) {
@@ -288,6 +292,6 @@ export function describeDrawing(s) {
   const parts = [];
   if (s.fills) parts.push(`${plural(s.fills, 'filled shape')}${s.holes ? ` with ${plural(s.holes, 'hole')}` : ''}`);
   if (s.lines) parts.push(`${plural(s.lines, 'line')}${s.passes > 1 ? ` (up to ${s.passes} passes)` : ''}`);
-  if (s.guides) parts.push(plural(s.guides, 'green guide'));
+  if (s.solids) parts.push(plural(s.solids, 'solid shape'));
   return parts.length ? parts.join(', ') : 'nothing to print yet';
 }

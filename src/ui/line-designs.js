@@ -11,7 +11,6 @@ import { parquetLayers, TILINGS, TILING_IDS } from '../engine/parquet.js';
 import { spirographLayers } from '../engine/spirograph.js';
 import { starLayers, STAR_TILINGS, STAR_TILING_IDS } from '../engine/starlattice.js';
 import { FIELD_IDS, createField } from '../engine/fields.js';
-import { interpretDrawing } from '../engine/drawing.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const PATTERN_SCALE = { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false };
@@ -40,8 +39,6 @@ LINE_DESIGNS.push(layered({
   blurb: 'A square grid that bends round holes and poles',
   about: 'The two layers are the level lines of the two halves of one complex function, so wherever the grid bends they still cross at exactly 90° and the cells stay square, only larger or smaller. Bend it round a buttonhole, round two holes, round two poles like the field of a magnet, or into two families of spirals. Every hole gets a ring round it, a hem, held by the lines that run into it.',
   file: 'conformal',
-  vectorGuides: true,
-  svgNote: 'Red defines the fabric, blue leaves holes, and green closed contours guide the conformal mesh. Stroke width sets wall passes.',
   c: CONFORMAL,
   bundle: 'map',
   controls: [
@@ -60,12 +57,7 @@ LINE_DESIGNS.push(layered({
     },
     COLOUR,
   ],
-  build: (s, boundary, { vector = null, vectorSize = null, vectorOffset = [0, 0], bead = 0.45 } = {}) => {
-    const [width, height] = vectorSize ?? [s.width, s.height];
-    const model = vector ? interpretDrawing(vector, { scaleX: width / vector.width, scaleY: height / vector.height }) : null;
-    const guides = model?.guides.map((g) => ({ ...g, ring: g.ring.map((p) => ({ x: p.x - vectorOffset[0], y: p.y - vectorOffset[1] })) })) ?? [];
-    return conformalLayers(boundary, { map: s.map, spacing: s.spacing, feature: s.feature, arms: s.arms, twist: s.twist, guides, guideHems: false, strandWidth: bead });
-  },
+  build: (s, boundary) => conformalLayers(boundary, { map: s.map, spacing: s.spacing, feature: s.feature, arms: s.arms, twist: s.twist }),
   summary: (result) => `a conformal mesh with ${result.report.crossings} right-angle crossings`,
 }));
 

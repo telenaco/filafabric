@@ -138,7 +138,7 @@ the printing temperature is sent once extrusion rises above the bed layer, inclu
 ## Printable SVG and garment panels
 
 **Import SVG** sits above the pattern settings. No drawing to hand? `samples/filafabric-sample.svg` is a 200 × 200 mm
-sample with every colour in it (red shapes to fill, a blue star cut out of one, green guides, wide red lines): the import
+sample with every colour in it (red shapes to fill, a blue star cut out of one, green shapes to print solid, wide red lines): the import
 card offers to try it in one click or to download it and open it in Inkscape or Illustrator to see how it is set up.
 Colour and stroke width say what each part of the drawing does:
 
@@ -147,6 +147,7 @@ Colour and stroke width say what each part of the drawing does:
 | A closed shape in pure **red** (`#ff0000`) | Filled with the pattern |
 | A closed shape in pure **blue** (`#0000ff`) | Left empty: a hole |
 | Blue inside red | Cuts a hole in the red; a red shape inside that blue is filled again (the innermost shape decides) |
+| A closed shape in **green** (`#00ff00`, or the CSS names green and lime) | Printed solid, on top of the pattern once the pattern is done: a round shape as one coil from its edge to its middle, any other shape as a pass round its edge and a zigzag inside it along its longer side. Neighbouring passes overlap by 20% of the extrusion width; the patch is two layers (the second reverses the coil or turns the zigzag a quarter turn), the first one layer above the highest strand printed under the shape. Its stroke width is only a marker |
 | A shape that is not closed | Never filled; it is a line |
 | Any open path, or a closed shape in another colour | A line, printed as drawn |
 | A line's stroke width | The number of passes: width ÷ extrusion width, rounded, at least one. A line as wide as the nozzle is one pass; a 0.8 mm line is two passes side by side and a 1.2 mm line three |

@@ -123,9 +123,9 @@ test('study exports do not retain failure metadata supplied with an ordinary dow
 
 test('study SVG complexity counts are anonymous numeric summaries only', () => {
   const raw = valid();
-  raw.properties.sources = { svg: true, image: false, svgPaths: 3, svgPoints: 250, svgGuides: 2, filename: 'private.svg', svgContent: '<svg/>' };
-  assert.deepEqual(sanitizeStudyRecord(raw).properties.sources, { svg: true, image: false, svgPaths: 3, svgPoints: 250, svgGuides: 2 });
-  raw.properties.sources = { svgPaths: -1, svgPoints: '250', svgGuides: NaN };
+  raw.properties.sources = { svg: true, image: false, svgPaths: 3, svgPoints: 250, svgSolids: 2, filename: 'private.svg', svgContent: '<svg/>' };
+  assert.deepEqual(sanitizeStudyRecord(raw).properties.sources, { svg: true, image: false, svgPaths: 3, svgPoints: 250, svgSolids: 2 });
+  raw.properties.sources = { svgPaths: -1, svgPoints: '250', svgSolids: NaN };
   assert.deepEqual(sanitizeStudyRecord(raw).properties.sources, { svg: false, image: false });
 });
 
@@ -135,7 +135,7 @@ test('study database and analysis queries separate build failures from downloads
     const raw = { ...valid(), exportType, eventId: `abcde123-1234-4234-8234-123456789ab${i}` };
     if (exportType === 'build-error') {
       raw.properties.error = { code: 'crossing-limit', limit: 120000, observed: 120001, message: 'private detail' };
-      raw.properties.sources = { svg: true, svgPaths: 4, svgPoints: 300, svgGuides: 2 };
+      raw.properties.sources = { svg: true, svgPaths: 4, svgPoints: 300, svgSolids: 2 };
     }
     assert.equal((await onRequest({ request: request(JSON.stringify(raw)), env })).status, 204);
   }

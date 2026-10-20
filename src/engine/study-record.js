@@ -26,7 +26,7 @@ export function sanitizeStudyRecord(raw) {
       settings,
       print: numeric(p.print, ['layerHeight', 'layers', 'extraLayers', 'nativeLayers', 'totalLayers', 'backingLayers', 'totalBackingLayers', 'brim', 'nozzleDiameter', 'extrusionWidth']),
       metrics: numeric(p.metrics, ['timeSec', 'filamentMm', 'moves']),
-      sources: { svg: p.sources?.svg === true, image: p.sources?.image === true, ...numeric(p.sources, ['svgPaths', 'svgPoints', 'svgGuides']) },
+      sources: { svg: p.sources?.svg === true, image: p.sources?.image === true, ...numeric(p.sources, ['svgPaths', 'svgPoints', 'svgSolids']) },
       panel: numeric(p.panel, ['repeat', 'backingSpacing']),
       ...(raw.exportType === 'build-error' ? { error: { code: p.error.code, ...numeric(p.error, ['limit', 'observed']) } } : {}),
     },
