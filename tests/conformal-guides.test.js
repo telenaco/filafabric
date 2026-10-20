@@ -101,7 +101,7 @@ test('a guide covering the whole preview removes material instead of being dedup
   assert.throws(() => conformalLayers(boundaryFor(50, 50), { guides }), /openings fill/i);
 });
 
-test('overlapping and nested green openings are subtracted as a union', () => {
+test('overlapping and nested yellow openings are subtracted as a union', () => {
   const b = boundaryFor(60, 50);
   const guides = [guide(ellipse(24, 25, 10)), guide(ellipse(36, 25, 10)), guide(ellipse(24, 25, 3))];
   const region = conformalGuideRegion(b, guides);

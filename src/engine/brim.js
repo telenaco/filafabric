@@ -287,7 +287,7 @@ function brimConnections(brim, body, boundary, { strandWidth, layerHeight, maxTi
   return ties;
 }
 
-function headerNotes(result) {
+export function headerNotes(result) {
   const standard = new Set(new GcodeWriter(result.cfg).header({ stats: result.stats }));
   return (result.gcode ?? '').split('; BODY START')[0].split(/\r?\n/)
     .filter((line) => line.startsWith('; ') && !standard.has(line) && !/^; (?:estimated time|filament:|param )/.test(line))

@@ -29,6 +29,7 @@ import { SHAPES, SHAPE_IDS } from '../engine/shapes.js';
 import { readSvgLines } from './svg-lines.js';
 import { composeSvgLines, outlineFromVector, vectorPatternRings } from '../engine/svg-lines.js';
 import { applySvgGuides, vectorGuides } from '../engine/svg-guides.js';
+import { applySvgSolids } from '../engine/svg-solids.js';
 import { summariseDrawing, describeDrawing, interpretDrawing } from '../engine/drawing.js';
 import { addExtraLayers, nativeLayerInfo } from '../engine/stack.js';
 import { generateDesignBase, compactDesignExport } from '../engine/design-export.js';
@@ -796,6 +797,8 @@ function regenerate() {
         outline: result.outline, vectorSize: [selectedWidth, selectedHeight] })),
       colorChange: !!settingsOf(state.design).colorChange,
     });
+    // green shapes print solid, last, on top of the pattern and any extra layers
+    if (state.vector) result = applySvgSolids(result, state.vector, { fullWidth: selectedWidth, fullHeight: selectedHeight });
     // Offset the selected outline before clipping: a bounded preview must never invent an edge at its crop.
     const pictured = state.design === 'squiggle' && state.squiggle.pattern === 'image' && state.image && !state.vector;
     const fullWidth = pictured ? result.cfg.t.sample_width : selectedWidth;
@@ -1964,7 +1967,7 @@ function reportStudyExport(exportType, options = {}, stats = state.result?.stats
       settings: exportType === 'gcode-panel' ? { ...(options.studySettings ?? settingsOf(state.design)), colorChange: false } : options.studySettings ?? settingsOf(state.design),
       print,
       metrics: exportType === 'build-error' ? {} : { timeSec: stats?.timeSec, filamentMm: stats?.filamentMm, moves: stats?.moves ?? options.moveCount ?? state.result?.moves?.length },
-      sources: { svg: !!vector, image: (options.design ?? state.design) === 'squiggle' && (options.settings ?? state.squiggle).pattern === 'image' && !!(options.image ?? state.image), ...(vector ? { svgPaths: vector.paths.length, svgPoints: vector.paths.reduce((n, p) => n + p.length, 0), svgGuides: interpretDrawing(vector).guides.length } : {}) },
+      sources: { svg: !!vector, image: (options.design ?? state.design) === 'squiggle' && (options.settings ?? state.squiggle).pattern === 'image' && !!(options.image ?? state.image), ...(vector ? { svgPaths: vector.paths.length, svgPoints: vector.paths.reduce((n, p) => n + p.length, 0), svgGuides: interpretDrawing(vector).guides.length, svgSolids: interpretDrawing(vector).solids.length } : {}) },
       panel: { repeat: options.repeat, backingSpacing: options.backingSpacing },
       ...(exportType === 'build-error' ? { error: options.error } : {}),
     },

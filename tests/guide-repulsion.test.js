@@ -12,17 +12,17 @@ const check = (strands, boundary) => {
   for (const s of strands) for (let i = 1; i < s.pts.length; i++) assert.ok(segmentInside(s.pts[i - 1], s.pts[i], boundary), `${s.id} segment ${i} avoids the actual opening`);
 };
 
-test('green contours bend through-lines continuously whereas blue clipping only stops them', () => {
+test('yellow contours bend through-lines continuously whereas blue clipping only stops them', () => {
   const b = boundaryFor(60, 50), guides = [{ ring: ellipse(30, 25, 7), width: 0.45 }];
   const input = [strand('line', [{ x: 0, y: 25 }, { x: 60, y: 25 }])], region = conformalGuideRegion(b, guides);
   const blue = clipStrands(input, region, 0);
   assert.equal(blue.length, 2);
-  const green = repelGuideStrands(input, guides, { boundary: b });
-  assert.equal(green.length, 1, 'a green guide routes the line around its wall');
-  assert.ok(green[0].pts.some((p) => Math.abs(p.y - 25) > 7));
-  assert.deepEqual(green[0].pts[0], input[0].pts[0]);
-  assert.deepEqual(green[0].pts.at(-1), input[0].pts.at(-1));
-  check(green, region);
+  const yellow = repelGuideStrands(input, guides, { boundary: b });
+  assert.equal(yellow.length, 1, 'a yellow guide routes the line around its wall');
+  assert.ok(yellow[0].pts.some((p) => Math.abs(p.y - 25) > 7));
+  assert.deepEqual(yellow[0].pts[0], input[0].pts[0]);
+  assert.deepEqual(yellow[0].pts.at(-1), input[0].pts.at(-1));
+  check(yellow, region);
 });
 
 test('nearby waves bend while distant geometry stays fixed', () => {
@@ -102,7 +102,7 @@ test('a wide opening leaves no void: the pattern comes up to its wall, and far p
   };
   const pts = out.flatMap((s) => s.pts);
   check(out, conformalGuideRegion(b, guides));
-  // the old push was a third of the opening: nothing came within a millimetre and a third of the wall
+  // the old push was a third of the opening: nothing came within a milyellowtre and a third of the wall
   assert.ok(Math.min(...pts.map(away)) < 0.8, 'lines end at the wall');
   assert.ok(pts.filter((p) => away(p) < 1.5).length > 60, 'a band of pattern lies against the wall, so it is bonded to it');
   // where nothing is bent, the lines are exactly the lines that were given

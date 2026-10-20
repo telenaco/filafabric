@@ -42,7 +42,7 @@ LINE_DESIGNS.push(layered({
   about: 'The two layers are the level lines of the two halves of one complex function, so wherever the grid bends they still cross at exactly 90° and the cells stay square, only larger or smaller. Bend it round a buttonhole, round two holes, round two poles like the field of a magnet, or into two families of spirals. Every hole gets a ring round it, a hem, held by the lines that run into it.',
   file: 'conformal',
   vectorGuides: true,
-  svgNote: 'Red defines the fabric, blue leaves holes, and green closed contours guide the conformal mesh. Stroke width sets wall passes.',
+  svgNote: 'Red defines the fabric, blue leaves holes, and yellow closed contours guide the conformal mesh. Stroke width sets wall passes.',
   c: CONFORMAL,
   bundle: 'map',
   controls: [

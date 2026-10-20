@@ -237,7 +237,7 @@ export function guidedConformalLayers(boundary, { spacing = 3, guides, guideHems
     const slope = Math.hypot(...potential.derivative(x, y));
     if (Number.isFinite(slope)) slopes.push(slope);
   }
-  if (!slopes.length) throw new ConfigError(['The green openings fill this preview window.']);
+  if (!slopes.length) throw new ConfigError(['The yellow openings fill this preview window.']);
   slopes.sort((a, b) => a - b);
   const step = spacing * Math.max(0.1, slopes[Math.floor(slopes.length / 2)]);
   // Continue the analytic field a couple of cells into an opening. Marching squares can then reach its
@@ -331,7 +331,7 @@ function contourArc(ring, from, to) {
 }
 
 /**
- * Bend any existing XY pattern around green openings. A compact outward displacement bends nearby lines;
+ * Bend any existing XY pattern around yellow openings. A compact outward displacement bends nearby lines;
  * paths through an opening follow an offset of its actual contour. Z, incoming flow and move classes follow the source
  * path by arc length, including their transition points. The final exact subtraction prevents shortcuts
  * through concavities or overlapping openings. This routing is geometric, not a physical-strength model.

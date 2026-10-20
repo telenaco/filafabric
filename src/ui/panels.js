@@ -758,7 +758,7 @@ export class PrintSetupCard extends Control {
 
 /* ---------- the one place a drawing comes in ---------- */
 
-/** The sample drawing on the site (samples/), to try or to open and copy: red fills, a blue hole, green guides, lines. */
+/** The sample drawing on the site (samples/), to try or to open and copy: red fills, a blue hole, yellow guides, green solids, lines. */
 export const SAMPLE_SVG = 'samples/filafabric-sample.svg';
 
 /**
@@ -785,7 +785,7 @@ export class SvgImportCard extends Control {
     // a drawing to try, for whoever has none: every colour the studio reads, in one file that can be opened to see how
     this.tryButton = el('button', { type: 'button', id: 'svg-sample-try', class: 'link small', text: 'use the sample drawing' });
     const download = el('a', { href: SAMPLE_SVG, download: 'filafabric-sample.svg', class: 'link small svg-sample-download', id: 'svg-sample-download',
-      title: 'A 200 x 200 mm drawing with every colour: red shapes are filled, the blue star is a hole, green bends the pattern, and the lines print as paths. Open it in Inkscape or Illustrator to see how it is set up.' });
+      title: 'A 200 x 200 mm drawing with every colour: red shapes are filled, the blue star is a hole, the yellow shapes bend the pattern, the green ones print solid on top of the pattern, and the lines print as paths. Open it in Inkscape or Illustrator to see how it is set up.' });
     download.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7M5 7l3 3 3-3M3 12.5h10"/></svg>';
     download.append('Download the SVG sample with colours');
     this.sample = el('div', { class: 'svg-sample small muted' },
@@ -818,7 +818,7 @@ export class SvgImportCard extends Control {
     const v = s.vector;
     this.info.textContent = v ? `${v.name} · ${fmt(v.width)} × ${fmt(v.height)} mm` : '';
     this.info.hidden = !v;
-    this.pick.dataset.tip = `${v ? `Replace this drawing. Prints: ${s.summary}.` : 'Use the SVG document’s size and print its vector lines first.'} With a standard 0.4 mm nozzle, stroke widths of 0.4 mm print one pass, 0.8 mm two, 1.2 mm three, and so on. Adjacent passes overlap by at least 20%. Black lines print as paths; red contains the pattern; blue blocks it; green bends the pattern around its contour. Lines that meet are printed in as few strokes as they allow.`;
+    this.pick.dataset.tip = `${v ? `Replace this drawing. Prints: ${s.summary}.` : 'Use the SVG document’s size and print its vector lines first.'} With a standard 0.4 mm nozzle, stroke widths of 0.4 mm print one pass, 0.8 mm two, 1.2 mm three, and so on. Adjacent passes overlap by at least 20%. Black lines print as paths; red contains the pattern; blue blocks it; yellow bends the pattern around its contour; a closed green shape prints solid on top of the pattern (round shapes as a coil, others as a zigzag, passes overlapping by 20%). Lines that meet are printed in as few strokes as they allow.`;
     this.pick.setAttribute('aria-description', this.pick.dataset.tip);
     this.remove.hidden = !v;
     this.dropHint.hidden = !!v;

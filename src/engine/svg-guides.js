@@ -16,7 +16,7 @@ export function vectorGuides(vector, width = vector.width, height = vector.heigh
 
 export const hasNativeHeight = (result) => !!(result.placements?.length || result.spacer || result.pillarWeave);
 
-/** Green changes generated texture; the original drawing is composed afterwards, without deformation. */
+/** Yellow changes generated texture; the original drawing is composed afterwards, without deformation. */
 export function applySvgGuides(result, vector, { fullWidth = vector.width, fullHeight = vector.height, outline = null } = {}) {
   const guides = vectorGuides(vector, fullWidth, fullHeight);
   if ((!guides.length && !outline) || result.guideCount) return result;
@@ -44,6 +44,6 @@ export function applySvgGuides(result, vector, { fullWidth = vector.width, fullH
     report: result.report ? { ...result.report, components: fabric.components } : result.report,
     routing: { beforeMm, afterMm: travelDistance(strands) },
     warnings: [...(result.warnings ?? []).filter((issue) => !result.fabric?.issues.includes(issue)), ...fabric.issues],
-    gcode: writeGcode(moves, cfg, { stats, comments: ['Texture repelled by green SVG contours'] }),
+    gcode: writeGcode(moves, cfg, { stats, comments: ['Texture repelled by yellow SVG contours'] }),
   };
 }

@@ -11,6 +11,8 @@ import { stackStrands, nativeLayerInfo, addExtraLayers } from './stack.js';
 import { rotateDesignInput } from './rotate-design.js';
 import { conformalGuideRegion, repelGuideStrands } from './conformal.js';
 import { resolveCrossings } from './crossings.js';
+import { solidStrands, SOLID_LAYERS } from './svg-solids.js';
+import { SOLID_OVERLAP } from './solid-fill.js';
 import { joinStrokes } from './travel.js';
 import { buildBrimStrands } from './brim.js';
 
@@ -78,7 +80,7 @@ function textureResult(options, repeat, offsetX = 0, offsetY = 0) {
     // The full-document strokes print once before the panel backing, rather than once per texture section.
     includeLines: !options.vector,
   }); } catch (error) {
-    if (d.vectorGuides && error.errors?.some((message) => /green openings fill/i.test(message))) return { cfg: resolveConfig(machine, material, { sample_width: tileWidth, sample_height: tileHeight }), strands: [], moves: [], fabric: { issues: [] } };
+    if (d.vectorGuides && error.errors?.some((message) => /yellow openings fill/i.test(message))) return { cfg: resolveConfig(machine, material, { sample_width: tileWidth, sample_height: tileHeight }), strands: [], moves: [], fabric: { issues: [] } };
     throw error;
   }
 }
@@ -108,6 +110,11 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   const model = vector ? interpretDrawing(vector, { scaleX: width / vector.width, scaleY: height / vector.height }) : null;
   const guides = model?.guides ?? [], outerBoundary = new PolygonBoundary(outline ?? (shapeOutline && model?.rings.length ? model.rings : [rectangle(width, height)]));
   const boundary = guides.length ? conformalGuideRegion(outerBoundary, guides) : outerBoundary;
+  // green shapes print solid once everything else is down, a layer above the highest strand printed under each one
+  const solids = (model?.solids ?? []).map((g) => {
+    const box = g.ring.reduce((b, p) => ({ minX: Math.min(b.minX, p.x), maxX: Math.max(b.maxX, p.x), minY: Math.min(b.minY, p.y), maxY: Math.max(b.maxY, p.y) }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
+    return { ...g, box, area: new PolygonBoundary([g.ring]), top: 0 };
+  });
   const brim = options.brim ?? 2;
   const brimStrands = buildBrimStrands(boundary.rings, { count: brim, strandWidth: bead, layerHeight: h });
   // Older callers may still request whole copies; explicit extraLayers takes precedence.
@@ -165,6 +172,7 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
         const cls = p.cls ?? (s.kind === 'base' ? 'base' : p.z > first.z + 0.4 ? (p.z >= a.z ? 'rising' : 'falling') : 'supported');
         await add(writer.move({ ...p, cls, tag: s.id, extrude: true, retract: last && i === 1 && cfg.derived.retraction.length ? 'unretract' : undefined }));
         maxPrintedZ = Math.max(maxPrintedZ, p.z);
+        for (const g of solids) if (p.z > g.top && p.x >= g.box.minX && p.x <= g.box.maxX && p.y >= g.box.minY && p.y <= g.box.maxY && g.area.contains(p.x, p.y)) g.top = p.z;
       }
       last = s.pts.at(-1);
     }
@@ -184,7 +192,7 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     let serial = 0;
     const strand = (poly) => ({ id: `svg-${serial++}`, layer: 0, kind: 'base', shape: poly.shape && shapeOutline, pts: poly.pts.map((p) => ({ x: p.x, y: p.y, z: h })) });
     // as drawn: the lines of a drawing that is the outline are trimmed to the panel, not to the shapes they cross
-    // Original SVG strokes, including every green wall pass, stay as drawn. The green openings constrain fabric.
+    // Original SVG strokes, including every yellow wall pass, stay as drawn. The yellow openings constrain fabric.
     const lineBoundary = shapeOutline ? new PolygonBoundary([rectangle(width, height)]) : outerBoundary;
     const source = [...whole.map(strand), ...clipStrands(clipped.map(strand), lineBoundary, bead / 2)];
     progress({ phase: 'svg', done: 0, total }); await emit(orderStrands(joinStrokes(source, { within: bead * 1.1, allow: (p, q) => segmentInside(p, q, boundary) }), { improve: true }));
@@ -242,6 +250,13 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     await emit(placed); sections++;
     await flush(); progress({ phase: 'texture', done: sections, total });
   }
+  if (solids.length) {
+    check();
+    const { strands: fill } = solidStrands(solids, [], { bead, layerHeight: h });
+    await add([`; solid shapes: ${solids.length} green, ${SOLID_LAYERS} layers on top of the panel, ${Math.round(SOLID_OVERLAP * 100)}% overlap`]);
+    await emit(clipStrands(fill, new PolygonBoundary([rectangle(width, height)]), 0));
+    await flush();
+  }
   await add([`; actual print ${JSON.stringify(print)}`, `; panel estimate (no acceleration): ${(writer.timeSec / 60).toFixed(1)} min; filament ${writer.cumE.toFixed(1)} mm`, ...writer.footer()]); await flush();
-  return { sections, peakSectionMoves, bytes, moves: writer.moves, filamentMm: writer.cumE, timeSec: writer.timeSec, guideCount: guides.length, print, warnings, physicallyVerified: false };
+  return { sections, peakSectionMoves, bytes, moves: writer.moves, filamentMm: writer.cumE, timeSec: writer.timeSec, guideCount: guides.length, solidCount: solids.length, print, warnings, physicallyVerified: false };
 }

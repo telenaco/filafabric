@@ -5,6 +5,7 @@ import { createField } from './fields.js';
 import { resolveConfig, ConfigError } from './params.js';
 import { bedFitErrors, PreflightError } from './gcode.js';
 import { applySvgGuides } from './svg-guides.js';
+import { applySvgSolids } from './svg-solids.js';
 import { composeSvgLines } from './svg-lines.js';
 import { stackLayers, addExtraLayers, nativeLayerInfo } from './stack.js';
 import { applyBrim } from './brim.js';
@@ -49,6 +50,13 @@ export function generateDesignBase(input) {
   return result;
 }
 
+/** The drawing's green shapes, printed solid on top of everything the design and its extra layers have laid down. */
+function withSolids(result, input) {
+  if (!input.vector) return result;
+  const [fullWidth, fullHeight] = input.vectorSize ?? [input.width, input.height], [offsetX, offsetY] = input.vectorOffset ?? [0, 0];
+  return applySvgSolids(result, input.vector, { fullWidth, fullHeight, offsetX, offsetY });
+}
+
 export function generateDesignExport(input) {
   let result = generateDesignBase(input);
   if (input.extraLayers === undefined && input.layers !== undefined) {
@@ -61,7 +69,7 @@ export function generateDesignExport(input) {
       rotatedResult: () => generateDesignBase(rotateDesignInput(input)), colorChange: !!input.settings?.colorChange,
     });
   }
-  return applyBrim(result, { count: input.brim ?? 2 });
+  return applyBrim(withSolids(result, input), { count: input.brim ?? 2 });
 }
 
 /** The UI only needs printable output and summary data; geometry remains inside the worker. */

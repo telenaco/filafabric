@@ -196,8 +196,8 @@ test('disjoint curved holes with overlapping bounding boxes stay on the convex o
   for(const s of strands) for(let i=0;i<s.pts.length;i+=19) assert.ok(safePoint(s.pts[i],boundary,.225));
 });
 
-test('an actual parsed green SVG circle and its conformal opening accept the default brim',()=>{
-  const vector=parseSvg('<svg xmlns="http://www.w3.org/2000/svg" width="200mm" height="200mm" viewBox="0 0 200 200"><circle cx="100" cy="100" r="20" fill="none" stroke="green"/></svg>');
+test('an actual parsed yellow SVG circle and its conformal opening accept the default brim',()=>{
+  const vector=parseSvg('<svg xmlns="http://www.w3.org/2000/svg" width="200mm" height="200mm" viewBox="0 0 200 200"><circle cx="100" cy="100" r="20" fill="none" stroke="yellow"/></svg>');
   const guides=interpretDrawing(vector).guides;
   const region=conformalGuideRegion(new PolygonBoundary([rectangle(200,200)]),guides);
   const strands=buildBrimStrands(region.rings);

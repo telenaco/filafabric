@@ -15,7 +15,8 @@ test('the sample drawing on the site shows every colour the studio reads', () =>
   const drawing = interpretDrawing(parseSvg(sampleText(), 'filafabric-sample.svg'));
   assert.ok(drawing.fills.length >= 1, 'red shapes that are filled');
   assert.ok(drawing.fills.some((f) => f.holes.length >= 1), 'a blue hole in one');
-  assert.ok(drawing.guides.length >= 1, 'green guides that bend the pattern');
+  assert.ok(drawing.guides.length >= 1, 'yellow guides that bend the pattern');
+  assert.ok(drawing.solids.length >= 1, 'green shapes printed solid');
   assert.ok(drawing.lines.length >= 1, 'lines printed as paths');
 });
 

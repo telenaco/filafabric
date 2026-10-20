@@ -116,7 +116,7 @@ test('raised SVG exports reinforce only the backing and preserve source lines an
 
 test('SVG guides retain original coordinates and all three green wall passes once', () => {
   const ring = Array.from({ length: 33 }, (_, i) => ({ x: 40 + 4 * Math.cos(i * Math.PI / 16), y: 20 + 4 * Math.sin(i * Math.PI / 16) }));
-  const vector = { name: 'green.svg', width: 60, height: 40, paths: [ring], styles: [{ color: 'green', width: 1.2 }] };
+  const vector = { name: 'yellow.svg', width: 60, height: 40, paths: [ring], styles: [{ color: 'yellow', width: 1.2 }] };
   const outline = [[{ x: 5, y: 3 }, { x: 55, y: 3 }, { x: 55, y: 37 }, { x: 5, y: 37 }]];
   const result = generateDesignExport({ ...profiles, design: 'crosshatch', width: 60, height: 40, outline, vector });
   assert.equal(result.guideCount, 1);
@@ -162,7 +162,7 @@ test('full-size export retains the generator budget instead of shrinking to fit'
 
 test('SVG design composes the imported drawing once and legacy pile retains raised classes with a vector', () => {
   const ring = Array.from({ length: 25 }, (_, i) => ({ x: 15 + 4 * Math.cos(i * Math.PI / 12), y: 15 + 4 * Math.sin(i * Math.PI / 12) }));
-  const vector = { name: 'green.svg', width: 30, height: 30, paths: [ring], styles: [{ color: 'green', width: 1.2 }] };
+  const vector = { name: 'yellow.svg', width: 30, height: 30, paths: [ring], styles: [{ color: 'yellow', width: 1.2 }] };
   const svg = generateDesignExport({ ...profiles, design: 'svgdesign', vector, width: 30, height: 30 });
   assert.equal(svg.strands.filter((s) => s.id.startsWith('svg-')).length, 3);
   const pile = generateDesignExport({ ...profiles, design: 'loop-pile', vector, width: 30, height: 30 });

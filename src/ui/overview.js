@@ -84,7 +84,7 @@ export function createOverview(container, onStatus) {
     ctx.lineWidth = 1.5 / v.scale; ctx.strokeStyle = color('--accent'); ctx.stroke();
     for (const source of result.source) {
       ctx.beginPath(); ring(source.pts);
-      ctx.strokeStyle = color(source.color === 'green' ? '--ok-dot' : source.color === 'blue' ? '--accent' : source.color === 'red' ? '--role-free' : '--ink');
+      ctx.strokeStyle = color(source.color === 'green' ? '--ok-dot' : source.color === 'yellow' ? '--warn-dot' : source.color === 'blue' ? '--accent' : source.color === 'red' ? '--role-free' : '--ink');
       ctx.lineWidth = 1 / v.scale; ctx.stroke();
     }
     ctx.restore();
