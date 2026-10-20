@@ -7,6 +7,7 @@ import { ConfigError } from '../src/engine/params.js';
 import { toTextile, PRIMARY_DEFAULTS } from '../src/ui/controls.js';
 import { DESIGNS, designById } from '../src/ui/designs.js';
 import { defaultProfiles } from './helpers.js';
+import { MAX_MOVES } from '../src/engine/tiler.js';
 
 const line = (id, x0, y0, x1, y1, z = 0.2) => {
   const n = 20;
@@ -156,11 +157,9 @@ test('a design of raised loops keeps its own height', () => {
   assert.equal(stackLayers(r, 4), r);
 });
 
-test('too many layers of a big pattern are refused plainly', () => {
-  const { machine, material } = defaultProfiles();
-  const coil = designById('coil');
-  const r = coil.generate(machine, material, { ...coil.defaults(), width: 100, height: 100, size: 1, pitch: 1.5 });
-  assert.throws(() => stackLayers(r, 40), (e) => e instanceof ConfigError && /moves/.test(e.message));
+test('stacking shares the unbounded move policy while runtime-capacity checks remain', () => {
+  assert.equal(MAX_MOVES, Infinity);
+  assert.throws(() => stackStrands([line('a', 0, 0, 1, 0)], 1e12), /JavaScript array capacity/);
 });
 
 test('the layer thickness chosen reaches every design through the material', () => {

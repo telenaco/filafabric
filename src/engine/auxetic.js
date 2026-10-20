@@ -23,7 +23,7 @@ export const CELL_IDS = Object.freeze(Object.keys(CELLS));
 /** The widest the zigzag can swing and still leave the strand width and a little more at the waist. */
 export const maxAuxeticAmplitude = (rowPitch, strandWidth = 0.45) => Math.max(0.25, (rowPitch - 2 * strandWidth - 0.4) / 2);
 
-export function auxeticLayers(boundary, { rowPitch = 6, period = 8, amplitude = 2, cell = 'hexagon', whole = true } = {}) {
+export function auxeticLayers(boundary, { rowPitch = 6, period = 8, amplitude = 2, cell = 'hexagon', whole = true, chain = false } = {}) {
   if (!CELLS[cell]) throw new Error(`Unknown auxetic cell: ${cell}`);
   const A = Math.min(amplitude, maxAuxeticAmplitude(rowPitch));
   const box = boundary.bbox();
@@ -73,5 +73,5 @@ export function auxeticLayers(boundary, { rowPitch = 6, period = 8, amplitude = 
   }
   const layer2 = [];
   for (const s of stairs) layer2.push(...clipPolyline(s, boundary));
-  return { layers: [layer1, layer2], extra: { amplitude: A, cell } };
+  return { layers: [layer1, chain ? chainPolylines(layer2, boundary, period) : layer2], extra: { amplitude: A, cell } };
 }

@@ -1,5 +1,5 @@
 import { createRng } from './rng.js';
-import { clipPolyline, trailsFromEdges, densify } from './layers.js';
+import { clipPolyline, trailsFromEdges, densify, chainPolylines } from './layers.js';
 import { fitCount } from './repeats.js';
 
 /**
@@ -67,7 +67,7 @@ export function truchetLayers(boundary, { tile = 'diagonals', size = 5, seed = 1
   const ox = box.minX + (w - cols * sx) / 2, oy = box.minY + (h - rows * sy) / 2;
   const rng = createRng(seed);
 
-  const toLayer = (edges) => trailsFromEdges(edges).flatMap((t) => clipPolyline(densify(t), boundary));
+  const toLayer = (edges) => chainPolylines(trailsFromEdges(edges).flatMap((t) => clipPolyline(densify(t), boundary)), boundary, size);
 
   if (tile === 'diagonals') {
     const one = [], other = [];

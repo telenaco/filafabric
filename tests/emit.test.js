@@ -31,6 +31,24 @@ test('strands with fewer than two points are skipped', () => {
   assert.equal(emitStrands([strand('a', 'base', [P(0, 0)])]).length, 0);
 });
 
+test('touching endpoints stay continuous without lifts or retractions and retain classes and flow', () => {
+  const m = emitStrands([
+    strand('a', 'base', [P(0, 0), P(5, 0)]),
+    strand('b', 'supported', [P(5, 0), { ...P(5, 5), flow: 1.4 }]),
+  ], { retraction: { length: 1, minTravel: 0 } });
+  assert.equal(m.filter(q => !q.extrude).length, 2, 'initial approach only');
+  assert.equal(m.filter(q => q.retract).length, 0);
+  assert.deepEqual(m.filter(q => q.extrude).map(q => [q.tag, q.cls, q.flow]), [['a', 'base', undefined], ['b', 'supported', 1.4]]);
+});
+
+test('touching XY still lifts for a height change or a filament-change pause', () => {
+  for (const b of [strand('b', 'supported', [P(5, 0, .4), P(5, 5, .4)]), strand('b', 'supported', [P(5, 0), P(5, 5)], { pauseBefore: true })]) {
+    const m = emitStrands([strand('a', 'base', [P(0, 0), P(5, 0)]), b]);
+    assert.ok(m.slice(3).some(q => !q.extrude && q.z > 3));
+    assert.equal(m.filter(q => q.customGcode?.startsWith('M600')).length, b.pauseBefore ? 1 : 0);
+  }
+});
+
 test('with a retraction, a long travel retracts first and primes at the next strand; a short one does not', () => {
   const retraction = { length: 1, minTravel: 2 };
   const m = emitStrands([strand('a', 'base', [P(0, 0), P(5, 0)]), strand('b', 'base', [P(0, 9), P(5, 9)]), strand('c', 'base', [P(5, 9.5), P(0, 9.5)])], { retraction });

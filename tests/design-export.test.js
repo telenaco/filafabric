@@ -114,28 +114,18 @@ test('raised SVG exports reinforce only the backing and preserve source lines an
   }
 });
 
-test('green SVG shapes print solid, last, on top of the pattern, in the drawing\'s own coordinates', () => {
+test('SVG guides retain original coordinates and all three green wall passes once', () => {
   const ring = Array.from({ length: 33 }, (_, i) => ({ x: 40 + 4 * Math.cos(i * Math.PI / 16), y: 20 + 4 * Math.sin(i * Math.PI / 16) }));
-  const vector = { name: 'green.svg', width: 60, height: 40, paths: [ring], styles: [{ color: 'green', width: 1.2 }] };
+  const vector = { name: 'yellow.svg', width: 60, height: 40, paths: [ring], styles: [{ color: 'yellow', width: 1.2 }] };
   const outline = [[{ x: 5, y: 3 }, { x: 55, y: 3 }, { x: 55, y: 37 }, { x: 5, y: 37 }]];
-  const plain = generateDesignExport({ ...profiles, design: 'crosshatch', width: 60, height: 40, outline, brim: 0 });
-  const result = generateDesignExport({ ...profiles, design: 'crosshatch', width: 60, height: 40, outline, vector, brim: 0 });
-  assert.deepEqual({ count: result.solid.count, coils: result.solid.coils, layers: result.solid.layers, overlap: result.solid.overlap }, { count: 1, coils: 1, layers: 2, overlap: 0.2 });
+  const result = generateDesignExport({ ...profiles, design: 'crosshatch', width: 60, height: 40, outline, vector });
+  assert.equal(result.guideCount, 1);
   assert.equal(result.vector.width, 60);
-  assert.equal(result.strands.filter((s) => s.id.startsWith('svg-')).length, 0, 'the green edge is not printed as a line as well');
-  const h = result.cfg.t.layer_height;
-  const fill = result.strands.filter((s) => s.name === 'Solid shape');
-  assert.ok(fill.every((s) => s.pts.every((p) => Math.hypot(p.x - 40, p.y - 20) <= 4)), 'inside the circle');
-  // the pattern still runs under the circle; the fill lies a layer above the highest of it, then a second layer
-  const under = result.strands.filter((s) => s.name !== 'Solid shape').flatMap((s) => s.pts).filter((p) => Math.hypot(p.x - 40, p.y - 20) < 4);
-  assert.ok(under.length > 0, 'the pattern is not cut away under the shape');
-  const top = Math.max(...under.map((p) => p.z));
-  assert.deepEqual([...new Set(fill.flatMap((s) => s.pts.map((p) => Math.round(p.z * 1000))))].sort((a, b) => a - b), [top + h, top + 2 * h].map((z) => Math.round(z * 1000)));
-  // printed last: everything before it is the plain design's path, unchanged
-  const extrusions = result.moves.filter((m) => m.extrude);
-  assert.match(extrusions.at(-1).tag, /^solid-/);
-  assert.ok(result.moves.findIndex((m) => m.extrude && /^solid-/.test(m.tag)) > result.moves.findLastIndex((m) => m.extrude && !/^solid-/.test(m.tag)));
-  assert.ok(result.stats.filamentMm > plain.stats.filamentMm);
+  assert.equal(result.vector.height, 40);
+  const walls = result.strands.filter((s) => s.id.startsWith('svg-'));
+  assert.equal(walls.length, 3);
+  assert.ok(walls.every((s) => s.pts.every((p) => p.x > 34 && p.x < 46 && p.z === result.cfg.t.layer_height)));
+  assert.ok(result.moves.some((m) => m.extrude && m.x > 50));
 });
 
 test('legacy image sampler and pile fields use full selected dimensions and keep raised classes', () => {
@@ -172,10 +162,9 @@ test('full-size export retains the generator budget instead of shrinking to fit'
 
 test('SVG design composes the imported drawing once and legacy pile retains raised classes with a vector', () => {
   const ring = Array.from({ length: 25 }, (_, i) => ({ x: 15 + 4 * Math.cos(i * Math.PI / 12), y: 15 + 4 * Math.sin(i * Math.PI / 12) }));
-  const vector = { name: 'green.svg', width: 30, height: 30, paths: [ring], styles: [{ color: 'green', width: 1.2 }] };
+  const vector = { name: 'yellow.svg', width: 30, height: 30, paths: [ring], styles: [{ color: 'yellow', width: 1.2 }] };
   const svg = generateDesignExport({ ...profiles, design: 'svgdesign', vector, width: 30, height: 30 });
-  assert.equal(svg.strands.filter((s) => s.id.startsWith('svg-')).length, 0);
-  assert.equal(svg.solid.count, 1);
+  assert.equal(svg.strands.filter((s) => s.id.startsWith('svg-')).length, 3);
   const pile = generateDesignExport({ ...profiles, design: 'loop-pile', vector, width: 30, height: 30 });
   assert.ok(pile.moves.some((m) => m.extrude && m.cls === 'rising'));
   assert.ok(pile.moves.some((m) => m.extrude && m.cls === 'unsupported'));

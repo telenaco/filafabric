@@ -44,3 +44,11 @@ export function searchMachines(entries, query, vendors = []) {
   scored.sort((a, b) => b.score - a.score || a.nozzle - b.nozzle || a.order - b.order);
   return scored.map((s) => s.entry);
 }
+
+/** Before typing, show just the current printer and one alternative; searching still reaches the full library. */
+export function machineSuggestions(entries, query, current, vendors = []) {
+  const found = searchMachines(entries, query, vendors);
+  if (query.trim()) return found;
+  const selected = entries.find(m => m.id === current);
+  return (selected ? [selected, ...found.filter(m => m.id !== current)] : found).slice(0, 2);
+}

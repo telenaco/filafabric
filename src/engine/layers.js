@@ -18,6 +18,11 @@ import { joinStrokes } from './travel.js';
  * crosses itself lifts over its own earlier pass, and the report says how well the layers are held together.
  */
 
+export function appendPoints(target, source, start = 0) {
+  for (let i = start; i < source.length; i++) target.push(source[i]);
+  return target;
+}
+
 const STEP = 0.5; // mm between points along a polyline
 
 /** The outline as a boundary, or the full width x height rectangle. */
@@ -72,7 +77,7 @@ const rotate = (p, c, s) => ({ x: p.x * c - p.y * s, y: p.x * s + p.y * c });
  * `whole` (repeats.js): the lanes fill the outline from edge to edge at the nearest spacing that fits, a wavy line kept a
  * full swing in from the edge, and each wavy line is whole periods from end to end.
  */
-export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = null, size = 0, pitch = 4, inset = 0.3, anchor = null, maxJog = null, keepInside = 0, whole = true } = {}) {
+export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = null, size = 0, pitch = 4, inset = 0.3, anchor = null, maxJog = null, keepInside = 0, whole = true, cornerStart = false } = {}) {
   const a = (angle * Math.PI) / 180;
   const c = Math.cos(a), s = Math.sin(a);
   const turned = new PolygonBoundary(boundary.rings.map((ring) => ring.map((p) => rotate(p, c, -s))));
@@ -98,9 +103,16 @@ export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = nu
   } else {
     lanes = [(box.minY + box.maxY) / 2];
   }
-  const chains = serpentineChains(turned, 'y', lanes, { inset, minLength: 1, maxJog: maxJog ?? 3 * spacing });
+  const chains = serpentineChains(turned, 'y', lanes, { inset, minLength: 1, maxJog: maxJog ?? 3 * spacing, cornerStart });
   const clear = (p) => safePoint(rotate(p, c, s), boundary, keepInside);
   return chains.map((segments) => {
+    if (cornerStart && segments.length > 1) {
+      const len0 = Math.abs(segments[0].to - segments[0].from);
+      const lenLast = Math.abs(segments[segments.length - 1].to - segments[segments.length - 1].from);
+      if (lenLast < len0) {
+        segments = segments.slice().reverse().map((seg) => ({ ...seg, from: seg.to, to: seg.from }));
+      }
+    }
     const pts = [];
     for (const seg of segments) {
       let { from, to } = seg;
@@ -129,8 +141,8 @@ export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = nu
           return { x: p.x, y: seg.c };
         });
       }
-      if (pts.length) pts.push(...densify([pts[pts.length - 1], line[0]]).slice(1));
-      pts.push(...(pts.length ? line.slice(1) : line));
+      if (pts.length) appendPoints(pts, densify([pts[pts.length - 1], line[0]]), 1);
+      appendPoints(pts, line, pts.length ? 1 : 0);
     }
     return pts.map((p) => rotate(p, c, s));
   }).filter((pts) => pts.length >= 2);
@@ -149,7 +161,8 @@ export function chainPolylines(list, boundary, maxJog = 6) {
       const end = cur[cur.length - 1];
       const d = Math.hypot(pts[0].x - end.x, pts[0].y - end.y);
       if (d <= maxJog && segmentInside(end, pts[0], boundary)) {
-        cur.push(...densify([end, pts[0]]).slice(1), ...pts.slice(1));
+        appendPoints(cur, densify([end, pts[0]]), 1);
+        appendPoints(cur, pts, 1);
         continue;
       }
       chains.push(cur);
@@ -186,7 +199,7 @@ export function trailsFromEdges(edges) {
           used[i] = true;
           let e = edges[i];
           if (key(e[0]) !== k) e = e.slice().reverse();
-          trail.push(...(trail.length ? e.slice(1) : e));
+          appendPoints(trail, e, trail.length ? 1 : 0);
           k = key(e[e.length - 1]);
         }
         trails.push(trail);
@@ -268,7 +281,7 @@ export function layersToStrands(layers, { layerHeight = 0.2, strandWidth = 0.45,
       s.pts = s.pts.map(({ cls, ...p }) => p); // the layer keeps its own colour role
       if (colorChange && k > 0 && i === 0) s.pauseBefore = true;
     });
-    strands.push(...settled);
+    appendPoints(strands, settled);
   });
   return strands;
 }

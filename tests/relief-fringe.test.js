@@ -5,6 +5,7 @@ import { fringePlacements, generateFringe } from '../src/engine/fringe.js';
 import { createField } from '../src/engine/fields.js';
 import { PolygonBoundary } from '../src/engine/boundary.js';
 import { ConfigError } from '../src/engine/params.js';
+import { MAX_MOVES, MAX_LOOPS } from '../src/engine/tiler.js';
 import { defaultProfiles } from './helpers.js';
 
 const { machine, material } = defaultProfiles();
@@ -80,8 +81,8 @@ test('generateRelief returns moves in the air classes, stats and G-code, determi
   assert.equal(generateRelief(machine, material, params).gcode, r.gcode);
 });
 
-test('an absurd relief layout is refused plainly', () => {
-  assert.throws(() => generateRelief(machine, material, { width: 240, height: 200, relief: 2, rowPitch: 0.1 }), ConfigError);
+test('relief does not impose the former fixed move ceiling', () => {
+  assert.equal(MAX_MOVES, Infinity);
 });
 
 test('fringe hairs stand on the base lines, rise, and end free; far rows print first', () => {
@@ -118,8 +119,9 @@ test('generateFringe returns a base, hairs, moves and G-code', () => {
   assert.ok(r.gcode.includes('G1'));
 });
 
-test('too many hairs gives the plain error', () => {
-  assert.throws(() => generateFringe(machine, material, { width: 240, height: 200, spacing: 2, rowGap: 3 }), ConfigError);
+test('fringe can place more than the former 6000 hairs', () => {
+  assert.equal(MAX_LOOPS, Infinity);
+  assert.ok(fringePlacements({ width: 100, height: 100, spacing: .5, rowGap: 2, length: 2 }).hairs > 6000);
 });
 
 test('fringe variation stays inside the width when a staggered foot lands on the edge', () => {

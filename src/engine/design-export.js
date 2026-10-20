@@ -4,8 +4,9 @@ import { generateSquiggle, SAMPLERS, createImageSampler } from './squiggle.js';
 import { createField } from './fields.js';
 import { resolveConfig, ConfigError } from './params.js';
 import { bedFitErrors, PreflightError } from './gcode.js';
+import { applySvgGuides } from './svg-guides.js';
 import { applySvgSolids } from './svg-solids.js';
-import { composeSvgLines, clipResultToOutline } from './svg-lines.js';
+import { composeSvgLines } from './svg-lines.js';
 import { stackLayers, addExtraLayers, nativeLayerInfo } from './stack.js';
 import { applyBrim } from './brim.js';
 import { rotateDesignInput } from './rotate-design.js';
@@ -33,7 +34,7 @@ export function generateDesignBase(input) {
   } else {
     result = mod.generate(machine, material, { ...mod.defaults(), ...settings, width, height }, {
       outline: mod.outline === false ? null : outline,
-      vector: mod.usesVector ? vector : null,
+      vector: mod.usesVector || mod.vectorGuides ? vector : null,
       vectorSize: input.vectorSize ?? [width, height],
       vectorOffset: input.vectorOffset ?? [0, 0],
       includeLines: !vector,
@@ -41,8 +42,9 @@ export function generateDesignBase(input) {
   }
   if (vector) {
     const [fullWidth, fullHeight] = input.vectorSize ?? [width, height], [offsetX, offsetY] = input.vectorOffset ?? [0, 0];
-    if (mod?.outline === false) result = clipResultToOutline(result, outline);
-    result = composeSvgLines(result, vector, { fullWidth, fullHeight, offsetX, offsetY, clipLines: !input.shapeOutline });
+    const guideVector = offsetX || offsetY ? { ...vector, paths: vector.paths.map((path) => path.map((p) => ({ ...p, x: p.x - offsetX * vector.width / fullWidth, y: p.y - offsetY * vector.height / fullHeight }))) } : vector;
+    result = applySvgGuides(result, guideVector, { fullWidth, fullHeight, outline: mod.outline === false ? outline : null });
+    result = composeSvgLines(result, vector, { fullWidth, fullHeight, offsetX, offsetY, clipLines: !input.shapeOutline && !result.guideCount });
     result.documentSize = [vector.width, vector.height];
   }
   return result;

@@ -10,7 +10,7 @@
 // with the same importer a dropped-in file goes through (src/engine/profile-import.js). Only printers for filament
 // (FFF) are kept, in the nozzle sizes listed in NOZZLES, one preset per model and nozzle.
 //
-// For now the library holds the most used Bambu Lab and Prusa printers (POPULAR); `--all` builds every vendor below
+// The library holds popular Bambu Lab, Prusa and Ender-3 printers (POPULAR); `--all` builds every vendor below
 // and every model they list (about 500 printers).
 //
 //   node tools/import-vendor-profiles.mjs                 download the latest vendor files and rebuild the library
@@ -41,6 +41,7 @@ const ALL = process.argv.includes('--all');
 const POPULAR = {
   bambu: ['Bambu Lab A1 mini', 'Bambu Lab A1', 'Bambu Lab P1S', 'Bambu Lab P1P', 'Bambu Lab P2S', 'Bambu Lab X1 Carbon', 'Bambu Lab X1E', 'Bambu Lab H2D'],
   prusa: ['Prusa CORE One & One+ & One+ (Gen 2)', 'Original Prusa MK4S', 'Original Prusa MK4 Input Shaper', 'Original Prusa MK3.9S', 'Original Prusa MK3.5 & MK3.5S', 'Original Prusa MINI & MINI+ Input Shaper', 'Original Prusa XL Input Shaper'],
+  creality: ['Creality Ender-3', 'Creality Ender-3 V2', 'Creality Ender-3 S1', 'Creality Ender-3 Pro'],
 };
 
 /** PrusaSlicer vendor bundles: the vendors whose printers are most common, Prusa first. */

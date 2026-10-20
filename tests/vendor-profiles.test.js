@@ -85,6 +85,10 @@ test('the popular printers are there, and a search finds them however they are t
     ['p1s', 'Bambu Lab P1S 0.4 nozzle'],
     ['mk4s', 'Original Prusa MK4S 0.4 nozzle'],
     ['bambu h2d', 'Bambu Lab H2D 0.4 nozzle'],
+    ['ender3', 'Creality Ender-3 (0.4 mm nozzle)'],
+    ['ender 3 v2', 'Creality Ender-3 V2 (0.4 mm nozzle)'],
+    ['ender 3 pro', 'Creality Ender-3 Pro (0.4 mm nozzle)'],
+    ['ender 3 s1', 'Creality Ender-3 S1 (0.4 mm nozzle)'],
   ]) assert.ok(names(query).includes(expected), `"${query}" finds ${expected}: ${names(query).slice(0, 5).join(', ')}`);
   // the 0.4 mm nozzle comes before the larger ones of the same printer
   const a1 = names('a1 mini');

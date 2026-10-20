@@ -3,7 +3,7 @@ import { bedFitErrors, PreflightError, writeGcode } from './gcode.js';
 import { computeStats } from './stats.js';
 import { PolygonBoundary } from './boundary.js';
 import { emitStrands } from './emit.js';
-import { layeredResult } from './layers.js';
+import { layeredResult, appendPoints } from './layers.js';
 import { MAX_MOVES } from './tiler.js';
 import { finishFabric } from './fabric-result.js';
 
@@ -173,7 +173,7 @@ export function generateSpiralTextile({ width, height, spacing = 3, inset = 0.4,
       const startsNear = end && Math.hypot(pts[0].x - end.x, pts[0].y - end.y) <= jog && shape.contains((pts[0].x + end.x) / 2, (pts[0].y + end.y) / 2);
       if (!startsNear) flush();
       if (!current) current = [];
-      current.push(...pts);
+      appendPoints(current, pts);
       end = pts[pts.length - 1];
       ringCount++;
       points += pts.length;

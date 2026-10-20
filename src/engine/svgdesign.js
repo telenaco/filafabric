@@ -87,7 +87,7 @@ export function svgDesignLayers(boundary, settings, vector = null, { bead = 0.45
   if ((mode === 'fill' || mode === 'both') && model.fills.length === 0) {
     const who = vector ? vector.name : 'The drawing';
     warnings.push(model.styled
-      ? `${who} has no red closed shape to fill (a closed shape is filled when it is red; blue is left empty and green prints solid), so its lines print as drawn`
+      ? `${who} has no red closed shape to fill (a closed shape is filled when it is red; blue is left empty), so its lines print as drawn`
       : `${who} has no closed shapes to fill, so its lines print as drawn`);
     mode = 'outline';
   }

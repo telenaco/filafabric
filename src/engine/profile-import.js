@@ -205,8 +205,9 @@ function endBlock(text, notes, label) {
 function bedFromShape(shape) {
   const pts = String(shape ?? '').split(',').map((p) => p.trim().split(/x/i).map(Number)).filter((p) => p.length === 2 && p.every(Number.isFinite));
   if (pts.length < 3) return null;
-  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
-  return { width: Math.max(...xs) - Math.min(...xs), depth: Math.max(...ys) - Math.min(...ys) };
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const [x, y] of pts) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y); }
+  return { width: maxX - minX, depth: maxY - minY };
 }
 
 function limitsFrom(get) {
@@ -236,9 +237,16 @@ function limitsFrom(get) {
 
 function machineFrom(get, { id, name, source, notes }) {
   const bed = pick(bedFromShape(get('bed_shape') ?? get('printable_area')), null);
-  if (!bed) throw new ProfileImportError(['no bed shape in this file (bed_shape / printable_area), so it is not a printer profile']);
+  if (!bed) throw new ProfileImportError([get('inherits')
+    ? 'This preset inherits its printer settings from another file. Export a complete config (including bed_shape / printable_area), or a bundle containing its parent presets.'
+    : 'no bed shape in this file (bed_shape / printable_area), so it is not a printer profile']);
   const flavor = String(get('gcode_flavor') ?? 'marlin2').toLowerCase();
   const nozzle = num(get('nozzle_diameter'));
+  if (get('nozzle_diameter') !== undefined && !(nozzle >= 0.1 && nozzle <= 2)) throw new ProfileImportError(['nozzle_diameter must be between 0.1 and 2 mm']);
+  const layerHeight = num(get('layer_height'));
+  if (get('layer_height') !== undefined && !(layerHeight > 0 && layerHeight <= 0.8 * (nozzle ?? 0.4) + 1e-9)) throw new ProfileImportError(['layer_height must be positive and at most 80% of the nozzle diameter']);
+  if (nozzle === null) notes.push(`${name}: no nozzle diameter is given; 0.4 mm is assumed. Check it before printing.`);
+  if (layerHeight === null) notes.push(`${name}: no print layer height is given; a nozzle-based default is used. Import a complete config to use your slicer's print preset.`);
   const x0 = Math.min(10, bed.width / 4);
   const machine = {
     id,
@@ -252,6 +260,7 @@ function machineFrom(get, { id, name, source, notes }) {
     limits: limitsFrom(get),
     printer_model_check: String(get('printer_model') ?? ''),
     ...(nozzle >= 0.1 && nozzle <= 2 ? { nozzle_diameter: nozzle } : {}),
+    ...(layerHeight !== null ? { print_defaults: { layer_height: layerHeight } } : {}),
     // no purge area is known: the prime line goes along the front edge, inside the bed
     prime: { x0, x1: Math.min(bed.width - 10, x0 + 60), y: 1, liftZ: 2, filamentMm: 12 },
     start_gcode: startBlock(get('start_gcode') ?? get('machine_start_gcode'), notes, name),
@@ -342,15 +351,52 @@ export function importProfiles(text, filename = 'profile') {
       const id = slug(name);
       const isMachine = json.type === 'machine' || json.printable_area !== undefined || json.bed_shape !== undefined;
       const isFilament = json.type === 'filament' || json.filament_diameter !== undefined || json.nozzle_temperature !== undefined;
+      if (isFilament && json.inherits && (json.filament_diameter === undefined || json.nozzle_temperature === undefined && json.temperature === undefined)) throw new ProfileImportError(['This filament preset is missing inherited settings. Export a self-contained filament profile, including diameter and temperatures.']);
       if (isMachine) machines.push(machineFrom(get, { id, name, source, notes }));
       if (isFilament && !isMachine) materials.push(materialFrom(get, { id, name, source, notes }));
-      if (!isMachine && !isFilament) throw new ProfileImportError(['this JSON is not a printer or filament profile']);
+      if (!isMachine && !isFilament) throw new ProfileImportError(['this JSON is not a printer or filament profile. A print/process preset alone has no bed or nozzle: export the complete printer configuration.']);
+      if (json.inherits) notes.push(`${name}: this file names a parent preset (${json.inherits}); only settings present in this file were imported. Use a complete export, not an inheritance-only preset.`);
     }
   } else {
     const sections = parseConfigText(text);
     if (sections.length === 0) throw new ProfileImportError(['no settings found in this file: expected a PrusaSlicer .ini or .gcode, or a Bambu Studio .json']);
-    sections.forEach((section, index) => {
-      const get = (key) => section.values[key];
+    // Bundles may hold hidden parents as well as concrete presets. Resolve only parents in this file, by kind.
+    const resolved = new Map();
+    const resolve = (section, trail = []) => {
+      if (resolved.has(section)) return resolved.get(section);
+      if (trail.includes(section) || trail.length >= 64) throw new ProfileImportError([`Preset inheritance is cyclic or too deep at ${section.name}. Export a complete config instead.`]);
+      const values = {};
+      for (const name of String(section.values.inherits ?? '').split(';').map(s => s.trim().replace(/^"|"$/g, '')).filter(Boolean)) {
+        const parent = sections.find(s => s.kind === section.kind && s.name === name);
+        if (!parent) {
+          const own = section.values;
+          const complete = section.kind === 'filament' ? own.filament_diameter !== undefined && own.temperature !== undefined
+            : own.bed_shape !== undefined && own.nozzle_diameter !== undefined && own.start_gcode !== undefined;
+          if (!complete) throw new ProfileImportError([`Missing parent preset "${name}". Export a complete config, or include the parent presets in the bundle.`]);
+          notes.push(`${section.name || filename}: parent preset "${name}" is not in this file; only the file's own settings were imported.`);
+          continue;
+        }
+        Object.assign(values, resolve(parent, [...trail, section]));
+      }
+      Object.assign(values, section.values);
+      delete values.inherits;
+      resolved.set(section, values);
+      return values;
+    };
+    const concrete = sections.filter(s => !s.name.startsWith('*'));
+    const active = sections.find(s => s.kind === 'presets')?.values;
+    const prints = concrete.filter(s => s.kind === 'print');
+    const printers = concrete.filter(s => s.kind === 'printer');
+    concrete.forEach((section, index) => {
+      if (!['config', 'printer', 'filament'].includes(section.kind)) return;
+      const values = resolve(section);
+      const print = prints.find(s => s.name === active?.print && (section.name === active?.printer || printers.length === 1))
+        ?? (!active?.print && printers.length === 1 && prints.length === 1 ? prints[0] : null);
+      if (section.kind === 'printer' && print) {
+        const printValues = resolve(print);
+        if (printValues.layer_height !== undefined) values.layer_height = printValues.layer_height;
+      }
+      const get = (key) => values[key];
       // a printer and a filament in one file are each named as the slicer names them
       const plain = filename.replace(/\.[^.]+$/, '');
       const nameOf = (settingsId) => section.name || String(get(settingsId) ?? '').trim();

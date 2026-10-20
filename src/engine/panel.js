@@ -9,6 +9,8 @@ import { createField } from './fields.js';
 import { drawingPolylines, interpretDrawing } from './drawing.js';
 import { stackStrands, nativeLayerInfo, addExtraLayers } from './stack.js';
 import { rotateDesignInput } from './rotate-design.js';
+import { conformalGuideRegion, repelGuideStrands } from './conformal.js';
+import { resolveCrossings } from './crossings.js';
 import { solidStrands, SOLID_LAYERS } from './svg-solids.js';
 import { SOLID_OVERLAP } from './solid-fill.js';
 import { joinStrokes } from './travel.js';
@@ -71,13 +73,16 @@ function textureResult(options, repeat, offsetX = 0, offsetY = 0) {
   if (design === 'squiggle') return generateSquiggle(machine, material, { ...settings, width: tileWidth, height: tileHeight, sampler: settings.pattern === 'image' && options.image ? createImageSampler(options.image, options.width ?? repeat, options.height ?? repeat, { yUp: true }) : SAMPLERS[settings.pattern] ?? SAMPLERS.centerSpot, colorChange: false });
   const d = DESIGNS.find((d) => d.id === design && d.status === 'ready');
   if (!d) throw new ConfigError(['Choose a supported fabric design.']);
-  return d.generate(machine, material, { ...d.defaults(), ...settings, width: tileWidth, height: tileHeight, colorChange: false }, {
+  try { return d.generate(machine, material, { ...d.defaults(), ...settings, width: tileWidth, height: tileHeight, colorChange: false }, {
     vector: options.vector,
     vectorSize: options.vectorSize ?? [options.width ?? repeat, options.height ?? repeat],
     vectorOffset: options.vectorOffset ?? [offsetX, offsetY],
     // The full-document strokes print once before the panel backing, rather than once per texture section.
     includeLines: !options.vector,
-  });
+  }); } catch (error) {
+    if (d.vectorGuides && error.errors?.some((message) => /yellow openings fill/i.test(message))) return { cfg: resolveConfig(machine, material, { sample_width: tileWidth, sample_height: tileHeight }), strands: [], moves: [], fabric: { issues: [] } };
+    throw error;
+  }
 }
 
 /** Bounded-memory panel export. Texture repeats per section; full-document SVG strokes never repeat. */
@@ -88,15 +93,23 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   if (![width, height].every((v) => Number.isFinite(v) && v >= 1 && v <= 5000) || !Number.isFinite(repeat) || repeat < 5 || repeat > 500 || !Number.isFinite(backingSpacing) || backingSpacing < 0.3 || backingSpacing > 50) throw new ConfigError(['Panel dimensions must be 1–5000 mm, the repeat 5–500 mm and the backing spacing 0.3–50 mm.']);
   if (options.extraLayers !== undefined && (!Number.isInteger(options.extraLayers) || options.extraLayers < 0 || options.extraLayers > 250)) throw new ConfigError(['Extra layers must be an integer from 0 to 250.']);
   if (typeof write !== 'function') throw new Error('A writable output is required');
-  const initialCfg = resolveConfig(machine, material, { sample_width: width, sample_height: height }), fit = bedFitErrors(initialCfg);
+  // Sections bound memory, not the physical print: backing, brim and texture share one full-panel coordinate system.
+  // Validate other settings with the swatch resolver, then restore the separately validated (up to 5000 mm) panel size.
+  const panelConfig = (settings = {}) => {
+    const cfg = resolveConfig(machine, material, { ...settings, sample_width: Math.min(width, 1000), sample_height: Math.min(height, 1000) });
+    cfg.t = { ...cfg.t, sample_width: width, sample_height: height };
+    cfg.derived.origin = { x: (machine.bed.width - width) / 2, y: (machine.bed.depth - height - cfg.derived.overhang) / 2 };
+    return cfg;
+  };
+  const initialCfg = panelConfig(), fit = bedFitErrors(initialCfg);
   if (fit.length) throw new PreflightError(fit);
   if (signal?.aborted) throw new DOMException('Export cancelled', 'AbortError');
   let texture = textureResult(options, repeat);
-  const cfg = resolveConfig(machine, material, { ...texture.cfg.t, sample_width: width, sample_height: height });
+  const cfg = panelConfig(texture.cfg.t);
   const h = cfg.t.layer_height, bead = cfg.t.extrusion_width;
   const model = vector ? interpretDrawing(vector, { scaleX: width / vector.width, scaleY: height / vector.height }) : null;
-  const outerBoundary = new PolygonBoundary(outline ?? (shapeOutline && model?.rings.length ? model.rings : [rectangle(width, height)]));
-  const boundary = outerBoundary;
+  const guides = model?.guides ?? [], outerBoundary = new PolygonBoundary(outline ?? (shapeOutline && model?.rings.length ? model.rings : [rectangle(width, height)]));
+  const boundary = guides.length ? conformalGuideRegion(outerBoundary, guides) : outerBoundary;
   // green shapes print solid once everything else is down, a layer above the highest strand printed under each one
   const solids = (model?.solids ?? []).map((g) => {
     const box = g.ring.reduce((b, p) => ({ minX: Math.min(b.minX, p.x), maxX: Math.max(b.maxX, p.x), minY: Math.min(b.minY, p.y), maxY: Math.max(b.maxY, p.y) }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
@@ -168,7 +181,8 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   const exportedSettings = { ...(options.settings ?? {}), colorChange: false };
   await add(writer.header({ comments: [`Garment panel ${width} x ${height} mm; ${options.design}; repeat ${repeat} mm`, 'Continuous crossed backing; texture repeats in sections; physical swatch qualification required', `settings ${JSON.stringify(exportedSettings)}`, `studio settings ${JSON.stringify({ design: options.design, settings: { ...(options.studySettings ?? exportedSettings), colorChange: false }, width, height, repeat, backingSpacing, print, material: material.id })}`] }));
   await emit(brimStrands);
-  const basis = backingLines(boundary, backingSpacing, h, vector ? h : 0, shapeOutline ? 0 : bead);
+  let basis = backingLines(boundary, backingSpacing, h, vector ? h : 0, shapeOutline ? 0 : bead);
+  if (guides.length) basis = resolveCrossings(repelGuideStrands(basis, guides, { boundary, strandWidth: bead }), { follow: true, preserve: true, lift: h, strandWidth: bead }).strands;
   if (!basis.length) throw new ConfigError(['No backing fits this outline. Use finer backing spacing or a larger panel.']);
   if (contactGraph(basis, { strandWidth: bead, layerHeight: h, cellSize: Math.max(5, backingSpacing) }).components !== 1) warnings.push('The backing is in separate pieces in this outline: use finer spacing or export separate garment pieces.');
   if (warnings.length) await add(warnings.map((w) => `; WARNING ${w}`));
@@ -178,7 +192,7 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     let serial = 0;
     const strand = (poly) => ({ id: `svg-${serial++}`, layer: 0, kind: 'base', shape: poly.shape && shapeOutline, pts: poly.pts.map((p) => ({ x: p.x, y: p.y, z: h })) });
     // as drawn: the lines of a drawing that is the outline are trimmed to the panel, not to the shapes they cross
-    // Original SVG strokes, including every green wall pass, stay as drawn. The green openings constrain fabric.
+    // Original SVG strokes, including every yellow wall pass, stay as drawn. The yellow openings constrain fabric.
     const lineBoundary = shapeOutline ? new PolygonBoundary([rectangle(width, height)]) : outerBoundary;
     const source = [...whole.map(strand), ...clipStrands(clipped.map(strand), lineBoundary, bead / 2)];
     progress({ phase: 'svg', done: 0, total }); await emit(orderStrands(joinStrokes(source, { within: bead * 1.1, allow: (p, q) => segmentInside(p, q, boundary) }), { improve: true }));
@@ -190,7 +204,7 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   // a picture is one picture across the whole panel, so every section is made from its own window onto it
   const pictured = options.design === 'squiggle' && options.settings?.pattern === 'image' && !!options.image;
   const designModule = DESIGNS.find((d) => d.id === options.design);
-  const drawn = !!vector && !!designModule?.usesVector;
+  const drawn = !!vector && (designModule?.usesVector || designModule?.vectorGuides);
   const sectionStrands = (x, y, w, ht) => {
     if (!drawn && !pictured) return texture.strands;
     const local = drawn ? textureResult({ ...options, ...(legacyMode ? {} : { sectionWidth: w, sectionHeight: ht }) }, repeat, x, y)
@@ -208,20 +222,26 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     const w = Math.min(repeat, width - x), ht = Math.min(repeat, height - y);
     const cellBoundary = new PolygonBoundary([rectangle(w, ht)]), phaseX = ((x - basis[0].pts[0].x) % backingSpacing + backingSpacing) % backingSpacing, phaseY = y % backingSpacing;
     const key = `${w}:${ht}:${phaseX.toFixed(5)}:${phaseY.toFixed(5)}`;
-    let local = !outline && !pictured && !drawn ? cache.get(key) : null;
+    let local = !outline && !pictured && !drawn && !guides.length ? cache.get(key) : null;
     if (!local) {
       local = clipStrands(sectionStrands(x, y, w, ht).map((s) => ({ ...s, pts: s.pts.map((p) => ({ ...p, z: p.z + zOffset })) })), cellBoundary, drawn ? 0 : bead / 2);
-      if (!outline && !shapeOutline) {
+      if (!outline && !shapeOutline && !guides.length) {
         const localBasis = basis.filter((s) => { const b = bounds(s); return b.maxX >= x && b.minX <= x + w && b.maxY >= y && b.minY <= y + ht; }).map((s) => ({ ...s, pts: s.pts.map((p) => ({ ...p, x: Math.max(0, Math.min(w, p.x - x)), y: Math.max(0, Math.min(ht, p.y - y)) })) })).filter((s) => Math.hypot(s.pts[1].x - s.pts[0].x, s.pts[1].y - s.pts[0].y) > 0.1);
         local = [...anchorTexture(localBasis, local, cellBoundary, h, bead), ...local];
       }
-      if (!outline && !pictured && !drawn) { if (cache.size >= 4) cache.delete(cache.keys().next().value); cache.set(key, local); }
+      if (!outline && !pictured && !drawn && !guides.length) { if (cache.size >= 4) cache.delete(cache.keys().next().value); cache.set(key, local); }
     }
     let placed = local.map((s) => ({ ...s, id: `section-${sections}-${s.id}`, pts: s.pts.map((p) => ({ ...p, x: p.x + x, y: p.y + y })) }));
-    if (outline || shapeOutline) {
+    if (outline || shapeOutline || guides.length) {
+      if (guides.length && !designModule?.vectorGuides) placed = repelGuideStrands(placed, guides, { boundary, strandWidth: bead });
       placed = clipStrands(placed.filter((s) => !s.id.includes('anchor-')), boundary, bead / 2);
       if (shapeOutline) placed = finishAtPrintedBoundary(placed, boundary, bead);
-      const support = clipStrands(basis, new PolygonBoundary([rectangle(w, ht, x, y)]), 0);
+      if (guides.length) placed = resolveCrossings(placed, { follow: true, preserve: true, lift: h, strandWidth: bead }).strands;
+      let support;
+      if (guides.length) {
+        const extent = bounds({ pts: placed.flatMap((s) => s.pts) }), pad = Math.max(2 * backingSpacing, bead * 4);
+        support = basis.filter((s) => { const b = bounds(s); return b.maxX >= extent.minX - pad && b.minX <= extent.maxX + pad && b.maxY >= extent.minY - pad && b.minY <= extent.maxY + pad; });
+      } else support = clipStrands(basis, new PolygonBoundary([rectangle(w, ht, x, y)]), 0);
       placed = [...anchorTexture(support, placed, boundary, h, bead), ...placed];
     }
     peakSectionMoves = Math.max(peakSectionMoves, placed.reduce((n, s) => n + s.pts.length + 3, 0));
@@ -238,5 +258,5 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     await flush();
   }
   await add([`; actual print ${JSON.stringify(print)}`, `; panel estimate (no acceleration): ${(writer.timeSec / 60).toFixed(1)} min; filament ${writer.cumE.toFixed(1)} mm`, ...writer.footer()]); await flush();
-  return { sections, peakSectionMoves, bytes, moves: writer.moves, filamentMm: writer.cumE, timeSec: writer.timeSec, solidCount: solids.length, print, warnings, physicallyVerified: false };
+  return { sections, peakSectionMoves, bytes, moves: writer.moves, filamentMm: writer.cumE, timeSec: writer.timeSec, guideCount: guides.length, solidCount: solids.length, print, warnings, physicallyVerified: false };
 }

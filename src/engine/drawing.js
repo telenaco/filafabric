@@ -17,12 +17,13 @@ import { unionFilledRegions } from './polygon-region.js';
 
 export const FILL = 'red';
 export const HOLE = 'blue';
+export const GUIDE = 'yellow';
 export const SOLID = 'green';
 export const MAX_PASSES = 8;
 
 /* ---------- what is saved of a drawing ---------- */
 
-const COLOURS = new Set(['red', 'blue', 'green', 'other']);
+const COLOURS = new Set(['red', 'blue', 'green', 'yellow', 'other']);
 
 /** A drawing from a file or a saved setting, or null when it cannot be one. Keeps `styles` only when they line up with the paths. */
 export function sanitizeSvgLines(raw) {
@@ -133,19 +134,19 @@ function nest(shapes) {
  *   fills:  { ring, holes: ring[] }[],                              the regions to fill: a filled shape and the holes cut out of it
  *   rings:  ring[],                                                 every ring of every region: even-odd gives the filled area
  *   lines:  { pts, width, closed, index }[],                        what prints as lines
- *   solids: { ring, index }[],                                      closed green shapes, printed solid on top
  *   styled: boolean,                                                the file said which colours its shapes are
  * }}
  */
 export function interpretDrawing(vector, { scaleX = 1, scaleY = 1 } = {}) {
   const widthScale = Math.sqrt(Math.abs(scaleX * scaleY)) || 1;
   const styled = Array.isArray(vector.styles) && vector.styles.length === vector.paths.length;
-  const shapes = [], lines = [], solids = [];
+  const shapes = [], lines = [], guides = [], solids = [];
   vector.paths.forEach((path, index) => {
     if (path.length < 2) return;
     const pts = path.map((p) => ({ x: p.x * scaleX, y: p.y * scaleY }));
     const style = styled ? vector.styles[index] : null;
     const ring = closedRing(pts);
+    if (ring && style?.color === GUIDE) guides.push({ ring, width: style.width * widthScale, index });
     // a solid shape is all fill: its edge is the fill's own first pass, so it is not printed again as a line
     if (ring && style?.color === SOLID) solids.push({ ring, index });
     else if (ring && (!style || style.color === FILL || style.color === HOLE)) shapes.push({ ring, color: style ? style.color : null, index });
@@ -176,7 +177,7 @@ export function interpretDrawing(vector, { scaleX = 1, scaleY = 1 } = {}) {
   }
   const rings = unionFilledRegions(fills);
   for (const s of shapes) delete s.samples;
-  return { shapes, fills, rings, lines, solids, styled };
+  return { shapes, fills, rings, lines, guides, solids, styled };
 }
 
 /* ---------- lines and their passes ---------- */
@@ -280,11 +281,11 @@ export function cropToDrawing(vector, { margin = 3 } = {}) {
 
 /* ---------- what the import card says ---------- */
 
-/** { fills, holes, solids, lines, passes } of a drawing: how many shapes are filled, how many holes, how many solid shapes, how many lines, the most passes any line takes. */
+/** { fills, holes, lines, passes } of a drawing: how many shapes are filled, how many holes, how many lines, the most passes any line takes. */
 export function summariseDrawing(vector, { bead = 0.45 } = {}) {
   const m = interpretDrawing(vector);
   const holes = new Set(m.fills.flatMap((f) => f.holes)).size;
-  return { fills: m.fills.length, holes, solids: m.solids.length, lines: m.lines.length, passes: m.lines.reduce((n, l) => Math.max(n, passesFor(l.width, bead)), 1), styled: m.styled };
+  return { fills: m.fills.length, holes, guides: m.guides.length, solids: m.solids.length, lines: m.lines.length, passes: m.lines.reduce((n, l) => Math.max(n, passesFor(l.width, bead)), 1), styled: m.styled };
 }
 
 export function describeDrawing(s) {
@@ -292,6 +293,7 @@ export function describeDrawing(s) {
   const parts = [];
   if (s.fills) parts.push(`${plural(s.fills, 'filled shape')}${s.holes ? ` with ${plural(s.holes, 'hole')}` : ''}`);
   if (s.lines) parts.push(`${plural(s.lines, 'line')}${s.passes > 1 ? ` (up to ${s.passes} passes)` : ''}`);
+  if (s.guides) parts.push(plural(s.guides, 'yellow guide'));
   if (s.solids) parts.push(plural(s.solids, 'solid shape'));
   return parts.length ? parts.join(', ') : 'nothing to print yet';
 }

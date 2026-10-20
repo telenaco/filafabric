@@ -1,7 +1,9 @@
 import { sampleGrid, isoLines } from './isolines.js';
-import { clipPolyline } from './layers.js';
+import { clipPolyline, appendPoints } from './layers.js';
 import { PolygonBoundary } from './boundary.js';
 import { ConfigError } from './params.js';
+import { guidedConformalLayers } from './conformal-guides.js';
+export { conformalGuideRegion, repelGuideStrands } from './conformal-guides.js';
 
 /**
  * Conformal mesh: the two layers are the level lines of the real and the imaginary part of one complex function
@@ -125,7 +127,7 @@ function joinAtBorder(list, outer, region, maxJog) {
       const ok = Math.hypot(start.x - end.x, start.y - end.y) <= maxJog
         && atBorder(end, cur[cur.length - 2]) && atBorder(start, pts[1])
         && region.contains((start.x + end.x) / 2, (start.y + end.y) / 2);
-      if (ok) { cur.push(...pts); continue; }
+      if (ok) { appendPoints(cur, pts); continue; }
       out.push(cur);
     }
     cur = pts.slice();
@@ -152,7 +154,8 @@ function splitWhere(pts, ok) {
  * @param feature  size of the holes or the distance of the poles, as a fraction of half the shorter side
  * @param arms, twist  the nautilus: how many lines of each family go once round
  */
-export function conformalLayers(boundary, { map = 'hole', spacing = 3, feature = 0.35, arms = 21, twist = 13 } = {}) {
+export function conformalLayers(boundary, { map = 'hole', spacing = 3, feature = 0.35, arms = 21, twist = 13, guides = [], guideHems = true, strandWidth = 0.45 } = {}) {
+  if (guides.length) return guidedConformalLayers(boundary, { spacing, guides, guideHems, strandWidth });
   const m = MAPS[map];
   if (!m) throw new Error(`Unknown conformal map: ${map}`);
   const box = boundary.bbox();

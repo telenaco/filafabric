@@ -31,11 +31,19 @@ export const LSYSTEMS = Object.freeze({
 export function lsystemCurve(id, iterations) {
   const sys = LSYSTEMS[id];
   let word = sys.axiom;
-  for (let i = 0; i < iterations; i++) word = [...word].map((ch) => sys.rules[ch] ?? ch).join('');
+  for (let i = 0; i < iterations; i++) {
+    let next = '';
+    for (let c = 0; c < word.length; c++) {
+      const ch = word[c];
+      next += sys.rules[ch] ?? ch;
+    }
+    word = next;
+  }
   const turn = (sys.angle * Math.PI) / 180;
   let x = 0, y = 0, a = 0;
   const pts = [{ x, y }];
-  for (const ch of word) {
+  for (let c = 0; c < word.length; c++) {
+    const ch = word[c];
     if (sys.draw.includes(ch)) {
       x += Math.cos(a);
       y += Math.sin(a);
@@ -238,6 +246,7 @@ export function tspTour(points) {
 
 /** One round of Chaikin corner cutting on an open polyline (the ends stay put). */
 function chaikin(pts) {
+  if (pts.length > 20000) return pts;
   const out = [pts[0]];
   for (let i = 1; i < pts.length; i++) {
     const a = pts[i - 1], b = pts[i];

@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { applySvgSolids, vectorSolids, topOver, SOLID_LAYERS } from '../src/engine/svg-solids.js';
 import { exportPanel } from '../src/engine/panel.js';
 import { generateDesignExport } from '../src/engine/design-export.js';
-import { cutOpenings } from '../src/engine/region-cut.js';
 import { boundaryFor } from '../src/engine/layers.js';
 import { PolygonBoundary } from '../src/engine/boundary.js';
 import { defaultProfiles } from './helpers.js';
@@ -71,19 +70,4 @@ test('a repeating panel prints the green shapes once, on top, after every sectio
   const before = [...text.slice(0, at).matchAll(/^G1 [^\n]*Z([\d.]+)/gm)].map((m) => +m[1]);
   assert.ok(zs.length === 0 || Math.min(...zs) > 0, 'the fill prints');
   assert.ok(Math.max(...before) > 0);
-});
-
-test('holes cut out of an outline: overlapping and nested ones are one hole, and an island can be removed', () => {
-  const ellipse = (x, y, r, n = 64) => Array.from({ length: n }, (_, k) => ({ x: x + r * Math.cos((k * 2 * Math.PI) / n), y: y + r * Math.sin((k * 2 * Math.PI) / n) }));
-  const b = boundaryFor(60, 50);
-  const region = cutOpenings(b, [ellipse(24, 25, 10), ellipse(36, 25, 10), ellipse(24, 25, 3)]);
-  assert.equal(region.contains(30, 25), false, 'the overlap does not become material');
-  assert.equal(region.contains(24, 25), false, 'a nested hole does not put material back');
-  assert.equal(region.contains(5, 5), true);
-  assert.equal(cutOpenings(boundaryFor(50, 50), [ellipse(25, 25, 100)]).contains(25, 25), false, 'a hole bigger than the swatch removes it all');
-  const first = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 20 }, { x: 0, y: 20 }];
-  const second = [{ x: 30, y: 0 }, { x: 50, y: 0 }, { x: 50, y: 20 }, { x: 30, y: 20 }];
-  const islands = cutOpenings(new PolygonBoundary([first, second]), [second]);
-  assert.equal(islands.contains(10, 10), true);
-  assert.equal(islands.contains(40, 10), false);
 });

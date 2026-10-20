@@ -270,14 +270,18 @@ export function createPreview(container) {
     if (state.result) { build(state.result); applyVisibility(); applyRange(); }
   });
 
-  renderer.setAnimationLoop(() => {
+  const animate = () => {
     controls.update();
     renderer.render(scene, camera);
-  });
+  };
+  let visible = true;
+  renderer.setAnimationLoop(animate);
   resize();
 
   return {
     update,
+    reset() { clear(); state.result = null; state.framedFor = ''; },
+    setVisible(on) { if (on === visible) return; visible = on; renderer.setAnimationLoop(on ? animate : null); if (on) resize(); },
     /** Roles that have at least one move in the current result, in legend order. */
     presentRoles() { return ROLES.filter((role) => Object.keys(state.buckets).some((key) => key.split('@')[0] === role && state.buckets[key].idx?.length > 0)); },
     setCamera(name) { state.camera = name; if (state.result) frame(true); },

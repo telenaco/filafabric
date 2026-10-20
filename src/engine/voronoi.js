@@ -1,6 +1,6 @@
 import { createRng } from './rng.js';
 import { ConfigError } from './params.js';
-import { clipPolyline, trailsFromEdges, densify } from './layers.js';
+import { clipPolyline, trailsFromEdges, densify, chainPolylines } from './layers.js';
 
 /**
  * Voronoi lace: a centroidal Voronoi tessellation (Lloyd-relaxed, so the cells are even and round) with its Delaunay
@@ -187,7 +187,7 @@ export function voronoiLayers(boundary, { spacing = 8, relax = 4, seed = 1, tone
     throw new ConfigError([`This would need about ${estimate} cells; the limit is ${MAX_SITES}. Use larger cells or a smaller swatch.`]);
   }
   const points = sites(box, { spacing, relax, seed, tone });
-  const toLayer = (edges) => trailsFromEdges(edges).flatMap((t) => clipPolyline(densify(t), boundary));
+  const toLayer = (edges) => chainPolylines(trailsFromEdges(edges).flatMap((t) => clipPolyline(densify(t), boundary)), boundary, spacing);
   if (whole && isBox(boundary)) {
     // whole cells (repeats.js): every site mirrored across each edge, so the edge itself is a wall of the lace (the
     // wall between a site and its mirror image lies on it). The cells along the edge are closed there, with their walls

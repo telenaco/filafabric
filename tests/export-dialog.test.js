@@ -47,15 +47,15 @@ test('the design identifier uses selected dimensions rather than a sampled previ
   assert.deepEqual(size, [400, 300]);
 });
 
-function exportHost({ size = 200, previewSize = 100, pending = null, timer = null, fail = false } = {}) {
+function exportHost({ size = 200, previewSize = 100, pending = null, timer = null, fail = false, ready = null } = {}) {
   const result = (width) => ({ cfg: { t: { sample_width: width, sample_height: width } }, moves: [{}], gcode: '; Textile G-code generator v1\nG90\n', stats: { moves: 1, timeSec: 123 } });
   const host = {
     Blob, AbortController, DOMException, structuredClone,
     exporting: false, exportController: null, exportLabel: '', genTimer: timer,
-    previewBuild: pending, state: { design: 'svgdesign', docName: 'Sample', print: { layerHeight: 0.2, layers: 2 }, resultKey: 'current', result: result(previewSize) },
+    previewBuild: pending, readyGcode: ready, state: { design: 'svgdesign', docName: 'Sample', print: { layerHeight: 0.2, layers: 2 }, resultKey: 'current', result: result(previewSize) },
     exportOptions: () => ({ design: 'svgdesign', width: size, height: size, machine: { id: 'printer' }, material: { id: 'tpu' }, studySettings: { backing1Spacing: 5.12345, pattern: 'none' } }),
     snapshotKey: () => 'current', currentSwatch: () => 'test', swatchFileName: () => 'short.gcode',
-    renderBusy() {}, renderExport() {}, render() {}, toast() {},
+    renderBusy() {}, renderExport() {}, render() {}, toast() {}, printEstimates: { put() {} },
     async buildSwatch(input) { host.built = input; if (fail) throw new Error('Too large'); return result(input.width); },
     download(name, blob) { host.saved = { name, blob }; },
     reportStudyExport(type, input, stats) { host.recorded = { type, input, stats }; },
@@ -118,6 +118,21 @@ test('Export waits for the current full-size preview instead of saving stale geo
   await run;
   assert.ok(host.saved);
   assert.equal(host.built, undefined);
+});
+
+test('Export saves G-code already generated for these exact settings, without building it again', async () => {
+  const ready = { key: 'current', result: { cfg: { t: { sample_width: 200, sample_height: 200 } }, gcode: '; Textile G-code generator v1\nG1 X1\n', moveCount: 5, stats: { timeSec: 60 } } };
+  const host = exportHost({ ready });
+  await host.run();
+  assert.equal(host.built, undefined, 'no second build');
+  assert.match(await host.saved.blob.text(), /G1 X1/);
+});
+
+test('G-code generated for other settings is never saved', async () => {
+  const host = exportHost({ ready: { key: 'older', result: { gcode: '; old\n', moveCount: 1, cfg: { t: {} }, stats: {} } } });
+  await host.run();
+  assert.equal(host.built.width, 200, 'built afresh');
+  assert.doesNotMatch(await host.saved.blob.text(), /; old/);
 });
 
 test('scheduled edits prevent reuse of the previous preview', async () => {

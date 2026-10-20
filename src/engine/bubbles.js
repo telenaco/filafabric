@@ -1,6 +1,6 @@
 import { createRng } from './rng.js';
 import { ConfigError } from './params.js';
-import { clipPolyline, chainPolylines } from './layers.js';
+import { clipPolyline, chainPolylines, appendPoints } from './layers.js';
 import { delaunay } from './voronoi.js';
 
 /**
@@ -127,7 +127,7 @@ export function orthogonalCircle(a, b, c) {
 function tour(circles, children, root, width, unbridged = []) {
   const pts = [];
   const half = (r) => Math.asin(Math.min(0.9, width / 2 / r));
-  const arc = (c, from, to) => pts.push(...circle(c, c.r, from, to).slice(pts.length ? 1 : 0));
+  const arc = (c, from, to) => appendPoints(pts, circle(c, c.r, from, to), pts.length ? 1 : 0);
   // round circle i from angle `from` to `to`, detouring into each child on the way
   const walk = (i, from, to) => {
     const c = circles[i];
@@ -252,7 +252,7 @@ export function bubblesLayers(boundary, { size = 4, gap = 0.6, seed = 1, tone = 
     while (queue.length) {
       const unbridged = [];
       rings.push(tour(circles, children, queue.shift(), width, unbridged));
-      queue.push(...unbridged);
+      appendPoints(queue, unbridged);
     }
   } else {
     rings = circles.map((c) => circle(c, c.r));

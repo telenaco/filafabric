@@ -43,6 +43,8 @@ export function bindPanelExport({
       : '';
   };
   const refresh = () => {
+    const machine = machines().get(machineId());
+    if (machine) { $('panel-width').max = String(machine.bed.width); $('panel-height').max = String(machine.bed.depth); }
     const problem = bedProblem();
     set('export-fit', problem);
     show('export-fit', !!problem);
@@ -121,6 +123,8 @@ export function bindPanelExport({
   $('panel-cancel').addEventListener('click', async () => { worker?.terminate(); worker = null; if (file) { try { await file.abort(); } catch {} file = null; } controls(false); status('Export cancelled. No completed file was saved.'); });
 
   $('panel-start').addEventListener('click', async () => {
+    const problem = bedProblem();
+    if (problem) { status(problem); refresh(); return; }
     if (mode === 'swatch') {
       saveSwatch(chosenName());
       dialog.close();

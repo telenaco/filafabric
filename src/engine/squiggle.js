@@ -215,6 +215,7 @@ export function generateSquiggleTextile({
   colorChange = false,
   boundary = null,
   whole = true,
+  planCrossings = true,
 }) {
   const z1 = layerHeight;
   const z2 = layerHeight * 2;
@@ -323,7 +324,7 @@ export function generateSquiggleTextile({
     ]);
   }
 
-  if (shaped) {
+  if (shaped && planCrossings) {
     const lift = layerHeight * 1.25;
     const settle = (layer, prefix) => resolveCrossings(
       layer.map((pts, i) => ({ id: `${prefix}${i}`, kind: 'base', pts })),

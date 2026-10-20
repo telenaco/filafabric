@@ -9,6 +9,7 @@ import { fitLanes } from './repeats.js';
 import { resolveCrossings } from './crossings.js';
 import { MAX_MOVES } from './tiler.js';
 import { finishFabric } from './fabric-result.js';
+import { appendPoints } from './layers.js';
 
 /**
  * Coil: flat rows of one continuous looped strand, one layer thick.
@@ -51,6 +52,7 @@ export function generateCoilTextile({
   boundary = null,
   rowPitch: rowPitchOverride = null,
   whole = true,
+  planCrossings = true,
 }) {
   const warnings = [];
   const rowPitch = rowPitchOverride ?? coilRowPitch(size, rowOverlap, strandWidth);
@@ -107,7 +109,7 @@ export function generateCoilTextile({
           pts.push({ x: prev.x + outward * Math.sin(Math.PI * t) * bulge, y: prev.y + (next.y - prev.y) * t, z: layerHeight });
         }
       }
-      pts.push(...row.pts);
+      appendPoints(pts, row.pts);
       loops += row.loops;
       rows++;
     }
@@ -124,7 +126,7 @@ export function generateCoilTextile({
       for (const seg of segments) {
         const row = lane(seg.c, seg.from, seg.to);
         if (pts.length) connect(pts, pts[pts.length - 1], row.pts[0], layerHeight);
-        pts.push(...(pts.length ? row.pts.slice(1) : row.pts));
+        appendPoints(pts, row.pts, pts.length ? 1 : 0);
         loops += row.loops;
         rows++;
       }
@@ -140,7 +142,7 @@ export function generateCoilTextile({
     if (strands.length === 0) warnings.push('The outline is too small for these loops: nothing to print');
   }
 
-  const resolved = resolveCrossings(strands, { lift, strandWidth });
+  const resolved = planCrossings ? resolveCrossings(strands, { lift, strandWidth }) : { strands, crossings: 0, maxLift: 0, maxSlopeDeg: 0 };
   return {
     strands: resolved.strands,
     rows,

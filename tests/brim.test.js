@@ -8,7 +8,7 @@ import { layeredResult } from '../src/engine/layers.js';
 import { ConfigError } from '../src/engine/params.js';
 import { parseSvg } from '../src/engine/svg-parse.js';
 import { interpretDrawing } from '../src/engine/drawing.js';
-import { cutOpenings } from '../src/engine/region-cut.js';
+import { conformalGuideRegion } from '../src/engine/conformal-guides.js';
 import { defaultProfiles } from './helpers.js';
 
 const P = (x,y) => ({x,y});
@@ -196,10 +196,10 @@ test('disjoint curved holes with overlapping bounding boxes stay on the convex o
   for(const s of strands) for(let i=0;i<s.pts.length;i+=19) assert.ok(safePoint(s.pts[i],boundary,.225));
 });
 
-test('an actual parsed blue SVG circle cut out of the page accepts the default brim',()=>{
-  const vector=parseSvg('<svg xmlns="http://www.w3.org/2000/svg" width="200mm" height="200mm" viewBox="0 0 200 200"><circle cx="100" cy="100" r="20" fill="none" stroke="blue"/></svg>');
-  const holes=interpretDrawing(vector).shapes.filter((s)=>s.role==='hole').map((s)=>s.ring);
-  const region=cutOpenings(new PolygonBoundary([rectangle(200,200)]),holes);
+test('an actual parsed yellow SVG circle and its conformal opening accept the default brim',()=>{
+  const vector=parseSvg('<svg xmlns="http://www.w3.org/2000/svg" width="200mm" height="200mm" viewBox="0 0 200 200"><circle cx="100" cy="100" r="20" fill="none" stroke="yellow"/></svg>');
+  const guides=interpretDrawing(vector).guides;
+  const region=conformalGuideRegion(new PolygonBoundary([rectangle(200,200)]),guides);
   const strands=buildBrimStrands(region.rings);
   assert.equal(strands.length,4);
   for(const s of strands) for(let i=0;i<s.pts.length;i+=19) assert.ok(safePoint(s.pts[i],region,.225));
@@ -224,7 +224,7 @@ test('a finely sampled concave garment stays within the original material and be
 });
 
 test('an imported drawing: curved shapes beside a non-convex one still get their brim, inside the outline', () => {
-  // an outline from SvgExampleTemplate.svg at 200 x 200 mm with openings cut in it: the page,
+  // the outline SvgExampleTemplate.svg gives the Zigzag mesh at 200 x 200 mm once its green guides are cut out: the page,
   // a five-pointed star (not convex) and four finely drawn round contours (0.35 mm edges, 1,156 of them). One non-convex
   // ring sends every ring down the capsule path, where the tiny edges made too many overlapping capsules to clip, and
   // the import failed with "too complex".

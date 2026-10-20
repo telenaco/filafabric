@@ -1,5 +1,5 @@
 import { PolygonBoundary } from './boundary.js';
-import { clipPolyline, chainPolylines } from './layers.js';
+import { clipPolyline, chainPolylines, appendPoints } from './layers.js';
 import { centredLanes } from './fill.js';
 import { fitPeriod, fitLanes } from './repeats.js';
 
@@ -101,10 +101,10 @@ export function waveLines(boundary, { angle = 0, spacing = 3, amplitude = 1, wav
     // A wave can enter a slanted edge before its centre lane does. Generate its whole X extent, then clip the wave.
     const from = box.minX - wavelength, to = box.maxX + wavelength;
     const start = phase + k * laneShift + (from - box.minX) / wavelength;
-    pieces.push(...clipPolyline(lanePoints(shape, from, to, y, amplitude, wavelength, start), turned, 1));
+    appendPoints(pieces, clipPolyline(lanePoints(shape, from, to, y, amplitude, wavelength, start), turned, 1));
     // alternate lanes run the other way so the end of one is beside the start of the next
     if (k % 2 === 1) pieces.reverse().forEach((p) => p.reverse());
-    list.push(...pieces);
+    appendPoints(list, pieces);
   });
   const chains = chainPolylines(list, turned, spacing + 2 * amplitude + 2);
   return chains.map((pts) => pts.map((p) => rotate(p, c, s)));

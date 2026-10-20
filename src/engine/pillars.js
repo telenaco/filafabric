@@ -5,7 +5,7 @@ import { emitStrands } from './emit.js';
 import { MAX_MOVES } from './tiler.js';
 import { finishFabric } from './fabric-result.js';
 import { PolygonBoundary } from './boundary.js';
-import { boundaryArea, crossingReport, densify } from './layers.js';
+import { boundaryArea, crossingReport, densify, appendPoints } from './layers.js';
 import { resolveCrossings } from './crossings.js';
 import { serpentineChains } from './fill.js';
 
@@ -110,11 +110,19 @@ export function spacerStrands(boundary, { pitch = 5, layers = 8, radius = 1, eve
     }
     for (const x of xs) {
       const on = nodes.filter((n) => n.x === x);
-      if (on.length >= 2) out.push({ axis: 'x', c: x, pts: netLine('x', x, Math.min(...on.map((n) => n.y)), Math.max(...on.map((n) => n.y)), z) });
+      if (on.length >= 2) {
+        let minY = Infinity, maxY = -Infinity;
+        for (const n of on) { if (n.y < minY) minY = n.y; if (n.y > maxY) maxY = n.y; }
+        out.push({ axis: 'x', c: x, pts: netLine('x', x, minY, maxY, z) });
+      }
     }
     for (const y of ys) {
       const on = nodes.filter((n) => n.y === y);
-      if (on.length >= 2) out.push({ axis: 'y', c: y, pts: netLine('y', y, Math.min(...on.map((n) => n.x)), Math.max(...on.map((n) => n.x)), z) });
+      if (on.length >= 2) {
+        let minX = Infinity, maxX = -Infinity;
+        for (const n of on) { if (n.x < minX) minX = n.x; if (n.x > maxX) maxX = n.x; }
+        out.push({ axis: 'y', c: y, pts: netLine('y', y, minX, maxX, z) });
+      }
     }
     return out;
   };
@@ -143,7 +151,7 @@ export function spacerStrands(boundary, { pitch = 5, layers = 8, radius = 1, eve
     }
   }
   const top = netStrands((layers + 2) * layerHeight, 'top');
-  strands.push(...top.map((s) => ({ ...s, kind: 'supported' })));
+  appendPoints(strands, top.map((s) => ({ ...s, kind: 'supported' })));
   return { strands, nodes: nodes.length, pillars: nodes.length, rings, bottom: bottom.length, top: top.length };
 }
 
@@ -213,8 +221,8 @@ export function pillarWeaveStrands(boundary, { pitch = 4.8, layers = 6, radius =
       const pts = [];
       for (const seg of chain) {
         const run = weave(seg, k, z);
-        if (pts.length) pts.push(...densify([pts[pts.length - 1], run[0]], STEP).slice(1).map((p) => ({ ...p, z })));
-        pts.push(...(pts.length ? run.slice(1) : run));
+        if (pts.length) appendPoints(pts, densify([pts[pts.length - 1], run[0]], STEP).slice(1).map((p) => ({ ...p, z })));
+        appendPoints(pts, run, pts.length ? 1 : 0);
       }
       if (pts.length >= 2) strands.push({ id: `fibre-${k}-${ci}`, kind: k === 0 ? 'base' : 'supported', name: 'Fibre', layer: 2 * k + 1, pts });
       at = pts.at(-1) ?? at;

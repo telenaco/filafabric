@@ -19,7 +19,7 @@ export const DIRECTION_IDS = Object.freeze(Object.keys(DIRECTIONS));
 /**
  * @returns { layers } one layer per direction; every layer is hatch lines at that angle, offset so layers interleave
  */
-export function crosshatchLayers(boundary, { directions = '0-90', spacing = 3, shape = 'wave', size = 0, pitch = 6 } = {}) {
+export function crosshatchLayers(boundary, { directions = '0-90', spacing = 3, shape = 'wave', size = 0, pitch = 6, keepInside = 0.3, cornerStart = true } = {}) {
   const set = DIRECTIONS[directions];
   if (!set) throw new Error(`Unknown crosshatch directions: ${directions}`);
   // three directions are placed on one lattice through the middle: a line at angle a lies where n(a)·p is a whole
@@ -36,6 +36,8 @@ export function crosshatchLayers(boundary, { directions = '0-90', spacing = 3, s
     shape: size > 0 ? shape : null,
     size,
     pitch,
+    keepInside,
+    cornerStart: cornerStart && k > 0,
   }));
   return { layers, angles: set.angles };
 }

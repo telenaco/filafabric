@@ -60,6 +60,7 @@ const HALFTONE = defineControls({
 export const PUBLICATION_DESIGNS = [
   layered({
     id: 'halftone',
+    optimizeTravel: true,
     name: 'Halftone net',
     blurb: 'The same crossed net, with line thickness carrying a pattern',
     about: 'Two layers of lines cross as a plain net, like Crosshatch. The pattern is carried by how thick each line is, not by where the lines are, so the net holds together the same everywhere and the picture is a change of flow along every line (and a slower print where the bead is thick). With two colours and the second layer set to the complement, the layers trade thickness and the pattern shows as the colours swap. The thickness range is a material test: print a small swatch first.',

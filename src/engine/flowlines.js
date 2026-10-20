@@ -42,7 +42,7 @@ export const FLOW_IDS = Object.freeze(Object.keys(FLOWS));
  * Evenly spaced streamlines of `angleAt` inside the boundary.
  * @returns polylines of { x, y }
  */
-export function evenStreamlines(boundary, angleAt, { dsep = 3, step = 0.4, avoid = [], avoidRadius = 1.5, maxPoints = 60000 } = {}) {
+export function evenStreamlines(boundary, angleAt, { dsep = 3, step = 0.4, avoid = [], avoidRadius = 1.5, maxPoints = Infinity } = {}) {
   const dtest = 0.5 * dsep;
   const box = boundary.bbox();
   const cell = dsep;
