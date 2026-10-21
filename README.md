@@ -45,6 +45,10 @@ names can still download the studio's code. It keeps casual visitors out; for re
 Cloudflare Access (free for small teams) instead of, or as well as, this page. *Lock the studio* in the ⋯ menu locks this
 browser again.
 
+**Opening the gate for a while:** `"open": true` in `src/ui/gate-config.json` lets everyone straight into the studio, with no
+password page and no lock in the menu (it is open now, from 21 October 2026). The password stays set: delete the flag, or set a
+new password with `node tools/set-password.mjs` (which writes the file without it), commit and push to close the gate again.
+
 ## Feedback
 
 *Feedback* in the top bar opens a short form with three choices: what works and what doesn't, a pattern request, or a

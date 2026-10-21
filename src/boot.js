@@ -21,10 +21,12 @@ const keep = {
   },
 };
 
-async function openStudio() {
+async function openStudio({ open = false } = {}) {
   document.body.classList.remove('locked');
   $('gate')?.remove();
-  await import('./ui/main.js?v=20261021-picture-patterns');
+  await import('./ui/main.js?v=20261021-open-gate');
+  // with the gate open there is nothing to lock
+  if (open) $('btn-lock')?.remove();
   $('btn-lock')?.addEventListener('click', () => {
     keep.clear();
     location.reload();
@@ -42,6 +44,13 @@ async function start() {
     error.textContent = 'The studio could not start. Reload the page, and if it happens again let the owner know.';
     error.hidden = false;
     console.error(e);
+    return;
+  }
+
+  // "open": true in gate-config.json lets everyone in without the password, for a while; the password stays set, and
+  // removing the flag (or setting a new password with tools/set-password.mjs) closes the gate again
+  if (config.open === true) {
+    await openStudio({ open: true });
     return;
   }
 

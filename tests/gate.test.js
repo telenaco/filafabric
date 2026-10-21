@@ -86,3 +86,14 @@ test('the gate tells a visitor without a password where to ask for one', () => {
   const html = fs.readFileSync(path.join(projectRoot, 'index.html'), 'utf8');
   assert.match(html, /class="gate-access"[^>]*>[^<]*<a href="mailto:bubakidesign@gmail\.com[^"]*">bubakidesign@gmail\.com<\/a>/);
 });
+
+test('"open": true in the gate config lets the studio open without the password, and takes the lock away', () => {
+  const boot = fs.readFileSync(path.join(projectRoot, 'src', 'boot.js'), 'utf8');
+  const open = boot.indexOf('if (config.open === true)'), token = boot.indexOf('if (keep.get() === unlockToken(config))');
+  assert.ok(open > 0 && open < token, 'checked before any password or saved unlock');
+  assert.match(boot.slice(open, token), /await openStudio\(\{ open: true \}\);\s*return;/);
+  assert.match(boot, /if \(open\) \$\('btn-lock'\)\?\.remove\(\);/);
+  const config = JSON.parse(fs.readFileSync(path.join(projectRoot, 'src', 'ui', 'gate-config.json'), 'utf8'));
+  assert.ok(config.open === undefined || typeof config.open === 'boolean');
+  assert.match(config.hash, /^[0-9a-f]{64}$/, 'the password stays set for when the gate closes again');
+});
