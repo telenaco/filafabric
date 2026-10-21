@@ -10,7 +10,7 @@ const { machine, material } = defaultProfiles();
 
 test('each setting shows the filament\'s own value until it is changed', () => {
   assert.deepEqual(FILAMENT_FIELDS.map((f) => [f.key, filamentValue(material, {}, f.key)]), [
-    ['firstLayerTemp', 248], ['nozzleTemp', 248], ['bedTemp', 50], ['retraction', 4], ['retractSpeed', 65], ['primeExtra', 0],
+    ['firstLayerTemp', 248], ['nozzleTemp', 248], ['bedTemp', 50], ['retraction', 4], ['retractSpeed', 65], ['primeExtra', 0.2],
   ]);
   assert.equal(withFilamentSettings(material, {}), material, 'nothing changed: the same filament');
 });

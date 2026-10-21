@@ -11,6 +11,7 @@ import { emitStrands } from '../src/engine/emit.js';
 import { computeStats } from '../src/engine/stats.js';
 import { writeGcode } from '../src/engine/gcode.js';
 import { designById } from '../src/ui/designs.js';
+import { plateMoves } from './plate.mjs';
 
 const profile = (kind, id) => JSON.parse(fs.readFileSync(new URL(`../profiles/${kind}/${id}.json`, import.meta.url)));
 const machine = profile('machines', 'prusa-mk3s');
@@ -51,34 +52,17 @@ const plateW = MARGIN + COLUMNS * W + (COLUMNS - 1) * GAP_X, plateH = rows * H +
 const plateCfg = resolveConfig(machine, material, { sample_width: plateW, sample_height: plateH });
 const h = plateCfg.t.layer_height;
 
-/** `before` then `after`, joined by a lift that retracts with `r`, and the prime that balances it on the first print of `after`. */
-function join(before, after, retraction) {
-  if (!before.length) return after;
-  const k = after.findIndex((m) => m.extrude);
-  if (after.slice(0, k + 1).some((m) => m.retract)) throw new Error('a swatch starts with a retraction of its own');
-  let top = 0;
-  for (const m of [...before, ...after]) if (m.z > top) top = m.z;
-  const last = before.at(-1);
-  return [...before, { x: last.x, y: last.y, z: top + 3, cls: 'travel', extrude: false, retract: 'retract', retraction },
-    ...after.map((m, i) => (i === k ? { ...m, retract: 'unretract', retraction } : m))];
-}
-
-let moves = [], previous = null;
-swatches.forEach((sw, i) => {
-  const ox = MARGIN + (i % COLUMNS) * (W + GAP_X), oy = Math.floor(i / COLUMNS) * (H + GAP_Y);
-  const own = sw.result.cfg.derived.retraction;
-  const mark = (m) => ({ ...m, x: m.x + ox, y: m.y + oy, retraction: own, ...(m.tag ? { tag: `${sw.letter}-${m.tag}` } : {}) });
-  // the bars: short lines on the bed left of the swatch, one for A up to six for F, printed with its own settings
+// each swatch is two parts with its own settings: its bars (short lines on the bed left of it, one for A up to six for
+// F), then the swatch itself
+const moves = plateMoves(swatches.flatMap((sw, i) => {
+  const at = [MARGIN + (i % COLUMNS) * (W + GAP_X), Math.floor(i / COLUMNS) * (H + GAP_Y)];
+  const retraction = sw.result.cfg.derived.retraction;
   const bars = Array.from({ length: i + 1 }, (_, b) => {
     const x = -BAR.inset - b * BAR.pitch, y0 = (H - BAR.length) / 2;
     return { id: `bar-${b + 1}`, kind: 'base', name: `Mark ${sw.letter}`, pts: [{ x, y: y0, z: h }, { x, y: y0 + BAR.length, z: h }] };
   });
-  const own_ = emitStrands(bars, { retraction: own }).map(mark);
-  const swatch = sw.result.moves.map(mark);
-  // the move into each part retracts with the settings of the part it leaves, and primes the same back
-  moves = join(join(moves, own_, previous ?? own), swatch, own);
-  previous = own;
-});
+  return [{ moves: emitStrands(bars, { retraction }), retraction, at, tag: sw.letter }, { moves: sw.result.moves, retraction, at, tag: sw.letter }];
+}));
 
 const stats = computeStats(moves, plateCfg, []);
 const comments = [
@@ -90,10 +74,7 @@ const comments = [
 const plateName = `ALL_A-F_zigzag_${W}x${H}mm_plate_${plateW}x${plateH}mm.gcode`;
 fs.writeFileSync(new URL(plateName, OUT), writeGcode(moves, plateCfg, { stats, comments }));
 
-// every retraction is primed back, swatch by swatch: what is pushed back on top is the extras and nothing else
-const retracts = moves.filter((m) => m.retract === 'retract').length, primes = moves.filter((m) => m.retract === 'unretract').length;
-if (retracts !== primes) throw new Error(`the plate has ${retracts} retractions and ${primes} primes`);
-
+const retracts = moves.filter((m) => m.retract === 'retract').length;
 const minutes = Math.round(stats.timeSec / 60);
 for (const s of swatches) console.log(`${s.letter}  retract ${s.length}  push ${s.length + s.extra}  ${s.hops} travels  ${s.minutes} min  ${s.name}`);
 console.log(`ALL  ${plateW} x ${plateH} mm on the bed, ${retracts} travels, about ${minutes} min  ${plateName}`);

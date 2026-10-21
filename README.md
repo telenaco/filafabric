@@ -177,15 +177,20 @@ the rest), bed temperature, retraction length and speed, and the extra push afte
 filament: choosing another starts from its own values, and *Use the filament's values* undoes it. Retraction applies
 before every travel the filament's `min_travel` allows; after it, the filament is pushed back the same length plus its
 `restart_extra` (PrusaSlicer's *extra length on restart*, read from imported slicer files). **Filaflex 95A Foamy
-retracts 4 mm at 65 mm/s before every travel, however short, and pushes the same 4 mm back** (Recreus's Foamy
-parameters: 2.5–5 mm at 65 mm/s). On the MK3S, 2.5 out and 2.5 back started thin for the first 6 cm after a travel,
-and 6 out and 7 back left a blob at every start: a long retraction lets the soft strand lose pressure, and the extra
-push lands as one lump. If a start is still thin, raise *Extra push after travel* in 0.1 mm steps (0.1 to about 0.4).
+retracts 4 mm at 65 mm/s before every travel, however short, and pushes 4.2 mm back** (Recreus's Foamy parameters:
+2.5–5 mm at 65 mm/s; 0.2 mm extra was the best of the swatches below, D). On the MK3S, 2.5 out and 2.5 back started
+thin for the first 6 cm after a travel, and 6 out and 7 back left a blob at every start: a long retraction lets the
+soft strand lose pressure, and too much extra push lands as one lump. *Extra push after travel* goes in 0.1 mm steps.
 `node tools/export-retraction-test.mjs` writes six 50 × 30 mm Zigzag mesh swatches, A to F (3, 4 and 5 mm, each with
 no extra and with 0.2 mm), to `DemoTestingPrints/retraction-test/` with an `INDEX.md`: one print with all six on the
 bed (A B C in front, D E F behind, each printed whole with its own retraction and marked by one to six short bars at
 its left), and each on its own. A move may carry its own retraction for this (`m.retraction`, read by the G-code writer
-and the statistics); the move between two swatches retracts and primes with the settings of the one it leaves.
+and the statistics); the move between two swatches retracts and primes with the settings of the one it leaves
+(`tools/plate.mjs`). The swatches look much alike, as the difference is only where a strand starts and stops, so
+`node tools/export-seam-test.mjs` writes one print where that is all there is: 36 circles of 20 mm, each a two-line
+brim as the studio prints one (two loops overlapping 20%, first layer only, each starting and closing on one spot), in
+nine blocks of four: columns 0.1, 0.2 and 0.3 mm extra push, rows front to back push-back speed 15, 25 and 40 mm/s
+(retraction 4 mm at 65 mm/s for all), to `DemoTestingPrints/seam-test/` with an `INDEX.md`.
 
 ## Printable SVG and garment panels
 

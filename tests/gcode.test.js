@@ -112,7 +112,7 @@ test('retract and unretract are emitted as relative E moves with the material sp
   const { gcode } = build({ retraction_length: 2.5 });
   const lines = gcode.split('\n');
   assert.ok(lines.some((l) => /^G1 E-2\.5 F3900$/.test(l)));
-  assert.ok(lines.some((l) => /^G1 E2\.5 F1500$/.test(l)), 'Foamy pushes back what it pulled');
+  assert.ok(lines.some((l) => /^G1 E2\.7 F1500$/.test(l)), 'Foamy pushes back what it pulled and 0.2 mm more');
   const s = scene({ sample_width: 20, sample_height: 20, retraction_length: 2.5 });
   s.cfg.derived.retraction = { ...s.cfg.derived.retraction, restartExtra: 0.3 };
   const pushed = writeGcode(plan(s.cfg, s.base, s.tiled.placements, s.boundary).moves, s.cfg).split('\n');
