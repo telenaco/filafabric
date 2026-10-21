@@ -32,3 +32,27 @@ test('every travel between strands of a design retracts first and primes again b
   assert.match(r.gcode, /^G1 E-4 F3900$/m);
   assert.match(r.gcode, /^G1 E4 F1500$/m);
 });
+
+test('a move can carry its own retraction, so swatches with different settings can share one print', async () => {
+  const { writeGcode } = await import('../src/engine/gcode.js');
+  const { computeStats } = await import('../src/engine/stats.js');
+  const cfg = resolveConfig(machine, material, { sample_width: 40, sample_height: 20 });
+  const own = { ...cfg.derived.retraction, length: 3, speed: 50, restartExtra: 0.2 };
+  const moves = [
+    { x: 0, y: 0, z: 0.2, cls: 'travel', extrude: false },
+    { x: 10, y: 0, z: 0.2, cls: 'base', extrude: true, tag: 'a' },
+    { x: 10, y: 0, z: 3, cls: 'travel', extrude: false, retract: 'retract', retraction: own },
+    { x: 20, y: 0, z: 0.2, cls: 'travel', extrude: false, retraction: own },
+    { x: 30, y: 0, z: 0.2, cls: 'base', extrude: true, tag: 'b', retract: 'unretract', retraction: own },
+    { x: 30, y: 0, z: 3, cls: 'travel', extrude: false, retract: 'retract' },
+    { x: 35, y: 10, z: 0.2, cls: 'travel', extrude: false },
+    { x: 38, y: 10, z: 0.2, cls: 'base', extrude: true, tag: 'c', retract: 'unretract' },
+  ];
+  const gcode = writeGcode(moves, cfg);
+  assert.match(gcode, /^G1 E-3 F3000$/m, 'its own: 3 mm at 50 mm/s');
+  assert.match(gcode, /^G1 E3\.2 F1500$/m, 'pushed back 3 + 0.2');
+  assert.match(gcode, /^G1 E-4 F3900$/m, 'the filament\'s again for a move without its own');
+  assert.match(gcode, /^G1 E4 F1500$/m);
+  const plain = computeStats(moves.map(({ retraction, ...m }) => m), cfg, []), mixed = computeStats(moves, cfg, []);
+  assert.ok(Math.abs(mixed.filamentMm - plain.filamentMm - 0.2) < 1e-9, 'its extra push counts as filament');
+});

@@ -33,11 +33,13 @@ export function computeStats(moves, cfg, placements) {
     }
     previous = m;
     previousExtruded = m.extrude;
-    if (m.retract === 'retract') timeSec += r.length / r.speed;
+    // a move may carry its own retraction (gcode.js)
+    const mr = m.retraction ?? r;
+    if (m.retract === 'retract') timeSec += mr.length / mr.speed;
     if (m.retract === 'unretract') {
       // the extra push after a travel is filament laid down, as much as any extrusion
-      timeSec += (r.length + (r.restartExtra ?? 0)) / r.deretractSpeed;
-      filamentMm += r.restartExtra ?? 0;
+      timeSec += (mr.length + (mr.restartExtra ?? 0)) / mr.deretractSpeed;
+      filamentMm += mr.restartExtra ?? 0;
     }
     if (m.violation) violations++;
     if (ds < 1e-9) continue;

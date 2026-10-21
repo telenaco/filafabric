@@ -182,7 +182,10 @@ parameters: 2.5–5 mm at 65 mm/s). On the MK3S, 2.5 out and 2.5 back started th
 and 6 out and 7 back left a blob at every start: a long retraction lets the soft strand lose pressure, and the extra
 push lands as one lump. If a start is still thin, raise *Extra push after travel* in 0.1 mm steps (0.1 to about 0.4).
 `node tools/export-retraction-test.mjs` writes six 50 × 30 mm Zigzag mesh swatches, A to F (3, 4 and 5 mm, each with
-no extra and with 0.2 mm), to `DemoTestingPrints/retraction-test/` with an `INDEX.md`, to compare side by side.
+no extra and with 0.2 mm), to `DemoTestingPrints/retraction-test/` with an `INDEX.md`: one print with all six on the
+bed (A B C in front, D E F behind, each printed whole with its own retraction and marked by one to six short bars at
+its left), and each on its own. A move may carry its own retraction for this (`m.retraction`, read by the G-code writer
+and the statistics); the move between two swatches retracts and primes with the settings of the one it leaves.
 
 ## Printable SVG and garment panels
 

@@ -135,7 +135,8 @@ export class GcodeWriter {
     return out;
   }
   move(m) {
-    const {t,machine,derived}=this.cfg, o=derived.origin, r=derived.retraction;
+    // a move may carry its own retraction (swatches with their own settings on one print); otherwise the filament's
+    const {t,machine,derived}=this.cfg, o=derived.origin, r=m.retraction??derived.retraction;
     if(![m.x,m.y,m.z].every(Number.isFinite) || m.x+o.x < -1e-6 || m.x+o.x > machine.bed.width+1e-6 || m.y+o.y < -1e-6 || m.y+o.y > machine.bed.depth+1e-6 || m.z < -1e-6 || m.z > machine.bed.max_z+1e-6) throw new PreflightError(['A streamed move leaves the printable volume or is not finite']);
     const out=[];this.moves++;this.maxZ=Math.max(this.maxZ,m.z);
     if(m.comment) out.push('; '+m.comment); if(m.customGcode) out.push(m.customGcode);
