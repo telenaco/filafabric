@@ -14,6 +14,7 @@ import { resolveConfig, ConfigError } from './params.js';
 import { createRng } from './rng.js';
 import { createField } from './fields.js';
 import { spacerStrands, pillarWeaveStrands } from './pillars.js';
+import { patternField, pictureDarkness } from './picture.js';
 import { solidOnly } from './svg-solids.js';
 
 export function useWholeOverview(width, height, machine, choice = 'auto') {
@@ -47,14 +48,15 @@ export function rawLayers(input, shape, factor) {
   const outer = boundaryFor(width, height, shape.rings);
   const boundary = shape.guides.length ? conformalGuideRegion(outer, shape.guides) : outer;
   const bead = (input.machine?.nozzle_diameter ?? .4) * 1.125;
-  const context = { vector: input.vector, bead, vectorSize: [width, height], vectorOffset: [0, 0], includeLines: false };
+  const picture = input.image ? { image: input.image, size: [width, height], offset: [0, 0] } : null;
+  const context = { vector: input.vector, bead, vectorSize: [width, height], vectorOffset: [0, 0], includeLines: false, picture };
   if (mod.overviewLayers) return mod.overviewLayers(s, boundary, context);
   const layersOf = result => [result.strands.map(s => s.pts)];
   if (input.design === 'spacer') return layersOf(spacerStrands(boundary, { ...s, layers: 1 }));
   if (input.design === 'pillarweave') return layersOf(pillarWeaveStrands(boundary, { ...s, layers: 2 }));
   if (input.design === 'squiggle') return layersOf(generateSquiggleTextile({ ...s, boundary, planCrossings: false,
-    sampler: s.pattern === 'image' && input.image ? createImageSampler(input.image, width, height, { yUp: true }) : SAMPLERS[s.pattern] ?? SAMPLERS.centerSpot }));
-  const field = ['coil', 'boucle', 'relief'].includes(input.design) && s.pattern && s.pattern !== 'none' ? createField(s.pattern, { scale: s.patternScale ?? 1 }) : null;
+    sampler: s.pattern === 'image' && input.image ? pictureDarkness(input.image, width, height) : SAMPLERS[s.pattern] ?? SAMPLERS.centerSpot }));
+  const field = ['coil', 'boucle', 'relief'].includes(input.design) ? patternField(s.pattern, { scale: s.patternScale ?? 1, picture }) : null;
   if (input.design === 'coil' || input.design === 'boucle') return layersOf(generateCoilTextile({ ...s, boundary, planCrossings: false,
     shape: input.design === 'boucle' ? 'ring' : s.shape, rowOverlap: input.design === 'boucle' ? 0 : s.rowOverlap / 100,
     sizeAt: field ? (x, y) => field(x, y, width, height) : null }));

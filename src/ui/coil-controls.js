@@ -1,3 +1,4 @@
+import { patternField, withPicture } from '../engine/picture.js';
 import { validNumber } from './numeric.js';
 // The Coil design's controls: ranges, defaults, sanitising, presets and read-outs.
 // Pure functions: no DOM, so they are tested in Node like the engine.
@@ -17,7 +18,7 @@ export const COIL_RANGES = Object.freeze({
 export const COIL_SHAPES = SHAPE_IDS;
 
 /** 'none' (every loop the same size) plus the pattern fields. */
-export const COIL_PATTERNS = Object.freeze(['none', ...FIELD_IDS]);
+export const COIL_PATTERNS = Object.freeze(withPicture(['none', ...FIELD_IDS]));
 
 export const COIL_DEFAULTS = Object.freeze({
   shape: 'looped',
@@ -85,7 +86,7 @@ export function describeCoil(c) {
 }
 
 /** Engine parameters for generateCoil: percent becomes a fraction and the pattern becomes a sampler. */
-export function coilParams(c, { outline = null } = {}) {
+export function coilParams(c, { outline = null, picture = null } = {}) {
   return {
     width: c.width,
     height: c.height,
@@ -94,7 +95,8 @@ export function coilParams(c, { outline = null } = {}) {
     pitch: c.pitch,
     rowOverlap: c.rowOverlap / 100,
     lift: c.lift,
-    sampler: c.pattern === 'none' ? null : createField(c.pattern, { scale: c.patternScale }),
+    // dark parts of a picture get full-size loops (positive), as every design reads it: dark is more
+    sampler: patternField(c.pattern, { scale: c.patternScale, picture }),
     outline,
   };
 }

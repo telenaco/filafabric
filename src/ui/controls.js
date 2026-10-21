@@ -1,3 +1,4 @@
+import { PICTURE, patternField } from '../engine/picture.js';
 import { validNumber } from './numeric.js';
 // The few creative controls people see, and how they map onto engine parameters.
 // Pure functions: no DOM, so they are tested in Node like the engine.
@@ -101,7 +102,7 @@ export function sanitizePrimary(raw) {
   if (SWATCHES.includes(raw.swatch)) out.swatch = raw.swatch;
   if (typeof raw.roomy === 'boolean') out.roomy = raw.roomy;
   if (typeof raw.edgeLoops === 'boolean') out.edgeLoops = raw.edgeLoops;
-  if (raw.pattern === 'none' || FIELD_IDS.includes(raw.pattern)) out.pattern = raw.pattern;
+  if (raw.pattern === 'none' || FIELD_IDS.includes(raw.pattern) || raw.pattern === PICTURE) out.pattern = raw.pattern;
   return out;
 }
 
@@ -132,9 +133,9 @@ export function describePrimary(primary) {
  * The pile-height factor a pattern gives each loop: 0.3 where the field is 0 and 1 where it is 1, so no loop
  * vanishes. Null when no pattern is chosen (every loop keeps the pile height).
  */
-export function pileLiftFactor(primary) {
-  if (!primary.pattern || primary.pattern === 'none') return null;
-  const field = createField(primary.pattern, { scale: primary.patternScale });
+export function pileLiftFactor(primary, picture = null) {
+  const field = patternField(primary.pattern, { scale: primary.patternScale, picture });
+  if (!field) return null;
   return (x, y) => 0.3 + 0.7 * field(x, y);
 }
 

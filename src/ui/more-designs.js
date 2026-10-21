@@ -1,6 +1,7 @@
 // The layered designs of the line-algorithm library: structures made of a few layers of plotted lines, each a card.
 // Every one is described by a small `layered({...})` call: its controls, and a `build(settings, boundary)` that turns
 // settings into layers of polylines. The rest (the panel, the print, the verdict, the report) is shared.
+import { patternField, withPicture } from '../engine/picture.js';
 import { defineControls, r1, r2 } from './structure-controls.js';
 import { buildLayeredVerdict } from './verdict.js';
 import { thumbFromLayers, optionThumbFromLayers, shapeThumb } from './thumbs.js';
@@ -101,10 +102,10 @@ export function layered(def) {
     optimizeTravel: !!def.optimizeTravel,
     // Display-only XY geometry: no travel planning, crossing analysis, stats or G-code allocation.
     overviewLayers: (s, boundary, context) => def.build(s, boundary, context).layers,
-    generate: (machine, material, s, { outline = null, vector = null, vectorSize = null, vectorOffset = [0, 0], includeLines = true } = {}) => {
+    generate: (machine, material, s, { outline = null, vector = null, vectorSize = null, vectorOffset = [0, 0], includeLines = true, picture = null } = {}) => {
       // a drawing's lines print as many passes as their width asks for, and a pass is as wide as this filament's bead
       const bead = resolveConfig(machine, material, { sample_width: s.width, sample_height: s.height }).t.extrusion_width;
-      const built = def.build(s, boundaryFor(s.width, s.height, outline), { vector, bead, vectorSize, vectorOffset, includeLines });
+      const built = def.build(s, boundaryFor(s.width, s.height, outline), { vector, bead, vectorSize, vectorOffset, includeLines, picture });
       const result = layeredResult(machine, material, {
         width: s.width,
         height: s.height,
@@ -359,7 +360,7 @@ MORE_DESIGNS.push(layered({
 const MEANDER = defineControls({
   ranges: { ...SIZE, cell: { min: 0.8, max: 14, step: 0.1 }, angle: { min: 15, max: 75, step: 5 }, spacing: { min: 0.8, max: 10, step: 0.1 }, seed: { min: 1, max: 999, step: 1 }, patternScale: { min: 0.5, max: 2, step: 0.25 }, backingDepth: { min: 0.2, max: 10, step: 0.1 }, backingLength: { min: 3, max: 40, step: 0.5 } },
   defaults: { width: 100, height: 100, curve: 'hilbert', cell: 6, backing: 'wave', backingDepth: 2, backingLength: 10, backingLayers: 'one', angle: 45, spacing: 5, seed: 1, pattern: 'none', patternScale: 1, colorChange: false },
-  enums: { curve: CURVE_IDS, backing: BACKING_STYLES, backingLayers: BACKING_LAYER_COUNTS, pattern: ['none', ...FIELD_IDS] },
+  enums: { curve: CURVE_IDS, backing: BACKING_STYLES, backingLayers: BACKING_LAYER_COUNTS, pattern: withPicture(['none', ...FIELD_IDS]) },
   bools: ['colorChange'],
   presets: [
     { id: 'hilbert', name: 'Hilbert lace', blurb: 'Tight folds, hatched across', patch: { curve: 'hilbert', cell: 6, angle: 45, spacing: 5 } },
@@ -383,7 +384,7 @@ MORE_DESIGNS.push(layered({
   file: 'meander',
   c: MEANDER,
   bundle: 'curve',
-  patterns: ['none', ...FIELD_IDS],
+  patterns: withPicture(['none', ...FIELD_IDS]),
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
@@ -413,10 +414,10 @@ MORE_DESIGNS.push(layered({
       { id: 'one', label: 'One', hint: 'The first layer and one backing: two layers' },
       { id: 'two', label: 'Two', hint: 'A third layer: a second backing turned across the first' },
     ] },
-    { kind: 'pattern', key: 'pattern', title: 'Grade the dots', hint: 'Only the stipple tour uses it: dots are denser where the pattern is bright.', scale: { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false } },
+    { kind: 'pattern', key: 'pattern', title: 'Grade the dots', hint: 'Only the stipple tour uses it: dots are denser where the pattern is bright.', scale: { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false }, picture: 'positive', pictureHint: 'With the stipple tour, the dots are denser where the picture is dark.' },
     COLOUR,
   ],
-  build: (s, boundary) => meanderLayers(boundary, { curve: s.curve, cell: s.cell, angle: s.angle, spacing: s.spacing, seed: s.seed, backing: s.backing, backingDepth: s.backingDepth, backingLength: s.backingLength, backingLayers: s.backingLayers, tone: s.pattern === 'none' ? null : createField(s.pattern, { scale: s.patternScale }) }),
+  build: (s, boundary, ctx) => meanderLayers(boundary, { curve: s.curve, cell: s.cell, angle: s.angle, spacing: s.spacing, seed: s.seed, backing: s.backing, backingDepth: s.backingDepth, backingLength: s.backingLength, backingLayers: s.backingLayers, tone: patternField(s.pattern, { scale: s.patternScale, picture: ctx?.picture }) }),
   summary: (result) => `a meander of ${result.report.crossings} crossings`,
 }));
 
@@ -508,7 +509,7 @@ MORE_DESIGNS.push(layered({
 const VORONOI = defineControls({
   ranges: { ...SIZE, spacing: { min: 0.8, max: 14, step: 0.1 }, relax: { min: 0, max: 8, step: 1 }, seed: { min: 1, max: 999, step: 1 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
   defaults: { width: 100, height: 100, spacing: 8, relax: 5, seed: 11, pattern: 'none', patternScale: 1, colorChange: false },
-  enums: { pattern: ['none', ...FIELD_IDS] },
+  enums: { pattern: withPicture(['none', ...FIELD_IDS]) },
   bools: ['colorChange'],
   presets: [
     { id: 'lace', name: 'Lace', blurb: 'Even, round cells', patch: { spacing: 8, relax: 5, pattern: 'none' } },
@@ -526,7 +527,7 @@ MORE_DESIGNS.push(layered({
   about: 'A relaxed Voronoi tessellation of round, even cells, with its Delaunay triangulation as the second layer. Every cell wall is the perpendicular bisector of a triangle edge, so the layers cross at about a right angle: lace-like, close to the same in every direction, and it can be graded with a pattern so the cells are smaller where it is bright.',
   file: 'voronoi',
   c: VORONOI,
-  patterns: ['none', ...FIELD_IDS],
+  patterns: withPicture(['none', ...FIELD_IDS]),
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
@@ -539,10 +540,10 @@ MORE_DESIGNS.push(layered({
         { key: 'seed', label: 'Pattern number', help: 'Each number is a different arrangement; the same number always repeats it.', lo: '1', hi: '999', unit: '', edit: true },
       ],
     },
-    { kind: 'pattern', key: 'pattern', title: 'Grade with a pattern', hint: 'Cells are smaller where the pattern is bright and larger where it is dark.', scale: { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false } },
+    { kind: 'pattern', key: 'pattern', title: 'Grade with a pattern', hint: 'Cells are smaller where the pattern is bright and larger where it is dark.', scale: { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false }, picture: 'positive', pictureHint: 'Cells are smaller and denser where the picture is dark, larger where it is light.' },
     COLOUR,
   ],
-  build: (s, boundary) => voronoiLayers(boundary, { spacing: s.spacing, relax: s.relax, seed: s.seed, tone: s.pattern === 'none' ? null : createField(s.pattern, { scale: s.patternScale }) }),
+  build: (s, boundary, ctx) => voronoiLayers(boundary, { spacing: s.spacing, relax: s.relax, seed: s.seed, tone: patternField(s.pattern, { scale: s.patternScale, picture: ctx?.picture }) }),
   summary: (result) => `a Voronoi lace of ${result.sites} cells and ${result.report.crossings} crossings`,
 }));
 

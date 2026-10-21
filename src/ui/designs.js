@@ -13,6 +13,7 @@
 //   about, ranges, size(state) / setSize(state, w, h), presets, presetMatch(state), controls (see coil below),
 //   describe(state), generate(machine, material, state, { outline }), verdict(result, state),
 //   figure(result) → { value, unit, label }, summary(result) → text for the preview's accessible name.
+import { patternField, withPicture } from '../engine/picture.js';
 import { PRIMARY_DEFAULTS, sanitizePrimary } from './controls.js';
 import { SQUIGGLE_DEFAULTS, sanitizeSquiggle } from './squiggle-controls.js';
 import {
@@ -40,7 +41,8 @@ import {
 } from './structure-controls.js';
 
 const WEAVE = WEAVE_CONTROLS(WEAVE_BINDING_IDS);
-const fieldFor = (pattern, scale) => (pattern === 'none' ? null : createField(pattern, { scale }));
+// a design's pattern as a field: a built-in one or the uploaded picture (picture.js), dark parts reading as more
+const fieldFor = (s, picture, polarity = 'positive') => patternField(s.pattern, { scale: s.patternScale, picture, polarity });
 const sizeOf = (s) => [s.width, s.height];
 const setSizeOf = (s, w, h) => { s.width = w; s.height = h; };
 const SCALE_SLIDER = { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false };
@@ -126,10 +128,12 @@ export const DESIGNS = [
         key: 'pattern',
         title: 'Pattern',
         hint: 'Where the pattern is bright the loops are full size; where it is dark they shrink.',
+        picture: 'positive',
+        pictureHint: 'Dark parts of the picture get full-size loops, light parts small ones.',
         scale: { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false },
       },
     ],
-    generate: (machine, material, c, { outline = null } = {}) => generateCoil(machine, material, coilParams(c, { outline })),
+    generate: (machine, material, c, { outline = null, picture = null } = {}) => generateCoil(machine, material, coilParams(c, { outline, picture })),
     verdict: (result, c) => buildCoilVerdict(result.stats, { loopsClose: c.shape === 'looped' && loopsClose(c.pitch, c.size) }),
     figure: (result) => ({ value: result.stats.crossings.toLocaleString('en'), unit: '', label: 'Crossings' }),
     summary: (result) => `a coil of ${result.stats.loops} loops`,
@@ -196,7 +200,7 @@ export const DESIGNS = [
     about: 'Rows of line with a round ring standing on it, alternately above and below, printed as one strand. Rings that touch the next row lie over it, one layer thick.',
     file: 'boucle',
     shapes: [],
-    patterns: ['none', ...FIELD_IDS],
+    patterns: withPicture(['none', ...FIELD_IDS]),
     roles: { base: 'Line and rings', anchored: 'Crossing over' },
     controls: [
       { kind: 'presets', title: 'Start from' },
@@ -211,10 +215,10 @@ export const DESIGNS = [
           { key: 'lift', label: 'Crossing lift', help: 'How far a strand rises where it lies over another. About one layer.', lo: 'Flat', hi: 'High', unit: 'mm', edit: true },
         ],
       },
-      { kind: 'pattern', key: 'pattern', title: 'Pattern', hint: 'Where the pattern is bright the rings are full size; where it is dark they shrink.', scale: SCALE_SLIDER },
+      { kind: 'pattern', key: 'pattern', title: 'Pattern', hint: 'Where the pattern is bright the rings are full size; where it is dark they shrink.', scale: SCALE_SLIDER, picture: 'positive', pictureHint: 'Dark parts of the picture get full-size rings, light parts small ones.' },
     ],
-    generate: (machine, material, s, { outline = null } = {}) => generateCoil(machine, material, {
-      width: s.width, height: s.height, shape: 'ring', size: s.size, pitch: s.pitch, rowPitch: s.rowPitch, rowOverlap: 0, lift: s.lift, sampler: fieldFor(s.pattern, s.patternScale), outline,
+    generate: (machine, material, s, { outline = null, picture = null } = {}) => generateCoil(machine, material, {
+      width: s.width, height: s.height, shape: 'ring', size: s.size, pitch: s.pitch, rowPitch: s.rowPitch, rowOverlap: 0, lift: s.lift, sampler: fieldFor(s, picture), outline,
     }),
     verdict: (result) => buildBoucleVerdict(result.stats, { rings: result.coil.loops }),
     figure: (result) => ({ value: result.coil.loops.toLocaleString('en'), unit: '', label: 'Rings' }),
@@ -227,7 +231,7 @@ export const DESIGNS = [
     blurb: 'Bobbles, seersucker and pleats',
     about: 'Rows rise and fall over crossed backing to form bobbles, puckered stripes or pleats.',
     file: 'relief',
-    patterns: FIELD_IDS,
+    patterns: withPicture(FIELD_IDS),
     roles: { base: 'Base', anchored: 'On the bed', lifting: 'Rising and falling', free: 'Raised' },
     controls: [
       { kind: 'presets', title: 'Start from' },
@@ -240,10 +244,10 @@ export const DESIGNS = [
           { key: 'rowPitch', label: 'Row spacing', help: 'Distance between neighbouring rows of strand.', lo: 'Close', hi: 'Open', unit: 'mm', edit: true },
         ],
       },
-      { kind: 'pattern', key: 'pattern', title: 'Pattern', hint: 'The strand rises where the pattern is bright and lies on the bed where it is dark.', scale: { ...SCALE_SLIDER, lo: 'Fine', hi: 'Broad' } },
+      { kind: 'pattern', key: 'pattern', title: 'Pattern', hint: 'The strand rises where the pattern is bright and lies on the bed where it is dark.', scale: { ...SCALE_SLIDER, lo: 'Fine', hi: 'Broad' }, picture: 'positive', pictureHint: 'The strand rises where the picture is dark and lies on the bed where it is light.' },
     ],
-    generate: (machine, material, s, { outline = null } = {}) => generateRelief(machine, material, {
-      width: s.width, height: s.height, relief: s.relief, rowPitch: s.rowPitch, field: fieldFor(s.pattern, s.patternScale), outline,
+    generate: (machine, material, s, { outline = null, picture = null } = {}) => generateRelief(machine, material, {
+      width: s.width, height: s.height, relief: s.relief, rowPitch: s.rowPitch, field: fieldFor(s, picture), outline,
     }),
     verdict: (result) => buildReliefVerdict(result.relief),
     figure: (result) => ({ value: result.relief.peak.toFixed(1), unit: 'mm', label: 'Peak height' }),

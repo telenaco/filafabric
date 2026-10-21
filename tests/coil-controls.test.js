@@ -14,7 +14,7 @@ test('the defaults are a valid, printable coil', () => {
 
 test('shapes and patterns come from the engine libraries', () => {
   assert.deepEqual([...COIL_SHAPES].sort(), ['figure8', 'honeycomb', 'looped', 'ring', 'square', 'wave', 'zigzag']);
-  assert.deepEqual(COIL_PATTERNS, ['none', ...FIELD_IDS]);
+  assert.deepEqual(COIL_PATTERNS, ['none', ...FIELD_IDS, 'image'], 'and the uploaded picture');
 });
 
 test('sanitizeCoil preserves exact values, coerces and drops unknown keys', () => {

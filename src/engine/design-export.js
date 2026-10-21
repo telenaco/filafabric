@@ -2,6 +2,7 @@ import { designById } from '../ui/designs.js';
 import { generate } from './generate.js';
 import { generateSquiggle, SAMPLERS, createImageSampler } from './squiggle.js';
 import { createField } from './fields.js';
+import { patternField, pictureDarkness } from './picture.js';
 import { resolveConfig, ConfigError } from './params.js';
 import { bedFitErrors, PreflightError } from './gcode.js';
 import { applySvgGuides } from './svg-guides.js';
@@ -19,16 +20,18 @@ export function generateDesignBase(input) {
   if (![width, height].every((n) => Number.isFinite(n) && n >= 1 && n <= 5000)) throw new ConfigError(['Design dimensions must be 1–5000 mm.']);
   const fit = bedFitErrors(resolveConfig(machine, material, { sample_width: width, sample_height: height }));
   if (fit.length) throw new PreflightError(fit);
+  // the uploaded picture covers the whole piece; a preview window or a section is placed in it like the drawing is
+  const [pieceWidth, pieceHeight] = input.vectorSize ?? [width, height], [offsetX, offsetY] = input.vectorOffset ?? [0, 0];
+  const picture = input.image ? { image: input.image, size: [pieceWidth, pieceHeight], offset: [offsetX, offsetY] } : null;
   let result;
   if (design === 'loop-pile') {
-    const field = input.pilePattern && input.pilePattern !== 'none'
-      ? createField(input.pilePattern, { scale: input.pilePatternScale ?? 1 }) : null;
+    const field = patternField(input.pilePattern, { scale: input.pilePatternScale ?? 1, picture });
     result = generate(machine, material, { ...settings, sample_width: width, sample_height: height }, {
       outline, liftAt: field ? (x, y) => 0.3 + 0.7 * field(x, y) : null,
     });
   } else if (design === 'squiggle') {
     const sampler = settings.pattern === 'image' && input.image
-      ? createImageSampler(input.image, width, height, { yUp: true })
+      ? pictureDarkness(input.image, pieceWidth, pieceHeight, { offsetX, offsetY })
       : SAMPLERS[settings.pattern] ?? SAMPLERS.centerSpot;
     result = generateSquiggle(machine, material, { ...settings, width, height, sampler, outline });
   } else {
@@ -38,6 +41,7 @@ export function generateDesignBase(input) {
       vectorSize: input.vectorSize ?? [width, height],
       vectorOffset: input.vectorOffset ?? [0, 0],
       includeLines: !vector,
+      picture,
     });
   }
   // a drawing that is all green (and blue) has no red to fill: no pattern, only its solids
