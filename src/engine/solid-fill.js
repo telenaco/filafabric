@@ -39,8 +39,9 @@ const distanceToRing = (p, ring) => {
   return best;
 };
 
-/** 'coil' for a round shape, 'zigzag' for anything else. */
-export function solidKind(ring) {
+/** 'coil' for a round shape, 'zigzag' for anything else (and for any shape with holes in it). */
+export function solidKind(ring, holes = []) {
+  if (holes.length) return 'zigzag';
   const p = perimeter(ring);
   if (!(p > 0)) return 'zigzag';
   return (4 * Math.PI * Math.abs(area2(ring) / 2)) / (p * p) >= ROUND ? 'coil' : 'zigzag';
@@ -50,6 +51,13 @@ export function solidKind(ring) {
 function insetRing(ccw, d) {
   const out = offsetPolyline([...ccw, ccw[0]], d).slice(0, -1);
   // an offset past the middle turns the ring inside out
+  return area2(out) > 1e-9 ? out : null;
+}
+
+/** A hole (anticlockwise) grown outward by d, into the solid round it; null if it grows into nothing. */
+function growRing(ccw, d) {
+  const cw = ccw.slice().reverse();
+  const out = offsetPolyline([...cw, cw[0]], d).slice(0, -1).reverse();
   return area2(out) > 1e-9 ? out : null;
 }
 
@@ -172,17 +180,22 @@ const rotate = (p, a) => ({ x: p.x * Math.cos(a) - p.y * Math.sin(a), y: p.x * M
  * pass, run back and forth and joined at alternate ends. A shape the lines cannot cross in one go (a U, a star) gets a
  * zigzag for each part. Returns polylines, the edge pass first.
  */
-export function zigzagPaths(ring, { bead = 0.45, overlap = SOLID_OVERLAP, angle = longAxis(ring) } = {}) {
+export function zigzagPaths(ring, { bead = 0.45, overlap = SOLID_OVERLAP, angle = longAxis(ring), holes = [], edged = [] } = {}) {
   const ccw = anticlockwise(ring);
   const pitch = bead * (1 - overlap);
   const edge = insetRing(ccw, bead / 2);
   if (!edge) return [];
   const out = [[...edge, edge[0]]];
-  // the lines run inside the edge pass, a pitch in from it, so each line end overlaps it as one line overlaps the next
+  // each hole gets a pass round its edge too, so an opening has a clean printed rim: half a strand out from it, or, where
+  // the drawing already prints the hole's edge as a line, a pitch out from that line, overlapping it as neighbours do
+  const rim = holes.map((_, i) => (edged[i] ? pitch : bead / 2));
+  const holeEdges = holes.map((h, i) => growRing(anticlockwise(h), rim[i])).filter(Boolean).map((h) => [...h, h[0]]);
+  // the lines run inside the edge passes, a pitch in from them, so each line end overlaps them as one line overlaps the next
   const core = insetRing(ccw, bead / 2 + pitch);
-  if (!core) return out;
+  if (!core) return [...out, ...holeEdges];
+  const coreHoles = holes.map((h, i) => growRing(anticlockwise(h), rim[i] + pitch)).filter(Boolean);
   const turned = core.map((p) => rotate(p, -angle));
-  const boundary = new PolygonBoundary([turned]);
+  const boundary = new PolygonBoundary([turned, ...coreHoles.map((h) => h.map((p) => rotate(p, -angle)))]);
   const box = boundary.bbox();
   const span = box.maxY - box.minY;
   // evenly spaced lanes from one side of the core to the other, never further apart than a pitch
@@ -204,6 +217,7 @@ export function zigzagPaths(ring, { bead = 0.45, overlap = SOLID_OVERLAP, angle 
     out[0] = loop;
     if (Math.hypot(loop.at(-1).x - to.x, loop.at(-1).y - to.y) <= 2 * bead + pitch) out.splice(0, 2, [...loop, ...out[1]]);
   }
+  out.splice(1, 0, ...holeEdges);
   return out;
 }
 
@@ -211,11 +225,11 @@ export function zigzagPaths(ring, { bead = 0.45, overlap = SOLID_OVERLAP, angle 
  * The fill of one shape for one layer, as polylines in print order. `layer` 0 is the first layer of the patch,
  * 1 the second: the coil reversed, or the zigzag turned a quarter turn.
  */
-export function solidLayer(ring, { bead = 0.45, overlap = SOLID_OVERLAP, layer = 0, kind = solidKind(ring) } = {}) {
-  if (kind === 'coil') {
+export function solidLayer(ring, { bead = 0.45, overlap = SOLID_OVERLAP, layer = 0, holes = [], edged = [], kind = solidKind(ring, holes) } = {}) {
+  if (kind === 'coil' && !holes.length) {
     const path = coilPath(ring, { bead, overlap });
     return [layer % 2 ? path.slice().reverse() : path];
   }
   const angle = longAxis(ring) + (layer % 2 ? Math.PI / 2 : 0);
-  return zigzagPaths(ring, { bead, overlap, angle });
+  return zigzagPaths(ring, { bead, overlap, angle, holes, edged });
 }

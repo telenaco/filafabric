@@ -113,7 +113,7 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   // green shapes print solid once everything else is down, a layer above the highest strand printed under each one
   const solids = (model?.solids ?? []).map((g) => {
     const box = g.ring.reduce((b, p) => ({ minX: Math.min(b.minX, p.x), maxX: Math.max(b.maxX, p.x), minY: Math.min(b.minY, p.y), maxY: Math.max(b.maxY, p.y) }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
-    return { ...g, box, area: new PolygonBoundary([g.ring]), top: 0 };
+    return { ...g, box, area: new PolygonBoundary([g.ring, ...(g.holes ?? [])]), top: 0 }; // its holes (a lace's openings) are not under it
   });
   const brim = options.brim ?? 2;
   const brimStrands = buildBrimStrands(boundary.rings, { count: brim, strandWidth: bead, layerHeight: h });

@@ -29,7 +29,7 @@ import { SHAPES, SHAPE_IDS } from '../engine/shapes.js';
 import { readSvgLines } from './svg-lines.js';
 import { composeSvgLines, outlineFromVector, vectorPatternRings } from '../engine/svg-lines.js';
 import { applySvgGuides, vectorGuides } from '../engine/svg-guides.js';
-import { applySvgSolids } from '../engine/svg-solids.js';
+import { applySvgSolids, solidOnly, withoutPattern } from '../engine/svg-solids.js';
 import { summariseDrawing, describeDrawing, interpretDrawing } from '../engine/drawing.js';
 import { addExtraLayers, nativeLayerInfo } from '../engine/stack.js';
 import { generateDesignBase, compactDesignExport } from '../engine/design-export.js';
@@ -784,6 +784,9 @@ function regenerate() {
       textile.sample_width = Math.min(w, cap); textile.sample_height = Math.min(h, cap);
       result = generate(machine, material, textile, { outline: placedOutline(textile.sample_width, textile.sample_height, w, h), liftAt: pileLiftFactor(state.primary) });
     }
+    // a drawing that is all green (and blue) has no red to fill: no pattern, only its solids
+    const allSolid = solidOnly(state.vector);
+    if (allSolid) result = withoutPattern(result);
     if (state.vector) {
       const [fullWidth, fullHeight] = BINDINGS[state.design].size.get();
       result = applySvgGuides(result, state.vector, { fullWidth, fullHeight, outline: mod.outline === false ? placedOutline(result.cfg.t.sample_width, result.cfg.t.sample_height, fullWidth, fullHeight) : null });
@@ -808,7 +811,7 @@ function regenerate() {
       const boundary = boundaryFor(fullWidth, fullHeight, placedOutline(fullWidth, fullHeight));
       brimOutline = state.vector ? conformalGuideRegion(boundary, vectorGuides(state.vector, fullWidth, fullHeight)).rings : boundary.rings;
     }
-    result = applyBrim(result, { count: state.print.brim, outline: brimOutline, fullWidth, fullHeight });
+    result = applyBrim(result, { count: allSolid ? 0 : state.print.brim, outline: brimOutline, fullWidth, fullHeight });
     if (state.vector && result.cfg.t.sample_width === selectedWidth && result.cfg.t.sample_height === selectedHeight) result.documentSize = [state.vector.width, state.vector.height];
     showGenerated(result, snapshotKey());
   } catch (e) {

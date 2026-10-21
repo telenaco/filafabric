@@ -4,6 +4,7 @@ import { exportPanel } from '../src/engine/panel.js';
 import { defaultProfiles } from './helpers.js';
 import { DESIGNS } from '../src/ui/designs.js';
 import { toTextile } from '../src/ui/controls.js';
+import { YELLOW_PRINTS_SOLID } from '../src/engine/drawing.js';
 
 const ellipse = (x, y, rx, ry = rx) => [...Array.from({ length: 48 }, (_, k) => ({ x: x + rx * Math.cos(k * Math.PI / 24), y: y + ry * Math.sin(k * Math.PI / 24) })), { x: x + rx, y }];
 const render = async (options) => { let text = ''; const stats = await exportPanel(options, { write: async (chunk) => { text += chunk; } }); return { text, stats }; };
@@ -23,7 +24,7 @@ function segments(text, machine, width, height) {
   return out;
 }
 
-test('yellow guides repel backing and texture for ordinary panel designs and preserve the opening across sections', async () => {
+test('yellow guides repel backing and texture for ordinary panel designs and preserve the opening across sections', { skip: YELLOW_PRINTS_SOLID && 'yellow prints solid for now: guides are parked (YELLOW_PRINTS_SOLID in drawing.js)' }, async () => {
   const { machine, material } = defaultProfiles(), width = 60, height = 40;
   const vector = { name: 'yellow.svg', width, height, paths: [ellipse(30, 20, 6)], styles: [{ color: 'yellow', width: 0.45 }] };
   for (const design of ['crosshatch', 'zigzag', 'conformal', 'loop-pile']) {
@@ -37,7 +38,7 @@ test('yellow guides repel backing and texture for ordinary panel designs and pre
   }
 });
 
-test('a conformal panel skips a section entirely covered by a yellow opening and finishes the remaining sections', async () => {
+test('a conformal panel skips a section entirely covered by a yellow opening and finishes the remaining sections', { skip: YELLOW_PRINTS_SOLID && 'yellow prints solid for now: guides are parked (YELLOW_PRINTS_SOLID in drawing.js)' }, async () => {
   const { machine, material } = defaultProfiles(), width = 40, height = 40;
   const vector = { name: 'corner.svg', width, height, paths: [ellipse(5, 5, 12)], styles: [{ color: 'yellow', width: 0.45 }] };
   const { text, stats } = await render({ machine, material, design: 'conformal', settings: { spacing: 4 }, width, height, repeat: 10, vector });
@@ -46,7 +47,7 @@ test('a conformal panel skips a section entirely covered by a yellow opening and
   assert.match(text, /BODY END/);
 });
 
-test('yellow panel wall strokes print once with their selected pass count, including passes inside the centreline', async () => {
+test('yellow panel wall strokes print once with their selected pass count, including passes inside the centreline', { skip: YELLOW_PRINTS_SOLID && 'yellow prints solid for now: guides are parked (YELLOW_PRINTS_SOLID in drawing.js)' }, async () => {
   const { machine, material } = defaultProfiles(), width = 40, height = 40;
   // Disable the optional frame to count only the original SVG's bed-level wall passes.
   const run = async (strokeWidth) => render({ machine, material, design: 'crosshatch', settings: { spacing: 5 }, brim: 0, width, height, repeat: 20, vector: { name: 'wall.svg', width, height, paths: [ellipse(20, 20, 6)], styles: [{ color: 'yellow', width: strokeWidth }] } });
@@ -59,7 +60,7 @@ test('yellow panel wall strokes print once with their selected pass count, inclu
   assert.ok(b.some((s) => Math.hypot(s.b.x - 20, s.b.y - 20) > 6.2), 'outer wall pass remains as drawn');
 });
 
-test('direct panel export derives red and blue material boundaries alongside yellow repulsion', async () => {
+test('direct panel export derives red and blue material boundaries alongside yellow repulsion', { skip: YELLOW_PRINTS_SOLID && 'yellow prints solid for now: guides are parked (YELLOW_PRINTS_SOLID in drawing.js)' }, async () => {
   const { machine, material } = defaultProfiles(), width = 60, height = 40;
   const rect = (x0, y0, x1, y1) => [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }, { x: x0, y: y0 }];
   const vector = { name: 'colours.svg', width, height, paths: [rect(4, 4, 56, 36), rect(10, 14, 17, 23), ellipse(38, 20, 5)], styles: [{ color: 'red', width: 0.45 }, { color: 'blue', width: 0.45 }, { color: 'yellow', width: 0.9 }] };

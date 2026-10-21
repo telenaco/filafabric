@@ -22,6 +22,8 @@ const checkMoveBudget = (strands) => {
 export function vectorPatternRings(vector, scale = {}) {
   const model = interpretDrawing(vector, scale);
   if (model.rings.length) return model.rings;
+  // nothing red to fill: the piece is its green solids (a lace outline), with their openings
+  if (model.solids.length) return model.solids.flatMap((s) => [s.ring, ...(s.holes ?? [])]);
   const blue = model.shapes.filter((s) => s.role === 'hole');
   if (!blue.length) return [];
   const w = vector.width * (scale.scaleX ?? 1), h = vector.height * (scale.scaleY ?? 1);
@@ -73,16 +75,18 @@ export function composeSvgLines(result, vector, { fullWidth = vector.width, full
   const imported = simplifyStrands([...clipStrands(whole.map((poly) => ({ ...strand(poly), onBoundary: true })), swatch, 0), ...lines], 1e-9);
   const printedBoundary = !clipLines && (model.rings.length || model.guides.length) ? boundary : null;
   const pattern = printedBoundary ? clipStrands(finishAtPrintedBoundary(result.strands, printedBoundary, w), swatch, 0) : result.strands;
-  const body = pattern.map((s) => ({ ...s, id: `pattern-${s.id}`, layer: (s.layer ?? 0) + 1, pts: s.pts.map(({ cls, ...p }) => ({ ...p, z: native ? p.z + h : 2 * h, ...(native && cls ? { cls } : {}) })) }));
+  // the pattern keeps the print order its design gave it (row by row for lanes); only the drawing's own lines are reordered
+  const body = pattern.map((s, i) => ({ ...s, id: `pattern-${s.id}`, layer: (s.layer ?? 0) + 1, rowOrder: i, pts: s.pts.map(({ cls, ...p }) => ({ ...p, z: native ? p.z + h : 2 * h, ...(native && cls ? { cls } : {}) })) }));
   let strands = [...imported, ...body];
   checkMoveBudget(strands);
   const beforeMm = travelDistance(strands);
   if (!native) {
     const repaired = connectStrands(strands, boundary, { strandWidth: w });
     const last = Math.max(1, ...strands.map((s) => s.layer)) + 1;
-    // the drawing's lines first touch-merge, then every layer is ordered and directed for the least travel
+    // the drawing's lines first touch-merge, then are ordered and directed for the least travel; the pattern keeps its order
     const layered = repaired.strands.map((s) => ({ ...s, layer: s.layer === -1 ? last : s.layer, pts: s.name === 'Structural tie' ? s.pts.map((p) => ({ ...p, z: 2 * h })) : s.pts }));
-    strands = orderStrands(joinStrokes(layered, { within: w * 1.1, allow: (p, q) => segmentInside(p, q, boundary) }), { improve: true });
+    const kept = layered.filter((s) => Number.isFinite(s.rowOrder));
+    strands = orderStrands([...joinStrokes(layered.filter((s) => !Number.isFinite(s.rowOrder)), { within: w * 1.1, allow: (p, q) => segmentInside(p, q, boundary) }), ...kept], { improve: true });
     strands = resolveCrossings(strands, { follow: true, lift: h, strandWidth: w }).strands;
   } else {
     strands = [...orderStrands(joinStrokes(imported, { within: w * 1.1, allow: (p, q) => segmentInside(p, q, boundary) }), { improve: true }), ...body];

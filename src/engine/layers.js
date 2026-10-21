@@ -2,7 +2,7 @@ import { resolveConfig, ConfigError } from './params.js';
 import { bedFitErrors, PreflightError, writeGcode } from './gcode.js';
 import { computeStats } from './stats.js';
 import { PolygonBoundary } from './boundary.js';
-import { serpentineChains, centredLanes } from './fill.js';
+import { serpentineChains, centredLanes, laneStart } from './fill.js';
 import { emitStrands } from './emit.js';
 import { resolveCrossings, findCrossings } from './crossings.js';
 import { lanePoints } from './shapes.js';
@@ -77,7 +77,7 @@ const rotate = (p, c, s) => ({ x: p.x * c - p.y * s, y: p.x * s + p.y * c });
  * `whole` (repeats.js): the lanes fill the outline from edge to edge at the nearest spacing that fits, a wavy line kept a
  * full swing in from the edge, and each wavy line is whole periods from end to end.
  */
-export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = null, size = 0, pitch = 4, inset = 0.3, anchor = null, maxJog = null, keepInside = 0, whole = true, cornerStart = false } = {}) {
+export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = null, size = 0, pitch = 4, inset = 0.3, anchor = null, maxJog = null, keepInside = 0, whole = true } = {}) {
   const a = (angle * Math.PI) / 180;
   const c = Math.cos(a), s = Math.sin(a);
   const turned = new PolygonBoundary(boundary.rings.map((ring) => ring.map((p) => rotate(p, c, -s))));
@@ -103,16 +103,10 @@ export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = nu
   } else {
     lanes = [(box.minY + box.maxY) / 2];
   }
-  const chains = serpentineChains(turned, 'y', lanes, { inset, minLength: 1, maxJog: maxJog ?? 3 * spacing, cornerStart });
+  // row after row from the bottom (left for upright lines), branch by branch where the outline splits wide
+  const chains = serpentineChains(turned, 'y', lanes, { inset, minLength: 1, maxJog: maxJog ?? 3 * spacing, ...laneStart(angle) });
   const clear = (p) => safePoint(rotate(p, c, s), boundary, keepInside);
   return chains.map((segments) => {
-    if (cornerStart && segments.length > 1) {
-      const len0 = Math.abs(segments[0].to - segments[0].from);
-      const lenLast = Math.abs(segments[segments.length - 1].to - segments[segments.length - 1].from);
-      if (lenLast < len0) {
-        segments = segments.slice().reverse().map((seg) => ({ ...seg, from: seg.to, to: seg.from }));
-      }
-    }
     const pts = [];
     for (const seg of segments) {
       let { from, to } = seg;
@@ -145,7 +139,16 @@ export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = nu
       appendPoints(pts, line, pts.length ? 1 : 0);
     }
     return pts.map((p) => rotate(p, c, s));
-  }).filter((pts) => pts.length >= 2);
+  }).filter((pts) => pts.length >= 2).map((pts, i) => markRowOrder(pts, i));
+}
+
+/**
+ * Marks a polyline with its place in a row-by-row print order (orderLanePieces), so the strand ordering keeps it rather
+ * than reordering the rows for less travel: the order is what keeps the texture even across the piece.
+ */
+export function markRowOrder(pts, order) {
+  pts.rowOrder = order;
+  return pts;
 }
 
 /**
@@ -257,14 +260,18 @@ export function crossingReport(items, areaMm2, strandWidth = 0.45) {
  */
 export function layersToStrands(layers, { layerHeight = 0.2, strandWidth = 0.45, colorChange = false, ramp = 1.6, boundary = null, coherent = false, inset = strandWidth / 2, optimizeTravel = false } = {}) {
   if (coherent) {
-    let flat = layers.flatMap((list, k) => list.filter((p) => p.length >= 2).map((p, i) => ({ id: `l${k + 1}-${i + 1}`, layer: k, kind: k ? 'supported' : 'base', name: `Layer ${k + 1}`, pauseBefore: colorChange && k > 0 && i === 0, pts: p.map((q) => ({ x: q.x, y: q.y, z: layerHeight, ...(q.flow !== undefined ? { flow: q.flow } : {}) })) })));
+    let flat = layers.flatMap((list, k) => list.filter((p) => p.length >= 2).map((p, i) => ({ id: `l${k + 1}-${i + 1}`, layer: k, kind: k ? 'supported' : 'base', name: `Layer ${k + 1}`, pauseBefore: colorChange && k > 0 && i === 0, ...(Number.isFinite(p.rowOrder) ? { rowOrder: p.rowOrder } : {}), pts: p.map((q) => ({ x: q.x, y: q.y, z: layerHeight, ...(q.flow !== undefined ? { flow: q.flow } : {}) })) })));
     flat = simplifyStrands(flat);
     if (boundary) flat = clipStrands(flat, boundary, inset);
     if (boundary) flat = connectStrands(flat, boundary, { strandWidth }).strands;
     const beforeMm = travelDistance(flat);
     flat = flat.map((s) => ({ ...s, layer: s.layer === -1 ? layers.length : s.layer }));
     // a drawing of many separate lines: join the ones that touch, then order and direct what is left for the least travel
-    if (optimizeTravel) flat = joinStrokes(flat, { within: strandWidth * 1.1, allow: boundary ? (p, q) => segmentInside(p, q, boundary) : null });
+    // (lines laid row by row are left as they are: joining them would reorder the rows)
+    if (optimizeTravel) {
+      const rowed = flat.filter((s) => Number.isFinite(s.rowOrder));
+      flat = [...rowed, ...joinStrokes(flat.filter((s) => !Number.isFinite(s.rowOrder)), { within: strandWidth * 1.1, allow: boundary ? (p, q) => segmentInside(p, q, boundary) : null })];
+    }
     flat = orderStrands(flat, { improve: optimizeTravel });
     const out = resolveCrossings(flat, { follow: true, lift: layerHeight, strandWidth, ramp }).strands;
     out.routing = { beforeMm, afterMm: travelDistance(out) };

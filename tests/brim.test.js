@@ -10,6 +10,7 @@ import { parseSvg } from '../src/engine/svg-parse.js';
 import { interpretDrawing } from '../src/engine/drawing.js';
 import { conformalGuideRegion } from '../src/engine/conformal-guides.js';
 import { defaultProfiles } from './helpers.js';
+import { YELLOW_PRINTS_SOLID } from '../src/engine/drawing.js';
 
 const P = (x,y) => ({x,y});
 const rectangle = (w=20,h=10) => [P(0,0),P(w,0),P(w,h),P(0,h)];
@@ -196,7 +197,7 @@ test('disjoint curved holes with overlapping bounding boxes stay on the convex o
   for(const s of strands) for(let i=0;i<s.pts.length;i+=19) assert.ok(safePoint(s.pts[i],boundary,.225));
 });
 
-test('an actual parsed yellow SVG circle and its conformal opening accept the default brim',()=>{
+test('an actual parsed yellow SVG circle and its conformal opening accept the default brim',{ skip: YELLOW_PRINTS_SOLID && 'yellow prints solid for now: guides are parked (YELLOW_PRINTS_SOLID in drawing.js)' }, ()=>{
   const vector=parseSvg('<svg xmlns="http://www.w3.org/2000/svg" width="200mm" height="200mm" viewBox="0 0 200 200"><circle cx="100" cy="100" r="20" fill="none" stroke="yellow"/></svg>');
   const guides=interpretDrawing(vector).guides;
   const region=conformalGuideRegion(new PolygonBoundary([rectangle(200,200)]),guides);

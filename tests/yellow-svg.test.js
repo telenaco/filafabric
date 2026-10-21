@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseSvg } from '../src/engine/svg-parse.js';
 import { interpretDrawing, sanitizeSvgLines, drawingPolylines } from '../src/engine/drawing.js';
+import { YELLOW_PRINTS_SOLID } from '../src/engine/drawing.js';
 
 const svg = (body) => `<svg xmlns="http://www.w3.org/2000/svg" width="60mm" height="40mm" viewBox="0 0 60 40">${body}</svg>`;
 
-test('yellow closed SVG strokes retain their contour and wall width, with red and blue semantics intact', () => {
+test('yellow closed SVG strokes retain their contour and wall width, with red and blue semantics intact', { skip: YELLOW_PRINTS_SOLID && 'yellow prints solid for now: guides are parked (YELLOW_PRINTS_SOLID in drawing.js)' }, () => {
   const v = parseSvg(svg('<rect x="1" y="1" width="58" height="38" fill="none" stroke="red"/><circle cx="15" cy="20" r="4" fill="none" stroke="blue"/><circle cx="40" cy="20" r="6" fill="none" stroke="#ffff00" stroke-width="1.2"/>'), 'coloured.svg');
   assert.deepEqual(v.styles.map((s) => s.color), ['red', 'blue', 'yellow']);
   const m = interpretDrawing(v);
@@ -19,7 +20,7 @@ test('yellow closed SVG strokes retain their contour and wall width, with red an
   assert.equal(drawingPolylines(v).clipped.filter((p) => !p.shape).length, 3, 'three printable wall passes');
 });
 
-test('CSS yellow and yellow are guides, including a white-filled circle with a yellow outline', () => {
+test('CSS yellow and yellow are guides, including a white-filled circle with a yellow outline', { skip: YELLOW_PRINTS_SOLID && 'yellow prints solid for now: guides are parked (YELLOW_PRINTS_SOLID in drawing.js)' }, () => {
   const v = parseSvg(svg('<circle cx="15" cy="20" r="5" fill="white" stroke="yellow"/><circle cx="40" cy="20" r="6" fill="none" stroke="yellow"/>'));
   assert.deepEqual(v.styles.map((s) => s.color), ['yellow', 'yellow']);
   assert.equal(interpretDrawing(v).guides.length, 2);

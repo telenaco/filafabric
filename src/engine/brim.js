@@ -333,7 +333,8 @@ export function applyBrim(result, { count = 2, outline = result.outline, fullWid
   const stats = { ...result.stats, ...computeStats(moves, cfg, result.placements ?? []), loops: result.stats.loops };
   const baseSegments = (result.base?.strands ?? []).flatMap((pts) => pts.slice(1).map((p, i) => [pts[i], p]));
   const supportedAt = baseSegments.length ? (p) => baseSegments.some(([a, b]) => p.z - a.z > layerHeight / 2 && p.z - a.z <= layerHeight + 0.04 && segmentContact(p, p, a, b).distance <= strandWidth / 2) : null;
-  const fabric = analyzeFabric(strands, { strandWidth, layerHeight, boundary, supportedAt });
+  // checked against the whole piece: a lace's solid body lies outside the outline of its windows of pattern
+  const fabric = analyzeFabric(strands, { strandWidth, layerHeight, boundary: result.pieceOutline ? new PolygonBoundary(result.pieceOutline) : boundary, supportedAt });
   const warnings = [...(result.warnings ?? []).filter((w) => !(result.fabric?.issues ?? []).includes(w)), ...fabric.issues];
   const metadata = { count, overlap: OVERLAP, strandWidth, pitch: strandWidth * (1 - OVERLAP), width: strandWidth * (1 + (count - 1) * (1 - OVERLAP)), runs: brim.length, connections: connections.length };
   return { ...result, strands, moves, stats, fabric, warnings, brim: metadata, ...(result.report ? { report: { ...result.report, components: fabric.components } } : {}),

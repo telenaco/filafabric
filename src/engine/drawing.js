@@ -19,6 +19,11 @@ export const FILL = 'red';
 export const HOLE = 'blue';
 export const GUIDE = 'yellow';
 export const SOLID = 'green';
+/**
+ * For now a yellow shape prints solid, exactly like a green one; the conforming-guide machinery (conformal-guides.js) is kept
+ * for when yellow brings it back. Set this to false to make yellow closed shapes guides again.
+ */
+export const YELLOW_PRINTS_SOLID = true;
 export const MAX_PASSES = 8;
 
 /* ---------- what is saved of a drawing ---------- */
@@ -146,9 +151,10 @@ export function interpretDrawing(vector, { scaleX = 1, scaleY = 1 } = {}) {
     const pts = path.map((p) => ({ x: p.x * scaleX, y: p.y * scaleY }));
     const style = styled ? vector.styles[index] : null;
     const ring = closedRing(pts);
-    if (ring && style?.color === GUIDE) guides.push({ ring, width: style.width * widthScale, index });
+    const solid = style?.color === SOLID || (YELLOW_PRINTS_SOLID && style?.color === GUIDE);
+    if (ring && style?.color === GUIDE && !solid) guides.push({ ring, width: style.width * widthScale, index });
     // a solid shape is all fill: its edge is the fill's own first pass, so it is not printed again as a line
-    if (ring && style?.color === SOLID) solids.push({ ring, index });
+    if (ring && solid) solids.push({ ring, index });
     else if (ring && (!style || style.color === FILL || style.color === HOLE)) shapes.push({ ring, color: style ? style.color : null, index });
     else lines.push({ pts, width: style ? style.width * widthScale : 0, closed: !!ring, index });
   });
@@ -177,6 +183,27 @@ export function interpretDrawing(vector, { scaleX = 1, scaleY = 1 } = {}) {
   }
   const rings = unionFilledRegions(fills);
   for (const s of shapes) delete s.samples;
+  // The innermost shape decides what prints: red the pattern, blue nothing, green solid. So a green shape is solid less
+  // whatever lies directly inside it (a blue cut-out, a red window of pattern, a green shape that is a solid of its own),
+  // which is how a lace is drawn: a green outline with its openings in blue and its patterned parts in red.
+  if (solids.length) {
+    const all = [...shapes.map((s) => ({ ring: s.ring, shape: s })), ...solids.map((s) => ({ ring: s.ring, solid: s }))];
+    nest(all);
+    for (const node of all) {
+      if (!node.solid) continue;
+      const inner = all.filter((c) => c.parent === node), rings = inner.map((c) => c.ring);
+      // openings drawn overlapping (a petal reaching into the centre) are one opening, not two that cancel out
+      const merged = rings.length > 1 ? unionFilledRegions(rings.map((ring) => ({ ring, holes: [] }))) : rings;
+      const same = merged.length === rings.length && merged.every((r, i) => r === rings[i]);
+      node.solid.holes = merged;
+      // a red window (or a blue hole in one) already has its edge printed as a line; the solid's rim sits beside it
+      const edged = (c) => !!c.shape?.kept;
+      node.solid.edged = same ? inner.map(edged) : merged.map((h) => {
+        const covered = inner.filter((c) => inside(c.ring[0].x, c.ring[0].y, h));
+        return covered.length > 0 && covered.every(edged);
+      });
+    }
+  }
   return { shapes, fills, rings, lines, guides, solids, styled };
 }
 

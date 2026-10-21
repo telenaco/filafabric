@@ -8,12 +8,13 @@ import { segmentInside } from '../src/engine/fabric.js';
 import { defaultProfiles } from './helpers.js';
 import { generate } from '../src/engine/generate.js';
 import { generateSquiggle } from '../src/engine/squiggle.js';
+import { YELLOW_PRINTS_SOLID } from '../src/engine/drawing.js';
 
 const { machine, material } = defaultProfiles();
 const circle = Array.from({ length: 49 }, (_, k) => ({ x: 20 + 5 * Math.cos(k * Math.PI / 24), y: 20 + 5 * Math.sin(k * Math.PI / 24) }));
 const vector = { name: 'yellow.svg', width: 40, height: 40, paths: [circle], styles: [{ color: 'yellow', width: 1.2 }] };
 
-test('yellow affects every ready nonlegacy design while original SVG wall passes remain undeformed', () => {
+test('yellow affects every ready nonlegacy design while original SVG wall passes remain undeformed', { skip: YELLOW_PRINTS_SOLID && 'yellow prints solid for now: guides are parked (YELLOW_PRINTS_SOLID in drawing.js)' }, () => {
   for (const d of DESIGNS.filter((d) => d.status === 'ready' && !d.legacy)) {
     const raw = d.generate(machine, material, { ...d.defaults(), width: 40, height: 40 }, { vector: d.usesVector || d.vectorGuides ? vector : null, vectorSize: [40, 40], includeLines: false });
     const repelled = applySvgGuides(raw, vector);
@@ -55,7 +56,7 @@ test('a raised design without native outline support still respects SVG containm
   for (const s of result.strands) for (let i = 1; i < s.pts.length; i++) assert.ok(segmentInside(s.pts[i - 1], s.pts[i], boundary));
 });
 
-test('legacy loop pile and squiggle use the same yellow repulsion and source composition', () => {
+test('legacy loop pile and squiggle use the same yellow repulsion and source composition', { skip: YELLOW_PRINTS_SOLID && 'yellow prints solid for now: guides are parked (YELLOW_PRINTS_SOLID in drawing.js)' }, () => {
   const results = [generate(machine, material, { sample_width: 40, sample_height: 40 }), generateSquiggle(machine, material, { width: 40, height: 40, spacing: 3, amplitude: 1, wavelength: 8 })];
   for (const raw of results) {
     const repelled = applySvgGuides(raw, vector), boundary = new PolygonBoundary(repelled.outline);
