@@ -335,7 +335,8 @@ export function generateSquiggleTextile({
   }
 
   const strands = [
-    ...layer1.map((pts, i) => ({ kind: 'base', layer: 0, id: i === 0 ? 'squiggle-l1' : `squiggle-l1-${i + 1}`, pts, lift: 0, name: 'Layer 1 (Base Squiggle)' })),
+    // both layers keep the row-by-row order they were laid in (fill.js), so the print order does not wander
+    ...layer1.map((pts, i) => ({ kind: 'base', layer: 0, id: i === 0 ? 'squiggle-l1' : `squiggle-l1-${i + 1}`, pts, lift: 0, name: 'Layer 1 (Base Squiggle)', rowOrder: i })),
     ...layer2.map((pts, i) => ({
       kind: 'supported',
       layer: 1,
@@ -344,6 +345,7 @@ export function generateSquiggleTextile({
       lift: layerHeight,
       name: 'Layer 2 (Interlock / Gyroid)',
       pauseBefore: colorChange && i === 0,
+      rowOrder: i,
     })),
   ];
 

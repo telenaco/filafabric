@@ -85,7 +85,8 @@ test('triangles meet three at a point, stars never do, and cubic opens from laye
     const lines = infillLines(id, square, { spacing: 3, layer });
     const { found } = findCrossings(lines.map((pts) => ({ pts })), { strandWidth: 0.45, mergeDistance: 1e-6 });
     const at = new Map();
-    for (const c of found) at.set(`${Math.round(c.x / 0.4)},${Math.round(c.y / 0.4)}`, (at.get(`${Math.round(c.x / 0.4)},${Math.round(c.y / 0.4)}`) ?? 0) + 1);
+    // the lattice inside: where the lines of three directions turn into each other at the edge their short joins can meet
+    for (const c of found.filter((q) => q.x > 1 && q.x < 99 && q.y > 1 && q.y < 99)) at.set(`${Math.round(c.x / 0.4)},${Math.round(c.y / 0.4)}`, (at.get(`${Math.round(c.x / 0.4)},${Math.round(c.y / 0.4)}`) ?? 0) + 1);
     return [...at.values()].filter((n) => n >= 3).length;
   };
   assert.ok(triples('triangles', 0) > 30);

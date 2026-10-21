@@ -71,6 +71,17 @@ or crossings under a strand already printed), the summary says so in plain words
 sliders a little, then more, then several together, and applies the first one after which the check passes, as one step
 that Undo takes back. Changing any setting, or *Stop looking*, ends the search.
 
+## Print order: row after row
+
+Lines laid in lanes (the squiggle, coil, zigzag, crosshatch and the other hatched designs) print the way a person would lay
+them: each layer from its bottom-left corner (vertical lines from the left), row after row, each row the opposite way to
+the one before, and every piece of a row before the next row. Where the outline cuts a row with a gap narrower than
+**60 mm** (`BRANCH_GAP` in `src/engine/fill.js`) the nozzle jumps the gap and carries on along the row, so both sides grow
+together; a wider gap splits the piece into branches, and the branch being printed is finished before the next one starts
+(where branches join again, the joined part comes after all of them). The strand ordering keeps that order instead of
+reordering lines for less travel, because the order is what keeps the texture even; an imported drawing's own lines are
+still ordered for the least travel, before the pattern.
+
 ## Run it
 
 Double-click `Run Textile Tool.bat` (needs Node 20 or newer). It starts a small local server and opens
@@ -137,7 +148,8 @@ the printing temperature is sent once extrusion rises above the bed layer, inclu
 ## Printable SVG and garment panels
 
 **Import SVG** sits above the pattern settings. No drawing to hand? `samples/filafabric-sample.svg` is a 200 × 200 mm
-sample with every colour in it (red shapes to fill, a blue star cut out of one, green guides, wide red lines): the import
+sample with the main colours in it (red shapes to fill, a blue star cut out of one, green solids, wide red lines), and
+`samples/lace-sample.svg` is a 170 × 110 mm lace medallion drawn with the lace rules below: the import
 card offers to try it in one click or to download it and open it in Inkscape or Illustrator to see how it is set up.
 Colour and stroke width say what each part of the drawing does:
 
@@ -145,7 +157,10 @@ Colour and stroke width say what each part of the drawing does:
 |---|---|
 | A closed shape in pure **red** (`#ff0000`) | Filled with the pattern |
 | A closed shape in pure **blue** (`#0000ff`) | Left empty: a hole |
-| Blue inside red | Cuts a hole in the red; a red shape inside that blue is filled again (the innermost shape decides) |
+| A closed shape in pure **green** (`#00ff00`) | Printed solid: a coil if it is round, a zigzag otherwise, two layers, 20% overlap |
+| A closed shape in pure **yellow** (`#ffff00`) | An opening the pattern bends round and stays bonded to (an eyelet) |
+| Shapes inside shapes | **The innermost shape decides** what prints in each place: red the pattern, blue nothing, green solid. Blue inside red cuts a hole in the pattern; red inside that blue is pattern again; green inside red is a solid on top of the pattern (a button) |
+| A lace | A green outline is the solid lace body; draw its openings inside it in blue and its patterned parts in red. The body prints first, on the bed, round them; the pattern fills the red windows; a green shape inside a window is solid again, on top. With no red at all, the piece is the solid alone (no pattern, no brim) |
 | A shape that is not closed | Never filled; it is a line |
 | Any open path, or a closed shape in another colour | A line, printed as drawn |
 | A line's stroke width | The number of passes: width ÷ extrusion width, rounded, at least one. A line as wide as the nozzle is one pass; a 0.8 mm line is two passes side by side and a 1.2 mm line three |

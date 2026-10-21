@@ -14,6 +14,7 @@ import { resolveConfig, ConfigError } from './params.js';
 import { createRng } from './rng.js';
 import { createField } from './fields.js';
 import { spacerStrands, pillarWeaveStrands } from './pillars.js';
+import { solidOnly } from './svg-solids.js';
 
 export function useWholeOverview(width, height, machine, choice = 'auto') {
   return choice === 'overview' || choice === 'auto' && (width > machine.bed.width || height > machine.bed.depth);
@@ -119,6 +120,8 @@ export function buildOverview(input, { maxVertices = 4000000, factors = OVERVIEW
   const tolerance = Math.min(0.08, Math.max(0.02, Math.max(shape.width, shape.height) / 20000));
   let issue = null;
   const strandWidth = (input.machine?.nozzle_diameter ?? .4) * 1.125;
+  // a drawing that is all green has no pattern: the drawing (its solid outline and openings) is the whole picture
+  if (input.vector && solidOnly(input.vector)) return { ...shape, packed: packLines([]), lines: 0, vertices: 0, factor: 1, strandWidth, shapeOnly: false, issue: null };
   for (const factor of factors) {
     let layers;
     try { layers = rawLayers(input, shape, factor); } catch (error) { issue = error.message; continue; }

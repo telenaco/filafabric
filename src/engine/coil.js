@@ -113,7 +113,7 @@ export function generateCoilTextile({
       loops += row.loops;
       rows++;
     }
-    strands.push({ id: 'coil', kind: 'base', name: 'Coil', pts });
+    strands.push({ id: 'coil', kind: 'base', name: 'Coil', pts, rowOrder: 0 });
   } else {
     const box = boundary.bbox();
     const margin = size * 0.6;
@@ -136,7 +136,8 @@ export function generateCoilTextile({
           `This layout would need more than ${MAX_MOVES.toLocaleString('en')} moves. Use larger loops, wider spacing or a smaller swatch.`,
         ]);
       }
-      strands.push({ id: id === 0 ? 'coil' : `coil-${id + 1}`, kind: 'base', name: 'Coil', pts });
+      // rows are laid bottom to top, branch by branch (fill.js): the strands keep that order when printed
+      strands.push({ id: id === 0 ? 'coil' : `coil-${id + 1}`, kind: 'base', name: 'Coil', pts, rowOrder: id });
       id++;
     }
     if (strands.length === 0) warnings.push('The outline is too small for these loops: nothing to print');

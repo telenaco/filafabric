@@ -354,6 +354,12 @@ export function orderStrands(strands, { start = null, improve = false } = {}) {
     const layerStart = at, layerFirst = out.length;
     let pause = left.some((s) => s.pauseBefore);
     const hadPause = pause;
+    // lines laid row by row (orderLanePieces) keep that order and direction: an even texture matters more than travel
+    if (left.every((s) => Number.isFinite(s.rowOrder))) {
+      left.map((s, i) => [s, i]).sort((a, b) => a[0].rowOrder - b[0].rowOrder || a[1] - b[1]).forEach(([s], i) => out.push({ ...s, pauseBefore: pause && i === 0 }));
+      at = out.at(-1)?.pts.at(-1) ?? at;
+      continue;
+    }
     while (left.length) {
       let best = Infinity, pick = 0, vertex = 0, reverse = false, closed = false;
       left.forEach((s, i) => {

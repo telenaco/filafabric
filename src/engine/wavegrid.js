@@ -1,6 +1,6 @@
 import { PolygonBoundary } from './boundary.js';
-import { clipPolyline, chainPolylines, appendPoints } from './layers.js';
-import { centredLanes } from './fill.js';
+import { clipPolyline, chainPolylines, markRowOrder } from './layers.js';
+import { centredLanes, orderLanePieces, laneStart } from './fill.js';
 import { fitPeriod, fitLanes } from './repeats.js';
 
 /**
@@ -95,17 +95,18 @@ export function waveLines(boundary, { angle = 0, spacing = 3, amplitude = 1, wav
       : [(box.minY + box.maxY) / 2];
   }
 
-  const list = [];
-  lanes.forEach((y, k) => {
-    const pieces = [];
+  const rows = lanes.map((y, k) => {
     // A wave can enter a slanted edge before its centre lane does. Generate its whole X extent, then clip the wave.
     const from = box.minX - wavelength, to = box.maxX + wavelength;
     const start = phase + k * laneShift + (from - box.minX) / wavelength;
-    appendPoints(pieces, clipPolyline(lanePoints(shape, from, to, y, amplitude, wavelength, start), turned, 1));
-    // alternate lanes run the other way so the end of one is beside the start of the next
-    if (k % 2 === 1) pieces.reverse().forEach((p) => p.reverse());
-    appendPoints(list, pieces);
+    return clipPolyline(lanePoints(shape, from, to, y, amplitude, wavelength, start), turned, 1).map((pts) => {
+      let lo = Infinity, hi = -Infinity;
+      for (const p of pts) { lo = Math.min(lo, p.x); hi = Math.max(hi, p.x); }
+      return { lo, hi, pts };
+    });
   });
+  // row after row from the bottom (left for upright lines), alternating, branch by branch where the outline splits wide
+  const list = orderLanePieces(rows, laneStart(angle)).map(({ piece, forward }) => (forward ? piece.pts : [...piece.pts].reverse()));
   const chains = chainPolylines(list, turned, spacing + 2 * amplitude + 2);
-  return chains.map((pts) => pts.map((p) => rotate(p, c, s)));
+  return chains.map((pts, i) => markRowOrder(pts.map((p) => rotate(p, c, s)), i));
 }

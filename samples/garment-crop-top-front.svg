@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="500mm" height="450mm" viewBox="0 0 500 450">
+  <title>Filafabric garment sample: lace-up crop top front</title>
+  <desc>A lace-up V-neck crop top front, women's M, drawn at full size in millimetres (460 x 408 mm).
+Red closed shape: the garment piece, filled with the pattern.
+Yellow circles: lacing eyelets; the pattern bends round them and stays bonded to their rim (0.9 mm wide: two passes).
+Blue diamonds: cut-outs, left empty.
+Black lines: reinforcing lines printed as drawn; 1.2 mm wide is three passes, 0.8 mm two.
+Too big for your bed? Type a smaller width in Size and shape: the whole drawing scales with it.</desc>
+  <g id="garment-piece">
+    <path id="crop-top-front" style="fill:none;stroke:#ff0000;stroke-width:0.5" d="M 175,21 L 250,211 L 325,21 L 390,43 C 386,126 420,221 480,221 L 472,421 Q 250,437 28,421 L 20,221 C 80,221 114,126 110,43 Z"/>
+  </g>
+  <g id="cut-outs">
+    <path id="diamond-1" style="fill:none;stroke:#0000ff;stroke-width:0.5" d="M 250,241 L 259,253 L 250,265 L 241,253 Z"/>
+    <path id="diamond-2" style="fill:none;stroke:#0000ff;stroke-width:0.5" d="M 250,273 L 259,285 L 250,297 L 241,285 Z"/>
+    <path id="diamond-3" style="fill:none;stroke:#0000ff;stroke-width:0.5" d="M 250,305 L 259,317 L 250,329 L 241,317 Z"/>
+  </g>
+  <g id="lacing-eyelets">
+    <circle id="eyelet-1" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="322.66" cy="59.61" r="3.5"/>
+    <circle id="eyelet-2" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="177.34" cy="59.61" r="3.5"/>
+    <circle id="eyelet-3" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="312.16" cy="86.21" r="3.5"/>
+    <circle id="eyelet-4" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="187.84" cy="86.21" r="3.5"/>
+    <circle id="eyelet-5" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="301.66" cy="112.81" r="3.5"/>
+    <circle id="eyelet-6" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="198.34" cy="112.81" r="3.5"/>
+    <circle id="eyelet-7" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="291.16" cy="139.41" r="3.5"/>
+    <circle id="eyelet-8" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="208.84" cy="139.41" r="3.5"/>
+    <circle id="eyelet-9" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="280.66" cy="166.01" r="3.5"/>
+    <circle id="eyelet-10" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="219.34" cy="166.01" r="3.5"/>
+    <circle id="eyelet-11" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="270.16" cy="192.61" r="3.5"/>
+    <circle id="eyelet-12" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="229.84" cy="192.61" r="3.5"/>
+  </g>
+  <g id="reinforcing-lines">
+    <path id="neckline-binding" style="fill:none;stroke:#000000;stroke-width:1.2" d="M 174.28,30.07 L 250,221.89 L 325.72,30.07"/>
+    <path id="armhole-binding-right" style="fill:none;stroke:#000000;stroke-width:1.2" d="M 385.69,58.11 L 385.78,63.7 L 385.98,69.34 L 386.28,74.99 L 386.7,80.62 L 387.22,86.25 L 387.84,91.86 L 388.57,97.44 L 389.41,103 L 390.35,108.51 L 391.39,113.98 L 392.54,119.4 L 393.78,124.76 L 395.13,130.06 L 396.58,135.29 L 398.13,140.43 L 399.78,145.5 L 401.53,150.47 L 403.37,155.35 L 405.32,160.12 L 407.36,164.78 L 409.5,169.32 L 411.74,173.74 L 414.07,178.03 L 416.5,182.18 L 419.03,186.19 L 421.66,190.05 L 424.38,193.75 L 427.2,197.28 L 430.12,200.64 L 433.14,203.82 L 436.26,206.82 L 439.47,209.62 L 442.79,212.21 L 446.21,214.6 L 449.72,216.76 L 453.33,218.69 L 457.04,220.38 L 460.85,221.82 L 464.74,223.01 L 468.59,223.9"/>
+    <path id="armhole-binding-left" style="fill:none;stroke:#000000;stroke-width:1.2" d="M 114.31,58.11 L 114.22,63.7 L 114.02,69.34 L 113.72,74.99 L 113.3,80.62 L 112.78,86.25 L 112.16,91.86 L 111.43,97.44 L 110.59,103 L 109.65,108.51 L 108.61,113.98 L 107.46,119.4 L 106.22,124.76 L 104.87,130.06 L 103.42,135.29 L 101.87,140.43 L 100.22,145.5 L 98.47,150.47 L 96.63,155.35 L 94.68,160.12 L 92.64,164.78 L 90.5,169.32 L 88.26,173.74 L 85.93,178.03 L 83.5,182.18 L 80.97,186.19 L 78.34,190.05 L 75.62,193.75 L 72.8,197.28 L 69.88,200.64 L 66.86,203.82 L 63.74,206.82 L 60.53,209.62 L 57.21,212.21 L 53.79,214.6 L 50.28,216.76 L 46.67,218.69 L 42.96,220.38 L 39.15,221.82 L 35.26,223.01 L 31.41,223.9"/>
+    <path id="hem-binding" style="fill:none;stroke:#000000;stroke-width:0.8" d="M 458.42,417.94 L 449.73,418.52 L 441.04,419.07 L 432.36,419.59 L 423.67,420.1 L 414.99,420.58 L 406.31,421.03 L 397.62,421.46 L 388.94,421.86 L 380.26,422.24 L 371.57,422.6 L 362.89,422.93 L 354.2,423.24 L 345.52,423.52 L 336.84,423.77 L 328.15,424.01 L 319.47,424.22 L 310.79,424.4 L 302.1,424.56 L 293.42,424.69 L 284.73,424.8 L 276.05,424.89 L 267.37,424.95 L 258.68,424.99 L 250,425 L 241.32,424.99 L 232.63,424.95 L 223.95,424.89 L 215.27,424.8 L 206.58,424.69 L 197.9,424.56 L 189.21,424.4 L 180.53,424.22 L 171.85,424.01 L 163.16,423.77 L 154.48,423.52 L 145.8,423.24 L 137.11,422.93 L 128.43,422.6 L 119.74,422.24 L 111.06,421.86 L 102.38,421.46 L 93.69,421.03 L 85.01,420.58 L 76.33,420.1 L 67.64,419.59 L 58.96,419.07 L 50.27,418.52 L 41.58,417.94"/>
+  </g>
+</svg>

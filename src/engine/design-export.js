@@ -5,7 +5,7 @@ import { createField } from './fields.js';
 import { resolveConfig, ConfigError } from './params.js';
 import { bedFitErrors, PreflightError } from './gcode.js';
 import { applySvgGuides } from './svg-guides.js';
-import { applySvgSolids } from './svg-solids.js';
+import { applySvgSolids, solidOnly, withoutPattern } from './svg-solids.js';
 import { composeSvgLines } from './svg-lines.js';
 import { stackLayers, addExtraLayers, nativeLayerInfo } from './stack.js';
 import { applyBrim } from './brim.js';
@@ -40,6 +40,8 @@ export function generateDesignBase(input) {
       includeLines: !vector,
     });
   }
+  // a drawing that is all green (and blue) has no red to fill: no pattern, only its solids
+  if (vector && solidOnly(vector)) result = withoutPattern(result);
   if (vector) {
     const [fullWidth, fullHeight] = input.vectorSize ?? [width, height], [offsetX, offsetY] = input.vectorOffset ?? [0, 0];
     const guideVector = offsetX || offsetY ? { ...vector, paths: vector.paths.map((path) => path.map((p) => ({ ...p, x: p.x - offsetX * vector.width / fullWidth, y: p.y - offsetY * vector.height / fullHeight }))) } : vector;
@@ -69,7 +71,8 @@ export function generateDesignExport(input) {
       rotatedResult: () => generateDesignBase(rotateDesignInput(input)), colorChange: !!input.settings?.colorChange,
     });
   }
-  return applyBrim(withSolids(result, input), { count: input.brim ?? 2 });
+  // a solid already prints its own edge pass: an all-solid piece takes no brim over it
+  return applyBrim(withSolids(result, input), { count: solidOnly(input.vector) ? 0 : input.brim ?? 2 });
 }
 
 /** The UI only needs printable output and summary data; geometry remains inside the worker. */
