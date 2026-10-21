@@ -172,7 +172,7 @@ test('panel names describe one-filament output without modifying the supplied se
 test('all twenty existing demo filenames keep their ordinary names including omitted zero angles', () => {
   const cases = [
     ['crosshatch', 'isogrid', {}, '01_crosshatch_isogrid_100x100mm_directions-0-60-120_shape-wave_spacing3.5_size0_pitch6.gcode'],
-    ['starlattice', 'stars', {}, '02_starlattice_stars_100x100mm_tiling-square_size8_angle67.5.gcode'],
+    ['starlattice', 'stars', {}, '02_starlattice_stars_100x100mm_tiling-square_size8_angle67.5_pattern-none_scale1.gcode' /* the star lattice took a pattern on 2026-10-21 */],
     ['dipweave', null, {}, '03_dipweave_default_100x100mm_warpPitch3.5_weftPitch3.5.gcode'],
     ['weave', null, { binding: 'plain', pitch: 4 }, '04_weave_plain_100x100mm_binding-plain_pitch4.gcode'],
     ['weave', null, { binding: 'diamond', pitch: 4 }, '05_weave_diamond_100x100mm_binding-diamond_pitch4.gcode'],

@@ -70,15 +70,16 @@ function meet(p, u, q, v) {
 /**
  * The straps of the pattern, as polylines. Each face contributes, at each corner, two rays: from the middle of the
  * edge before the corner and the edge after it, meeting near the corner. A strap is followed across faces: a ray
- * that reaches an edge midpoint carries straight on into the neighbouring face.
+ * that reaches an edge midpoint carries straight on into the neighbouring face. `angleOf(f)` (degrees) gives a face an
+ * angle of its own: neighbouring faces still meet at their shared edge midpoints, so a graded pattern stays one lattice.
  */
-export function hankinStraps(faces, angleDeg) {
-  const th = (angleDeg * Math.PI) / 180;
+export function hankinStraps(faces, angleDeg, angleOf = null) {
   const key = (p) => `${Math.round(p.x * 1000)},${Math.round(p.y * 1000)}`;
   // half-segments: for face f and edge i, 'a' runs from the edge midpoint to the corner point after it, 'b' from the
   // midpoint to the corner point before it
   const mids = new Map(); // midpoint key -> [{ f, i }]
-  const corner = faces.map((poly) => {
+  const corner = faces.map((poly, f) => {
+    const th = ((angleOf ? angleOf(f) : angleDeg) * Math.PI) / 180;
     const n = poly.length;
     const mid = poly.map((v, i) => ({ x: (v.x + poly[(i + 1) % n].x) / 2, y: (v.y + poly[(i + 1) % n].y) / 2 }));
     const dir = poly.map((v, i) => {
@@ -194,7 +195,7 @@ export function colourStraps(straps, maxLayers = 4) {
  *                hexagons; an octagon and its square), the pattern stretched a few percent at most so they fill the box
  *                and every edge falls on a line of symmetry of the motif, not part-way across a star
  */
-export function starLayers(boundary, { tiling = 'square', size = 8, angle = null, whole = true } = {}) {
+export function starLayers(boundary, { tiling = 'square', size = 8, angle = null, whole = true, tone = null } = {}) {
   const t = STAR_TILINGS[tiling];
   if (!t) throw new Error(`Unknown tiling: ${tiling}`);
   const box = boundary.bbox();
@@ -206,7 +207,14 @@ export function starLayers(boundary, { tiling = 'square', size = 8, angle = null
   const plain = { minX: box.minX, minY: box.minY, maxX: box.minX + w / fx, maxY: box.minY + h / fy };
   const stretch = (p) => ({ x: box.minX + (p.x - box.minX) * fx, y: box.minY + (p.y - box.minY) * fy });
   const faces = tilingFaces(tiling, plain, size);
-  const straps = hankinStraps(faces, angle ?? t.angle);
+  // a pattern grades the stars: each tile's angle swings up to 18° either side of the chosen one, sharper where it is high
+  const base = angle ?? t.angle;
+  const angleOf = tone ? (f) => {
+    const poly = faces[f], c = stretch({ x: poly.reduce((n, p) => n + p.x, 0) / poly.length, y: poly.reduce((n, p) => n + p.y, 0) / poly.length });
+    const v = Math.max(0, Math.min(1, tone(c.x - box.minX, c.y - box.minY, w, h)));
+    return Math.max(40, Math.min(85, base + (v - 0.5) * 36));
+  } : null;
+  const straps = hankinStraps(faces, base, angleOf);
   // only the straps that reach the swatch
   const inside = straps.filter((pts) => pts.some((p) => p.x > plain.minX - size && p.x < plain.maxX + size && p.y > plain.minY - size && p.y < plain.maxY + size)).map((pts) => pts.map(stretch));
   const colour = colourStraps(inside, 4);

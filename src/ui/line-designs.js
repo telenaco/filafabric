@@ -10,12 +10,14 @@ import { bubblesLayers } from '../engine/bubbles.js';
 import { parquetLayers, TILINGS, TILING_IDS } from '../engine/parquet.js';
 import { spirographLayers } from '../engine/spirograph.js';
 import { starLayers, STAR_TILINGS, STAR_TILING_IDS } from '../engine/starlattice.js';
-import { FIELD_IDS, createField } from '../engine/fields.js';
+import { FIELD_IDS } from '../engine/fields.js';
+import { patternField, withPicture } from '../engine/picture.js';
 import { interpretDrawing } from '../engine/drawing.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const PATTERN_SCALE = { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false };
-const toneFor = (s) => (s.pattern === 'none' ? null : createField(s.pattern, { scale: s.patternScale }));
+// a design's pattern as a field: a built-in one or the uploaded picture (picture.js), dark parts reading as more
+const toneFor = (s, ctx, polarity = 'positive') => patternField(s.pattern, { scale: s.patternScale, picture: ctx?.picture, polarity });
 const COLOUR = { kind: 'switch', key: 'colorChange', label: 'Two colours', help: 'Pause after the first layer so you can load a second filament (M600).' };
 
 export const LINE_DESIGNS = [];
@@ -152,7 +154,7 @@ LINE_DESIGNS.push(layered({
 const FLOW = defineControls({
   ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, scale: { min: 10, max: 80, step: 5 }, bend: { min: 0.1, max: 1, step: 0.05 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
   defaults: { width: 100, height: 100, flow: 'waves', spacing: 3, scale: 25, bend: 0.6, pattern: 'noise', patternScale: 1, colorChange: false },
-  enums: { flow: FLOW_IDS, pattern: ['none', ...FIELD_IDS] },
+  enums: { flow: FLOW_IDS, pattern: withPicture(['none', ...FIELD_IDS]) },
   bools: ['colorChange'],
   presets: [
     { id: 'ripples', name: 'Ripples', blurb: 'A grid that ripples both ways', patch: { flow: 'waves', scale: 25, bend: 0.6 } },
@@ -172,7 +174,7 @@ LINE_DESIGNS.push(layered({
   file: 'flowlines',
   c: FLOW,
   bundle: 'flow',
-  patterns: ['none', ...FIELD_IDS],
+  patterns: withPicture(['none', ...FIELD_IDS]),
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
@@ -186,17 +188,17 @@ LINE_DESIGNS.push(layered({
         { key: 'bend', label: 'Bend', help: 'How far the lines lean: the ripple depth, the twist of the whirlpool, or how far a pattern turns them.', lo: 'Gentle', hi: 'Strong', unit: '', edit: false },
       ],
     },
-    { kind: 'pattern', key: 'pattern', title: 'Turn with a pattern', hint: 'Only the pattern flow uses it: the lines turn one way where it is bright, the other where it is dark.', scale: PATTERN_SCALE },
+    { kind: 'pattern', key: 'pattern', title: 'Turn with a pattern', hint: 'Only the pattern flow uses it: the lines turn one way where it is bright, the other where it is dark.', scale: PATTERN_SCALE, picture: 'positive', pictureHint: 'With the pattern flow, the lines turn one way where the picture is dark and the other where it is light.' },
     COLOUR,
   ],
-  build: (s, boundary) => flowLayers(boundary, { flow: s.flow, spacing: s.spacing, scale: s.scale, bend: s.bend, tone: toneFor(s) }),
+  build: (s, boundary, ctx) => flowLayers(boundary, { flow: s.flow, spacing: s.spacing, scale: s.scale, bend: s.bend, tone: toneFor(s, ctx) }),
   summary: (result) => `flow lines with ${result.report.crossings} right-angle crossings`,
 }));
 
 const BUBBLES = defineControls({
   ranges: { ...SIZE, size: { min: 0.8, max: 10, step: 0.1 }, seed: { min: 1, max: 999, step: 1 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
   defaults: { width: 100, height: 100, size: 4, seed: 1, link: true, pattern: 'none', patternScale: 1, colorChange: false },
-  enums: { pattern: ['none', ...FIELD_IDS] },
+  enums: { pattern: withPicture(['none', ...FIELD_IDS]) },
   bools: ['link', 'colorChange'],
   presets: [
     { id: 'foam', name: 'Foam', blurb: 'Mixed bubbles, joined in clusters', patch: { size: 4, link: true, pattern: 'none' } },
@@ -215,7 +217,7 @@ LINE_DESIGNS.push(layered({
   about: 'Rings of mixed sizes packed until no gap would take another. Neighbouring rings are joined where they nearly touch by a short double bridge, so one strand tours a whole cluster. The second layer puts a small ring in each gap between three bubbles, centred where it meets all three at a right angle (their radical centre), so every bubble is held by the rings in the gaps round it. Reads as foam or lace.',
   file: 'bubbles',
   c: BUBBLES,
-  patterns: ['none', ...FIELD_IDS],
+  patterns: withPicture(['none', ...FIELD_IDS]),
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
@@ -228,10 +230,10 @@ LINE_DESIGNS.push(layered({
       ],
     },
     { kind: 'switch', key: 'link', label: 'Join bubbles into clusters', help: 'One strand tours each cluster of touching bubbles, with fewer starts and stops. Off: every bubble is its own ring.' },
-    { kind: 'pattern', key: 'pattern', title: 'Grade with a pattern', hint: 'Bubbles are smaller where the pattern is bright.', scale: PATTERN_SCALE },
+    { kind: 'pattern', key: 'pattern', title: 'Grade with a pattern', hint: 'Bubbles are smaller where the pattern is bright.', scale: PATTERN_SCALE, picture: 'positive', pictureHint: 'Bubbles are smaller and denser where the picture is dark.' },
     COLOUR,
   ],
-  build: (s, boundary) => bubblesLayers(boundary, { size: s.size, seed: s.seed, link: s.link, tone: toneFor(s) }),
+  build: (s, boundary, ctx) => bubblesLayers(boundary, { size: s.size, seed: s.seed, link: s.link, tone: toneFor(s, ctx) }),
   summary: (result) => `${result.bubbles} bubbles held by ${result.gaps} rings`,
 }));
 
@@ -320,9 +322,9 @@ LINE_DESIGNS.push(layered({
 }));
 
 const STAR = defineControls({
-  ranges: { ...SIZE, size: { min: 0.8, max: 20, step: 0.1 }, angle: { min: 50, max: 80, step: 2.5 } },
-  defaults: { width: 100, height: 100, tiling: 'square', size: 8, angle: 67.5, colorChange: false },
-  enums: { tiling: STAR_TILING_IDS },
+  ranges: { ...SIZE, size: { min: 0.8, max: 20, step: 0.1 }, angle: { min: 50, max: 80, step: 2.5 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
+  defaults: { width: 100, height: 100, tiling: 'square', size: 8, angle: 67.5, pattern: 'none', patternScale: 1, colorChange: false },
+  enums: { tiling: STAR_TILING_IDS, pattern: withPicture(['none', ...FIELD_IDS]) },
   bools: ['colorChange'],
   presets: [
     { id: 'stars', name: 'Stars and crosses', blurb: 'Four-pointed stars in a square grid', patch: { tiling: 'square', size: 8, angle: 67.5 } },
@@ -342,6 +344,7 @@ LINE_DESIGNS.push(layered({
   file: 'starlattice',
   c: STAR,
   bundle: 'tiling',
+  patterns: withPicture(['none', ...FIELD_IDS]),
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
@@ -354,8 +357,9 @@ LINE_DESIGNS.push(layered({
         { key: 'angle', label: 'Contact angle', help: 'How far the straps lean from the tile edges: sharper stars as it grows.', lo: 'Blunt', hi: 'Sharp', unit: '°', edit: true },
       ],
     },
+    { kind: 'pattern', key: 'pattern', title: 'Grade with a pattern', hint: 'The stars are sharper where the pattern is bright and blunter where it is dark: each tile takes its own contact angle, and the straps still meet at the tile edges.', scale: PATTERN_SCALE, picture: 'positive', pictureHint: 'The stars are sharper (longer straps) where the picture is dark and blunter where it is light.' },
     COLOUR,
   ],
-  build: (s, boundary) => starLayers(boundary, { tiling: s.tiling, size: s.size, angle: s.angle }),
+  build: (s, boundary, ctx) => starLayers(boundary, { tiling: s.tiling, size: s.size, angle: s.angle, tone: toneFor(s, ctx) }),
   summary: (result) => `a star lattice of ${result.families} strap families and ${result.report.crossings} crossings`,
 }));

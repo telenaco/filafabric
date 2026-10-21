@@ -26,6 +26,7 @@
 import { el } from './dom.js';
 import { validNumber } from './numeric.js';
 import { FIELDS, createField } from '../engine/fields.js';
+import { PICTURE } from '../engine/picture.js';
 import { SHAPES } from '../engine/shapes.js';
 import { shapeThumb } from './thumbs.js';
 
@@ -426,38 +427,120 @@ export class OptionFold extends Control {
 
 /** The grid of pattern fields, and beside it the pattern-size slider (shown only while a pattern is chosen). */
 export class PatternPicker extends Control {
-  /** @param scale the slider description of the pattern size, or null */
-  constructor(host, designId, key, patterns, titleId, { scale = null } = {}) {
+  /**
+   * @param scale        the slider description of the pattern size, or null
+   * @param pictureHint  how this design reads the uploaded picture, shown with it, when `patterns` offers it
+   */
+  constructor(host, designId, key, patterns, titleId, { scale = null, pictureHint = '' } = {}) {
     super(host);
     this.designId = designId;
     this.key = key;
     this.grid = el('div', { class: 'patterns', role: 'group', 'aria-labelledby': titleId });
+    const offersPicture = patterns.includes(PICTURE);
+    // the picture is chosen from a file the first time: a hidden chooser, opened by the "Your picture" button
+    this.fileInput = offersPicture ? el('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', class: 'visually-hidden', tabindex: '-1', 'aria-hidden': 'true', id: `${designId}-picture-file` }) : null;
+    this.fileInput?.addEventListener('change', () => {
+      const file = this.fileInput.files?.[0];
+      if (file) host.loadPicture(file, designId);
+      this.fileInput.value = '';
+    });
     this.buttons = patterns.map((field) => {
       const canvas = el('canvas', { class: 'pattern-thumb', 'data-field': field, 'aria-hidden': 'true' });
-      const btn = el('button', { type: 'button', class: 'pattern', 'data-choice': `${designId}:${key}:${field}`, 'aria-pressed': 'false', title: field === 'none' ? 'Every loop the same' : FIELDS[field].hint },
-        canvas, el('span', { text: field === 'none' ? 'Plain' : FIELDS[field].label }));
-      btn.addEventListener('click', () => { host.settings(designId)[key] = field; host.change(); });
+      const picture = field === PICTURE;
+      const label = picture ? 'Your picture' : field === 'none' ? 'Plain' : FIELDS[field].label;
+      const title = picture ? (pictureHint || 'Use a picture of your own as the pattern') : field === 'none' ? 'Every loop the same' : FIELDS[field].hint;
+      const btn = el('button', { type: 'button', class: 'pattern', 'data-choice': `${designId}:${key}:${field}`, 'aria-pressed': 'false', title }, canvas, el('span', { text: label }));
+      btn.addEventListener('click', () => {
+        if (picture && !host.picture?.()) { this.fileInput.click(); return; }
+        host.settings(designId)[key] = field;
+        host.change();
+      });
       this.grid.append(btn);
-      drawFieldThumb(canvas, field);
+      this.drawThumb(canvas, field);
       return { btn, field };
     });
     this.scaleBox = el('div', { id: `${designId}-pattern-scale`, class: 'pattern-scale' });
     this.scale = scale ? new SliderControl(host, designId, scale) : null;
     if (this.scale) this.scaleBox.append(this.scale.node);
-    this.node = el('div', { class: 'pattern-picker' }, this.grid, this.scaleBox);
+    this.pictureBox = offersPicture ? this.buildPictureBox(pictureHint) : null;
+    this.node = el('div', { class: 'pattern-picker' }, this.grid, this.scaleBox, this.pictureBox, this.fileInput);
+  }
+
+  /** The picture in use: how this design reads it, its name and size, and what can be done with it. */
+  buildPictureBox(pictureHint) {
+    const { host, designId } = this;
+    this.pictureInfo = el('p', { class: 'small muted picture-info' });
+    const choose = el('button', { type: 'button', class: 'link small', text: 'Choose another picture' });
+    choose.addEventListener('click', () => this.fileInput.click());
+    this.shapeButton = el('button', { type: 'button', class: 'link small', text: 'Give the piece the picture\'s shape' });
+    this.shapeButton.addEventListener('click', () => host.pictureShape(designId));
+    const remove = el('button', { type: 'button', class: 'link small', text: 'Remove picture' });
+    remove.addEventListener('click', () => host.clearPicture());
+    const box = el('div', { class: 'picture-box', id: `${designId}-picture-box` },
+      pictureHint ? el('p', { class: 'small', text: pictureHint }) : null,
+      this.pictureInfo,
+      el('div', { class: 'picture-actions' }, choose, this.shapeButton, remove));
+    // a picture dropped on the box (or on the whole picker) replaces the one in use
+    for (const target of [box, this.grid]) {
+      target.addEventListener('dragover', (e) => { if (e.dataTransfer?.types?.includes('Files')) { e.preventDefault(); target.classList.add('dragover'); } });
+      target.addEventListener('dragleave', () => target.classList.remove('dragover'));
+      target.addEventListener('drop', (e) => {
+        const file = e.dataTransfer?.files?.[0];
+        target.classList.remove('dragover');
+        if (!file) return;
+        e.preventDefault();
+        host.loadPicture(file, designId);
+      });
+    }
+    return box;
+  }
+
+  /** A pattern's button picture: the field itself, the uploaded picture, or an upload arrow before there is one. */
+  drawThumb(canvas, field) {
+    if (field !== PICTURE) { drawFieldThumb(canvas, field); return; }
+    const ratio = Math.min(window.devicePixelRatio || 1, 2), size = 48;
+    canvas.width = size * ratio;
+    canvas.height = size * ratio;
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.clearRect(0, 0, size, size);
+    const image = this.host.picture?.();
+    if (image?.thumb) { ctx.drawImage(image.thumb, 0, 0, size, size); return; }
+    const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#34469a';
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(24, 31); ctx.lineTo(24, 14); ctx.moveTo(17, 21); ctx.lineTo(24, 14); ctx.lineTo(31, 21); ctx.moveTo(13, 36); ctx.lineTo(35, 36);
+    ctx.stroke();
   }
 
   redraw() {
-    for (const { btn, field } of this.buttons) drawFieldThumb(btn.querySelector('canvas'), field);
+    for (const { btn, field } of this.buttons) this.drawThumb(btn.querySelector('canvas'), field);
     this.fold?.update();
   }
 
   update() {
     const s = this.host.settings(this.designId);
-    for (const { btn, field } of this.buttons) btn.setAttribute('aria-pressed', String(String(s[this.key]) === field));
+    for (const { btn, field } of this.buttons) {
+      btn.setAttribute('aria-pressed', String(String(s[this.key]) === field));
+      if (field === PICTURE) this.drawThumb(btn.querySelector('canvas'), field); // the picture may have changed
+    }
     this.fold?.update();
-    this.scaleBox.hidden = !s.pattern || s.pattern === 'none';
+    const picture = s[this.key] === PICTURE;
+    this.scaleBox.hidden = !s.pattern || s.pattern === 'none' || picture; // a picture is laid over the whole piece
     this.scale?.update();
+    if (this.pictureBox) {
+      const image = this.host.picture?.();
+      this.pictureBox.hidden = !picture || !image;
+      if (image) {
+        const [w, h] = this.host.binding(this.designId)?.size?.get?.() ?? [0, 0];
+        const shaped = w && h && Math.abs(w / h - image.px[0] / image.px[1]) < 0.02;
+        this.pictureInfo.textContent = `${image.name} · ${image.px[0]} × ${image.px[1]} px · ${shaped ? 'the piece has its shape' : 'stretched to fill the piece'}`;
+        this.shapeButton.hidden = !!shaped;
+      }
+    }
   }
 }
 
@@ -649,7 +732,7 @@ export class SlidersSection extends Section {
 /** A grid of pattern fields (the brightness map a design reads) and its size slider. */
 export class PatternSection extends Section {
   buildBody() {
-    this.picker = new PatternPicker(this.host, this.mod.id, this.spec.key, this.mod.patterns, this.titleId, { scale: this.spec.scale ?? null });
+    this.picker = new PatternPicker(this.host, this.mod.id, this.spec.key, this.mod.patterns, this.titleId, { scale: this.spec.scale ?? null, pictureHint: this.spec.pictureHint ?? '' });
     return [this.hint(), this.picker.node];
   }
 

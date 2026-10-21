@@ -71,6 +71,22 @@ or crossings under a strand already printed), the summary says so in plain words
 sliders a little, then more, then several together, and applies the first one after which the check passes, as one step
 that Undo takes back. Changing any setting, or *Stop looking*, ends the search.
 
+## Patterns and your picture
+
+Every design with a pattern (Squiggle & Gyroid, Loop pile, Coil, Bouclé, Relief, Meander, Voronoi lace, Flow lines,
+Bubbles, Halftone net and Star lattice) offers **Your picture** next to its built-in patterns. One picture is shared by all
+of them: load it once (choose it, or drop it on the pattern picker) and any of those designs can use it with one click.
+It is laid over the whole piece, a preview corner or an export takes its part of it, and its tones are stretched to its
+own darkest and lightest (`src/engine/picture.js`), so a flat photo still uses the whole range. The design's own sliders
+set the range (loop size, line thickness, cell size); the picture says where in it each place falls.
+
+Each design reads it one way, set by `picture: 'positive'` or `'negative'` on its pattern control. They are all positive
+for now: **dark is more**, as with ink. Fuller loops (Coil, Bouclé), a taller pile (Loop pile), the strand rising (Relief),
+denser dots (Meander's stipple tour), smaller cells and bubbles (Voronoi lace, Bubbles), thicker lines (Halftone net),
+sharper stars (Star lattice: each tile takes its own contact angle), and Flow lines turning one way. The picture never
+travels in a share link or a saved file; reopened without it, a pattern set to it goes back to the design's default.
+The repeating garment panel does not use the picture yet. Designs whose geometry cannot show a gradient have no pattern.
+
 ## Print order: row after row
 
 Lines laid in lanes (the squiggle, coil, zigzag, crosshatch and the other hatched designs) print the way a person would lay

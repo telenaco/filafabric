@@ -3,6 +3,7 @@
 //   Spacer net       Kim & Lee, "Modeling and development of continuous textile structures utilizing 3D printing"
 //   Pillar weave     Takahashi & Kim, "3D Printed Fabric: Techniques for Design and 3D Weaving Programmable Textiles"
 // Each is described like the other cards: controls here, geometry in src/engine.
+import { patternField, withPicture } from '../engine/picture.js';
 import { defineControls, r1, r2 } from './structure-controls.js';
 import { layered } from './more-designs.js';
 import { buildLayeredVerdict } from './verdict.js';
@@ -37,7 +38,7 @@ const HALFTONE = defineControls({
     patternScale: { min: 0.25, max: 2, step: 0.05 },
   },
   defaults: { width: 100, height: 100, spacing: 3, angle: 0, shape: 'straight', size: 1.5, pitch: 8, thin: 0.6, thick: 1.8, second: 'same', pattern: 'bumps', patternScale: 1, colorChange: false },
-  enums: { shape: NET_SHAPES, second: SECOND_LAYERS, pattern: FIELD_IDS },
+  enums: { shape: NET_SHAPES, second: SECOND_LAYERS, pattern: withPicture(FIELD_IDS) },
   bools: ['colorChange'],
   presets: [
     { id: 'soft', name: 'Soft', blurb: 'A gentle swing in thickness', patch: { thin: 0.8, thick: 1.4, second: 'same', shape: 'straight', angle: 0, colorChange: false } },
@@ -66,7 +67,7 @@ export const PUBLICATION_DESIGNS = [
     about: 'Two layers of lines cross as a plain net, like Crosshatch. The pattern is carried by how thick each line is, not by where the lines are, so the net holds together the same everywhere and the picture is a change of flow along every line (and a slower print where the bead is thick). With two colours and the second layer set to the complement, the layers trade thickness and the pattern shows as the colours swap. The thickness range is a material test: print a small swatch first.',
     file: 'halftone',
     c: HALFTONE,
-    patterns: FIELD_IDS,
+    patterns: withPicture(FIELD_IDS),
     controls: [
       { kind: 'presets', title: 'Start from' },
       { kind: 'size', title: 'Size and shape' },
@@ -81,7 +82,7 @@ export const PUBLICATION_DESIGNS = [
           { id: 'complement', label: 'Complement', hint: 'The second layer is thick where the first is thin: the net stays the same thickness and the colours swap' },
         ],
       },
-      { kind: 'pattern', key: 'pattern', title: 'Picture', hint: 'Lines are thick where the pattern is bright and thin where it is dark.', scale: PATTERN_SCALE },
+      { kind: 'pattern', key: 'pattern', title: 'Picture', hint: 'Lines are thick where the pattern is bright and thin where it is dark.', scale: PATTERN_SCALE, picture: 'positive', pictureHint: 'Lines are thick where the picture is dark and thin where it is light, like a printed halftone.' },
       {
         kind: 'sliders',
         title: 'Look and feel',
@@ -96,7 +97,7 @@ export const PUBLICATION_DESIGNS = [
       },
       COLOUR,
     ],
-    build: (s, boundary, { bead } = {}) => halftoneLayers(boundary, {
+    build: (s, boundary, { bead, picture = null } = {}) => halftoneLayers(boundary, {
       bead,
       spacing: s.spacing,
       angle: s.angle,
@@ -107,7 +108,8 @@ export const PUBLICATION_DESIGNS = [
       thin: s.thin,
       thick: s.thick,
       second: s.second,
-      tone: createField(s.pattern, { scale: s.patternScale }),
+      // dark parts of a picture print thick, as a halftone does (without a picture loaded: an even mid tone)
+      tone: patternField(s.pattern, { scale: s.patternScale, picture }),
     }),
     verdict: (result) => buildLayeredVerdict(result),
     figure: (result) => ({ value: `${result.halftone.lo.toFixed(2)}–${result.halftone.hi.toFixed(2)}`, unit: '×', label: 'Line thickness' }),

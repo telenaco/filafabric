@@ -24,7 +24,7 @@ const keep = {
 async function openStudio() {
   document.body.classList.remove('locked');
   $('gate')?.remove();
-  await import('./ui/main.js?v=20261021-yellow-solid');
+  await import('./ui/main.js?v=20261021-picture-patterns');
   $('btn-lock')?.addEventListener('click', () => {
     keep.clear();
     location.reload();

@@ -684,6 +684,14 @@ body:not(.locked) > #gate { display: none; }
 .pattern .shape-thumb { display: block; }
 .pattern-scale { margin-top: 14px; }
 .pattern-scale[hidden] { display: none; }
+/* the picture as a pattern: how the design reads it, its name and size, and what can be done with it */
+.picture-box { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
+.picture-box[hidden] { display: none; }
+.picture-box p { margin: 0 0 6px; }
+.picture-actions { display: flex; flex-wrap: wrap; gap: 2px 14px; }
+.picture-actions .link { min-height: 32px; padding: 0; }
+.picture-actions .link[hidden] { display: none; }
+.pattern-picker .dragover { outline: 2px dashed var(--accent); outline-offset: 3px; border-radius: 10px; }
 
 .gallery-order { margin: -4px 0 12px; }
 .manual-value { background: var(--accent-soft); border-radius: 4px; }

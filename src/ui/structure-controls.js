@@ -1,4 +1,6 @@
 import { validNumber } from './numeric.js';
+import { FIELD_IDS } from '../engine/fields.js';
+import { withPicture } from '../engine/picture.js';
 // Controls for the newer structures (Relief, Fringe, Bouclé, Spiral, Weave): ranges, defaults, sanitising, presets and
 // read-outs, built from one small description each. Pure: no DOM, so it is tested in Node like the engine.
 
@@ -42,6 +44,7 @@ const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 20
 export const RELIEF_CONTROLS = defineControls({
   ranges: { ...SIZE, relief: { min: 0.5, max: 3, step: 0.25 }, rowPitch: { min: 0.8, max: 6, step: 0.1 }, patternScale: { min: 0.25, max: 2, step: 0.05 } },
   defaults: { width: 100, height: 100, relief: 2, rowPitch: 3, pattern: 'bumps', patternScale: 0.5 },
+  enums: { pattern: withPicture(FIELD_IDS) },
   presets: [
     { id: 'seersucker', name: 'Seersucker', blurb: 'Fine puckered stripes', patch: { pattern: 'stripes', patternScale: 0.3, relief: 1, rowPitch: 2.5 } },
     { id: 'bobbles', name: 'Bobbles', blurb: 'Round bumps', patch: { pattern: 'bumps', patternScale: 0.5, relief: 2.5, rowPitch: 3 } },
@@ -70,6 +73,7 @@ export const FRINGE_CONTROLS = defineControls({
 export const BOUCLE_CONTROLS = defineControls({
   ranges: { ...SIZE, size: { min: 0.8, max: 8, step: 0.1 }, pitch: { min: 0.8, max: 16, step: 0.1 }, rowPitch: { min: 0.8, max: 16, step: 0.1 }, lift: { min: 0.1, max: 0.6, step: 0.05 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
   defaults: { width: 100, height: 100, size: 4, pitch: 8, rowPitch: 7, lift: 0.25, pattern: 'none', patternScale: 1 },
+  enums: { pattern: withPicture(['none', ...FIELD_IDS]) },
   presets: [
     { id: 'picot-trim', name: 'Picot trim', blurb: 'Small rings, wide rows', patch: { size: 3, pitch: 6, rowPitch: 8 } },
     { id: 'boucle', name: 'Bouclé', blurb: 'Big rings on every row', patch: { size: 5, pitch: 8, rowPitch: 7 } },

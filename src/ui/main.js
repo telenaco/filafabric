@@ -10,6 +10,7 @@ import { bedSizeLimits, printSizeProblem } from './bed-size.js';
 import { PrintEstimates } from './print-estimates.js';
 import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airStrandMm, fitAspect, pileLiftFactor } from './controls.js';
 import { SQ_RANGES, SQUIGGLE_DEFAULTS, describeSquiggle, sizeForAspect } from './squiggle-controls.js';
+import { PICTURE, withPicture, pictureDarkness } from '../engine/picture.js';
 import { buildVerdict, buildSquiggleVerdict, formatMinutes } from './verdict.js';
 import { stateToHash, hashToState, sanitizeState, PRINT_DEFAULTS } from './share.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
@@ -327,12 +328,8 @@ function loadState(data) {
   normalisePrint();
   if (typeof data?.name === 'string') state.docName = data.name.slice(0, 60);
   if (designChanged) resetRoles();
-  // a picture never travels in a link or a file, so without one loaded the pattern falls back
-  if (state.squiggle.pattern === 'image' && !state.image) {
-    state.squiggle.pattern = SQUIGGLE_DEFAULTS.pattern;
-    return true;
-  }
-  return false;
+  // a picture never travels in a link or a file, so without one loaded every pattern set to it falls back
+  return state.image ? false : forgetPictureChoices();
 }
 
 function applySnapshot(data) {
@@ -424,6 +421,11 @@ const PRINT_BINDING = {
 
 /** What the panel classes need from the studio. */
 const host = {
+  // the one uploaded picture, shared by every design whose pattern can be it (never in a link or a saved file)
+  picture: () => state.image,
+  loadPicture: (file, designId) => loadPicture(file, designId),
+  clearPicture: () => clearPicture(),
+  pictureShape: (designId) => givePictureShape(designId),
   binding: (id) => (id === 'print' ? PRINT_BINDING : BINDINGS[id]),
   settings: (id) => settingsOf(id),
   presetPicture: (mod, preset) => presetThumb(mod, preset, { machine: state.machines.get(state.machine), material: printMaterial() }),
@@ -462,7 +464,7 @@ function buildPanels() {
     $(b.host).replaceChildren(...sliders.map((s) => s.node));
     controls.push(size, ...sliders);
   }
-  const picker = new PatternPicker(host, 'loop-pile', 'pattern', ['none', ...FIELD_IDS], 'lp-pattern-title', { scale: PATTERN_SCALE });
+  const picker = new PatternPicker(host, 'loop-pile', 'pattern', withPicture(['none', ...FIELD_IDS]), 'lp-pattern-title', { scale: PATTERN_SCALE, picture: 'positive', pictureHint: 'The pile is taller where the picture is dark and lower where it is light.' });
   $('#lp-pattern').replaceChildren(picker.node);
   controls.push(picker);
   const pilePatterns = new SectionFold(host, $('#lp-pattern').closest('section'), { id: 'lp-pattern-section' });
@@ -649,7 +651,7 @@ function previewAtSelectedSize(input, { estimateOnly = false } = {}) {
 /** The tone of the squiggle pattern across the swatch as it is previewed (a window at most 100 mm across). */
 function squiggleSampler(width = state.squiggle.width, height = state.squiggle.height) {
   const s = state.squiggle;
-  if (s.pattern === 'image' && state.image) return createImageSampler(state.image.data, width, height, { yUp: true });
+  if (s.pattern === 'image' && state.image) return pictureDarkness(state.image.data, width, height);
   return SAMPLERS[s.pattern] ?? SAMPLERS.centerSpot;
 }
 
@@ -759,7 +761,7 @@ function regenerate() {
       const own = state.designs[mod.id];
       const [w, h] = mod.size(own);
       const previewState = { ...own, width: Math.min(w, cap), height: Math.min(h, cap) };
-      result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height, w, h), vector: mod.usesVector || mod.vectorGuides ? state.vector : null, vectorSize: [w, h], includeLines: !state.vector });
+      result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height, w, h), vector: mod.usesVector || mod.vectorGuides ? state.vector : null, vectorSize: [w, h], includeLines: !state.vector, picture: pictureFor(w, h) });
     } else if (state.design === 'squiggle') {
       const s = state.squiggle;
       // a picture is shown whole: the preview is the whole swatch at the shape it has, shrunk to fit the window
@@ -782,7 +784,7 @@ function regenerate() {
       const [w, h] = sampleSize(state.primary);
       const textile = toTextile(state.primary, state.advanced);
       textile.sample_width = Math.min(w, cap); textile.sample_height = Math.min(h, cap);
-      result = generate(machine, material, textile, { outline: placedOutline(textile.sample_width, textile.sample_height, w, h), liftAt: pileLiftFactor(state.primary) });
+      result = generate(machine, material, textile, { outline: placedOutline(textile.sample_width, textile.sample_height, w, h), liftAt: pileLiftFactor(state.primary, pictureFor(w, h)) });
     }
     // a drawing that is all green (and blue) has no red to fill: no pattern, only its solids
     const allSolid = solidOnly(state.vector);
@@ -1701,8 +1703,48 @@ function renderDesignChoices() {
   renderControls();
 }
 
-/* ---------- pictures for the squiggle pattern ---------- */
-function loadPicture(file) {
+/* ---------- the picture, as a pattern for any design that offers it ---------- */
+/** The picture laid over a width x height mm piece, for a design's pattern (picture.js), or null without one. */
+function pictureFor(width, height) {
+  return state.image ? { image: state.image.data, size: [width, height], offset: [0, 0] } : null;
+}
+
+/** Every pattern set to the picture goes back to its design's own default. True if any did. */
+function forgetPictureChoices() {
+  let changed = false;
+  for (const mod of DESIGNS) {
+    if (mod.status !== 'ready') continue;
+    const s = settingsOf(mod.id);
+    if (s?.pattern !== PICTURE) continue;
+    s.pattern = mod.defaults().pattern ?? 'none';
+    changed = true;
+  }
+  return changed;
+}
+
+function clearPicture() {
+  state.image = null;
+  state.imageBoxOpen = false;
+  forgetPictureChoices();
+  buildPatterns();
+  renderControls();
+  schedule();
+  commit();
+}
+
+/** The design keeps its longer side and takes the picture's proportions. */
+function givePictureShape(designId = state.design) {
+  if (!state.image) return;
+  const binding = BINDINGS[designId];
+  const [w, h] = sizeForAspect(...state.image.px, Math.max(...binding.size.get()));
+  binding.size.set(w, h);
+  renderSizes();
+  renderControls();
+  schedule();
+  commit();
+}
+
+function loadPicture(file, designId = 'squiggle') {
   if (!file || !file.type.startsWith('image/')) {
     toast('That is not a picture: use a PNG, JPG or WebP file.');
     return;
@@ -1724,15 +1766,18 @@ function loadPicture(file) {
     const side = Math.min(natW, natH);
     thumb.getContext('2d').drawImage(img, (natW - side) / 2, (natH - side) / 2, side, side, 0, 0, 112, 112);
     state.image = { data: ctx.getImageData(0, 0, canvas.width, canvas.height), name: file.name, px: [natW, natH], thumb };
-    // the picture adapts to the swatch: the size you set stays, whatever the picture's own size
-    state.squiggle.pattern = 'image';
+    // the picture adapts to the piece: the size you set stays, whatever the picture's own size
+    const target = settingsOf(designId);
+    if (target) target.pattern = PICTURE;
     state.imageBoxOpen = false;
     $('#sq-thumb').getContext('2d').drawImage(thumb, 0, 0, 112, 112);
     buildPatterns();
+    renderControls();
     renderSizes();
     schedule();
     commit();
-    toast(`Picture fitted to the ${state.squiggle.width} × ${state.squiggle.height} mm swatch`);
+    const [w, h] = BINDINGS[designId].size.get().map((n) => Math.round(n * 10) / 10);
+    toast(`Picture fitted to the ${w} × ${h} mm piece`);
   };
   img.onerror = () => { URL.revokeObjectURL(url); toast('That picture could not be opened.'); };
   img.src = url;
@@ -1766,25 +1811,8 @@ function bindSquiggle() {
     drop.classList.remove('dragover');
     if (e.dataTransfer?.files?.[0]) loadPicture(e.dataTransfer.files[0]);
   });
-  $('#sq-img-match').addEventListener('click', () => {
-    if (!state.image) return;
-    // keep the size you have set, and give it the picture's shape
-    const [w, h] = sizeForAspect(...state.image.px, Math.max(state.squiggle.width, state.squiggle.height));
-    state.squiggle.width = w;
-    state.squiggle.height = h;
-    renderSizes();
-    renderSquiggleChoices();
-    schedule();
-    commit();
-  });
-  $('#sq-img-clear').addEventListener('click', () => {
-    state.image = null;
-    state.imageBoxOpen = false;
-    if (state.squiggle.pattern === 'image') state.squiggle.pattern = SQUIGGLE_DEFAULTS.pattern;
-    buildPatterns();
-    schedule();
-    commit();
-  });
+  $('#sq-img-match').addEventListener('click', () => { givePictureShape('squiggle'); renderSquiggleChoices(); });
+  $('#sq-img-clear').addEventListener('click', clearPicture);
 }
 
 /* ---------- actions ---------- */
@@ -1970,7 +1998,7 @@ function reportStudyExport(exportType, options = {}, stats = state.result?.stats
       settings: exportType === 'gcode-panel' ? { ...(options.studySettings ?? settingsOf(state.design)), colorChange: false } : options.studySettings ?? settingsOf(state.design),
       print,
       metrics: exportType === 'build-error' ? {} : { timeSec: stats?.timeSec, filamentMm: stats?.filamentMm, moves: stats?.moves ?? options.moveCount ?? state.result?.moves?.length },
-      sources: { svg: !!vector, image: (options.design ?? state.design) === 'squiggle' && (options.settings ?? state.squiggle).pattern === 'image' && !!(options.image ?? state.image), ...(vector ? { svgPaths: vector.paths.length, svgPoints: vector.paths.reduce((n, p) => n + p.length, 0), svgGuides: interpretDrawing(vector).guides.length, svgSolids: interpretDrawing(vector).solids.length } : {}) },
+      sources: { svg: !!vector, image: (options.studySettings ?? options.settings ?? settingsOf(options.design ?? state.design))?.pattern === PICTURE && !!(options.image ?? state.image), ...(vector ? { svgPaths: vector.paths.length, svgPoints: vector.paths.reduce((n, p) => n + p.length, 0), svgGuides: interpretDrawing(vector).guides.length, svgSolids: interpretDrawing(vector).solids.length } : {}) },
       panel: { repeat: options.repeat, backingSpacing: options.backingSpacing },
       ...(exportType === 'build-error' ? { error: options.error } : {}),
     },
