@@ -180,6 +180,7 @@ sample with the main colours in it (red shapes to fill, a blue star cut out of o
 card offers to try it in one click or to download it and open it in Inkscape or Illustrator to see how it is set up.
 Every design takes a drawing and fills its red shapes with its own pattern; **Drawing & infill** is the one for a
 drawing on its own, its red shapes filled with a slicer infill pattern (gyroid, honeycomb…) instead, or only outlined.
+It is out of the gallery for now (`hidden: true` on its card, from 21 October 2026); links and saved files still open it.
 Colour and stroke width say what each part of the drawing does, and the import card says it too, under **How a drawing
 prints** (`DRAWING_GUIDE` in `src/ui/panels.js`, in every design):
 

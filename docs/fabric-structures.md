@@ -98,7 +98,8 @@ each other that many times take minutes to lift over each other).
 **Swatches** are 100 × 100 mm everywhere, and `templates/swatch-100x100.svg` is a page of that size to draw on.
 
 Crosshatch & isogrid is kept in the code and left out of the list for now (`hidden: true` on its card); its tests still
-run.
+run. So is Drawing & infill (from 21 October 2026): every design takes a drawing, and a link or a saved file still opens
+it. A hidden essential keeps its place in `ESSENTIALS` for when it comes back.
 
 A single layer of zigzag, wave or square rows whose peaks meet and close into cells is the **Coil** with that shape (the
 *Zigzag cells* preset): neighbouring rows run opposite ways, which puts them half a wave apart, and *row overlap* 0 is

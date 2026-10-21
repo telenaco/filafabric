@@ -7,7 +7,7 @@ import { meanderLayers } from '../src/engine/meander.js';
 import { boundaryFor } from '../src/engine/layers.js';
 import { findCrossings } from '../src/engine/crossings.js';
 import { fitLanes } from '../src/engine/repeats.js';
-import { DESIGNS, ESSENTIALS, designById } from '../src/ui/designs.js';
+import { DESIGNS, ESSENTIALS, designById, galleryGroups } from '../src/ui/designs.js';
 import { defaultProfiles } from './helpers.js';
 
 const box = boundaryFor(60, 60);
@@ -140,6 +140,17 @@ test('the essentials are real, ready cards and come first', () => {
   assert.equal(designById('crosshatch').status, 'ready');
   assert.equal(ESSENTIALS.includes('crosshatch'), false);
   for (const id of ESSENTIALS) assert.equal(designById(id)?.status, 'ready', id);
+});
+
+test('a hidden card leaves the gallery but still opens: Drawing & infill, for now', () => {
+  const { essentials, others } = galleryGroups();
+  const shown = [...essentials, ...others].map((d) => d.id);
+  assert.equal(designById('svgdesign').hidden, true);
+  assert.equal(designById('svgdesign').status, 'ready', 'a link or a saved file still opens it');
+  assert.equal(shown.includes('svgdesign'), false);
+  assert.equal(shown.includes('crosshatch'), false);
+  assert.deepEqual(essentials.map((d) => d.id), ESSENTIALS.filter((id) => id !== 'svgdesign'), 'the other essentials keep their order');
+  assert.ok(others.length > 10 && others.every((d) => !ESSENTIALS.includes(d.id)));
   assert.equal(designById('zigzag-mesh').name, 'Advanced zigzag mesh');
   assert.equal(designById('zigzag-mesh').status, 'preset');
 });

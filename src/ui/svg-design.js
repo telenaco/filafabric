@@ -88,6 +88,7 @@ const PATTERNS = patternOptions;
 export const SVG_DESIGNS = [
   layered({
     id: 'svgdesign',
+    hidden: true, // out of the gallery for now (every design takes a drawing); links and saved files still open it
     name: 'Drawing & infill',
     blurb: 'Your drawing, its shapes filled with slicer infill',
     about: 'Every design takes a drawing and fills its red shapes with its own textile pattern. This one is for the drawing on its own: its lines print as drawn, and its red shapes are filled with any of the slicer\'s infill patterns instead (gyroid, honeycomb, Hilbert curve, lightning…), or left as outlines for line art. One or two backing layers can go on top, each with its own infill pattern, spacing and angle, riding over the drawing wherever they cross it so the layers hold each other together. How each colour of a drawing prints is under Import SVG. Without a drawing it shows a sample heart.',

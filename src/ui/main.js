@@ -23,7 +23,7 @@ import { TooltipLayer } from './tooltip.js';
 // versioned with the release in boot.js, so a returning browser never pairs this file with an older printer loader
 import { ProfileStore } from './profile-store.js?v=20261019-printer-setup';
 import { machineSuggestions } from './machine-search.js?v=20261019-printer-setup';
-import { DESIGNS, ESSENTIALS, designById, isReady, baseDesignSettings } from './designs.js';
+import { DESIGNS, designById, isReady, baseDesignSettings, galleryGroups } from './designs.js';
 import { THUMBS, shapeThumb, presetThumb } from './thumbs.js';
 import { swatchCode } from './swatch.js';
 import { exportFileName, relevantKeys } from './file-name.js';
@@ -1647,8 +1647,8 @@ function renderProfileList() {
 function renderTiles() {
   const ranking = new Map(PRINTABILITY.map((p, i) => [p.id, { ...p, rank: i + 1 }]));
   const byRank = (a, b) => (ranking.get(a.id)?.rank ?? 1000) - (ranking.get(b.id)?.rank ?? 1000);
-  const essentials = ESSENTIALS.map((id) => DESIGNS.find((d) => d.id === id)).filter(Boolean);
-  const others = DESIGNS.filter((d) => !ESSENTIALS.includes(d.id) && !d.hidden).sort(byRank);
+  const { essentials, others: rest } = galleryGroups();
+  const others = rest.sort(byRank);
   const makeTile = (d) => {
     const ready = d.status === 'ready';
     const planned = d.status === 'planned';
