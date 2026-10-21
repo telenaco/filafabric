@@ -84,6 +84,29 @@ test('overlapping openings in a solid are one opening, so its fill never runs ac
   }
 });
 
+test('green is solid wherever it is the innermost shape: in a blue cut-out a disc on the bed, on red a solid on the pattern', () => {
+  const { machine, material } = defaultProfiles();
+  const vector = drawing([
+    { color: 'red', pts: rect(5, 5, 90, 70) },
+    { color: 'blue', pts: circle(28, 40, 14) },
+    { color: 'green', pts: circle(28, 40, 7) },
+    { color: 'green', pts: circle(70, 40, 7) },
+  ], 100, 80);
+  const r = generateDesignExport({ machine, material, design: 'zigzag', settings: designById('zigzag').defaults(), width: 100, height: 80,
+    vector, outline: vectorPatternRings(vector), shapeOutline: true, extraLayers: 0, brim: 2 });
+  const h = r.cfg.t.layer_height, near = (p, x, y, d) => Math.hypot(p.x - x, p.y - y) < d;
+  const solids = r.strands.filter((s) => s.name === 'Solid shape');
+  const pattern = r.strands.filter((s) => /^pattern-/.test(s.id) && s.name !== 'Structural tie');
+  const zMin = (list) => Math.min(...list.flatMap((s) => s.pts.map((p) => p.z)));
+  const inHole = solids.filter((s) => near(s.pts[0], 28, 40, 7)), onRed = solids.filter((s) => near(s.pts[0], 70, 40, 7));
+  assert.ok(inHole.length && onRed.length);
+  assert.equal(zMin(inHole), h, 'the disc in the cut-out lies on the bed');
+  assert.ok(zMin(onRed) > zMin(pattern), 'the circle on red sits on the pattern');
+  assert.equal(pattern.flatMap((s) => s.pts).filter((p) => near(p, 28, 40, 13.5) && !near(p, 28, 40, 7.5)).length, 0, 'the ring of the cut-out round the disc stays empty');
+  assert.ok(!r.warnings.some((w) => /leave the outline/.test(w)), 'the disc is part of the piece');
+  assert.ok(r.warnings.some((w) => /separate fabric regions/.test(w)), 'and it is loose: nothing ties it to the rest, which the check says');
+});
+
 test('a drawing all green and blue prints its solid alone: no pattern and no brim, the green outline is the piece', () => {
   const { machine, material } = defaultProfiles();
   const vector = drawing([{ color: 'green', pts: rect(10, 10, 60, 40) }, { color: 'blue', pts: circle(30, 30, 6) }, { color: 'blue', pts: circle(50, 30, 6) }], 80, 60);

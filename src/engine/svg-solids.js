@@ -150,14 +150,22 @@ export function withoutPattern(result) {
 const ringInside = (a, b) => inside(a[0].x, a[0].y, b) && inside(a[Math.floor(a.length / 2)].x, a[Math.floor(a.length / 2)].y, b);
 
 /**
- * The outline of the whole piece for checking it: the pattern's own outline while every solid lies within it (a button on
- * a garment); when some solid lies outside it, the outermost solids and whatever of the pattern's outline is not inside
- * one (a lace: its green body, the red windows of pattern being inside it).
+ * The outline of the whole piece for checking it. The pattern's own outline while every solid lies on it (a button on a
+ * garment). A solid round the pattern's outline (a lace's green body round its red windows) makes the outermost solids
+ * the outline, with whatever of the pattern's outline lies outside them. A solid in a hole of the outline (a green disc
+ * in a blue cut-out) is added to it: the rings read inside and out in turn, so the disc counts and the hole round it not.
  */
 export function pieceRings(outlineRings, solidRings) {
-  if (solidRings.every((s) => outlineRings.some((o) => ringInside(s, o)))) return outlineRings;
-  const outer = solidRings.filter((s) => !solidRings.some((t) => t !== s && ringInside(s, t)));
-  return [...outer, ...outlineRings.filter((o) => !outer.some((s) => ringInside(o, s)))];
+  const region = new PolygonBoundary(outlineRings);
+  const loose = solidRings.filter((s) => !(region.contains(s[0].x, s[0].y) && region.contains(s[Math.floor(s.length / 2)].x, s[Math.floor(s.length / 2)].y)));
+  if (!loose.length) return outlineRings;
+  const around = loose.filter((s) => outlineRings.some((o) => ringInside(o, s)));
+  let rings = outlineRings;
+  if (around.length) {
+    const outer = around.filter((s) => !around.some((t) => t !== s && ringInside(s, t)));
+    rings = [...outer, ...outlineRings.filter((o) => !outer.some((s) => ringInside(o, s)))];
+  }
+  return [...rings, ...loose.filter((s) => !around.includes(s))];
 }
 
 /** `before` then `after`, joined by a lift clear of everything printed (and a balanced retraction for a long move). */
