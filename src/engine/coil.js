@@ -10,6 +10,7 @@ import { resolveCrossings } from './crossings.js';
 import { MAX_MOVES } from './tiler.js';
 import { finishFabric } from './fabric-result.js';
 import { appendPoints } from './layers.js';
+import { clipStrands } from './fabric.js';
 
 /**
  * Coil: flat rows of one continuous looped strand, one layer thick.
@@ -22,6 +23,27 @@ import { appendPoints } from './layers.js';
  */
 
 const STEP = 0.4; // mm between points along a strand
+
+/**
+ * The outline as a row of loops sees it: along the row at height c, everywhere the shape lies within `band` of the row
+ * (as far as the loops reach either side), stretches closer than `merge` joined into one so no loop is laid twice.
+ */
+function bandBoundary(boundary, band, merge) {
+  const across = (c) => Array.from({ length: 9 }, (_, i) => c - band + (2 * band * i) / 8);
+  return {
+    intervals(axis, c) {
+      const spans = across(c).flatMap((y) => boundary.intervals(axis, y)).sort((p, q) => p[0] - q[0]);
+      const out = [];
+      for (const [a, b] of spans) {
+        const last = out.at(-1);
+        if (last && a - last[1] <= merge) last[1] = Math.max(last[1], b);
+        else out.push([a, b]);
+      }
+      return out;
+    },
+    contains: (x, y) => across(y).some((yy) => boundary.contains(x, yy)),
+  };
+}
 
 /** Straight points from p to q, at most STEP apart (excluding p, including q). */
 function connect(pts, p, q, z) {
@@ -64,11 +86,11 @@ export function generateCoilTextile({
   const rowsIn = whole ? fitLanes : centredLanes;
 
   /** One lane as world points: `from` to `to` along x at height `c`. */
-  const lane = (c, from, to) => {
+  const lane = (c, from, to, exact = false) => {
     const dir = to >= from ? 1 : -1;
     const length = Math.abs(to - from);
     const field = sizeAt ? (u) => sizeAt(from + dir * u, c) : null;
-    const p = whole ? fillPitch(shape, length, pitch, size) : pitch;
+    const p = exact || !whole ? pitch : fillPitch(shape, length, pitch, size);
     const pts = lanePoints({ shape, length, pitch: p, size, sizeAt: field, step: STEP });
     return { pts: pts.map((q) => ({ x: from + dir * q.u, y: c + q.v, z: layerHeight })), loops: makesLoops ? lanePeriods({ shape, length, pitch: p, size }) : 0 };
   };
@@ -115,16 +137,25 @@ export function generateCoilTextile({
     }
     strands.push({ id: 'coil', kind: 'base', name: 'Coil', pts, rowOrder: 0 });
   } else {
+    // The loops are laid as if the whole piece were filled, then cut to the shape (finishFabric clips them): rows over
+    // the outline's full height, loops at their own size and spacing on one grid across the piece, so a window too small
+    // for a whole loop still gets the part of a loop that falls in it, in step with its neighbours.
     const box = boundary.bbox();
-    const margin = size * 0.6;
-    const lo = box.minY + margin, hi = box.maxY - margin;
-    const lanes = hi > lo ? rowsIn(lo, hi, rowPitch) : [(box.minY + box.maxY) / 2];
-    const chains = serpentineChains(boundary, 'y', lanes, { inset: 0.3, minLength: Math.max(2 * pitch, 1), maxJog: 3 * rowPitch });
+    const lanes = box.maxY > box.minY ? rowsIn(box.minY, box.maxY, rowPitch) : [(box.minY + box.maxY) / 2];
+    const band = bandBoundary(boundary, size + strandWidth, 2 * pitch);
+    const chains = serpentineChains(band, 'y', lanes, { inset: 0, minLength: 0.1, maxJog: 3 * rowPitch });
+    // each stretch made whole loops on the grid from the outline's left edge, outward, so the cut decides where loops end
+    const onGrid = (seg) => {
+      const a = Math.min(seg.from, seg.to), b = Math.max(seg.from, seg.to);
+      const lo = box.minX + Math.floor((a - box.minX) / pitch) * pitch, hi = box.minX + Math.max(1, Math.ceil((b - box.minX) / pitch)) * pitch;
+      return seg.to >= seg.from ? [lo, Math.max(hi, lo + pitch)] : [Math.max(hi, lo + pitch), lo];
+    };
     let id = 0;
     for (const segments of chains) {
       const pts = [];
       for (const seg of segments) {
-        const row = lane(seg.c, seg.from, seg.to);
+        const [from, to] = onGrid(seg);
+        const row = lane(seg.c, from, to, true);
         if (pts.length) connect(pts, pts[pts.length - 1], row.pts[0], layerHeight);
         appendPoints(pts, row.pts, pts.length ? 1 : 0);
         loops += row.loops;
@@ -140,6 +171,8 @@ export function generateCoilTextile({
       strands.push({ id: id === 0 ? 'coil' : `coil-${id + 1}`, kind: 'base', name: 'Coil', pts, rowOrder: id });
       id++;
     }
+    // the boolean cut: the loops end exactly where the shape does (half a strand inside it), in step across every window
+    strands.splice(0, strands.length, ...clipStrands(strands, boundary, strandWidth / 2).filter((st) => st.pts.length > 1));
     if (strands.length === 0) warnings.push('The outline is too small for these loops: nothing to print');
   }
 

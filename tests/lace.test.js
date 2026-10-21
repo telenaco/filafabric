@@ -107,6 +107,21 @@ test('green is solid wherever it is the innermost shape: in a blue cut-out a dis
   assert.ok(r.warnings.some((w) => /separate fabric regions/.test(w)), 'and it is loose: nothing ties it to the rest, which the check says');
 });
 
+test('coil loops are laid whole and cut by the shape: windows too small for a loop still get the part that falls in them', () => {
+  const { machine, material } = defaultProfiles();
+  const windows = [[20, 20, 1.5], [35, 22, 2], [50, 20, 3], [70, 25, 4], [25, 45, 2.5], [55, 48, 6]];
+  const vector = drawing([{ color: 'green', pts: rect(5, 5, 90, 60) }, ...windows.map(([x, y, r]) => ({ color: 'red', pts: circle(x, y, r) }))], 100, 70);
+  const r = generateDesignExport({ machine, material, design: 'coil', settings: designById('coil').defaults(), width: 100, height: 70,
+    vector, outline: vectorPatternRings(vector), shapeOutline: true, extraLayers: 0, brim: 0 });
+  const pattern = r.strands.filter((s) => /^pattern-/.test(s.id) && s.name !== 'Structural tie').flatMap((s) => s.pts);
+  // (a window smaller than a loop's own opening, 3 mm here, can sit wholly inside one: the cut leaves it as the loop is)
+  for (const [x, y, rad] of windows.filter(([, , wr]) => 2 * wr >= 4)) {
+    const inWindow = pattern.filter((p) => Math.hypot(p.x - x, p.y - y) < rad);
+    assert.ok(inWindow.length > 0, `the ${2 * rad} mm window at (${x}, ${y}) has loops in it`);
+  }
+  assert.ok(pattern.every((p) => windows.some(([wx, wy, wr]) => Math.hypot(p.x - wx, p.y - wy) < wr + 0.6)), 'nothing outside the windows');
+});
+
 test('a drawing all green and blue prints its solid alone: no pattern and no brim, the green outline is the piece', () => {
   const { machine, material } = defaultProfiles();
   const vector = drawing([{ color: 'green', pts: rect(10, 10, 60, 40) }, { color: 'blue', pts: circle(30, 30, 6) }, { color: 'blue', pts: circle(50, 30, 6) }], 80, 60);
