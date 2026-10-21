@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseSvg } from '../src/engine/svg-parse.js';
-import { interpretDrawing } from '../src/engine/drawing.js';
+import { interpretDrawing, YELLOW_PRINTS_SOLID } from '../src/engine/drawing.js';
 import { SAMPLE_SVG } from '../src/ui/panels.js';
 import { generateDesignExport } from '../src/engine/design-export.js';
 import { designById } from '../src/ui/designs.js';
@@ -15,8 +15,10 @@ test('the sample drawing on the site shows every colour the studio reads', () =>
   const drawing = interpretDrawing(parseSvg(sampleText(), 'filafabric-sample.svg'));
   assert.ok(drawing.fills.length >= 1, 'red shapes that are filled');
   assert.ok(drawing.fills.some((f) => f.holes.length >= 1), 'a blue hole in one');
-  assert.ok(drawing.guides.length >= 1, 'yellow guides that bend the pattern');
-  assert.ok(drawing.solids.length >= 1, 'green shapes printed solid');
+  // yellow prints solid for now, like green (YELLOW_PRINTS_SOLID); otherwise its shapes are guides that bend the pattern
+  if (YELLOW_PRINTS_SOLID) assert.equal(drawing.guides.length, 0, 'yellow shapes are solids for now');
+  else assert.ok(drawing.guides.length >= 1, 'yellow guides that bend the pattern');
+  assert.ok(drawing.solids.length >= (YELLOW_PRINTS_SOLID ? 4 : 2), 'green (and yellow) shapes printed solid');
   assert.ok(drawing.lines.length >= 1, 'lines printed as paths');
 });
 

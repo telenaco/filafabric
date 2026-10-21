@@ -158,10 +158,10 @@ Colour and stroke width say what each part of the drawing does:
 | A closed shape in pure **red** (`#ff0000`) | Filled with the pattern |
 | A closed shape in pure **blue** (`#0000ff`) | Left empty: a hole |
 | A closed shape in pure **green** (`#00ff00`) | Printed solid: a coil if it is round, a zigzag otherwise, two layers, 20% overlap |
-| A closed shape in pure **yellow** (`#ffff00`) | An opening the pattern bends round and stays bonded to (an eyelet) |
+| A closed shape in pure **yellow** (`#ffff00`) | For now printed solid, exactly like green. (Yellow will later carry the conformal mesh guides that bend the pattern; that machinery is kept, switched off by `YELLOW_PRINTS_SOLID` in `src/engine/drawing.js`.) |
 | Shapes inside shapes | **The innermost shape decides** what prints in each place: red the pattern, blue nothing, green solid. Blue inside red cuts a hole in the pattern; red inside that blue is pattern again; green inside red is a solid on top of the pattern (a button) |
 | A lace | A green outline is the solid lace body; draw its openings inside it in blue and its patterned parts in red. The body prints first, on the bed, round them; the pattern fills the red windows; a green shape inside a window is solid again, on top. With no red at all, the piece is the solid alone (no pattern, no brim) |
-| A shape that is not closed | Never filled; it is a line |
+| A shape that is not closed (a red line, for example) | Never filled; it is a line, printed as drawn at its stroke width |
 | Any open path, or a closed shape in another colour | A line, printed as drawn |
 | A line's stroke width | The number of passes: width ÷ extrusion width, rounded, at least one. A line as wide as the nozzle is one pass; a 0.8 mm line is two passes side by side and a 1.2 mm line three |
 

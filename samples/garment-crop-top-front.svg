@@ -3,7 +3,7 @@
   <title>Filafabric garment sample: lace-up crop top front</title>
   <desc>A lace-up V-neck crop top front, women's M, drawn at full size in millimetres (460 x 408 mm).
 Red closed shape: the garment piece, filled with the pattern.
-Yellow circles: lacing eyelets; the pattern bends round them and stays bonded to their rim (0.9 mm wide: two passes).
+Blue circles: lacing eyelets, left open; their edge prints as a rim round each one.
 Blue diamonds: cut-outs, left empty.
 Black lines: reinforcing lines printed as drawn; 1.2 mm wide is three passes, 0.8 mm two.
 Too big for your bed? Type a smaller width in Size and shape: the whole drawing scales with it.</desc>
@@ -16,18 +16,18 @@ Too big for your bed? Type a smaller width in Size and shape: the whole drawing 
     <path id="diamond-3" style="fill:none;stroke:#0000ff;stroke-width:0.5" d="M 250,305 L 259,317 L 250,329 L 241,317 Z"/>
   </g>
   <g id="lacing-eyelets">
-    <circle id="eyelet-1" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="322.66" cy="59.61" r="3.5"/>
-    <circle id="eyelet-2" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="177.34" cy="59.61" r="3.5"/>
-    <circle id="eyelet-3" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="312.16" cy="86.21" r="3.5"/>
-    <circle id="eyelet-4" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="187.84" cy="86.21" r="3.5"/>
-    <circle id="eyelet-5" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="301.66" cy="112.81" r="3.5"/>
-    <circle id="eyelet-6" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="198.34" cy="112.81" r="3.5"/>
-    <circle id="eyelet-7" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="291.16" cy="139.41" r="3.5"/>
-    <circle id="eyelet-8" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="208.84" cy="139.41" r="3.5"/>
-    <circle id="eyelet-9" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="280.66" cy="166.01" r="3.5"/>
-    <circle id="eyelet-10" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="219.34" cy="166.01" r="3.5"/>
-    <circle id="eyelet-11" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="270.16" cy="192.61" r="3.5"/>
-    <circle id="eyelet-12" style="fill:none;stroke:#ffff00;stroke-width:0.9" cx="229.84" cy="192.61" r="3.5"/>
+    <circle id="eyelet-1" style="fill:none;stroke:#0000ff;stroke-width:0.9" cx="322.66" cy="59.61" r="3.5"/>
+    <circle id="eyelet-2" style="fill:none;stroke:#0000ff;stroke-width:0.9" cx="177.34" cy="59.61" r="3.5"/>
+    <circle id="eyelet-3" style="fill:none;stroke:#0000ff;stroke-width:0.9" cx="312.16" cy="86.21" r="3.5"/>
+    <circle id="eyelet-4" style="fill:none;stroke:#0000ff;stroke-width:0.9" cx="187.84" cy="86.21" r="3.5"/>
+    <circle id="eyelet-5" style="fill:none;stroke:#0000ff;stroke-width:0.9" cx="301.66" cy="112.81" r="3.5"/>
+    <circle id="eyelet-6" style="fill:none;stroke:#0000ff;stroke-width:0.9" cx="198.34" cy="112.81" r="3.5"/>
+    <circle id="eyelet-7" style="fill:none;stroke:#0000ff;stroke-width:0.9" cx="291.16" cy="139.41" r="3.5"/>
+    <circle id="eyelet-8" style="fill:none;stroke:#0000ff;stroke-width:0.9" cx="208.84" cy="139.41" r="3.5"/>
+    <circle id="eyelet-9" style="fill:none;stroke:#0000ff;stroke-width:0.9" cx="280.66" cy="166.01" r="3.5"/>
+    <circle id="eyelet-10" style="fill:none;stroke:#0000ff;stroke-width:0.9" cx="219.34" cy="166.01" r="3.5"/>
+    <circle id="eyelet-11" style="fill:none;stroke:#0000ff;stroke-width:0.9" cx="270.16" cy="192.61" r="3.5"/>
+    <circle id="eyelet-12" style="fill:none;stroke:#0000ff;stroke-width:0.9" cx="229.84" cy="192.61" r="3.5"/>
   </g>
   <g id="reinforcing-lines">
     <path id="neckline-binding" style="fill:none;stroke:#000000;stroke-width:1.2" d="M 174.28,30.07 L 250,221.89 L 325.72,30.07"/>
