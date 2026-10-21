@@ -4,37 +4,53 @@
  *
  * A strand is { id, kind: 'base' | 'supported', name, pts: [{ x, y, z, cls? }], pauseBefore? }.
  * `retraction` ({ length, minTravel } from cfg.derived.retraction) switches on retract and prime around long travels.
+ * `seam` ({ gap, coast, wipe } in mm, all 0 by default) is how a strand ends before a travel, against the knot and the
+ * string where a loop closes on its own start:
+ *   gap    a closed loop stops this far short of its start (it does not run over its own fat start)
+ *   coast  the last of the strand is moved over without pushing filament (the pressure left in the nozzle finishes it)
+ *   wipe   the nozzle goes on this far over what it has just printed, round a loop or back along a line, pulling the
+ *          retraction in as it goes (`pull` on the wipe moves, at the retraction speed), so the string is wiped off on
+ *          the print; the travel's lift then retracts nothing more
  */
-export function emitStrands(strands, { startLift = 5, travelLift = 3, retraction = null } = {}) {
+export function emitStrands(strands, { startLift = 5, travelLift = 3, retraction = null, seam = null } = {}) {
   const moves = [];
   let pendingUnretract = false;
   const travel = (x, y, z, customGcode, comment) => ({ x, y, z, cls: 'travel', extrude: false, customGcode, comment });
-  let cur = null;
+  const printable = strands.filter((s) => s.pts.length >= 2);
+  // whether a travel follows each strand, and whether it retracts: decided as the next strand's start decides it
+  const needsTravel = (from, to) => to.pauseBefore || Math.hypot(to.pts[0].x - from.x, to.pts[0].y - from.y) >= 1e-6 || Math.abs(to.pts[0].z - from.z) >= 1e-6;
+  const retractsTo = (from, to) => !!retraction && retraction.length > 0 && Math.hypot(to.pts[0].x - from.x, to.pts[0].y - from.y) >= retraction.minTravel;
+  let cur = null, at = null, pulled = false;
   let printedMaxZ = -Infinity;
-  for (const strand of strands) {
-    if (strand.pts.length < 2) continue;
+  printable.forEach((strand, index) => {
     const first = strand.pts[0];
     if (cur === null) {
       moves.push(travel(first.x, first.y, first.z + startLift));
       moves.push(travel(first.x, first.y, first.z));
-    } else if (strand.pauseBefore || Math.hypot(first.x - cur.x, first.y - cur.y) >= 1e-6 || Math.abs(first.z - cur.z) >= 1e-6) {
+    } else if (needsTravel(cur, strand)) {
       const safeZ = Math.max(printedMaxZ, cur.z, first.z) + travelLift;
-      const lift = travel(cur.x, cur.y, safeZ);
-      // a long enough travel retracts first and primes again at the start of the next strand (as the loop pile does)
-      if (retraction && retraction.length > 0 && Math.hypot(first.x - cur.x, first.y - cur.y) >= retraction.minTravel) {
-        lift.retract = 'retract';
+      // the lift starts where the nozzle is: the strand's end, or where its wipe left it
+      const lift = travel(at.x, at.y, safeZ);
+      // a long enough travel retracts first and primes again at the start of the next strand (as the loop pile does);
+      // a wipe has already pulled it in
+      if (retractsTo(cur, strand)) {
+        if (!pulled) lift.retract = 'retract';
         pendingUnretract = true;
       }
       moves.push(lift);
       if (strand.pauseBefore) {
-        moves.push(travel(cur.x, cur.y, safeZ, 'M600 ; Pause for filament color change', `Filament change pause before ${strand.name}`));
+        moves.push(travel(at.x, at.y, safeZ, 'M600 ; Pause for filament color change', `Filament change pause before ${strand.name}`));
       }
       moves.push(travel(first.x, first.y, safeZ));
       moves.push(travel(first.x, first.y, first.z));
     }
+    pulled = false;
     const kindClass = strand.kind === 'base' ? 'base' : 'supported';
-    for (let i = 1; i < strand.pts.length; i++) {
-      const p = strand.pts[i];
+    const next = printable[index + 1];
+    const ending = seam && next && needsTravel(strand.pts.at(-1), next) ? seamEnd(strand.pts, seam) : null;
+    const printed = ending?.printed ?? strand.pts;
+    for (let i = 1; i < printed.length; i++) {
+      const p = printed[i];
       const move = { x: p.x, y: p.y, z: p.z, cls: p.cls ?? kindClass, extrude: true, tag: strand.id };
       if (p.flow !== undefined && p.flow !== 1) move.flow = p.flow;
       if (i === 1 && pendingUnretract) {
@@ -43,8 +59,59 @@ export function emitStrands(strands, { startLift = 5, travelLift = 3, retraction
       }
       moves.push(move);
     }
+    at = printed.at(-1);
+    if (ending) {
+      // coasting: over the rest of the strand without pushing filament, at the strand's own speed
+      for (const p of ending.coasted.slice(1)) moves.push({ x: p.x, y: p.y, z: p.z, cls: p.cls ?? kindClass, extrude: false, tag: strand.id });
+      if (ending.coasted.length) at = ending.coasted.at(-1);
+      // the wipe pulls the whole retraction in over its length, when the travel after it retracts at all
+      const wipe = ending.wiped.slice(1), length = pathLength(ending.wiped);
+      const pull = retractsTo(strand.pts.at(-1), next) && length > 1e-9 ? retraction.length : 0;
+      for (let i = 0; i < wipe.length; i++) {
+        const a = ending.wiped[i], b = wipe[i], d = Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z);
+        moves.push({ x: b.x, y: b.y, z: b.z, cls: 'travel', extrude: false, ...(pull ? { pull: (pull * d) / length } : {}) });
+      }
+      if (wipe.length) at = wipe.at(-1);
+      pulled = pull > 0;
+    }
     cur = strand.pts[strand.pts.length - 1];
     for (const p of strand.pts) printedMaxZ = Math.max(printedMaxZ, p.z);
-  }
+  });
   return moves;
+}
+
+const span = (a, b) => Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z);
+const pathLength = (pts) => pts.reduce((n, p, i) => (i ? n + span(pts[i - 1], p) : 0), 0);
+
+/** The polyline cut `s` mm along it: the part before and the part after, both holding the cut point. */
+function cutAt(pts, s) {
+  let run = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i], d = span(a, b);
+    if (d > 0 && run + d >= s - 1e-9) {
+      const t = Math.max(0, Math.min(1, (s - run) / d));
+      const p = { ...b, x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: a.z + (b.z - a.z) * t };
+      return [[...pts.slice(0, i), p], [p, ...pts.slice(i)]];
+    }
+    run += d;
+  }
+  return [pts, [pts.at(-1)]];
+}
+
+/**
+ * How a strand ends before a travel (see emitStrands): what is printed, what is coasted over (from the end of what is
+ * printed) and the wipe (from where the coasting ends). A strand too short to keep 1 mm printed is left as it is.
+ */
+function seamEnd(pts, { gap = 0, coast = 0, wipe = 0 }) {
+  const closed = span(pts[0], pts.at(-1)) < 1e-6;
+  const total = pathLength(pts), cut = (closed ? gap : 0) + coast;
+  if (total - cut < 1) return null;
+  let path = closed && gap > 0 ? cutAt(pts, total - gap)[0] : pts;
+  let coasted = [];
+  if (coast > 0) [path, coasted] = cutAt(path, total - cut);
+  const end = (coasted.length ? coasted : path).at(-1);
+  // a loop is wiped on round over its own start; a line back along itself
+  const route = closed ? [end, ...pts] : [end, ...[...pts].reverse()];
+  const wiped = wipe > 0 ? cutAt(route, wipe)[0] : [];
+  return { printed: path, coasted, wiped };
 }

@@ -1,5 +1,6 @@
-import { moveSpeed, segmentE, filamentArea } from './extrusion.js';
+import { segmentE, filamentArea } from './extrusion.js';
 import { startPosition } from './params.js';
+import { moveSpeedOf } from './gcode.js';
 
 /** Summary numbers for the UI and the G-code header. Time ignores acceleration. */
 export function computeStats(moves, cfg, placements) {
@@ -43,7 +44,7 @@ export function computeStats(moves, cfg, placements) {
     }
     if (m.violation) violations++;
     if (ds < 1e-9) continue;
-    timeSec += ds / moveSpeed(m.cls, dx, dy, dz, cfg, m.flow ?? 1);
+    timeSec += ds / moveSpeedOf(m, dx, dy, dz, ds, cfg, mr);
     lengthByClass[m.cls] += ds;
     if (m.extrude) filamentMm += segmentE(ds, m.cls, cfg, m.flow ?? 1);
   }

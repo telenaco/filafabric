@@ -34,7 +34,13 @@ export function plateMoves(parts) {
     moves = join(moves, placed, previous ?? part.retraction);
     previous = part.retraction;
   }
-  const retracts = moves.filter((m) => m.retract === 'retract').length, primes = moves.filter((m) => m.retract === 'unretract').length;
-  if (retracts !== primes) throw new Error(`the plate has ${retracts} retractions and ${primes} primes`);
+  // every millimetre pulled in (by a retraction, or by a wipe as it moves) is pushed back, besides the extras
+  let pulled = 0, pushed = 0;
+  for (const m of moves) {
+    if (m.retract === 'retract') pulled += m.retraction.length;
+    if (m.pull > 0) pulled += m.pull;
+    if (m.retract === 'unretract') pushed += m.retraction.length;
+  }
+  if (Math.abs(pulled - pushed) > 1e-6) throw new Error(`the plate pulls in ${pulled.toFixed(3)} mm and pushes back ${pushed.toFixed(3)} mm`);
   return moves;
 }

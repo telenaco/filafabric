@@ -155,11 +155,19 @@ export class GcodeWriter {
     const parts=['G1'],X=fmt(m.x+o.x,3),Y=fmt(m.y+o.y,3),Z=fmt(m.z,3);
     if(X!==this.outX){parts.push('X'+X);this.outX=X;} if(Y!==this.outY){parts.push('Y'+Y);this.outY=Y;} if(Z!==this.outZ){parts.push('Z'+Z);this.outZ=Z;}
     if(m.extrude){this.extrudingMoves++;this.cumE+=segmentE(ds,m.cls,this.cfg,m.flow??1);const target=roundTo(this.cumE,5);parts.push('E'+fmt(target-this.emittedE,5));this.emittedE=target;}
-    const speed=moveSpeed(m.cls,dx,dy,dz,this.cfg,m.flow??1),F=Math.round(speed*60);this.timeSec+=ds/speed;
+    // a wipe pulls filament in as it moves (emit.js), as fast as a retraction pulls it
+    else if(m.pull>0) parts.push('E-'+fmt(m.pull,5));
+    const speed=moveSpeedOf(m,dx,dy,dz,ds,this.cfg,r),F=Math.round(speed*60);this.timeSec+=ds/speed;
     if(F!==this.outF){parts.push('F'+F);this.outF=F;}
     if(parts.length>1)out.push(parts.join(' '));return out;
   }
   footer() {return ['; BODY END',...fillTemplate(this.cfg.machine.end_gcode,this.vars())];}
+}
+
+/** A move's speed (mm/s): its class's, or for a wipe that pulls filament in, what pulls it at the retraction speed. */
+export function moveSpeedOf(m, dx, dy, dz, ds, cfg, r = m.retraction ?? cfg.derived.retraction) {
+  const speed = moveSpeed(m.cls, dx, dy, dz, cfg, m.flow ?? 1);
+  return !m.extrude && m.pull > 0 ? Math.min(speed, (ds * r.speed) / m.pull) : speed;
 }
 
 export function writeGcode(moves,cfg,info={}) {
