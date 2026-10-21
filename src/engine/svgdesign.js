@@ -6,7 +6,8 @@ import { infillLines, INFILL_IDS } from './infill.js';
 import { classifyPaths, interpretDrawing, linePasses } from './drawing.js';
 
 /**
- * SVG design: a drawing becomes a printable textile, with one or two backing layers on top.
+ * Drawing & infill (the card's id is 'svgdesign'): a drawing becomes a printable textile, its red shapes filled with a
+ * slicer infill pattern, with one or two backing layers on top.
  *
  *  - The design layer is the drawing itself, read the way drawing.js says: closed RED shapes are filled with a slicer
  *    infill pattern, closed BLUE shapes are holes (blue inside red cuts a hole, red inside that is filled again), and

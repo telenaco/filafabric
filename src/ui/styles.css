@@ -70,6 +70,22 @@ h1, h2, h3 { margin: 0; }
 .size-source-divider::before, .size-source-divider::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
 .brim-control { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
 .svg-layer-control .switch-row { margin-top: 12px; }
+/* the colour guide: what each colour of a drawing prints as, folded under one line with the colours beside it */
+.svg-guide { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.svg-guide summary { cursor: pointer; display: flex; align-items: center; gap: 10px; min-height: 32px; font-weight: 600; width: fit-content; }
+.svg-guide-chips { display: inline-flex; align-items: center; gap: 4px; }
+.svg-guide-chips .svg-chip.line { width: 10px; margin-top: 0; }
+.svg-guide-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.svg-guide-list li { display: grid; grid-template-columns: 14px 1fr; gap: 8px; align-items: start; line-height: 1.45; }
+.svg-guide-list .svg-chip { margin-top: 3px; }
+.svg-guide-note { color: var(--ink); }
+/* the drawing's own colours, as they are in the file (not theme colours) */
+.svg-chip { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0, 0, 0, 0.25); flex: none; }
+.svg-chip.red { background: #ff0000; }
+.svg-chip.blue { background: #0000ff; }
+.svg-chip.green { background: #00ff00; }
+.svg-chip.yellow { background: #ffff00; }
+.svg-chip.line { height: 2px; margin-top: 8px; border: 0; border-radius: 1px; background: currentColor; }
 /* each section of a design's panel is a card; its header names it, pictures it and, while closed, says what it is set to */
 .panel > .group { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
 .panel > .group:not(.section-fold) { padding: 12px 14px; }

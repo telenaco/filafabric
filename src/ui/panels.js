@@ -29,6 +29,7 @@ import { validNumber } from './numeric.js';
 import { FIELDS, createField } from '../engine/fields.js';
 import { PICTURE } from '../engine/picture.js';
 import { SHAPES } from '../engine/shapes.js';
+import { YELLOW_PRINTS_SOLID } from '../engine/drawing.js';
 import { shapeThumb } from './thumbs.js';
 
 const fmt = (n) => String(Math.round(n * 10) / 10);
@@ -876,13 +877,28 @@ export class BackingCard extends Control {
 
 /* ---------- the one place a drawing comes in ---------- */
 
-/** The sample drawing on the site (samples/), to try or to open and copy: red fills, a blue hole, yellow guides, green solids, lines. */
+/** The sample drawing on the site (samples/), to try or to open and copy: red fills, a blue hole, yellow and green solids, lines. */
 export const SAMPLE_SVG = 'samples/filafabric-sample.svg';
+
+/**
+ * What each colour of a drawing does, as the guide in the import card says it (the same for every design; a design that
+ * reads a colour its own way adds a line of its own, its `svgNote`). The rules themselves are in engine/drawing.js.
+ */
+export const DRAWING_GUIDE = Object.freeze([
+  { colour: 'red', name: 'Red closed shape', text: 'Filled with the pattern.' },
+  { colour: 'blue', name: 'Blue closed shape', text: 'Left empty: a hole. Blue inside red cuts a hole; red inside that blue is filled again.' },
+  { colour: 'green', name: 'Green closed shape', text: 'Printed solid, two layers: a coil if it is round, a zigzag otherwise. On the bed it builds up layer by layer with the pattern; inside a red shape it lies on the pattern and prints last.' },
+  { colour: 'yellow', name: 'Yellow closed shape', text: YELLOW_PRINTS_SOLID ? 'For now printed solid, exactly like green.' : 'Bends the pattern round its outline.' },
+  { colour: 'line', name: 'Any other line', text: 'Printed as drawn, first, on the first layer. Its stroke width sets the passes side by side: 0.4 mm one, 0.8 mm two, 1.2 mm three.' },
+]);
+const GUIDE_FOOT = 'Where shapes sit inside each other, the innermost one decides. Use pure colours: red #ff0000, blue #0000ff, green #00ff00 (or #008000), yellow #ffff00; any other colour is a line.';
+// red is filled once the pattern is cut to the shapes, which an import does; a design that draws the drawing itself fills it its own way
+const RED_CUT = 'Filled with this design\'s pattern. Turn off Fill its shapes with this pattern to cover the whole swatch instead.';
 
 /**
  * The SVG import. A drawing comes in once, here, and does three things everywhere in the studio: its lines print first,
  * the swatch takes its size, and (if you ask) the pattern is cut to its closed shapes. `host.svg()` describes the
- * situation: { vector, summary, usesVector, idleNote, allowsOutline, hasShapes, outlineOn, window }, and the card calls
+ * situation: { vector, summary, usesVector, designNote, allowsOutline, hasShapes, outlineOn, window }, and the card calls
  * host.importSvg(file), host.removeSvg() and host.setShapeOutline(on).
  */
 export class SvgImportCard extends Control {
@@ -903,14 +919,24 @@ export class SvgImportCard extends Control {
     // a drawing to try, for whoever has none: every colour the studio reads, in one file that can be opened to see how
     this.tryButton = el('button', { type: 'button', id: 'svg-sample-try', class: 'link small', text: 'use the sample drawing' });
     const download = el('a', { href: SAMPLE_SVG, download: 'filafabric-sample.svg', class: 'link small svg-sample-download', id: 'svg-sample-download',
-      title: 'A 200 x 200 mm drawing with every colour: red shapes are filled, the blue star is a hole, the yellow shapes bend the pattern, the green ones print solid on top of the pattern, and the lines print as paths. Open it in Inkscape or Illustrator to see how it is set up.' });
+      title: `A 200 x 200 mm drawing with every colour: red shapes are filled, the blue star is a hole, the green ${YELLOW_PRINTS_SOLID ? 'and yellow shapes print solid' : 'shapes print solid, the yellow ones bend the pattern'}, and the lines print as paths. Open it in Inkscape or Illustrator to see how it is set up.` });
     download.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7M5 7l3 3 3-3M3 12.5h10"/></svg>';
     download.append('Download the SVG sample with colours');
     this.sample = el('div', { class: 'svg-sample small muted' },
       el('p', {}, 'or ', this.tryButton),
       el('p', {}, download));
+    // the colour guide: what each colour of a drawing prints as, folded under one line
+    const chip = (colour) => el('span', { class: `svg-chip ${colour}`, 'aria-hidden': 'true' });
+    this.designNote = el('p', { class: 'svg-guide-note', hidden: true });
+    this.redText = el('span', { text: DRAWING_GUIDE[0].text });
+    this.guide = el('details', { class: 'svg-guide small', id: 'svg-guide' },
+      el('summary', {}, el('span', { text: 'How a drawing prints' }), el('span', { class: 'svg-guide-chips' }, ...DRAWING_GUIDE.map((g) => chip(g.colour)))),
+      this.designNote,
+      el('ul', { class: 'svg-guide-list' }, ...DRAWING_GUIDE.map((g, i) => el('li', {}, chip(g.colour),
+        el('span', {}, el('strong', { text: g.name }), ' ', i === 0 ? this.redText : g.text)))),
+      el('p', { class: 'muted', text: GUIDE_FOOT }));
     this.node = el('div', { class: 'svg-layer-control', 'aria-label': 'SVG import' },
-      el('div', { class: 'svg-layer-actions' }, this.pick, this.dropHint, this.remove), this.sample, this.info, this.shapeRow, this.note);
+      el('div', { class: 'svg-layer-actions' }, this.pick, this.dropHint, this.remove), this.sample, this.info, this.shapeRow, this.note, this.guide);
     this.tryButton.addEventListener('click', async () => {
       try {
         const res = await fetch(SAMPLE_SVG);
@@ -936,8 +962,12 @@ export class SvgImportCard extends Control {
     const v = s.vector;
     this.info.textContent = v ? `${v.name} · ${fmt(v.width)} × ${fmt(v.height)} mm` : '';
     this.info.hidden = !v;
-    this.pick.dataset.tip = `${v ? `Replace this drawing. Prints: ${s.summary}.` : 'Use the SVG document’s size and print its vector lines first.'} With a standard 0.4 mm nozzle, stroke widths of 0.4 mm print one pass, 0.8 mm two, 1.2 mm three, and so on. Adjacent passes overlap by at least 20%. Black lines print as paths; red contains the pattern; blue blocks it; yellow bends the pattern around its contour; a closed green shape prints solid on top of the pattern (round shapes as a coil, others as a zigzag, passes overlapping by 20%). Lines that meet are printed in as few strokes as they allow.`;
+    // what each colour does is in the guide below the button
+    this.pick.dataset.tip = `${v ? `Replace this drawing. Prints: ${s.summary}.` : 'Use the SVG document’s size and print its lines first.'} How a drawing prints, colour by colour, is below. Lines that meet are printed in as few strokes as they allow.`;
     this.pick.setAttribute('aria-description', this.pick.dataset.tip);
+    this.redText.textContent = s.usesVector ? DRAWING_GUIDE[0].text : RED_CUT;
+    this.designNote.hidden = !s.designNote;
+    this.designNote.textContent = s.designNote ?? '';
     this.remove.hidden = !v;
     this.dropHint.hidden = !!v;
     this.sample.hidden = !!v;

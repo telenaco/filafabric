@@ -1,6 +1,6 @@
-// The SVG design card: bring a drawing, turn it into a printable pattern, and put one or two backing layers on top of
-// it whose pattern is any of the slicer's infill patterns. The engine is src/engine/svgdesign.js; this file is only the
-// card's controls, presets and read-outs.
+// The Drawing & infill card (id 'svgdesign', kept so links and saved files still open it): a drawing on its own, its red
+// shapes filled with any of the slicer's infill patterns rather than a textile pattern, and one or two backing layers on
+// top of it. The engine is src/engine/svgdesign.js; this file is only the card's controls, presets and read-outs.
 import { defineControls, r1 } from './structure-controls.js';
 import { layered } from './more-designs.js';
 import { buildLayeredVerdict } from './verdict.js';
@@ -88,9 +88,9 @@ const PATTERNS = patternOptions;
 export const SVG_DESIGNS = [
   layered({
     id: 'svgdesign',
-    name: 'SVG design',
-    blurb: 'Your drawing as a pattern, with infill-pattern backing',
-    about: 'Bring an SVG and colour decides what each closed shape does: red shapes are filled with any of the slicer\'s infill patterns (gyroid, honeycomb, Hilbert curve, lightning…), blue shapes are left empty, and a blue shape inside a red one is a hole. Lines print as drawn, one pass for a line as wide as the extrusion and more for a wider one. One or two backing layers go on top, each with its own pattern, spacing and angle, and ride over the drawing wherever they cross it so the layers hold each other together. Without an SVG it shows a sample heart.',
+    name: 'Drawing & infill',
+    blurb: 'Your drawing, its shapes filled with slicer infill',
+    about: 'Every design takes a drawing and fills its red shapes with its own textile pattern. This one is for the drawing on its own: its lines print as drawn, and its red shapes are filled with any of the slicer\'s infill patterns instead (gyroid, honeycomb, Hilbert curve, lightning…), or left as outlines for line art. One or two backing layers can go on top, each with its own infill pattern, spacing and angle, riding over the drawing wherever they cross it so the layers hold each other together. How each colour of a drawing prints is under Import SVG. Without a drawing it shows a sample heart.',
     file: 'svgdesign',
     c: SVGDESIGN,
     usesVector: true,
@@ -98,7 +98,7 @@ export const SVG_DESIGNS = [
     panel: true,
     // a drawing is many separate lines: join the ones that touch and order the rest for the least travel (travel.js)
     optimizeTravel: true,
-    svgNote: 'Bring a drawing: black lines print as paths, red closed shapes are filled, blue ones are left empty yellow ones bend the pattern and green ones print solid on top of it.',
+    svgNote: 'In this design the red shapes are filled with the infill pattern you choose under Fill pattern (or only outlined, with Its lines), and backing layers can go on top.',
     controls: [
       { kind: 'presets', title: 'Start from' },
       { kind: 'size', title: 'Size and shape' },

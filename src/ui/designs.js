@@ -284,7 +284,7 @@ export const DESIGNS = [
   },
 ];
 
-// the SVG design card comes first after the original structures, then the line-algorithm library and the newer line designs
+// the Drawing & infill card (svgdesign) comes first after the original structures, then the line-algorithm library and the newer line designs
 DESIGNS.push(...BASIC_DESIGNS, ...SVG_DESIGNS, ...MORE_DESIGNS, ...LINE_DESIGNS, ...PUBLICATION_DESIGNS);
 
 /**

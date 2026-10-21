@@ -44,7 +44,7 @@ What the tools do:
 
 ## What is implemented (`src/engine/network.js`, `src/engine/travel.js`, `orderStrands` in `fabric.js`)
 
-Applied to the SVG design, an imported drawing's lines and a full panel's drawing, in this order:
+Applied to Drawing & infill, an imported drawing's lines and a full panel's drawing, in this order:
 
 1. **Merge** (`mergeTouching`): strokes whose ends lie within 1.1 bead widths become one stroke; the short step across
    is part of it. Three passes of a wide line become one back-and-forth stroke. A step is only taken where it stays

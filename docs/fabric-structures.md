@@ -11,7 +11,7 @@ Nothing here has been printed yet: every drape or handle description below is a 
 |---|---|---|---|
 | **Loop pile** | Soft raised arches anchored on an open base; each loop arches over the lines beneath it | base + arches | pile height, loop size, spacing, base openness, strand thickness, variation, **pattern** (raises some loops, lowers others) |
 | **Squiggle & Gyroid** | Two fused layers of lines (columns then rows, or two offset rows that cross) | 2 | mode, strand shape, pattern, line spacing, wave depth and length, two colours |
-| **SVG design** | Bring a drawing: its lines print as drawn (a wide line as several passes) and its red closed shapes, less the blue holes in them, can be filled with any of the 17 PrusaSlicer infill patterns; then one or two backing layers go on top, each with its own infill pattern, spacing and angle, over the whole swatch, the shapes only or the drawing's box | 1 + 1 or 2 | drawing becomes (lines, fill, both), fill pattern, spacing and angle, backing layers, backing area, each backing's pattern, spacing and angle |
+| **Drawing & infill** (id `svgdesign`, called SVG design before 21 October 2026) | A drawing on its own: its lines print as drawn (a wide line as several passes) and its red closed shapes, less the blue holes in them, can be filled with any of the 17 PrusaSlicer infill patterns; then one or two backing layers go on top, each with its own infill pattern, spacing and angle, over the whole swatch, the shapes only or the drawing's box | 1 + 1 or 2 | drawing becomes (lines, fill, both), fill pattern, spacing and angle, backing layers, backing area, each backing's pattern, spacing and angle |
 | **Halftone net** | Two layers of lines whose thickness (flow, with speed following) carries a pattern: the topology never changes, so the fabric holds the same everywhere; the second layer can be the complement of the first so two colours trade thickness. Straight, wave or zigzag lines | 2 | pattern, line shape, same or complement, spacing, thinnest and thickest flow, grid angle |
 | **Spacer net** | A net on the bed, a pillar of stacked rings on its nodes (or every second or third), and a second net on the pillars' tops, printed layer by layer | 2 nets + pillars | net spacing, pillar height, pillar radius, pillar every |
 | **Pillar weave** | Pillars on a grid and a serpentine fibre that passes each pillar on one side on one layer and the other side on the next, so the fibre layers lock round the pillars | layers + pillars | pillar spacing, layers, pillar radius |
@@ -52,7 +52,7 @@ peaks, lotus petals, lightning bolts, plus soft noise, bumps and stripes.
 ## The list
 
 The design list opens with the **essentials** (Zigzag mesh, Squiggle & Gyroid, Coil, Star lattice, Dip weave, Halftone net,
-Meander, Turing stripes, SVG design, Bubbles, Voronoi lace). Everything else follows, easiest first. Where a card used to have both a "Start from" row and a choice that said the same thing (the curve of
+Meander, Turing stripes, Drawing & infill, Bubbles, Voronoi lace). Everything else follows, easiest first. Where a card used to have both a "Start from" row and a choice that said the same thing (the curve of
 the Meander, the tiling of the Star lattice, the map of the Conformal mesh), the choice now carries the sizes that
 suit it and the row is gone. The Meander and Turing stripes are held by a wavy backing: a sine wave whose depth and
 length you set (the default), the fixed lines of a gyroid slice, or straight lines. One backing makes two layers with the
@@ -73,7 +73,7 @@ lines, so nothing has to be tied on. The centre radius defaults to 0.6 mm (a cen
 Rosette's inner waves taper to fit it and Spirograph's rings start at it. *Open* leaves a hole of that radius instead.
 
 **Travel.** A drawing is many separate strokes, and every move between two is a retract, a lift, a travel and a drop. The
-SVG design, an imported drawing's lines and a full panel's drawing are therefore ordered by `src/engine/travel.js` and
+Drawing & infill, an imported drawing's lines and a full panel's drawing are therefore ordered by `src/engine/travel.js` and
 `src/engine/network.js` (the research and the measurements are in `docs/path-optimisation.md`): strands that touch end
 to end are merged into one (three passes of a wide line become one back-and-forth stroke); lines that meet or cross are
 rebuilt as the fewest strokes their network allows, an Eulerian trail decomposition that prints every line once (a

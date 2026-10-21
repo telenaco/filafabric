@@ -551,7 +551,8 @@ function svgSituation() {
     vector: v,
     summary: v ? summaryOf(v) : '',
     usesVector: !!mod.usesVector,
-    idleNote: mod.svgNote ?? 'Its lines print first, on the first layer with this pattern, and its closed shapes can shape the pattern.',
+    // a design that reads a colour its own way says so in the colour guide
+    designNote: mod.svgNote ?? null,
     allowsOutline: true,
     hasShapes: !!(v && shapesOf(v)),
     outlineOn: registered,

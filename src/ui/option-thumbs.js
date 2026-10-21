@@ -92,7 +92,7 @@ export const OPTION_ICONS = {
     parallel: icon(path(zigzag(7), B) + path(zigzag(16), A) + path(zigzag(25), B)),
     cross: icon(path(zigzag(9), B) + path(zigzag(23), B) + path(zigzag(16, { vertical: true }), A) + path(zigzag(32, { vertical: true }), A)),
   },
-  // SVG design: what the drawing becomes
+  // Drawing & infill (svgdesign): what the drawing becomes
   'svgdesign:mode': {
     outline: icon(circle(24, 16, 11, INK, 2)),
     fill: icon(circleHatch(24, 16, 11, 3, B)),

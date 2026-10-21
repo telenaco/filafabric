@@ -5,7 +5,7 @@ base plus a dense pile of raised, anchored 3D loops. First target: Prusa MK3S, F
 sample. Machine and material profiles are data files, so more machines can be added from G-code you share.
 
 **Status:** the generator and the studio are built for the Prusa MK3S, with thirty-one structures (thirty-two tiles, with the Advanced zigzag mesh preset) (Zigzag mesh, Loop pile, Squiggle &
-Gyroid, Advanced zigzag mesh, SVG design, Halftone net, Spacer net, Pillar weave, Coil, Weave, Spiral panel, Bouclé & picots, Relief, Fringe, Crosshatch & isogrid, Auxetic mesh, Dip weave,
+Gyroid, Advanced zigzag mesh, Drawing & infill, Halftone net, Spacer net, Pillar weave, Coil, Weave, Spiral panel, Bouclé & picots, Relief, Fringe, Crosshatch & isogrid, Auxetic mesh, Dip weave,
 Spiderweb, Ring mail, Meander, Harmonograph, Truchet tiles, Voronoi lace, Turing stripes, Conformal mesh, Sunflower, Rosette,
 Flow lines, Bubbles, Parquet, Spirograph, Star lattice), a strand-shape and pattern library,
 and the automated tests passing. See `docs/fabric-structures.md` for the library.
@@ -178,7 +178,10 @@ October 2026; it had retraction off): the low end of Recreus's 2.5–6 mm, and P
 sample with the main colours in it (red shapes to fill, a blue star cut out of one, green solids, wide red lines), and
 `samples/lace-sample.svg` is a 170 × 110 mm lace medallion drawn with the lace rules below: the import
 card offers to try it in one click or to download it and open it in Inkscape or Illustrator to see how it is set up.
-Colour and stroke width say what each part of the drawing does:
+Every design takes a drawing and fills its red shapes with its own pattern; **Drawing & infill** is the one for a
+drawing on its own, its red shapes filled with a slicer infill pattern (gyroid, honeycomb…) instead, or only outlined.
+Colour and stroke width say what each part of the drawing does, and the import card says it too, under **How a drawing
+prints** (`DRAWING_GUIDE` in `src/ui/panels.js`, in every design):
 
 | In the drawing | What it prints |
 |---|---|

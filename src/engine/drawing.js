@@ -3,8 +3,9 @@
 //   - a closed shape in pure RED is filled with the pattern;
 //   - a closed shape in pure BLUE is left empty: a hole. Shapes inside shapes nest like a boolean: the innermost shape
 //     a point lies in decides it, so blue inside red cuts a hole and red inside that blue is filled again;
-//   - a closed shape in GREEN is printed solid, on top of the pattern once the pattern is done: a round shape as a coil,
-//     any other as a zigzag (solid-fill.js). An open green line is a line like any other;
+//   - a closed shape in GREEN is printed solid, a round shape as a coil and any other as a zigzag (solid-fill.js): on the
+//     bed it builds up layer by layer with a flat pattern, and on the pattern it lies on top, printed last
+//     (svg-solids.js). An open green line is a line like any other. YELLOW prints the same, for now (YELLOW_PRINTS_SOLID);
 //   - everything else is a line, and a line is printed as drawn: open paths, and closed shapes of any other colour.
 //     A line about as wide as the extrusion is one pass; a wider one is printed as several passes side by side.
 //
