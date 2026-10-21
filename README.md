@@ -172,15 +172,17 @@ revision and how cooling is mapped to this tool's path roles. First-layer heat i
 the printing temperature is sent once extrusion rises above the bed layer, including streamed exports.
 
 **Temperatures and retraction** in the printer setup show the chosen filament's nozzle temperature (first layer and
-the rest), bed temperature, retraction length and the extra push after a travel, and can be changed there
+the rest), bed temperature, retraction length and speed, and the extra push after a travel, and can be changed there
 (`src/ui/filament-settings.js`). A change is kept with the print setup (undo, links, saved files) and only for that
 filament: choosing another starts from its own values, and *Use the filament's values* undoes it. Retraction applies
 before every travel the filament's `min_travel` allows; after it, the filament is pushed back the same length plus its
 `restart_extra` (PrusaSlicer's *extra length on restart*, read from imported slicer files). **Filaflex 95A Foamy
-retracts 4 mm at 75 mm/s before every travel, however short, and pushes 5 mm back** (from 21 October 2026): at 2.5 mm
-out and 2.5 mm back the first 6 cm after each travel printed thin, about 1.5 mm of filament short, as a flexible strand
-needs extra push to build its pressure up again. If a start still prints thin, raise *Extra push after travel*: each
-0.5 mm is about 2 cm of a 0.45 mm line.
+retracts 4 mm at 65 mm/s before every travel, however short, and pushes the same 4 mm back** (Recreus's Foamy
+parameters: 2.5–5 mm at 65 mm/s). On the MK3S, 2.5 out and 2.5 back started thin for the first 6 cm after a travel,
+and 6 out and 7 back left a blob at every start: a long retraction lets the soft strand lose pressure, and the extra
+push lands as one lump. If a start is still thin, raise *Extra push after travel* in 0.1 mm steps (0.1 to about 0.4).
+`node tools/export-retraction-test.mjs` writes six 50 × 30 mm Zigzag mesh swatches, A to F (3, 4 and 5 mm, each with
+no extra and with 0.2 mm), to `DemoTestingPrints/retraction-test/` with an `INDEX.md`, to compare side by side.
 
 ## Printable SVG and garment panels
 

@@ -10,18 +10,19 @@ const { machine, material } = defaultProfiles();
 
 test('each setting shows the filament\'s own value until it is changed', () => {
   assert.deepEqual(FILAMENT_FIELDS.map((f) => [f.key, filamentValue(material, {}, f.key)]), [
-    ['firstLayerTemp', 248], ['nozzleTemp', 248], ['bedTemp', 50], ['retraction', 4], ['primeExtra', 1],
+    ['firstLayerTemp', 248], ['nozzleTemp', 248], ['bedTemp', 50], ['retraction', 4], ['retractSpeed', 65], ['primeExtra', 0],
   ]);
   assert.equal(withFilamentSettings(material, {}), material, 'nothing changed: the same filament');
 });
 
 test('changed temperatures and retraction reach the G-code', () => {
-  const changed = withFilamentSettings(material, { firstLayerTemp: 245, nozzleTemp: 240, bedTemp: 60, retraction: 3, primeExtra: 1.5 });
+  const changed = withFilamentSettings(material, { firstLayerTemp: 245, nozzleTemp: 240, bedTemp: 60, retraction: 3, retractSpeed: 50, primeExtra: 0.3 });
   assert.equal(material.temperature.print, 248, 'the profile itself is untouched');
   const cfg = resolveConfig(machine, changed);
   assert.deepEqual(cfg.derived.temperatures, { first: 245, print: 240, bed: 60 });
   assert.equal(cfg.derived.retraction.length, 3);
-  assert.equal(cfg.derived.retraction.restartExtra, 1.5);
+  assert.equal(cfg.derived.retraction.restartExtra, 0.3);
+  assert.equal(cfg.derived.retraction.speed, 50);
   const gcode = writeGcode([
     { x: 0, y: 0, z: 0.2, cls: 'travel', extrude: false },
     { x: 10, y: 0, z: 0.2, cls: 'base', extrude: true },
@@ -33,8 +34,8 @@ test('changed temperatures and retraction reach the G-code', () => {
   assert.match(gcode, /^M109 S245/m);
   assert.match(gcode, /^M190 S60/m);
   assert.match(gcode, /^M104 S240 ; printing temperature$/m);
-  assert.match(gcode, /^G1 E-3 F4500$/m);
-  assert.match(gcode, /^G1 E4\.5 F1500$/m, 'pushed back 3 + 1.5 mm');
+  assert.match(gcode, /^G1 E-3 F3000$/m, '3 mm at 50 mm/s');
+  assert.match(gcode, /^G1 E3\.3 F1500$/m, 'pushed back 3 + 0.3 mm');
 });
 
 test('a value the same as the filament\'s, empty or out of range, is no change', () => {

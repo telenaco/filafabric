@@ -14,12 +14,12 @@
   },
   "retraction": {
     "length": 4,
-    "speed": 75,
+    "speed": 65,
     "deretract_speed": 25,
     "z_hop": 0.2,
     "min_travel": 0,
-    "restart_extra": 1,
-    "note": "Recreus recommends 2.5-6 mm at 75 mm/s. 4 mm on every travel, however short (min_travel 0), and 5 mm pushed back (restart_extra 1): at 2.5 mm out and 2.5 mm back the first 6 cm after a travel printed thin on the MK3S (about 1.5 mm of filament short), as the foamy strand needs extra push to build its pressure up again."
+    "restart_extra": 0,
+    "note": "Recreus's print parameters for Foamy (checked 21 October 2026): 2.5-5.0 mm at 65 mm/s, 0.2 mm z-hop, travel as fast as the printer allows. 4 mm on every travel, however short (min_travel 0), pushed back the same 4 mm. 6 mm out and 7 back (restart_extra 1) left a blob at every restart; 2.5 out and 2.5 back started thin for the first 6 cm. If a start is thin, raise restart_extra in 0.1 mm steps (0.1-0.4); tools/export-retraction-test.mjs writes swatches to compare."
   },
   "fan": { "default": 0 },
   "travel_speed_hint": 180,

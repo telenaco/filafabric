@@ -7,11 +7,11 @@ import { defaultProfiles } from './helpers.js';
 
 const { machine, material } = defaultProfiles();
 
-test('Filaflex Foamy retracts 4 mm at 75 mm/s on every travel, however short, and pushes 5 mm back', () => {
+test('Filaflex Foamy retracts 4 mm at 65 mm/s on every travel, however short, and pushes the same 4 mm back', () => {
   const r = resolveConfig(machine, material).derived.retraction;
   assert.equal(r.length, 4);
-  assert.equal(r.restartExtra, 1, 'a millimetre more than it pulled, to build the pressure up again');
-  assert.equal(r.speed, 75);
+  assert.equal(r.restartExtra, 0, 'an extra push left a blob at every start (6 out, 7 back)');
+  assert.equal(r.speed, 65, 'Recreus\'s Foamy speed');
   assert.equal(r.minTravel, 0);
 });
 
@@ -29,7 +29,6 @@ test('every travel between strands of a design retracts first and primes again b
     if (m.extrude && prev && !prev.extrude && i > 2) assert.ok(!open, `move ${i} prints with the filament primed`);
   }
   assert.ok(travels > 10, 'the mesh has travels to check');
-  assert.match(r.gcode, /^G1 E-4 F4500$/m);
-  assert.match(r.gcode, /^G1 E5 F1500$/m);
-  assert.doesNotMatch(r.gcode, /^G1 E4 F/m, 'never only what was pulled back');
+  assert.match(r.gcode, /^G1 E-4 F3900$/m);
+  assert.match(r.gcode, /^G1 E4 F1500$/m);
 });
