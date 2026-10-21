@@ -34,6 +34,9 @@ test('a PrusaSlicer config export gives a printer and a filament', () => {
   assert.equal(f.retraction.length, 0.8, 'a filament that says nil uses the printer\'s retraction');
   assert.equal(f.retraction.z_hop, 0.4);
   assert.equal(f.flow.foam_expansion, 1, 'what a slicer file cannot say gets a plain default');
+  assert.equal(f.retraction.restart_extra, 0, 'no extra push unless the file asks for one');
+  const pushed = importProfiles(fixture('prusa-config.ini').replace('retract_length = 0.8', 'retract_length = 0.8\nretract_restart_extra = 0.6'), 'pushed.ini').materials[0];
+  assert.equal(pushed.retraction.restart_extra, 0.6, 'PrusaSlicer\'s extra length on restart is the extra push after a travel');
 });
 
 test('the slicer\'s start G-code is kept where its placeholders can be filled, and the rest is left out', () => {

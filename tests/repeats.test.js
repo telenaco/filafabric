@@ -23,13 +23,16 @@ test('a period is the nearest that fits a whole number of times; lanes and cells
   assert.ok(Math.abs(cells.centres[0] - cells.size / 2) < 1e-9 && Math.abs(cells.centres.at(-1) - (100 - cells.size / 2)) < 1e-9);
 });
 
-test('the zigzag mesh is whole zigzags edge to edge: no wave cut part-way, no peak cut by the top or bottom', () => {
+test('the zigzag mesh is whole zigzags from side to side, and the top and bottom cut it as the sides do', () => {
   for (const [w, h] of [[100, 100], [150, 120], [73, 41]]) {
     const b = boundaryFor(w, h);
     const lines = waveLines(b, { spacing: 3, amplitude: 2, wavelength: 6, shape: 'triangle' });
     const pts = lines.flat();
-    // every peak is whole: nothing is flattened against the top or bottom edge (it would sit at 0.3 mm with others)
-    assert.ok(Math.min(...pts.map((p) => p.y)) >= 0.3 - 1e-9 && Math.max(...pts.map((p) => p.y)) <= h - 0.3 + 1e-9);
+    // the lanes lie half a spacing in from the top and bottom (whole repeats: the next piece carries them on), so a
+    // wave that swings further than that is cut by the edge (until 21 October 2026 they were kept a full swing in)
+    assert.ok(Math.min(...pts.map((p) => p.y)) < 1e-6 && Math.max(...pts.map((p) => p.y)) > h - 1e-6, `${w} x ${h}: the lines reach the top and bottom`);
+    const centre = fitCells(0, h, 3).centres[0];
+    assert.ok(Math.abs(lines[0].find((p) => p.x < 1e-6).y - centre) < 1e-6, `${w} x ${h}: the first lane half a spacing in`);
     // a lane starts and ends on its centre line, at the left and the right edge: whole waves
     const lane = lines[0];
     const first = lane.find((p) => p.x < 1e-6), last = lane.find((p) => Math.abs(p.x - w) < 1e-6);

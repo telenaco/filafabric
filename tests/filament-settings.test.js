@@ -10,17 +10,18 @@ const { machine, material } = defaultProfiles();
 
 test('each setting shows the filament\'s own value until it is changed', () => {
   assert.deepEqual(FILAMENT_FIELDS.map((f) => [f.key, filamentValue(material, {}, f.key)]), [
-    ['firstLayerTemp', 248], ['nozzleTemp', 248], ['bedTemp', 50], ['retraction', 2.5],
+    ['firstLayerTemp', 248], ['nozzleTemp', 248], ['bedTemp', 50], ['retraction', 4], ['primeExtra', 1],
   ]);
   assert.equal(withFilamentSettings(material, {}), material, 'nothing changed: the same filament');
 });
 
 test('changed temperatures and retraction reach the G-code', () => {
-  const changed = withFilamentSettings(material, { firstLayerTemp: 245, nozzleTemp: 240, bedTemp: 60, retraction: 4 });
+  const changed = withFilamentSettings(material, { firstLayerTemp: 245, nozzleTemp: 240, bedTemp: 60, retraction: 3, primeExtra: 1.5 });
   assert.equal(material.temperature.print, 248, 'the profile itself is untouched');
   const cfg = resolveConfig(machine, changed);
   assert.deepEqual(cfg.derived.temperatures, { first: 245, print: 240, bed: 60 });
-  assert.equal(cfg.derived.retraction.length, 4);
+  assert.equal(cfg.derived.retraction.length, 3);
+  assert.equal(cfg.derived.retraction.restartExtra, 1.5);
   const gcode = writeGcode([
     { x: 0, y: 0, z: 0.2, cls: 'travel', extrude: false },
     { x: 10, y: 0, z: 0.2, cls: 'base', extrude: true },
@@ -32,7 +33,8 @@ test('changed temperatures and retraction reach the G-code', () => {
   assert.match(gcode, /^M109 S245/m);
   assert.match(gcode, /^M190 S60/m);
   assert.match(gcode, /^M104 S240 ; printing temperature$/m);
-  assert.match(gcode, /^G1 E-4 F4500$/m);
+  assert.match(gcode, /^G1 E-3 F4500$/m);
+  assert.match(gcode, /^G1 E4\.5 F1500$/m, 'pushed back 3 + 1.5 mm');
 });
 
 test('a value the same as the filament\'s, empty or out of range, is no change', () => {

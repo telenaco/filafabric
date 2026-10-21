@@ -13,6 +13,9 @@ export const FILAMENT_FIELDS = Object.freeze([
   // (at most 15 mm, as the engine allows: longer retractions jam flexible filament)
   { key: 'retraction', label: 'Retraction on every travel', unit: 'mm', min: 0, max: 15, step: 0.5,
     get: (m) => m.retraction.length, put: (m, v) => ({ ...m, retraction: { ...m.retraction, length: v } }) },
+  // pushed back after a travel on top of the retraction: a flexible strand needs it to build its pressure up again
+  { key: 'primeExtra', label: 'Extra push after travel', unit: 'mm', min: 0, max: 10, step: 0.5,
+    get: (m) => m.retraction.restart_extra ?? 0, put: (m, v) => ({ ...m, retraction: { ...m.retraction, restart_extra: v } }) },
 ]);
 
 const field = (key) => FILAMENT_FIELDS.find((f) => f.key === key);

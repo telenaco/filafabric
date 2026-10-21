@@ -13,12 +13,13 @@
     "max_volumetric_speed_nominal": 5.0
   },
   "retraction": {
-    "length": 2.5,
+    "length": 4,
     "speed": 75,
     "deretract_speed": 25,
     "z_hop": 0.2,
     "min_travel": 0,
-    "note": "Recreus recommends 2.5-6 mm at 75 mm/s. 2.5 mm, the low end (and Prusa's NinjaFlex length), on every travel however short (min_travel 0): the foamy strand oozes on any move."
+    "restart_extra": 1,
+    "note": "Recreus recommends 2.5-6 mm at 75 mm/s. 4 mm on every travel, however short (min_travel 0), and 5 mm pushed back (restart_extra 1): at 2.5 mm out and 2.5 mm back the first 6 cm after a travel printed thin on the MK3S (about 1.5 mm of filament short), as the foamy strand needs extra push to build its pressure up again."
   },
   "fan": { "default": 0 },
   "travel_speed_hint": 180,

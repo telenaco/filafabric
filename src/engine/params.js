@@ -213,6 +213,8 @@ export function resolveConfig(machine, material, overrides = {}) {
       length: t.retraction_length ?? r.length,
       speed: t.retraction_speed ?? r.speed,
       deretractSpeed: r.deretract_speed,
+      // pushed back after a travel on top of what was pulled: a flexible strand needs it to build its pressure up again
+      restartExtra: r.restart_extra ?? 0,
       zHop: r.z_hop,
       minTravel: r.min_travel,
     },

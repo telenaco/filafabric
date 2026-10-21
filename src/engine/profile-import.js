@@ -312,6 +312,7 @@ function materialFrom(get, { id, name, source, notes }) {
       deretract_speed: retractSpeed,
       z_hop: pick(num(get('filament_retract_lift')), num(get('filament_z_hop')), num(get('retract_lift')), 0),
       min_travel: pick(num(get('retract_before_travel')), num(get('retraction_minimum_travel')), 2),
+      restart_extra: pick(num(get('filament_retract_restart_extra')), num(get('retract_restart_extra')), num(get('filament_retract_restart_extra_length')), 0),
     },
     fan: { default: pick(num(get('min_fan_speed')), num(get('fan_min_speed')), 0) },
     travel_speed_hint: 150,

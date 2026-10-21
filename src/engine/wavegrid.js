@@ -1,7 +1,7 @@
 import { PolygonBoundary } from './boundary.js';
 import { clipPolyline, chainPolylines, markRowOrder } from './layers.js';
 import { centredLanes, orderLanePieces, laneStart } from './fill.js';
-import { fitPeriod, fitLanes } from './repeats.js';
+import { fitPeriod, fitCells } from './repeats.js';
 
 /**
  * Lines that wave: parallel lanes, each a sine, triangle (zigzag) or square wave about its own centre line.
@@ -67,7 +67,8 @@ const rotate = (p, c, s) => ({ x: p.x * c - p.y * s, y: p.x * s + p.y * c });
  * @param offset     slides all the lanes sideways by this fraction of the spacing
  * @param whole      whole repeats (repeats.js): the wave length and the spacing become the nearest that fit the outline's
  *                   width and height a whole number of times, the waves start and end on an edge, and the outermost
- *                   lanes are kept a full swing in, so no wave is cut part-way at the edge
+ *                   lanes lie half a spacing in, so every edge cuts the pattern the same way and the next piece goes on
+ *                   with it (until 21 October 2026 they were kept a full swing in, short of the top and bottom)
  * @returns lines (arrays of { x, y }) clipped to the boundary and joined end to end, lane after lane, wherever the
  *          boundary allows it
  */
@@ -85,10 +86,11 @@ export function waveLines(boundary, { angle = 0, spacing = 3, amplitude = 1, wav
   if (whole) wavelength = fitPeriod(box.maxX - box.minX, wavelength);
   let lanes;
   if (whole) {
-    const fitted = fitLanes(lo + amplitude, hi - amplitude, spacing);
-    const gap = fitted.length > 1 ? fitted[1] - fitted[0] : spacing;
-    lanes = fitted.map((y) => y + offset * gap).filter((y) => y > lo + amplitude - 1e-9 && y < hi - amplitude + 1e-9);
-    if (!lanes.length) lanes = [(lo + hi) / 2];
+    // half a lane gap in from each edge, as if the swatch were cut from a larger piece: a piece above or below carries
+    // the lanes on at the same gap, and a wave that swings past the edge is cut by it, as the sides cut the lanes
+    const { centres, size: gap } = fitCells(box.minY, box.maxY, spacing);
+    lanes = centres.map((y) => y + offset * gap).filter((y) => y > box.minY && y < box.maxY);
+    if (!lanes.length) lanes = [(box.minY + box.maxY) / 2];
   } else {
     lanes = hi > lo
       ? centredLanes(lo, hi, spacing).map((y) => y + offset * spacing).filter((y) => y > lo - 1e-9 && y < hi + 1e-9)

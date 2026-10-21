@@ -34,7 +34,11 @@ export function computeStats(moves, cfg, placements) {
     previous = m;
     previousExtruded = m.extrude;
     if (m.retract === 'retract') timeSec += r.length / r.speed;
-    if (m.retract === 'unretract') timeSec += r.length / r.deretractSpeed;
+    if (m.retract === 'unretract') {
+      // the extra push after a travel is filament laid down, as much as any extrusion
+      timeSec += (r.length + (r.restartExtra ?? 0)) / r.deretractSpeed;
+      filamentMm += r.restartExtra ?? 0;
+    }
     if (m.violation) violations++;
     if (ds < 1e-9) continue;
     timeSec += ds / moveSpeed(m.cls, dx, dy, dz, cfg, m.flow ?? 1);

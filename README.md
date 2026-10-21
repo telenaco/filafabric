@@ -18,10 +18,16 @@ The first physical print has not been done yet, so start with a small test swatc
 A swatch is sewn or welded to the next piece, so a pattern meets the edge at the end of a repeat, never part-way
 through one (`src/engine/repeats.js`). The wave length, line spacing, tile or cell size you set is a target: the
 pattern uses the nearest size that fits a whole number of times (9.6 zigzags in 100 mm become 10 of 10 mm), its lanes
-run from one edge to the other with a wavy line kept a full swing in, and cells are whole: bubbles and chainmail rings
+run from one edge to the other, and cells are whole: bubbles and chainmail rings
 sit inside the edge, Voronoi cells are closed by a wall along it, Truchet and basket blocks fill the swatch, star
 lattices meet the edge on a line of symmetry. A pattern that meets a straight edge at a slant (a 45° hatch, a
 herringbone, a radial web or rosette) cannot end on a whole repeat, and is cut there as before.
+
+Wavy lanes (the Zigzag mesh, the backing mesh, the wavy backings; `src/engine/wavegrid.js`) lie half a spacing in from
+the edges they run along, as if the swatch were cut from a larger piece: a piece above or below carries them on at the
+same spacing, and a wave that swings past the edge is cut by it, so the top and bottom meet the pattern the way the
+sides do. (Until 21 October 2026 the outermost lines were kept a full swing in, which left a row of open notches
+along the top and bottom deeper than the cells inside.)
 
 ## Demo prints
 
@@ -166,11 +172,15 @@ revision and how cooling is mapped to this tool's path roles. First-layer heat i
 the printing temperature is sent once extrusion rises above the bed layer, including streamed exports.
 
 **Temperatures and retraction** in the printer setup show the chosen filament's nozzle temperature (first layer and
-the rest), bed temperature and retraction length, and can be changed there (`src/ui/filament-settings.js`). A change is
-kept with the print setup (undo, links, saved files) and only for that filament: choosing another starts from its own
-values, and *Use the filament's values* undoes it. Retraction applies before every travel the filament's
-`min_travel` allows. **Filaflex 95A Foamy retracts 2.5 mm at 75 mm/s before every travel, however short** (from 21
-October 2026; it had retraction off): the low end of Recreus's 2.5–6 mm, and Prusa's NinjaFlex length.
+the rest), bed temperature, retraction length and the extra push after a travel, and can be changed there
+(`src/ui/filament-settings.js`). A change is kept with the print setup (undo, links, saved files) and only for that
+filament: choosing another starts from its own values, and *Use the filament's values* undoes it. Retraction applies
+before every travel the filament's `min_travel` allows; after it, the filament is pushed back the same length plus its
+`restart_extra` (PrusaSlicer's *extra length on restart*, read from imported slicer files). **Filaflex 95A Foamy
+retracts 4 mm at 75 mm/s before every travel, however short, and pushes 5 mm back** (from 21 October 2026): at 2.5 mm
+out and 2.5 mm back the first 6 cm after each travel printed thin, about 1.5 mm of filament short, as a flexible strand
+needs extra push to build its pressure up again. If a start still prints thin, raise *Extra push after travel*: each
+0.5 mm is about 2 cm of a 0.45 mm line.
 
 ## Printable SVG and garment panels
 

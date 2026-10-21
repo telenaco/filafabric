@@ -66,6 +66,7 @@ export function validateMaterial(m) {
   need(errors, isNum(r.deretract_speed) && r.deretract_speed > 0, 'retraction.deretract_speed must be > 0');
   need(errors, isNum(r.z_hop) && r.z_hop >= 0, 'retraction.z_hop must be >= 0');
   need(errors, isNum(r.min_travel) && r.min_travel >= 0, 'retraction.min_travel must be >= 0');
+  need(errors, r.restart_extra === undefined || (isNum(r.restart_extra) && r.restart_extra >= 0 && r.restart_extra <= 10), 'retraction.restart_extra must be 0-10 when given');
   need(errors, m.fan && isNum(m.fan.default) && m.fan.default >= 0 && m.fan.default <= 100, 'fan.default must be in 0-100');
   return errors;
 }

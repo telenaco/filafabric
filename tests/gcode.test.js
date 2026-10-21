@@ -108,11 +108,11 @@ test('round trip: bounds, feedrates, Z-component limit and total E', () => {
   assert.ok(moves.length > 0);
 });
 
-test('retract and unretract are emitted as relative E moves with the material speeds', () => {
+test('retract and unretract are emitted as relative E moves with the material speeds, the prime with its extra push', () => {
   const { gcode } = build({ retraction_length: 2.5 });
   const lines = gcode.split('\n');
   assert.ok(lines.some((l) => /^G1 E-2\.5 F4500$/.test(l)));
-  assert.ok(lines.some((l) => /^G1 E2\.5 F1500$/.test(l)));
+  assert.ok(lines.some((l) => /^G1 E3\.5 F1500$/.test(l)), 'Foamy pushes 1 mm more than it pulled');
 });
 
 test('fans: M106 only when a class asks for one, M107 otherwise', () => {

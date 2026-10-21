@@ -146,7 +146,7 @@ export class GcodeWriter {
       if(derived.temperatures.print!==derived.temperatures.first) out.push('M104 S'+derived.temperatures.print+' ; printing temperature');
     }
     if(m.retract==='retract') {const f=Math.round(r.speed*60);out.push('G1 E-'+fmt(r.length,5)+' F'+f);this.outF=f;this.timeSec+=r.length/r.speed;}
-    else if(m.retract==='unretract') {const f=Math.round(r.deretractSpeed*60);out.push('G1 E'+fmt(r.length,5)+' F'+f);this.outF=f;this.timeSec+=r.length/r.deretractSpeed;}
+    else if(m.retract==='unretract') {const f=Math.round(r.deretractSpeed*60),push=r.length+(r.restartExtra??0);out.push('G1 E'+fmt(push,5)+' F'+f);this.outF=f;this.timeSec+=push/r.deretractSpeed;}
     const want=fanFor(m.cls,t);
     if(want!==this.fan) {out.push(want===0?'M107 ; fan off':'M106 S'+Math.round(want*255/100)+' ; fan '+want+'%');this.fan=want;}
     const dx=m.x-this.pos.x,dy=m.y-this.pos.y,dz=m.z-this.pos.z,ds=Math.hypot(dx,dy,dz);this.pos={x:m.x,y:m.y,z:m.z};
