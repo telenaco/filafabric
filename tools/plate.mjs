@@ -10,16 +10,18 @@ export function join(before, after, retraction) {
   if (!before.length) return after;
   const k = after.findIndex((m) => m.extrude);
   if (after.slice(0, k + 1).some((m) => m.retract)) throw new Error('a part starts with a retraction of its own');
+  // 3 mm over the highest thing printed (not over the travels: they would raise every next lift by 3 mm)
   let top = 0;
-  for (const m of [...before, ...after]) if (m.z > top) top = m.z;
+  for (const m of [...before, ...after]) if (m.extrude && m.z > top) top = m.z;
   const last = before.at(-1);
   return [...before, { x: last.x, y: last.y, z: top + 3, cls: 'travel', extrude: false, retract: 'retract', retraction },
     ...after.map((m, i) => (i === k ? { ...m, retract: 'unretract', retraction } : m))];
 }
 
 /**
- * @param parts [{ moves, retraction, at: [x, y], tag }]: moves in the part's own coordinates, its retraction (the
- *              derived form, as cfg.derived.retraction), where its origin goes and a tag that keeps its strands apart
+ * @param parts [{ moves, retraction, at: [x, y], tag, startGcode? }]: moves in the part's own coordinates, its retraction
+ *              (the derived form, as cfg.derived.retraction), where its origin goes, a tag that keeps its strands apart,
+ *              and G-code to send before it (a temperature to wait for), sent once the nozzle is lifted clear
  * @returns the moves of the plate. The move into a part retracts with the settings of the part it leaves and primes
  *          the same back, so every retraction is primed back by what it pulled (and that part's extra).
  */
@@ -28,6 +30,7 @@ export function plateMoves(parts) {
   for (const part of parts) {
     const [ox, oy] = part.at;
     const placed = part.moves.map((m) => ({ ...m, x: m.x + ox, y: m.y + oy, retraction: part.retraction, ...(m.tag ? { tag: `${part.tag}-${m.tag}` } : {}) }));
+    if (part.startGcode) placed[0] = { ...placed[0], customGcode: part.startGcode };
     moves = join(moves, placed, previous ?? part.retraction);
     previous = part.retraction;
   }

@@ -187,10 +187,13 @@ bed (A B C in front, D E F behind, each printed whole with its own retraction an
 its left), and each on its own. A move may carry its own retraction for this (`m.retraction`, read by the G-code writer
 and the statistics); the move between two swatches retracts and primes with the settings of the one it leaves
 (`tools/plate.mjs`). The swatches look much alike, as the difference is only where a strand starts and stops, so
-`node tools/export-seam-test.mjs` writes one print where that is all there is: 36 circles of 20 mm, each a two-line
-brim as the studio prints one (two loops overlapping 20%, first layer only, each starting and closing on one spot), in
-nine blocks of four: columns 0.1, 0.2 and 0.3 mm extra push, rows front to back push-back speed 15, 25 and 40 mm/s
-(retraction 4 mm at 65 mm/s for all), to `DemoTestingPrints/seam-test/` with an `INDEX.md`.
+`node tools/export-seam-test.mjs` writes one print where that is all there is: circles of 20 mm, each a two-line brim
+as the studio prints one (two loops overlapping 20%, first layer only, each starting and closing on one spot), to
+`DemoTestingPrints/seam-test/` with an `INDEX.md`. A first version (nine blocks: 0.1–0.3 mm extra push, 15–40 mm/s
+push-back) showed the same knot and strings at every seam whatever the push, a little worse at 40 mm/s; so it is now
+twelve pairs, each changing one thing from the filament's own settings: the lift on a travel (0.2 mm, Recreus's z-hop,
+and 1 mm against the usual 3), the retraction (2.5 and 5 mm), its speed (40 and 90 mm/s), no extra push, the two loops
+joined into one strand, and the temperature (243 and 238 °C, waited for with `M109 R`, and 238 °C with the 0.2 mm lift).
 
 ## Printable SVG and garment panels
 
