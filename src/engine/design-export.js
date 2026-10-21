@@ -10,6 +10,7 @@ import { applySvgSolids, solidOnly, withoutPattern } from './svg-solids.js';
 import { composeSvgLines } from './svg-lines.js';
 import { stackLayers, addExtraLayers, nativeLayerInfo } from './stack.js';
 import { applyBrim } from './brim.js';
+import { addBackingMesh } from './backing.js';
 import { rotateDesignInput } from './rotate-design.js';
 
 /** Generate the selected design once at its complete size, independently of the preview window. */
@@ -75,8 +76,10 @@ export function generateDesignExport(input) {
       rotatedResult: () => generateDesignBase(rotateDesignInput(input)), colorChange: !!input.settings?.colorChange,
     });
   }
+  // a backing mesh goes under everything the design and the drawing lay down; the brim goes round it on the bed
+  result = addBackingMesh(withSolids(result, input), input.backing);
   // a solid already prints its own edge pass: an all-solid piece takes no brim over it
-  return applyBrim(withSolids(result, input), { count: solidOnly(input.vector) ? 0 : input.brim ?? 2 });
+  return applyBrim(result, { count: solidOnly(input.vector) && !input.backing ? 0 : input.brim ?? 2 });
 }
 
 /** The UI only needs printable output and summary data; geometry remains inside the worker. */

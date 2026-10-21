@@ -292,6 +292,11 @@
       <p id="machine-count" class="small muted" aria-live="polite"></p>
     </div>
     <label class="field-row stacked" for="sel-material"><span>Filament</span><select id="sel-material"></select></label>
+    <fieldset class="filament-settings" id="filament-settings">
+      <legend>Temperatures and retraction</legend>
+      <div class="filament-fields" id="filament-fields"></div>
+      <p class="small muted" id="filament-settings-note"></p>
+    </fieldset>
     <p class="muted small" id="dialog-note"></p>
     <div id="print-setup"></div>
     <div class="profile-add">
@@ -393,6 +398,6 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-<script type="module" src="src/boot.js?v=20261021-open-gate"></script>
+<script type="module" src="src/boot.js?v=20261021-filament-backing"></script>
 </body>
 </html>

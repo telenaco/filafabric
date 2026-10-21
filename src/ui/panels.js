@@ -12,6 +12,7 @@
 //       PresetsSection, SizeSection, ShapeSection, ChoiceSection, SwitchSection, SlidersSection, PatternSection
 //     DesignPanel         one design's whole panel, built from the `controls` its registry entry describes
 //     SvgImportCard       the single place a drawing comes in: its lines, and optionally its shape as the outline
+//     BackingCard         the backing mesh under a flat design, shared by every design through the print setup
 //
 // The panel does not know the studio. It is given a `host`, an object with these methods:
 //   binding(id)          { get(key), set(key, value), range(key), readout(key), size: { ranges, get(), set(w, h, preset) } }
@@ -836,6 +837,40 @@ export class PrintSetupCard extends Control {
 
   redraw() {
     this.fold?.update();
+  }
+}
+
+/**
+ * The backing mesh: the same card at the end of every flat design's panel. A switch, and while it is on the mesh's three
+ * sliders and a filament-change pause after it. Its settings are kept in the print setup (the host's 'print' binding,
+ * keys backing, backingSpacing, backingDepth, backingWavelength, backingPause), so they are shared by every design.
+ * @param defs { label, help, sliders: slider descriptions, pause: { label, help } }
+ */
+export class BackingCard extends Control {
+  constructor(host, designId, defs) {
+    super(host);
+    const switchRow = (input, { label, help }) => el('label', { class: 'switch-row' }, input, el('span', {}, el('strong', { text: label }), el('small', { text: help })));
+    this.toggle = el('input', { type: 'checkbox', role: 'switch', 'data-switch': `${designId}:backing` });
+    this.toggle.addEventListener('change', () => { this.binding.set('backing', this.toggle.checked); this.host.change(); });
+    this.pause = el('input', { type: 'checkbox', role: 'switch', 'data-switch': `${designId}:backingPause` });
+    this.pause.addEventListener('change', () => { this.binding.set('backingPause', this.pause.checked); this.host.change(); });
+    // the sliders read and write the print setup; their ids carry the design, as one card is in every panel
+    const print = { ...host, binding: () => host.binding('print') };
+    this.sliders = defs.sliders.map((def) => new SliderControl(print, `backing-${designId}`, def));
+    this.body = el('div', { class: 'controls backing-body', hidden: true }, ...this.sliders.map((s) => s.node), switchRow(this.pause, defs.pause));
+    this.node = el('section', { class: 'group untitled backing-card' }, switchRow(this.toggle, defs), this.body);
+  }
+
+  get binding() {
+    return this.host.binding('print');
+  }
+
+  update() {
+    const on = !!this.binding.get('backing');
+    this.toggle.checked = on;
+    this.body.hidden = !on;
+    this.pause.checked = !!this.binding.get('backingPause');
+    if (on) for (const s of this.sliders) s.update();
   }
 }
 

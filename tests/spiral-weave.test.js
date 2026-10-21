@@ -166,9 +166,9 @@ test('generateWeave returns moves with lifts, stats and G-code, deterministicall
   const r = generateWeave(machine, material, params);
   assert.ok(r.stats.hops > 50, 'a lift for every piece');
   assert.equal(r.stats.crossings, 36);
-  assert.ok(!r.moves.some((m) => m.retract), 'the Foamy profile asks for no retraction, so there is none');
-  const withRetraction = generateWeave(machine, { ...material, retraction: { ...material.retraction, length: 1.5, min_travel: 2 } }, params);
-  assert.ok(withRetraction.moves.some((m) => m.retract === 'retract'), 'a profile that retracts gets it between pieces');
+  assert.ok(r.moves.some((m) => m.retract === 'retract'), 'the Foamy profile retracts between pieces');
+  const without = generateWeave(machine, { ...material, retraction: { ...material.retraction, length: 0 } }, params);
+  assert.ok(!without.moves.some((m) => m.retract), 'a profile that asks for no retraction gets none');
   assert.equal(generateWeave(machine, material, params).gcode, r.gcode);
 });
 

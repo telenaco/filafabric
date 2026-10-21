@@ -24,7 +24,7 @@ const keep = {
 async function openStudio({ open = false } = {}) {
   document.body.classList.remove('locked');
   $('gate')?.remove();
-  await import('./ui/main.js?v=20261021-open-gate');
+  await import('./ui/main.js?v=20261021-filament-backing');
   // with the gate open there is nothing to lock
   if (open) $('btn-lock')?.remove();
   $('btn-lock')?.addEventListener('click', () => {

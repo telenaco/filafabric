@@ -466,6 +466,16 @@ input[role="switch"]:checked::before { transform: translateX(16px); }
 }
 .field-row.inline { grid-template-columns: auto 1fr; align-items: center; gap: 10px; font-weight: 500; min-height: 40px; }
 .field-row.inline input { min-height: 0; width: 20px; height: 20px; accent-color: var(--accent); }
+/* the filament's temperatures and retraction in the printer setup: two by two, one column on a phone */
+.filament-settings { margin: 4px 0 12px; padding: 0; border: 0; min-width: 0; }
+.filament-settings legend { padding: 0; margin-bottom: 8px; font-weight: 600; font-size: 13.5px; }
+.filament-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+.filament-fields .field-row { font-weight: 500; }
+.filament-fields .field-row.changed span { color: var(--accent); }
+.filament-fields input { font-variant-numeric: tabular-nums; }
+.filament-settings .small { margin: 8px 0 0; }
+.filament-settings .link { min-height: 28px; padding: 0; }
+@media (max-width: 420px) { .filament-fields { grid-template-columns: 1fr; } }
 
 /* ---------- print summary ---------- */
 .summary {

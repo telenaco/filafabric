@@ -7,7 +7,9 @@ import { defaultProfiles } from './helpers.js';
 const hash = (s) => createHash('sha256').update(s).digest('hex');
 
 test('squiggle G-code stays byte-identical (cross and parallel)', () => {
-  const { machine, material } = defaultProfiles();
+  const { machine, material: foamy } = defaultProfiles();
+  // (retraction: Foamy retracts on every travel from 2026-10-21; the geometry is pinned with it off, as it was set before)
+  const material = { ...foamy, retraction: { ...foamy.retraction, length: 0, min_travel: 10 } };
   const cross = generateSquiggle(machine, material, { width: 40, height: 30, mode: 'cross', sampler: SAMPLERS.waves });
   const par = generateSquiggle(machine, material, { width: 40, height: 30, mode: 'parallel', colorChange: true });
   // (whole repeats: the columns are a whole number of waves long, from 2026-10-15)

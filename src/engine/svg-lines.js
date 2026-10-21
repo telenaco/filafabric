@@ -76,7 +76,9 @@ export function composeSvgLines(result, vector, { fullWidth = vector.width, full
   const printedBoundary = !clipLines && (model.rings.length || model.guides.length) ? boundary : null;
   const pattern = printedBoundary ? clipStrands(finishAtPrintedBoundary(result.strands, printedBoundary, w), swatch, 0) : result.strands;
   // the pattern keeps the print order its design gave it (row by row for lanes); only the drawing's own lines are reordered
-  const body = pattern.map((s, i) => ({ ...s, id: `pattern-${s.id}`, layer: (s.layer ?? 0) + 1, rowOrder: i, pts: s.pts.map(({ cls, ...p }) => ({ ...p, z: native ? p.z + h : 2 * h, ...(native && cls ? { cls } : {}) })) }));
+  // a flat pattern keeps its own layers, the first on the bed beside the lines (it lifts over them where it crosses one);
+  // a raised one stands on the lines' layer
+  const body = pattern.map((s, i) => ({ ...s, id: `pattern-${s.id}`, layer: (s.layer ?? 0) + 1, rowOrder: i, pts: s.pts.map(({ cls, ...p }) => ({ ...p, z: native ? p.z + h : Math.max(h, p.z), ...(native && cls ? { cls } : {}) })) }));
   let strands = [...imported, ...body];
   checkMoveBudget(strands);
   const beforeMm = travelDistance(strands);

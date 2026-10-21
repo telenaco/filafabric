@@ -14,7 +14,7 @@ test('defaults resolve against MK3S + Foamy', () => {
   assert.equal(cfg.derived.limitsMode, 'normal');
   assert.equal(cfg.derived.limits.max_feedrate.z, 12);
   assert.equal(cfg.derived.freeDiameter, 0.4);
-  assert.equal(cfg.derived.retraction.length, 0);
+  assert.equal(cfg.derived.retraction.length, 2.5);
   assert.equal(cfg.derived.temperatures.first, 248);
 });
 

@@ -165,6 +165,13 @@ spool; PLA is rigid. [Material sources and adaptations](profiles/MATERIAL_SOURCE
 revision and how cooling is mapped to this tool's path roles. First-layer heat is retained through bed extrusion;
 the printing temperature is sent once extrusion rises above the bed layer, including streamed exports.
 
+**Temperatures and retraction** in the printer setup show the chosen filament's nozzle temperature (first layer and
+the rest), bed temperature and retraction length, and can be changed there (`src/ui/filament-settings.js`). A change is
+kept with the print setup (undo, links, saved files) and only for that filament: choosing another starts from its own
+values, and *Use the filament's values* undoes it. Retraction applies before every travel the filament's
+`min_travel` allows. **Filaflex 95A Foamy retracts 2.5 mm at 75 mm/s before every travel, however short** (from 21
+October 2026; it had retraction off): the low end of Recreus's 2.5–6 mm, and Prusa's NinjaFlex length.
+
 ## Printable SVG and garment panels
 
 **Import SVG** sits above the pattern settings. No drawing to hand? `samples/filafabric-sample.svg` is a 200 × 200 mm
@@ -180,10 +187,12 @@ Colour and stroke width say what each part of the drawing does:
 | A closed shape in pure **green** (`#00ff00`) | Printed solid: a coil if it is round, a zigzag otherwise, two layers, 20% overlap |
 | A closed shape in pure **yellow** (`#ffff00`) | For now printed solid, exactly like green. (Yellow will later carry the conformal mesh guides that bend the pattern; that machinery is kept, switched off by `YELLOW_PRINTS_SOLID` in `src/engine/drawing.js`.) |
 | Shapes inside shapes | **The innermost shape decides** what prints in each place: red the pattern, blue nothing, green solid. Blue inside red cuts a hole in the pattern; red inside that blue is pattern again; green inside red is a solid on top of the pattern (a button) |
-| A lace | A green outline is the solid lace body; draw its openings inside it in blue and its patterned parts in red. The body prints first, on the bed, round them; the pattern fills the red windows; a green shape inside a window is solid again, on top. With no red at all, the piece is the solid alone (no pattern, no brim) |
+| A lace | A green outline is the solid lace body; draw its openings inside it in blue and its patterned parts in red. The body lies on the bed round them and prints layer by layer with a flat pattern, as a slicer would: the body's first layer, the pattern's first, the body's second, the pattern's second; the pattern fills the red windows; a green shape inside a window is solid again, on top, last. With no red at all, the piece is the solid alone (no pattern, no brim) |
 | A shape that is not closed (a red line, for example) | Never filled; it is a line, printed as drawn at its stroke width |
 | Any open path, or a closed shape in another colour | A line, printed as drawn |
 | A line's stroke width | The number of passes: width ÷ extrusion width, rounded, at least one. A line as wide as the nozzle is one pass; a 0.8 mm line is two passes side by side and a 1.2 mm line three |
+
+The drawing's lines print first, on the first layer. A flat pattern keeps its own layers with a drawing: its first lies on the bed beside the lines (lifting over a line where it crosses one, and finishing on the edges it meets), its second one layer up; a raised design stands on the lines' layer. (Before 21 October 2026 every layer of a flat pattern was put at one height, a layer above the lines.)
 
 Colour comes from the fill, or from the stroke when the fill is `none`; the stroke width of a red or blue shape is only a marker. Physical document dimensions, margins and transforms are retained; resizing the design scales the drawing (and its line widths) too. A drawing that carries no colours at all (an older saved file) keeps the previous rule: closed paths are shapes and shapes inside shapes alternate fill, hole. **Fill its shapes with this pattern** cuts the pattern to the red area, less the blue holes in it. Save/Open settings includes the imported paths and their colours; share links omit them to keep links small. `tests/fixtures/red-blue-lines.svg` is a small example of all of this.
 
@@ -299,6 +308,17 @@ the slider's 0–10 range can be typed, up to 250, subject to the
 normal geometry and move budgets. Old saved whole-copy counts migrate using the selected design's native passes.
 Exported settings and anonymous study records include original, extra and total pass counts. These are logical
 pattern passes: local crossing lifts can make the finished fabric taller than the count times the layer height.
+
+## Backing mesh
+
+**Backing mesh**, the last card of every flat design's panel (a lace, the coil, any one-layer pattern), prints a
+zigzag mesh under the whole piece first: two flat layers, the second half a wave along so the two cross all along,
+lines **3.7 mm apart, 2 mm each way, 6 mm waves** as standard (the Zigzag mesh settings it was tuned with). The design
+and the drawing then print as they would on their own, two layers higher; the brim goes round it on the bed. Its three
+sliders show while it is on, and *Change colour after the backing* pauses (M600) once the mesh is down, so the design
+can be another filament. The setting is shared by every design, like the brim, and travels in links and saved files.
+Raised designs (loop pile, relief, fringe, spacer, pillar weave) stand on their own base and do not offer it: use
+**Extra layers** there. `src/engine/backing.js` `addBackingMesh()`.
 
 ## Open requests
 

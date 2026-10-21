@@ -1,0 +1,60 @@
+// The filament's temperatures and retraction, changeable in the printer setup. Each comes from the filament profile until
+// it is changed; a change is kept in the print setup (and so in links, saved files and undo) and only what differs from
+// the profile is stored. Choosing another filament starts again from its own values.
+
+/** key: where it is kept in the print setup; get: the filament's own value; put: the filament with it changed. */
+export const FILAMENT_FIELDS = Object.freeze([
+  { key: 'firstLayerTemp', label: 'Nozzle, first layer', unit: '°C', min: 150, max: 300, step: 1,
+    get: (m) => m.temperature.first_layer, put: (m, v) => ({ ...m, temperature: { ...m.temperature, first_layer: v } }) },
+  { key: 'nozzleTemp', label: 'Nozzle, other layers', unit: '°C', min: 150, max: 300, step: 1,
+    get: (m) => m.temperature.print, put: (m, v) => ({ ...m, temperature: { ...m.temperature, print: v } }) },
+  { key: 'bedTemp', label: 'Bed', unit: '°C', min: 0, max: 120, step: 1,
+    get: (m) => m.bed_temperature, put: (m, v) => ({ ...m, bed_temperature: v }) },
+  // (at most 15 mm, as the engine allows: longer retractions jam flexible filament)
+  { key: 'retraction', label: 'Retraction on every travel', unit: 'mm', min: 0, max: 15, step: 0.5,
+    get: (m) => m.retraction.length, put: (m, v) => ({ ...m, retraction: { ...m.retraction, length: v } }) },
+]);
+
+const field = (key) => FILAMENT_FIELDS.find((f) => f.key === key);
+const inRange = (f, v) => typeof v === 'number' && Number.isFinite(v) && v >= f.min && v <= f.max;
+
+/** The value a setting has now: the change in `print`, or the filament's own. */
+export function filamentValue(material, print, key) {
+  const f = field(key);
+  return inRange(f, print?.[key]) ? print[key] : f.get(material);
+}
+
+/** The filament with the changes in `print` made to it (the profile itself is left as it is). */
+export function withFilamentSettings(material, print) {
+  let out = material;
+  for (const f of FILAMENT_FIELDS) if (inRange(f, print?.[f.key]) && print[f.key] !== f.get(material)) out = f.put(out, print[f.key]);
+  return out;
+}
+
+/** The print setup with one setting changed: a value the same as the filament's, empty or out of range, is no change. */
+export function setFilamentSetting(print, material, key, value) {
+  const f = field(key), out = { ...print };
+  const v = value === null || value === '' ? NaN : Number(value);
+  if (inRange(f, v) && v !== f.get(material)) out[key] = v;
+  else delete out[key];
+  return out;
+}
+
+/** The changes a link or a file may carry: known keys with numbers in range, nothing else. */
+export function sanitizeFilamentSettings(raw) {
+  const out = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const f of FILAMENT_FIELDS) {
+    const r = raw[f.key];
+    const v = typeof r === 'number' || (typeof r === 'string' && r.trim() !== '') ? Number(r) : NaN;
+    if (inRange(f, v)) out[f.key] = v;
+  }
+  return out;
+}
+
+/** The print setup without any change to the filament: for when another filament is chosen. */
+export function withoutFilamentSettings(print) {
+  const out = { ...print };
+  for (const f of FILAMENT_FIELDS) delete out[f.key];
+  return out;
+}

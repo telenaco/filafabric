@@ -13,12 +13,12 @@
     "max_volumetric_speed_nominal": 5.0
   },
   "retraction": {
-    "length": 0,
+    "length": 2.5,
     "speed": 75,
     "deretract_speed": 25,
     "z_hop": 0.2,
-    "min_travel": 10,
-    "note": "Recreus recommends 2.5-6 mm at 75 mm/s; the user's working Generic FLEX profile uses none. Start with none; raise if stringing hurts."
+    "min_travel": 0,
+    "note": "Recreus recommends 2.5-6 mm at 75 mm/s. 2.5 mm, the low end (and Prusa's NinjaFlex length), on every travel however short (min_travel 0): the foamy strand oozes on any move."
   },
   "fan": { "default": 0 },
   "travel_speed_hint": 180,
