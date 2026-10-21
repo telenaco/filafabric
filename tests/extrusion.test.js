@@ -44,7 +44,7 @@ test('class target speeds come from the parameters', () => {
   assert.equal(classTargetSpeed('rising', t), 8);
   assert.equal(classTargetSpeed('falling', t), 8);
   assert.equal(classTargetSpeed('unsupported', t), 5);
-  assert.equal(classTargetSpeed('travel', t), 150);
+  assert.equal(classTargetSpeed('travel', t), 180, 'the travel speed Foamy asks for (travel_speed_hint)');
 });
 
 test('an easy move runs at the class target', () => {

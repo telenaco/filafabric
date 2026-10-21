@@ -172,15 +172,24 @@ revision and how cooling is mapped to this tool's path roles. First-layer heat i
 the printing temperature is sent once extrusion rises above the bed layer, including streamed exports.
 
 **Temperatures and retraction** in the printer setup show the chosen filament's nozzle temperature (first layer and
-the rest), bed temperature, retraction length and speed, and the extra push after a travel, and can be changed there
-(`src/ui/filament-settings.js`). A change is kept with the print setup (undo, links, saved files) and only for that
-filament: choosing another starts from its own values, and *Use the filament's values* undoes it. Retraction applies
-before every travel the filament's `min_travel` allows; after it, the filament is pushed back the same length plus its
-`restart_extra` (PrusaSlicer's *extra length on restart*, read from imported slicer files). **Filaflex 95A Foamy
-retracts 4 mm at 65 mm/s before every travel, however short, and pushes 4.2 mm back** (Recreus's Foamy parameters:
-2.5–5 mm at 65 mm/s; 0.2 mm extra was the best of the swatches below, D). On the MK3S, 2.5 out and 2.5 back started
-thin for the first 6 cm after a travel, and 6 out and 7 back left a blob at every start: a long retraction lets the
-soft strand lose pressure, and too much extra push lands as one lump. *Extra push after travel* goes in 0.1 mm steps.
+the rest), bed temperature, retraction length and speed, the extra push after a travel, the seam gap and the lift on a
+travel, and can be changed there (`src/ui/filament-settings.js`). A change is kept with the print setup (undo, links,
+saved files) and only for that filament: choosing another starts from its own values, and *Use the filament's values*
+undoes it. Retraction applies before every travel the filament's `min_travel` allows; after it, the filament is pushed
+back the same length plus its `restart_extra` (PrusaSlicer's *extra length on restart*, read from imported slicer
+files). A travel lifts the filament's `z_hop` over the highest thing printed so far (3 mm when it sets none), at its
+`travel_speed_hint` (150 mm/s when it sets none; a design's own travel speed wins), and a closed loop stops its
+`seam_gap` short of its own start before a travel (`src/engine/emit.js`).
+
+**Filaflex 95A Foamy prints at 238 °C, retracts 1 mm at 40 mm/s before every travel, however short, pushes the same
+1 mm back at 20 mm/s, lifts 0.2 mm on a travel at 180 mm/s, and stops each loop 0.2 mm short of its start** (from 21
+October 2026). That is the cleanest of a full-bed seam test printed on the MK3S (`FOAM99_45PAIRS`: 45 pairs of 20 mm
+two-line circles, all with the 0.2 mm lift at 180 mm/s): 238 °C was the cleanest row, 1 mm (and 2.5 mm) at 40 mm/s
+the cleanest retraction, 75 mm/s lost circles, and a 0.2 mm seam gap looked good (at 245 °C). Before it, 4 mm at
+65 mm/s, 4.2 back, a 3 mm lift and 248 °C left a knot and a string at every seam; 2.5 out and 2.5 back started thin for
+6 cm after a travel, and 6 out and 7 back left a blob. 238 °C is below Recreus's 248 °C, so the foam rises a little less:
+check a swatch's width and weight. Circles at the very edges of that bed (it ran from 5 to 245 mm) printed dashed
+whatever their settings: keep test prints in the middle of the bed.
 `node tools/export-retraction-test.mjs` writes six 50 × 30 mm Zigzag mesh swatches, A to F (3, 4 and 5 mm, each with
 no extra and with 0.2 mm), to `DemoTestingPrints/retraction-test/` with an `INDEX.md`: one print with all six on the
 bed (A B C in front, D E F behind, each printed whole with its own retraction and marked by one to six short bars at

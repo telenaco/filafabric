@@ -15,6 +15,7 @@ import { solidStrands, SOLID_LAYERS } from './svg-solids.js';
 import { SOLID_OVERLAP } from './solid-fill.js';
 import { joinStrokes } from './travel.js';
 import { buildBrimStrands } from './brim.js';
+import { travelLiftOf } from './emit.js';
 
 const rectangle = (w, h, x = 0, y = 0) => [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];
 const bounds = (s) => s.pts.reduce((b, p) => ({ minX: Math.min(b.minX, p.x), maxX: Math.max(b.maxX, p.x), minY: Math.min(b.minY, p.y), maxY: Math.max(b.maxY, p.y) }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
@@ -163,7 +164,7 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     for (const s of strands) {
       check(); if (s.pts.length < 2) continue;
       if (s.brim) await add([`; brim run ${s.id}`]);
-      const first = s.pts[0], safe = Math.max(maxPrintedZ, first.z, last?.z ?? 0) + 3;
+      const first = s.pts[0], safe = Math.max(maxPrintedZ, first.z, last?.z ?? 0) + travelLiftOf(cfg.derived.retraction);
       if (last) await add(writer.move({ x: last.x, y: last.y, z: safe, cls: 'travel', extrude: false, retract: cfg.derived.retraction.length ? 'retract' : undefined }));
       await add(writer.move({ x: first.x, y: first.y, z: safe, cls: 'travel', extrude: false }));
       await add(writer.move({ x: first.x, y: first.y, z: first.z, cls: 'travel', extrude: false }));

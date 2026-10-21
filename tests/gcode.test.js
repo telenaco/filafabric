@@ -111,12 +111,12 @@ test('round trip: bounds, feedrates, Z-component limit and total E', () => {
 test('retract and unretract are emitted as relative E moves with the material speeds, the prime with its extra push', () => {
   const { gcode } = build({ retraction_length: 2.5 });
   const lines = gcode.split('\n');
-  assert.ok(lines.some((l) => /^G1 E-2\.5 F3900$/.test(l)));
-  assert.ok(lines.some((l) => /^G1 E2\.7 F1500$/.test(l)), 'Foamy pushes back what it pulled and 0.2 mm more');
+  assert.ok(lines.some((l) => /^G1 E-2\.5 F2400$/.test(l)));
+  assert.ok(lines.some((l) => /^G1 E2\.5 F1200$/.test(l)), 'Foamy pushes back what it pulled');
   const s = scene({ sample_width: 20, sample_height: 20, retraction_length: 2.5 });
   s.cfg.derived.retraction = { ...s.cfg.derived.retraction, restartExtra: 0.3 };
   const pushed = writeGcode(plan(s.cfg, s.base, s.tiled.placements, s.boundary).moves, s.cfg).split('\n');
-  assert.ok(pushed.some((l) => /^G1 E2\.8 F1500$/.test(l)), 'and an extra push on top when the filament asks for one');
+  assert.ok(pushed.some((l) => /^G1 E2\.8 F1200$/.test(l)), 'and an extra push on top when the filament asks for one');
 });
 
 test('fans: M106 only when a class asks for one, M107 otherwise', () => {

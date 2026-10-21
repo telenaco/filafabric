@@ -10,14 +10,14 @@ const { machine, material } = defaultProfiles();
 
 test('each setting shows the filament\'s own value until it is changed', () => {
   assert.deepEqual(FILAMENT_FIELDS.map((f) => [f.key, filamentValue(material, {}, f.key)]), [
-    ['firstLayerTemp', 248], ['nozzleTemp', 248], ['bedTemp', 50], ['retraction', 4], ['retractSpeed', 65], ['primeExtra', 0.2],
+    ['firstLayerTemp', 238], ['nozzleTemp', 238], ['bedTemp', 50], ['retraction', 1], ['retractSpeed', 40], ['primeExtra', 0], ['seamGap', 0.2], ['travelLift', 0.2],
   ]);
   assert.equal(withFilamentSettings(material, {}), material, 'nothing changed: the same filament');
 });
 
 test('changed temperatures and retraction reach the G-code', () => {
   const changed = withFilamentSettings(material, { firstLayerTemp: 245, nozzleTemp: 240, bedTemp: 60, retraction: 3, retractSpeed: 50, primeExtra: 0.3 });
-  assert.equal(material.temperature.print, 248, 'the profile itself is untouched');
+  assert.equal(material.temperature.print, 238, 'the profile itself is untouched');
   const cfg = resolveConfig(machine, changed);
   assert.deepEqual(cfg.derived.temperatures, { first: 245, print: 240, bed: 60 });
   assert.equal(cfg.derived.retraction.length, 3);
@@ -35,14 +35,14 @@ test('changed temperatures and retraction reach the G-code', () => {
   assert.match(gcode, /^M190 S60/m);
   assert.match(gcode, /^M104 S240 ; printing temperature$/m);
   assert.match(gcode, /^G1 E-3 F3000$/m, '3 mm at 50 mm/s');
-  assert.match(gcode, /^G1 E3\.3 F1500$/m, 'pushed back 3 + 0.3 mm');
+  assert.match(gcode, /^G1 E3\.3 F1200$/m, 'pushed back 3 + 0.3 mm, at Foamy\'s 20 mm/s');
 });
 
 test('a value the same as the filament\'s, empty or out of range, is no change', () => {
   let print = {};
   print = setFilamentSetting(print, material, 'nozzleTemp', 230);
   assert.equal(print.nozzleTemp, 230);
-  print = setFilamentSetting(print, material, 'nozzleTemp', 248);
+  print = setFilamentSetting(print, material, 'nozzleTemp', 238);
   assert.equal('nozzleTemp' in print, false, 'back to the filament\'s value');
   print = setFilamentSetting(print, material, 'retraction', 0);
   assert.equal(print.retraction, 0, 'retraction can be switched off');

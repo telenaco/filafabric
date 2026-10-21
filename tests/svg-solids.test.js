@@ -36,8 +36,9 @@ test('the fill lies on the highest strand under each shape, the native path is k
   // nothing prints after the fill, and the lift to it clears everything printed before
   const firstFill = out.moves.findIndex((m) => m.extrude && /^solid-/.test(m.tag));
   assert.ok(out.moves.slice(firstFill).every((m) => !m.extrude || /^solid-/.test(m.tag)));
-  const highest = Math.max(...base.moves.map((m) => m.z));
-  assert.ok(out.moves.slice(base.moves.length, firstFill).some((m) => !m.extrude && m.z > highest + 2), 'travels in clear of the print');
+  // (by the filament's own lift over the highest thing printed: 0.2 mm for Foamy)
+  const highest = Math.max(...base.moves.filter((m) => m.extrude).map((m) => m.z)), lift = base.cfg.derived.retraction.zHop;
+  assert.ok(out.moves.slice(base.moves.length, firstFill).some((m) => !m.extrude && m.z >= highest + lift - 1e-9), 'travels in clear of the print');
   assert.match(out.gcode, /; Solid shapes: 2 green \(1 coiled, 1 zigzag\)/);
 });
 

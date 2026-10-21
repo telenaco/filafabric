@@ -17,10 +17,15 @@ const line = (x, y) => ({ id: `line-${x}`, kind: 'base', pts: [{ x, y, z: 0.2 },
 const length = (moves) => moves.reduce((n, m, i) => (i ? n + Math.hypot(m.x - moves[i - 1].x, m.y - moves[i - 1].y) : 0), 0);
 const near = (a, b) => Math.hypot(a.x - b.x, a.y - b.y) < 1e-6;
 
-test('with no seam set, or all of it 0, the moves are as they were', () => {
+test('with no seam set, or all of it 0, the moves are as they were; with none set the filament\'s seam gap applies', () => {
   const strands = [square(0, 0), square(20, 0), line(0, 30)];
-  const plain = emitStrands(strands, { retraction });
-  assert.deepEqual(emitStrands(strands, { retraction, seam: { gap: 0, coast: 0, wipe: 0 } }), plain);
+  const closesAsDrawn = { ...retraction, seamGap: 0 };
+  const plain = emitStrands(strands, { retraction: closesAsDrawn });
+  assert.deepEqual(emitStrands(strands, { retraction: closesAsDrawn, seam: { gap: 0, coast: 0, wipe: 0 } }), plain);
+  // Filaflex's own: its loops stop 0.2 mm short of their start before a travel
+  assert.equal(retraction.seamGap, 0.2);
+  const loop = emitStrands(strands, { retraction }).filter((m) => m.tag === 'sq-0');
+  assert.ok(Math.abs(loop.at(-1).y - 0.2) < 1e-9 && loop.at(-1).x === 0, 'the first square ends at (0, 0.2)');
 });
 
 test('a gap stops a loop short of its own start, and a coast moves over the last of it without pushing filament', () => {

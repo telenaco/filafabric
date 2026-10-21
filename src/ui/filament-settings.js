@@ -19,6 +19,12 @@ export const FILAMENT_FIELDS = Object.freeze([
   // again, but every bit of it is filament laid at the start of the next strand (a blob when it is too much)
   { key: 'primeExtra', label: 'Extra push after travel', unit: 'mm', min: 0, max: 10, step: 0.1,
     get: (m) => m.retraction.restart_extra ?? 0, put: (m, v) => ({ ...m, retraction: { ...m.retraction, restart_extra: v } }) },
+  // how far short of its own start a loop stops before a travel, so it does not run over its fat start
+  { key: 'seamGap', label: 'Seam gap', unit: 'mm', min: 0, max: 5, step: 0.1,
+    get: (m) => m.retraction.seam_gap ?? 0, put: (m, v) => ({ ...m, retraction: { ...m.retraction, seam_gap: v } }) },
+  // the lift a travel really gets: the filament's, or the studio's 3 mm when it sets none (emit.js travelLiftOf)
+  { key: 'travelLift', label: 'Lift on a travel', unit: 'mm', min: 0.1, max: 10, step: 0.1,
+    get: (m) => (m.retraction.z_hop > 0 ? m.retraction.z_hop : 3), put: (m, v) => ({ ...m, retraction: { ...m.retraction, z_hop: v } }) },
 ]);
 
 const field = (key) => FILAMENT_FIELDS.find((f) => f.key === key);

@@ -191,6 +191,8 @@ export function resolveConfig(machine, material, overrides = {}) {
   // a printer profile may say what nozzle it has (an imported slicer printer does); a design's own overrides win
   const t = { ...DEFAULT_TEXTILE,
     ...(machine?.nozzle_diameter > 0 ? { nozzle_diameter: machine.nozzle_diameter, extrusion_width: Math.round(machine.nozzle_diameter * 1.125 * 10000) / 10000 } : {}),
+    // a filament may say how fast to travel (`travel_speed_hint`): a design's own travel speed still wins
+    ...(material?.travel_speed_hint > 0 ? { speed_travel: material.travel_speed_hint } : {}),
     layer_height: defaultLayerHeight(machine), ...(material?.print_defaults ?? {}), ...overrides };
   const errors = [...profileErrors, ...validateTextile(t)];
   if (errors.length) throw new ConfigError(errors);
@@ -215,8 +217,11 @@ export function resolveConfig(machine, material, overrides = {}) {
       deretractSpeed: r.deretract_speed,
       // pushed back after a travel on top of what was pulled: a flexible strand needs it to build its pressure up again
       restartExtra: r.restart_extra ?? 0,
+      // how high a travel lifts over what is printed (emit.js; 0: the studio's own 3 mm)
       zHop: r.z_hop,
       minTravel: r.min_travel,
+      // how far short of its own start a loop stops before a travel (emit.js `seam`)
+      seamGap: r.seam_gap ?? 0,
     },
     temperatures: {
       first: material.temperature.first_layer,

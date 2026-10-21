@@ -4,15 +4,21 @@
  *
  * A strand is { id, kind: 'base' | 'supported', name, pts: [{ x, y, z, cls? }], pauseBefore? }.
  * `retraction` ({ length, minTravel } from cfg.derived.retraction) switches on retract and prime around long travels.
- * `seam` ({ gap, coast, wipe } in mm, all 0 by default) is how a strand ends before a travel, against the knot and the
- * string where a loop closes on its own start:
+ * `travelLift` is how high a travel lifts over the highest thing printed so far: the filament's lift (`zHop`) when it
+ * sets one, 3 mm otherwise.
+ * `seam` ({ gap, coast, wipe } in mm, all 0 by default; the filament's `seamGap` as the gap when no seam is given) is how
+ * a strand ends before a travel, against the knot and the string where a loop closes on its own start:
  *   gap    a closed loop stops this far short of its start (it does not run over its own fat start)
  *   coast  the last of the strand is moved over without pushing filament (the pressure left in the nozzle finishes it)
  *   wipe   the nozzle goes on this far over what it has just printed, round a loop or back along a line, pulling the
  *          retraction in as it goes (`pull` on the wipe moves, at the retraction speed), so the string is wiped off on
  *          the print; the travel's lift then retracts nothing more
  */
-export function emitStrands(strands, { startLift = 5, travelLift = 3, retraction = null, seam = null } = {}) {
+export function emitStrands(strands, { startLift = null, travelLift = null, retraction = null, seam = null } = {}) {
+  // the first approach comes down from the prime line: the filament's lift over the bed, or 5 mm
+  startLift ??= retraction?.zHop > 0 ? retraction.zHop : 5;
+  travelLift ??= travelLiftOf(retraction);
+  seam ??= retraction?.seamGap > 0 ? { gap: retraction.seamGap } : null;
   const moves = [];
   let pendingUnretract = false;
   const travel = (x, y, z, customGcode, comment) => ({ x, y, z, cls: 'travel', extrude: false, customGcode, comment });
@@ -79,6 +85,9 @@ export function emitStrands(strands, { startLift = 5, travelLift = 3, retraction
   });
   return moves;
 }
+
+/** How high a travel lifts over the highest thing printed: the filament's lift when it sets one (0.2 mm for Foamy), else 3 mm. */
+export const travelLiftOf = (retraction) => (retraction?.zHop > 0 ? retraction.zHop : 3);
 
 const span = (a, b) => Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z);
 const pathLength = (pts) => pts.reduce((n, p, i) => (i ? n + span(pts[i - 1], p) : 0), 0);

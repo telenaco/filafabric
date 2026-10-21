@@ -14,9 +14,9 @@ test('defaults resolve against MK3S + Foamy', () => {
   assert.equal(cfg.derived.limitsMode, 'normal');
   assert.equal(cfg.derived.limits.max_feedrate.z, 12);
   assert.equal(cfg.derived.freeDiameter, 0.4);
-  assert.equal(cfg.derived.retraction.length, 4);
-  assert.equal(cfg.derived.retraction.restartExtra, 0.2);
-  assert.equal(cfg.derived.temperatures.first, 248);
+  assert.equal(cfg.derived.retraction.length, 1);
+  assert.equal(cfg.derived.retraction.restartExtra, 0);
+  assert.equal(cfg.derived.temperatures.first, 238);
 });
 
 test('overrides win and nulls fall back to the material', () => {

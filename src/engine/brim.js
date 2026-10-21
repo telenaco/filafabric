@@ -2,7 +2,7 @@ import { ConfigError } from './params.js';
 import { PolygonBoundary } from './boundary.js';
 import { polygonRegion } from './polygon-region.js';
 import { clipStrands, segmentInside, segmentContact, contactGraph, analyzeFabric } from './fabric.js';
-import { emitStrands } from './emit.js';
+import { emitStrands, travelLiftOf } from './emit.js';
 import { computeStats } from './stats.js';
 import { GcodeWriter, writeGcode } from './gcode.js';
 import { MAX_MOVES } from './tiler.js';
@@ -315,7 +315,7 @@ export function applyBrim(result, { count = 2, outline = result.outline, fullWid
   const prefix = emitStrands(added, { retraction: cfg.derived.retraction });
   const nativeMoves = [...result.moves];
   if (prefix.length && nativeMoves.length) {
-    const last = prefix.at(-1), first = nativeMoves[0], safeZ = Math.max(last.z, first.z, layerHeight) + 3;
+    const last = prefix.at(-1), first = nativeMoves[0], safeZ = Math.max(last.z, first.z, layerHeight) + travelLiftOf(cfg.derived.retraction);
     const lift = { x: last.x, y: last.y, z: safeZ, cls: 'travel', extrude: false };
     const firstExtrusion = nativeMoves.findIndex((m) => m.extrude), retraction = cfg.derived.retraction;
     const startup = firstExtrusion >= 0 ? nativeMoves.slice(0, firstExtrusion + 1) : [];
