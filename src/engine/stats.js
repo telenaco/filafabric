@@ -1,8 +1,9 @@
 import { segmentE, filamentArea } from './extrusion.js';
 import { startPosition } from './params.js';
-import { moveSpeedOf } from './gcode.js';
+import { moveSpeedOf, GcodeWriter } from './gcode.js';
 
-/** Summary numbers for the UI and the G-code header. Time ignores acceleration. */
+/** timeSec/moveStartSec retain the commanded-body playback clock. estimatedTimeSec
+ * additionally models acceleration on the actual rounded start/body/end G-code. */
 export function computeStats(moves, cfg, placements) {
   let pos = startPosition(cfg);
   let timeSec = 0;
@@ -19,9 +20,12 @@ export function computeStats(moves, cfg, placements) {
   let previous = null;
   let previousExtruded = false;
   const moveStartSec = new Float64Array(moves.length);
+  const timingWriter = new GcodeWriter(cfg);
+  timingWriter.header();
   let moveIndex = 0;
 
   for (const m of moves) {
+    timingWriter.move(m);
     moveStartSec[moveIndex++] = timeSec;
     const dx = m.x - pos.x, dy = m.y - pos.y, dz = m.z - pos.z;
     const ds = Math.hypot(dx, dy, dz);
@@ -67,8 +71,12 @@ export function computeStats(moves, cfg, placements) {
   }
 
   const volumeMm3 = filamentMm * filamentArea(cfg.derived.filamentDiameter);
+  timingWriter.footer();
+  const motionEstimate = timingWriter.motionEstimate;
   return {
     timeSec, timeByKind, retractions, travelMoves,
+    estimatedTimeSec: motionEstimate.estimatedTimeSec,
+    motionEstimate,
     extrusionRangeZ: { min: Number.isFinite(minPrintZ) ? minPrintZ : null, max: Number.isFinite(maxPrintZ) ? maxPrintZ : null },
     filamentMm,
     filamentGrams: (volumeMm3 / 1000) * cfg.material.density,

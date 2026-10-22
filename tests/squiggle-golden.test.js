@@ -15,6 +15,7 @@ test('squiggle G-code matches the comparison-profile snapshot (cross and paralle
   // (whole repeats: the columns are a whole number of waves long, from 2026-10-15)
   // (row order: each layer keeps the order and direction it was laid in, from 2026-10-21; the same segments as before)
   // Prusa comparison alignment deliberately changes E, speed caps, width and printer-current commands.
-  assert.equal(hash(cross.gcode), '5db27b2998139b1cafbbaaefc80892a2ce754adba7e411b13a78e48df69661bf');
-  assert.equal(hash(par.gcode), 'd3ff09f62a0a5cb567e5e9cd484683fa9fd8b5aa538848fdd93ea330b0391215');
+  // Motion-time metadata is deterministic and includes acceleration/startup without changing the playback clock.
+  assert.equal(hash(cross.gcode), '6ca30c8154026c6562ed0819db645be8708a0e234160cc87ad0c3f79d2abb813');
+  assert.equal(hash(par.gcode), '9659331e01836e412b4ff150180bc81502d3576f1d44efe375671052a110a8a1');
 });

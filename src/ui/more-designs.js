@@ -102,10 +102,10 @@ export function layered(def) {
     optimizeTravel: !!def.optimizeTravel,
     // Display-only XY geometry: no travel planning, crossing analysis, stats or G-code allocation.
     overviewLayers: (s, boundary, context) => def.build(s, boundary, context).layers,
-    generate: (machine, material, s, { outline = null, vector = null, vectorSize = null, vectorOffset = [0, 0], includeLines = true, picture = null, perimeters = 0 } = {}) => {
+    generate: (machine, material, s, { outline = null, vector = null, vectorSize = null, vectorOffset = [0, 0], includeLines = true, picture = null, perimeters = 0, printedBoundary = false } = {}) => {
       // a drawing's lines print as many passes as their width asks for, and a pass is as wide as this filament's bead
       const bead = resolveConfig(machine, material, { sample_width: s.width, sample_height: s.height }).t.extrusion_width;
-      const built = def.build(s, boundaryFor(s.width, s.height, outline), { vector, bead, vectorSize, vectorOffset, includeLines, picture, perimeters });
+      const built = def.build(s, boundaryFor(s.width, s.height, outline), { vector, bead, vectorSize, vectorOffset, includeLines, picture, perimeters, printedBoundary });
       const result = layeredResult(machine, material, {
         width: s.width,
         height: s.height,

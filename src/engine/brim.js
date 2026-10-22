@@ -1,7 +1,7 @@
 import { ConfigError } from './params.js';
 import { PolygonBoundary } from './boundary.js';
 import { polygonRegion } from './polygon-region.js';
-import { clipStrands, segmentInside, segmentContact, contactGraph, analyzeFabric, simplifyStrands } from './fabric.js';
+import { clipStrands, segmentInside, segmentContact, contactGraph, analyzeFabric, simplifyStrands, orderStrands } from './fabric.js';
 import { emitStrands, travelLiftOf } from './emit.js';
 import { computeStats } from './stats.js';
 import { GcodeWriter, writeGcode } from './gcode.js';
@@ -187,7 +187,7 @@ export function insetRings(rings, radius) {
 }
 
 /** Side-by-side bed runs INSIDE the full selected outline. Clip to a preview only after making its real contours. */
-export function buildBrimStrands(rings, { count = 2, strandWidth = 0.45, layerHeight = 0.2, viewport = null } = {}) {
+export function buildBrimStrands(rings, { count = 2, strandWidth = 0.45, layerHeight = 0.2, viewport = null, printedBoundary = false } = {}) {
   validateCount(count);
   if (!count) return [];
   if (!(strandWidth > 0) || !Number.isFinite(strandWidth) || !(layerHeight > 0) || !Number.isFinite(layerHeight)) throw new ConfigError(['Brim bead width and layer height must be positive finite numbers.']);
@@ -196,7 +196,8 @@ export function buildBrimStrands(rings, { count = 2, strandWidth = 0.45, layerHe
   if (!rings.length) return [];
   const strands = [];
   for (let run = 0; run < count; run++) {
-    const inset = strandWidth / 2 + run * strandWidth * (1 - OVERLAP);
+    const pitch = strandWidth * (1 - OVERLAP);
+    const inset = (printedBoundary ? pitch : strandWidth / 2) + run * pitch;
     const contours = insetRings(rings, inset).map(cleanContour).filter((ring) => ring.length >= 3);
     if (!contours.length) break;
     for (const ring of contours) strands.push({ id: `brim-${run + 1}-${strands.length + 1}`, name: 'Brim', kind: 'base', layer: -1, brim: true, run, inset, pts: [...ring, ring[0]].map((p) => ({ ...p, z: layerHeight })) });
@@ -264,7 +265,7 @@ function brimConnections(brim, body, boundary, { strandWidth, layerHeight, maxTi
     if (a === b) continue;
     parent.set(a, b);
     ties.push({ id: `brim-tie-${ties.length + 1}`, name: 'Brim connection', kind: 'base', layer: -1, brim: true, connection: true,
-      pts: [c.q, { ...c.p, z: layerHeight }] });
+      pts: [c.q, { x: c.p.x, y: c.p.y, z: layerHeight }] });
   }
   // An attached component can still have a frayed end at the opposite side of the outline.
   // Tie each open bed endpoint independently; never treat a closed motif's seam as an exposed end.
@@ -284,7 +285,7 @@ function brimConnections(brim, body, boundary, { strandWidth, layerHeight, maxTi
       }
       if (!best || best.d <= strandWidth * 0.8) continue;
       ties.push({ id: `brim-tie-${ties.length + 1}`, name: 'Brim connection', kind: 'base', layer: -1, brim: true, connection: true,
-        pts: [best.q, { ...p, z: layerHeight }] });
+        pts: [best.q, { x: p.x, y: p.y, z: layerHeight }] });
     }
   }
   return ties;
@@ -298,19 +299,19 @@ export function headerNotes(result) {
 }
 
 /** Prepend brim and short bed ties. Native coordinates, classes and commands stay intact; only a missing startup prime is added. */
-export function applyBrim(result, { count = 2, outline = result.outline, fullWidth = result.cfg?.t.sample_width, fullHeight = result.cfg?.t.sample_height, maxTie = 12, label = 'Brim', requestedCount = count } = {}) {
+export function applyBrim(result, { count = 2, outline = result.outline, fullWidth = result.cfg?.t.sample_width, fullHeight = result.cfg?.t.sample_height, maxTie = 12, label = 'Brim', requestedCount = count, printedBoundary = result.printedBoundary ?? false } = {}) {
   validateCount(count);
   if (!count) {
     if (label !== 'Perimeters') return result;
-    return { ...result, perimeters: { count: requestedCount, runs: 0, connections: 0 },
-      gcode: writeGcode(result.moves, result.cfg, { stats: result.stats, comments: [...headerNotes(result), `Perimeters: ${requestedCount}${requestedCount ? ' inside solid shapes; no additional bed border' : '; no additional outlines'}`] }) };
+    return { ...result, perimeters: { count: requestedCount, runs: 0, connections: 0 }, meshPerimeters: { count: 0, runs: 0, connections: 0 },
+      gcode: writeGcode(result.moves, result.cfg, { stats: result.stats, comments: [...headerNotes(result), `Perimeters: ${requestedCount}${requestedCount ? ' inside solid shapes; no additional bed border' : '; no additional outlines'}`, 'Mesh outlines: 0'] }) };
   }
   const { cfg } = result, { extrusion_width: strandWidth, layer_height: layerHeight } = cfg.t;
   const rings = outline ?? [rectangle(fullWidth, fullHeight)], boundary = new PolygonBoundary(rings);
   const viewport = { width: cfg.t.sample_width, height: cfg.t.sample_height };
   let brim;
   try {
-    brim = buildBrimStrands(rings, { count, strandWidth, layerHeight, viewport });
+    brim = buildBrimStrands(rings, { count, strandWidth, layerHeight, viewport, printedBoundary });
   } catch (error) {
     // the brim is an extra: an outline too detailed to offset leaves it out, and the design itself still prints
     if (!(error instanceof ConfigError)) throw error;
@@ -319,7 +320,8 @@ export function applyBrim(result, { count = 2, outline = result.outline, fullWid
   if (label === 'Perimeters') brim = brim.map((s) => ({ ...s, name: 'Perimeter', perimeter: true }));
   const body = result.strands ?? [];
   const connections = brimConnections(brim, body, boundary, { strandWidth, layerHeight, maxTie });
-  const added = [...brim, ...connections], strands = [...added, ...body];
+  // Only new flat bed geometry is reordered. Native raised paths and their dependencies remain verbatim.
+  const added = orderStrands([...brim, ...connections], { improve: true }), strands = [...added, ...body];
   const prefix = emitStrands(added, { retraction: cfg.derived.retraction });
   const nativeMoves = [...result.moves];
   if (prefix.length && nativeMoves.length) {
@@ -345,6 +347,6 @@ export function applyBrim(result, { count = 2, outline = result.outline, fullWid
   const fabric = analyzeFabric(strands, { strandWidth, layerHeight, boundary: result.pieceOutline ? new PolygonBoundary(result.pieceOutline) : boundary, supportedAt });
   const warnings = [...(result.warnings ?? []).filter((w) => !(result.fabric?.issues ?? []).includes(w)), ...fabric.issues];
   const metadata = { count, overlap: OVERLAP, strandWidth, pitch: strandWidth * (1 - OVERLAP), width: strandWidth * (1 + (count - 1) * (1 - OVERLAP)), runs: brim.length, connections: connections.length };
-  return { ...result, strands, moves, stats, fabric, warnings, brim: metadata, ...(label === 'Perimeters' ? { perimeters: metadata } : {}), ...(result.report ? { report: { ...result.report, components: fabric.components } } : {}),
-    gcode: writeGcode(moves, cfg, { stats, comments: [...headerNotes(result), `${label}: ${count} runs, 20% bead overlap, inside the selected outline`] }) };
+  return { ...result, strands, moves, stats, fabric, warnings, brim: metadata, meshPerimeters: metadata, ...(label === 'Perimeters' ? { perimeters: { ...metadata, count: requestedCount } } : {}), ...(result.report ? { report: { ...result.report, components: fabric.components } } : {}),
+    gcode: writeGcode(moves, cfg, { stats, comments: [...headerNotes(result), `${label}: ${requestedCount}; mesh outlines: ${count} runs, 20% bead overlap, inside the selected outline`] }) };
 }

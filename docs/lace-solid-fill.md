@@ -30,13 +30,13 @@ The added extrusion length consists of short links that replace separate row sta
 
 The clearance regression also rejects an in-memory mutant that accepts every proposed connector: its unsafe connection comes within 0.1613 mm of a window, below the 0.225 mm bead-radius clearance.
 
-## Independent solid thickness and selective travel
+## Historical solid thickness and selective travel trial
 
 Printer setup > Layers > Solid layers now defaults to **1**. Choose 1–8 for green/yellow dense solid shapes independently of the pattern. The setting survives saved/shared state and applies to preview, swatch export and streamed panels. Old saved states without a solid-layer count use the new single-layer default; select 2 to reproduce their previous solid thickness. Export filenames carry the selected solid count and export metadata records it.
 
 Both native zigzag mesh passes and their non-planar crossings remain intact. Changing the solid count does not flatten, repeat or reroute those mesh strands. Other patterns keep their own structural layer plans.
 
-The Foamy profile now retracts for travels of at least **2 mm**, adjustable under Temperatures and retraction. Its optional lift follows retraction; short flat travels omit both. The 1 mm retract at 40 mm/s, 0.2 mm optional lift, 0.2 mm seam gap, 238 C temperature and calibrated flow remain. Setting the minimum travel to 0 restores retraction on every actual travel. Explicit zero optional lift is honored, but clearance over raised geometry and color-change pauses still lifts at least the layer thickness. Travel distance starts at the actual seam/wipe endpoint, with balanced retract/unretract handling.
+At this earlier trial, the Foamy profile retracted for travels of at least **2 mm**, adjustable under Temperatures and retraction. Its optional lift followed retraction; short flat travels omitted both. That historical setup used 1 mm retract at 40 mm/s, 0.2 mm optional lift, 0.2 mm seam gap and 238 C. **These profile defaults have been superseded:** the 22 October Prusa comparison uses 240 C, multiplier 1.15, 0.42 mm commanded line width, zero filament retraction and zero optional hop. See [Prusa profile alignment](prusa-profile-alignment.md) and the current `profiles/materials/filaflex-95-foamy.json`; required raised-geometry clearance remains. With a nonzero retraction length selected, setting the minimum travel to 0 retracts on every actual travel. Explicit zero optional lift is honored, but clearance over raised geometry and color-change pauses still lifts at least the layer thickness. Travel distance starts at the actual seam/wipe endpoint, with balanced retract/unretract handling.
 
 Final drawing-2 reproduction, using the same mesh, dimensions and material as above:
 
@@ -76,7 +76,7 @@ Prusa's G-code selects Arachne and its WIDTH comments vary: external 0.383–0.6
 
 Safe contour simplification reduces final extrusion segments below 0.05 mm from 25,237 to 2,077 (Prusa: 574). Median segment length is 0.360 mm versus Prusa's 0.323 mm. No raised mesh knots are simplified.
 
-The commanded time is an estimate; Prusa's measured approximately 24 minutes includes effects excluded here. FilaFabric still commands about 28% less filament per path mm. Its flow 0.73 and temperature 238 C differ from Prusa's Generic FLEX multiplier 1.15, M221 S95 and 240 C. These material settings are retained; a physical deposited-width/flow comparison is still necessary to establish finishing quality. Physical quality parity is not claimed.
+The commanded time is an estimate; Prusa's measured approximately 24 minutes includes effects excluded here. FilaFabric still commands about 28% less filament per path mm. At the time of this historical trial, its flow 0.73 and temperature 238 C differed from Prusa's Generic FLEX multiplier 1.15, M221 S95 and 240 C. The subsequent [Prusa profile alignment](prusa-profile-alignment.md) superseded those profile defaults; a physical deposited-width/flow comparison is still necessary to establish finishing quality. Physical quality parity is not claimed.
 
 Verification: 922 tests, 911 passed, 11 intentional skips, no failures. Independent reviews and rechecks cover fallback safety, streamed continuity, contour budgets, simplification clearance and metadata. Browser verification exercises Perimeters separately from Solid layers.
 

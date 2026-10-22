@@ -193,16 +193,22 @@ export class SizeControl extends Control {
     this.divider = el('div', { class: 'size-source-divider', text: 'or', 'aria-hidden': 'true' });
     this.svgSlot = el('div', { class: 'size-svg-slot' });
     this.brim = new SliderControl({ ...host, binding: () => host.binding('print') }, `${designId}-edge`, {
-      key: 'brim', label: 'Perimeters', help: 'Outlines side by side inside the shape. Solid infill leaves room for up to this many outlines; zigzag rows meet the innermost one. Two is the default; 0 removes extra outlines. Narrow areas keep only the outlines that fit. Type up to 50. This changes edge width, not the number of layers.',
+      key: 'brim', label: 'Solid perimeters', help: 'Walls inside green and yellow solid shapes. Two is the default; 0 fills to the bead-safe edge without separate walls. Narrow areas keep only the walls that fit. Type up to 50. The mesh outlines have their own setting below.',
       lo: 'Off', hi: 'Wide', unit: 'lines', edit: true,
     });
     this.brim.node.classList.add('brim-control');
+    this.meshPerimeters = new SliderControl({ ...host, binding: () => host.binding('print') }, `${designId}-mesh-edge`, {
+      key: 'meshPerimeters', label: 'Mesh outlines', help: 'Extra rings on the mesh side of the outline and inside red SVG windows. Off by default: mesh ends reach the printed SVG edge. Increase for edge reinforcement. These rings add material independently of solid walls and layer counts. Type up to 50.',
+      lo: 'Off', hi: 'Wide', unit: 'lines', edit: true,
+    });
+    this.meshPerimeters.node.classList.add('brim-control');
     this.warn = el('p', { class: 'ctl-warn small', hidden: true });
-    this.node = el('div', { class: 'size-control' }, this.inputs, this.divider, this.svgSlot, this.note, this.warn, this.error, this.brim.node);
+    this.node = el('div', { class: 'size-control' }, this.inputs, this.divider, this.svgSlot, this.note, this.warn, this.error, this.brim.node, this.meshPerimeters.node);
   }
 
   update() {
     this.brim.update();
+    this.meshPerimeters.update();
     const limits = this.host.sizeLimits?.(this.designId);
     for (const [f, max] of [[this.width, limits?.width], [this.height, limits?.height]]) {
       if (max !== undefined) f.input.max = String(max);

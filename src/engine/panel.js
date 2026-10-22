@@ -121,8 +121,9 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     return { ...g, box, area: new PolygonBoundary([g.ring, ...(g.holes ?? [])]), top: 0 }; // its holes (a lace's openings) are not under it
   });
   if (options.perimeters !== undefined) validatePerimeters(options.perimeters);
-  const brim = options.perimeters ?? options.brim ?? 2;
-  const brimStrands = buildBrimStrands(boundary.rings, { count: brim, strandWidth: bead, layerHeight: h });
+  if (options.meshPerimeters !== undefined) validatePerimeters(options.meshPerimeters);
+  const brim = options.meshPerimeters ?? options.perimeters ?? options.brim ?? 2;
+  const brimStrands = orderStrands(buildBrimStrands(boundary.rings, { count: brim, strandWidth: bead, layerHeight: h, printedBoundary: shapeOutline && !!vector }), { improve: true });
   // Older callers may still request whole copies; explicit extraLayers takes precedence.
   const legacyMode = options.extraLayers === undefined && options.layers !== undefined;
   const layers = legacyMode ? Math.max(1, Math.round(options.layers ?? 1)) : 1;
@@ -148,7 +149,7 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   };
   texture = withTextureLayers(texture, () => rotatedTexture());
   const globalLayers = vector ? 3 : 2;
-  const print = { layerHeight: h, layers, solidLayers: options.solidLayers ?? SOLID_LAYERS, brim, ...(options.perimeters !== undefined ? { perimeters: options.perimeters } : {}), nozzleDiameter: cfg.t.nozzle_diameter, extrusionWidth: bead };
+  const print = { layerHeight: h, layers, solidLayers: options.solidLayers ?? SOLID_LAYERS, brim, meshPerimeters: brim, ...(options.perimeters !== undefined ? { perimeters: options.perimeters } : {}), nozzleDiameter: cfg.t.nozzle_diameter, extrusionWidth: bead };
   const recordPlan = (result) => {
     const plan = result.layerPlan;
     if (!plan || (print.patternLayers !== undefined && (plan.patternLayers ?? -1) < (print.patternLayers ?? -1))) return;
@@ -221,8 +222,8 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     return layered.strands;
   };
   const fitPerimeters = (strands) => {
-    if (!(options.perimeters > 0) || options.design !== 'zigzag') return strands;
-    const inset = bead / 2 + options.perimeters * bead * 0.8;
+    if (!(brim > 0) || options.design !== 'zigzag') return strands;
+    const inset = (shapeOutline && vector ? bead * 0.8 : bead / 2) + brim * bead * 0.8;
     const clipped = clipStrands(strands, boundary, inset);
     const maxJog = (options.settings?.spacing ?? 3) + 2 * (options.settings?.depth ?? 2) + 2;
     const joined = chainRowStrands(clipped, boundary, { inset, maxJog });
@@ -249,7 +250,7 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     if (outline || shapeOutline || guides.length) {
       if (guides.length && !designModule?.vectorGuides) placed = repelGuideStrands(placed, guides, { boundary, strandWidth: bead });
       placed = clipStrands(placed.filter((s) => !s.id.includes('anchor-')), boundary, bead / 2);
-      if (shapeOutline && !options.perimeters) placed = finishAtPrintedBoundary(placed, boundary, bead);
+      if (shapeOutline && !brim) placed = finishAtPrintedBoundary(placed, boundary, bead);
       if (guides.length) placed = resolveCrossings(placed, { follow: true, preserve: true, lift: h, strandWidth: bead }).strands;
       placed = fitPerimeters(placed);
       let support;

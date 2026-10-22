@@ -7,7 +7,7 @@ import { createPreview, ROLES } from './preview.js';
 import { createOverview } from './overview.js';
 import { useWholeOverview, canSimplifyPreview } from '../engine/overview.js';
 import { bedSizeLimits, printSizeProblem } from './bed-size.js';
-import { PrintEstimates } from './print-estimates.js';
+import { PrintEstimates, printTimeSeconds } from './print-estimates.js';
 import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airStrandMm, fitAspect, pileLiftFactor } from './controls.js';
 import { SQ_RANGES, SQUIGGLE_DEFAULTS, describeSquiggle, sizeForAspect } from './squiggle-controls.js';
 import { PICTURE, withPicture, pictureDarkness } from '../engine/picture.js';
@@ -368,7 +368,7 @@ let studyRecorder = null;
 
 const RAISED_DESIGNS = new Set(['loop-pile', 'relief', 'fringe', 'spacer', 'pillarweave']);
 const PRINT_SOLIDS = { key: 'solidLayers', label: 'Solid layers', help: 'Layers of infill in green and yellow solid shapes. One gives a single solid pass; choose more for reinforcement. The mesh pattern keeps its own layers.', lo: 'Single', hi: 'Reinforced', unit: '', edit: true };
-const PRINT_RANGES = { solidLayers: { min: 1, max: 8, step: 1 }, extraLayers: { min: 0, max: 10, step: 1 }, brim: { min: 0, max: 8, step: 1 } };
+const PRINT_RANGES = { solidLayers: { min: 1, max: 8, step: 1 }, extraLayers: { min: 0, max: 10, step: 1 }, brim: { min: 0, max: 8, step: 1 }, meshPerimeters: { min: 0, max: 8, step: 1 } };
 const PRINT_THICKNESS = { label: 'Layer thickness', help: 'How thick every layer is. Thinner prints cleaner and slower; thicker is quick, but strands lie over each other less cleanly.' };
 const PRINT_LAYERS = { key: 'extraLayers', label: 'Extra layers', help: '0 keeps the original design. One-layer patterns alternate with a regenerated 90° pass across the same outline. Multi-layer patterns continue their original sequence: A–B–A–B. For raised designs, extra passes reinforce the backing beneath the texture; the texture prints once. The edge perimeters and imported SVG paths print once.', lo: 'Original', hi: 'More', unit: '', edit: true };
 
@@ -439,12 +439,12 @@ const PRINT_BINDING = {
     }
     if (key in BACKING_KEYS) { state.print.backing = { ...(state.print.backing ?? backingKept), [BACKING_KEYS[key]]: value }; return; }
     if (key === 'solidLayers') { state.print.solidLayers = Math.max(1, Math.min(8, Math.round(value))); return; }
-    if (key === 'brim' && value > 50) { toast('Perimeters: enter a count from 0 to 50.'); return; }
+    if (['brim', 'meshPerimeters'].includes(key) && value > 50) { toast('Perimeters: enter a count from 0 to 50.'); return; }
     if (key === 'extraLayers') {
       if (value > 250) { toast('Extra layers: enter a count from 0 to 250.'); return; }
       delete state.print.legacyCopies;
     }
-    state.print[key] = ['extraLayers', 'brim'].includes(key) ? Math.max(0, Math.round(value)) : value;
+    state.print[key] = ['extraLayers', 'brim', 'meshPerimeters'].includes(key) ? Math.max(0, Math.round(value)) : value;
   },
   available: (key) => key !== 'extraLayers' || !(state.result?.designId === state.design && state.result.layerPlan?.repeatable === false),
   range: (key) => PRINT_RANGES[key] ?? BACKING_RANGES[key],
@@ -456,7 +456,7 @@ const PRINT_BINDING = {
   readout: (key) => {
     if (key in BACKING_READOUTS) return `${Math.round(PRINT_BINDING.get(key) * 10) / 10} ${BACKING_READOUTS[key]}`;
     if (key === 'solidLayers') return `${state.print.solidLayers} solid ${state.print.solidLayers === 1 ? 'layer' : 'layers'} · ${Number((state.print.solidLayers * state.print.layerHeight).toFixed(3))} mm`;
-    if (key === 'brim') return state.print.brim ? `${state.print.brim} ${state.print.brim === 1 ? 'line' : 'lines'}` : 'Off';
+    if (['brim', 'meshPerimeters'].includes(key)) return state.print[key] ? `${state.print[key]} ${state.print[key] === 1 ? 'line' : 'lines'}` : 'Off';
     if (key === 'layerHeight') return `${Math.round(state.print.layerHeight * 1000) / 1000} mm${state.print.layerHeight === defaultLayerHeight(state.machines.get(state.machine)) ? ' (default)' : ''}`;
     return layerSetupText();
   },
@@ -647,7 +647,7 @@ function exportOptions(width = null, height = null) {
     machine: state.machines.get(state.machine), material: printMaterial(), design: state.design,
     width, height, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : settingsOf(state.design),
     studySettings: { ...settingsOf(state.design) }, outline: placedOutline(width, height),
-    vector: state.vector, shapeOutline: !!state.outline?.page, solidLayers: state.print.solidLayers, solidGenerator: 'arachne', extraLayers: state.print.extraLayers, legacyCopies: state.print.legacyCopies, brim: state.print.brim, perimeters: state.print.brim, backing: backingFor(),
+    vector: state.vector, shapeOutline: !!state.outline?.page, solidLayers: state.print.solidLayers, solidGenerator: 'arachne', extraLayers: state.print.extraLayers, legacyCopies: state.print.legacyCopies, brim: state.print.brim, perimeters: state.print.brim, meshPerimeters: state.print.meshPerimeters, backing: backingFor(),
     image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale,
     panelSize: size,
   };
@@ -866,7 +866,7 @@ async function regenerate() {
       const own = state.designs[mod.id];
       const [w, h] = mod.size(own);
       const previewState = { ...own, width: Math.min(w, cap), height: Math.min(h, cap) };
-      result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height, w, h), vector: mod.usesVector || mod.vectorGuides ? state.vector : null, vectorSize: [w, h], includeLines: !state.vector, picture: pictureFor(w, h), perimeters: state.print.brim });
+      result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height, w, h), vector: mod.usesVector || mod.vectorGuides ? state.vector : null, vectorSize: [w, h], includeLines: !state.vector, picture: pictureFor(w, h), perimeters: state.print.meshPerimeters, printedBoundary: !!state.vector && !!state.outline?.page });
     } else if (state.design === 'squiggle') {
       const s = state.squiggle;
       // a picture is shown whole: the preview is the whole swatch at the shape it has, shrunk to fit the window
@@ -898,7 +898,7 @@ async function regenerate() {
       const [fullWidth, fullHeight] = BINDINGS[state.design].size.get();
       result = applySvgGuides(result, state.vector, { fullWidth, fullHeight, outline: mod.outline === false ? placedOutline(result.cfg.t.sample_width, result.cfg.t.sample_height, fullWidth, fullHeight) : null });
       // a drawing that is also the outline lies on the boundary itself, so its lines are not trimmed to it
-      result = composeSvgLines(result, state.vector, { fullWidth, fullHeight, clipLines: !state.outline?.page && !result.guideCount, perimeters: state.print.brim });
+      result = composeSvgLines(result, state.vector, { fullWidth, fullHeight, clipLines: !state.outline?.page && !result.guideCount, perimeters: state.print.brim, meshPerimeters: state.print.meshPerimeters });
     }
     const native = nativeLayerInfo(result);
     const extras = state.print.legacyCopies ? (native.repeatable && !native.raised ? native.patternLayers * (state.print.legacyCopies - 1) : 0) : state.print.extraLayers;
@@ -920,7 +920,7 @@ async function regenerate() {
       const boundary = boundaryFor(fullWidth, fullHeight, placedOutline(fullWidth, fullHeight));
       brimOutline = state.vector ? conformalGuideRegion(boundary, vectorGuides(state.vector, fullWidth, fullHeight)).rings : boundary.rings;
     }
-    result = applyBrim(result, { count: allSolid && !backingFor() ? 0 : state.print.brim, outline: brimOutline, fullWidth, fullHeight, label: 'Perimeters', requestedCount: state.print.brim });
+    result = applyBrim(result, { count: allSolid && !backingFor() ? 0 : state.print.meshPerimeters, outline: brimOutline, fullWidth, fullHeight, label: 'Perimeters', requestedCount: state.print.brim });
     if (state.vector && result.cfg.t.sample_width === selectedWidth && result.cfg.t.sample_height === selectedHeight) result.documentSize = [state.vector.width, state.vector.height];
     showGenerated(result, snapshotKey());
   } catch (e) {
@@ -1122,6 +1122,7 @@ function reportItems(r, item) {
 }
 
 function renderFigures() {
+  const minutes = stats => { const seconds=printTimeSeconds(stats); return seconds===null ? '—' : formatMinutes(seconds/60); };
   const host = $('#figures');
   const toggle = $('#btn-details');
   const fig = (value, unit, label) => el('div', { class: 'figure' },
@@ -1138,10 +1139,10 @@ function renderFigures() {
     const scope = estimate?.full ? 'Whole-piece' : 'Sample';
     host.classList.toggle('stale', !!state.error);
     host.replaceChildren();
-    if (estimate) host.append(fig(formatMinutes(estimate.timeSec / 60), 'min', `${scope} print time`),
+    if (estimate) host.append(fig(minutes(estimate), 'min', `${scope} motion estimate`),
       fig(grams(estimate.filamentGrams ?? 0), 'g', `${scope} filament`));
     const info = generating ? `Generating the G-code for the whole ${w} × ${h} mm piece, the same work Export does. You can keep looking; the time appears when it is done.`
-      : estimate?.full ? `From the G-code for the whole ${w} × ${h} mm piece${readyGcode?.key === key ? ', which is ready: Export saves it straight away' : ''}. Time excludes acceleration.`
+      : estimate?.full ? `From the G-code for the whole ${w} × ${h} mm piece${readyGcode?.key === key ? ', which is ready: Export saves it straight away' : ''}. Includes acceleration and startup motion; heating, homing and bed levelling are extra.`
         : estimate ? `From a ${estimate.width} × ${estimate.height} mm 3D sample only, not the whole ${w} × ${h} mm piece.`
           : `The 2D view is a drawing, so it has no print time. Time and filament come from the G-code for the whole ${w} × ${h} mm piece.`;
     host.append(el('p', { class: 'estimate-info small muted', text: problem && !estimate?.full ? `${info} ${problem}` : info }));
@@ -1165,12 +1166,13 @@ function renderFigures() {
   const mod = designById(state.design);
   host.classList.toggle('stale', !!state.error);
   host.replaceChildren(
-    fig(formatMinutes(stats.timeSec / 60), 'min', sampled ? 'Preview print time' : 'Print time'),
+    fig(minutes(stats), 'min', sampled ? 'Preview motion estimate' : 'Motion estimate'),
     fig(grams(stats.filamentGrams), 'g', sampled ? 'Preview filament' : 'Filament'),
     !mod.legacy
       ? (() => { const f = mod.figure(state.result); return fig(f.value, f.unit, f.label); })()
       : isSq ? fig('2', '', 'Layers') : fig(stats.loops.toLocaleString('en'), '', 'Loops'),
   );
+  host.append(el('p',{class:'estimate-info small muted',text:printTimeSeconds(stats)===null ? 'Motion estimate unavailable: this file contains motion the timing model cannot predict.' : 'Includes acceleration and startup motion. Heating, homing, bed levelling and manual pauses are extra.'}));
   toggle.textContent = state.details ? 'Hide details' : 'Details';
   toggle.setAttribute('aria-expanded', String(state.details));
 
@@ -1190,16 +1192,17 @@ function renderFigures() {
       item('G-code moves', stats.moves.toLocaleString('en')),
       item('Steepest slope', `${stats.maxSlopeDeg.toFixed(1)}°`),
       ...(state.result.report ? reportItems(state.result.report, item) : []),
-      el('p', { class: 'note', text: 'Time ignores acceleration. Each lift ends one strand and starts the next, which is where blobs and strings come from.' })
+      el('p', { class: 'note', text: 'Motion time uses acceleration, axis limits and classic jerk with bounded lookahead. Print-order playback keeps the commanded-motion clock. Short print runs and long travels can contribute to blobs and strings.' })
     );
   }
   const what = !mod.legacy ? mod.summary(state.result) : isSq ? 'a two-layer squiggle mesh' : `${stats.loops} loops`;
-  $('#preview').setAttribute('aria-label', `3D preview: ${what} on a ${t.sample_width} by ${t.sample_height} millimetre swatch, about ${formatMinutes(stats.timeSec / 60)} minutes.`);
+  $('#preview').setAttribute('aria-label', `3D preview: ${what} on a ${t.sample_width} by ${t.sample_height} millimetre swatch, ${printTimeSeconds(stats)===null ? 'motion estimate unavailable' : `about ${minutes(stats)} minutes of modeled motion`}.`);
 }
 
 function renderPlayback() {
   const total = state.result ? state.result.stats.timeSec / 60 : 0;
   $('#time-label').textContent = `${formatMinutes(total * state.fraction)} of ${formatMinutes(total)} min`;
+  $('#time-label').title = 'Print order uses commanded motion without acceleration; the motion estimate above includes acceleration and startup/end motion.';
   $('#play-icon').setAttribute('d', state.playing ? PAUSE_ICON : PLAY_ICON);
   $('#btn-play').setAttribute('aria-label', state.playing ? 'Pause' : 'Play the print order');
   $('#scrub').value = String(Math.round(state.fraction * 1000));
@@ -1931,7 +1934,7 @@ function recordBuildFailure(error, input = null) {
   const [width, height] = input ? [input.width, input.height] : BINDINGS[state.design].size.get();
   const captured = input ?? {
     design: state.design, width, height, studySettings: { ...settingsOf(state.design) },
-    machine: state.machines.get(state.machine), material: printMaterial(), solidLayers: state.print.solidLayers, extraLayers: state.print.extraLayers, brim: state.print.brim, perimeters: state.print.brim,
+    machine: state.machines.get(state.machine), material: printMaterial(), solidLayers: state.print.solidLayers, extraLayers: state.print.extraLayers, brim: state.print.brim, perimeters: state.print.brim, meshPerimeters: state.print.meshPerimeters,
     vector: state.vector, outline: state.outline?.rings,
   };
   const vector = captured.vector, sourcePaths = vector?.paths ?? [];
@@ -1941,7 +1944,7 @@ function recordBuildFailure(error, input = null) {
     settings: {
       ...settings,
       operation: input?.operation ?? (input ? 'panel' : 'preview'),
-      print: { layers: captured.layers, extraLayers: captured.extraLayers, brim: captured.brim, perimeters: captured.perimeters, layerHeight: captured.material?.print_defaults?.layer_height },
+      print: { layers: captured.layers, extraLayers: captured.extraLayers, brim: captured.brim, perimeters: captured.perimeters, meshPerimeters: captured.meshPerimeters, layerHeight: captured.material?.print_defaults?.layer_height },
       machine: captured.machine?.id, material: captured.material?.id,
       ...(input ? { repeat: captured.repeat, backingSpacing: captured.backingSpacing } : state.design === 'loop-pile' ? { advanced: { ...state.advanced } } : {}),
     },
@@ -2062,7 +2065,7 @@ function feedbackContext() {
         design: state.design,
         size: { width, height },
         settings: settingsOf(state.design),
-        print: { solidLayers: state.print.solidLayers, extraLayers: state.print.extraLayers, brim: state.print.brim, perimeters: state.print.brim, layerHeight: printMaterial()?.print_defaults?.layer_height },
+        print: { solidLayers: state.print.solidLayers, extraLayers: state.print.extraLayers, brim: state.print.brim, perimeters: state.print.brim, meshPerimeters: state.print.meshPerimeters, layerHeight: printMaterial()?.print_defaults?.layer_height },
         machine: state.machine,
         material: state.material,
         // counts only: the drawing stays on this device
@@ -2093,9 +2096,9 @@ function reportStudyExport(exportType, options = {}, stats = state.result?.stats
   const [width, height] = ['settings-json', 'build-error'].includes(exportType) ? BINDINGS[state.design].size.get() : [cfg?.t.sample_width, cfg?.t.sample_height];
   const vector = options.vector ?? state.vector;
   const plan = options.layerPlan ?? state.result?.layerPlan;
-  let print = stats?.print ?? { layerHeight: cfg?.t.layer_height, extraLayers: plan?.extraLayers ?? options.extraLayers ?? state.print.extraLayers, nativeLayers: plan?.nativeLayers, totalLayers: plan?.totalLayers, backingLayers: plan?.backingLayers, totalBackingLayers: plan?.totalBackingLayers, brim: options.brim ?? state.print.brim, perimeters: options.perimeters ?? state.print.brim, nozzleDiameter: cfg?.t.nozzle_diameter, extrusionWidth: cfg?.t.extrusion_width };
+  let print = stats?.print ?? { layerHeight: cfg?.t.layer_height, extraLayers: plan?.extraLayers ?? options.extraLayers ?? state.print.extraLayers, nativeLayers: plan?.nativeLayers, totalLayers: plan?.totalLayers, backingLayers: plan?.backingLayers, totalBackingLayers: plan?.totalBackingLayers, brim: options.brim ?? state.print.brim, perimeters: options.perimeters ?? state.print.brim, meshPerimeters: options.meshPerimeters ?? state.print.meshPerimeters, nozzleDiameter: cfg?.t.nozzle_diameter, extrusionWidth: cfg?.t.extrusion_width };
   if (exportType === 'build-error') {
-    print = { layerHeight: options.material?.print_defaults?.layer_height ?? state.print.layerHeight, extraLayers: options.extraLayers ?? state.print.extraLayers, brim: options.brim ?? state.print.brim, perimeters: options.perimeters ?? state.print.brim };
+    print = { layerHeight: options.material?.print_defaults?.layer_height ?? state.print.layerHeight, extraLayers: options.extraLayers ?? state.print.extraLayers, brim: options.brim ?? state.print.brim, perimeters: options.perimeters ?? state.print.brim, meshPerimeters: options.meshPerimeters ?? state.print.meshPerimeters };
     try {
       const current = resolveConfig(options.machine ?? state.machines.get(state.machine), options.material ?? printMaterial());
       Object.assign(print, { nozzleDiameter: current.t.nozzle_diameter, extrusionWidth: current.t.extrusion_width });

@@ -19,6 +19,7 @@ import { prepareAdaptiveSolids } from './adaptive-solids.js';
 export function generateDesignBase(input) {
   const { machine, material, design, settings = {}, width, height, outline = null, vector = null } = input;
   if (input.perimeters !== undefined) validatePerimeters(input.perimeters);
+  if (input.meshPerimeters !== undefined) validatePerimeters(input.meshPerimeters);
   const mod = designById(design);
   if (!mod || mod.status !== 'ready') throw new ConfigError(['Choose a supported fabric design.']);
   if (![width, height].every((n) => Number.isFinite(n) && n >= 1 && n <= 5000)) throw new ConfigError(['Design dimensions must be 1–5000 mm.']);
@@ -46,7 +47,8 @@ export function generateDesignBase(input) {
       vectorOffset: input.vectorOffset ?? [0, 0],
       includeLines: !vector,
       picture,
-      perimeters: input.perimeters ?? 0,
+      perimeters: input.meshPerimeters ?? input.perimeters ?? 0,
+      printedBoundary: !!input.vector && !!input.shapeOutline,
     });
   }
   // a drawing that is all green (and blue) has no red to fill: no pattern, only its solids
@@ -55,7 +57,7 @@ export function generateDesignBase(input) {
     const [fullWidth, fullHeight] = input.vectorSize ?? [width, height], [offsetX, offsetY] = input.vectorOffset ?? [0, 0];
     const guideVector = offsetX || offsetY ? { ...vector, paths: vector.paths.map((path) => path.map((p) => ({ ...p, x: p.x - offsetX * vector.width / fullWidth, y: p.y - offsetY * vector.height / fullHeight }))) } : vector;
     result = applySvgGuides(result, guideVector, { fullWidth, fullHeight, outline: mod.outline === false ? outline : null });
-    result = composeSvgLines(result, vector, { fullWidth, fullHeight, offsetX, offsetY, clipLines: !input.shapeOutline && !result.guideCount, perimeters: input.perimeters ?? 0 });
+    result = composeSvgLines(result, vector, { fullWidth, fullHeight, offsetX, offsetY, clipLines: !input.shapeOutline && !result.guideCount, perimeters: input.perimeters ?? 0, meshPerimeters: input.meshPerimeters });
     result.documentSize = [vector.width, vector.height];
   }
   return result;
@@ -89,7 +91,7 @@ export function generateDesignExport(input) {
   // a backing mesh goes under everything the design and the drawing lay down; the brim goes round it on the bed
   result = addBackingMesh(withSolids(result, input), input.backing);
   // a solid already prints its own edge pass: an all-solid piece takes no brim over it
-  return applyBrim(result, { count: solidOnly(input.vector) && !input.backing ? 0 : input.perimeters ?? input.brim ?? 2, label: input.perimeters !== undefined ? 'Perimeters' : 'Brim', requestedCount: input.perimeters });
+  return applyBrim(result, { count: solidOnly(input.vector) && !input.backing ? 0 : input.meshPerimeters ?? input.perimeters ?? input.brim ?? 2, label: input.perimeters !== undefined ? 'Perimeters' : 'Brim', requestedCount: input.perimeters });
 }
 
 /** The UI only needs printable output and summary data; geometry remains inside the worker. */

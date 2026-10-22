@@ -40,7 +40,7 @@ export function hashToState(hash) {
  * Layer thickness (mm), additional layers above the native design, and side-by-side brim runs, with any change to the
  * filament's temperatures and retraction (filament-settings.js). Invalid values use the defaults.
  */
-export const PRINT_DEFAULTS = Object.freeze({ layerHeight: 0.2, extraLayers: 0, solidLayers: 1, brim: 2 });
+export const PRINT_DEFAULTS = Object.freeze({ layerHeight: 0.2, extraLayers: 0, solidLayers: 1, brim: 2, meshPerimeters: 0 });
 export function sanitizePrint(raw) {
   const out = { ...PRINT_DEFAULTS };
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
@@ -63,6 +63,10 @@ export function sanitizePrint(raw) {
   const b = Object.hasOwn(raw, 'perimeters') ? raw.perimeters : raw.brim;
   const count = (typeof b === 'number' || typeof b === 'string' && b.trim() !== '') ? Number(b) : NaN;
   if (Number.isFinite(count) && count >= 0 && count <= 50) out.brim = Math.round(count);
+  // Old links used one count for solid walls and mesh rings; preserve their geometry on migration.
+  const meshRaw = Object.hasOwn(raw, 'meshPerimeters') ? raw.meshPerimeters : b;
+  const mesh = (typeof meshRaw === 'number' || typeof meshRaw === 'string' && meshRaw.trim() !== '') ? Number(meshRaw) : NaN;
+  if (Number.isFinite(mesh) && mesh >= 0 && mesh <= 50) out.meshPerimeters = Math.round(mesh);
   return out;
 }
 
