@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { segmentContact } from '../src/engine/fabric.js';
 import { solidKind, coilPath, zigzagPaths, solidLayer, longAxis, SOLID_OVERLAP } from '../src/engine/solid-fill.js';
 
 const circle = (cx, cy, r, n = 160) => Array.from({ length: n }, (_, i) => ({ x: cx + r * Math.cos((2 * Math.PI * i) / n), y: cy + r * Math.sin((2 * Math.PI * i) / n) }));
@@ -141,6 +142,18 @@ test('solid fill preserves narrow windows when connecting adjacent rows', () => 
         const ys = [lo, hi].map((t) => a.y + t * (b.y - a.y));
         assert.ok(!(Math.max(...ys) > 2 && Math.min(...ys) < 16), 'no extrusion cuts across the narrow slot');
       }
+    }
+  }
+});
+
+test('a row connection keeps full bead clearance between closely spaced small windows', () => {
+  const ring = rect(0, 0, 25, 20);
+  const holes = [8, 9.01].map((x) => [{ x: x + 0.1, y: 10 }, { x, y: 10.1 }, { x: x - 0.1, y: 10 }, { x, y: 9.9 }]);
+  const paths = zigzagPaths(ring, { bead, angle: 0, holes });
+  for (const pts of paths) for (let i = 1; i < pts.length; i++) {
+    for (const hole of holes) for (let j = 0; j < hole.length; j++) {
+      const clearance = segmentContact(pts[i - 1], pts[i], hole[j], hole[(j + 1) % hole.length]).distance;
+      assert.ok(clearance >= bead / 2 - 1e-6, `connection leaves only ${clearance} mm beside a window`);
     }
   }
 });

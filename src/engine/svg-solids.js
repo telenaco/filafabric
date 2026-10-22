@@ -1,7 +1,7 @@
 import { interpretDrawing } from './drawing.js';
 import { solidKind, solidLayer, SOLID_OVERLAP } from './solid-fill.js';
 import { PolygonBoundary } from './boundary.js';
-import { clipStrands, analyzeFabric } from './fabric.js';
+import { clipStrands, analyzeFabric, orderStrands } from './fabric.js';
 import { emitStrands, travelLiftOf } from './emit.js';
 import { computeStats } from './stats.js';
 import { writeGcode } from './gcode.js';
@@ -75,10 +75,14 @@ export function solidStrands(solids, under, { bead = 0.45, layerHeight = 0.2, la
   for (let k = 0; k < layers; k++) {
     shapes.forEach((s, i) => {
       const z = s.top + (k + 1) * layerHeight;
-      for (const pts of solidLayer(s.ring, { bead, overlap, layer: k, kind: s.kind, holes: s.holes, edged: s.edged ?? [] })) {
-        out.push({ id: `solid-${i + 1}-${k + 1}-${out.length + 1}`, name: 'Solid shape', solid: s.kind, solidLayer: k, fixed: true, ground: s.top === 0,
-          kind: s.top === 0 && k === 0 ? 'base' : 'supported', pts: pts.map((p) => ({ x: p.x, y: p.y, z })) });
-      }
+      const paths = solidLayer(s.ring, { bead, overlap, layer: k, kind: s.kind, holes: s.holes, edged: s.edged ?? [] });
+      const strands = paths.map((pts, j) => ({
+        id: `solid-${i + 1}-${k + 1}-${out.length + j + 1}`, name: 'Solid shape', solid: s.kind, solidLayer: k, fixed: true, ground: s.top === 0,
+        kind: s.top === 0 && k === 0 ? 'base' : 'supported', pts: pts.map((p) => ({ x: p.x, y: p.y, z })),
+      }));
+      // Only reorder this shape at this height: keep layer precedence and a coil's spiral direction.
+      const ordered = strands.length > 1 ? orderStrands(strands, { start: out.at(-1)?.pts.at(-1), improve: true }) : strands;
+      out.push(...ordered);
     });
   }
   return { strands: out, shapes };
