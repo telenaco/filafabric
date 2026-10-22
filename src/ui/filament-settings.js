@@ -9,19 +9,25 @@ const filamentCeiling = (material, machine) => material.flow.max_volumetric_spee
 /** key: where it is kept in the print setup; get: the filament's own value; put: the filament with it changed. */
 export const FILAMENT_FIELDS = Object.freeze([
   { key: 'flowMultiplier', label: 'Filament flow multiplier', unit: '×', min: 0.1, max: 2.5, step: 0.01,
+    help: 'Scales filament input. 1 uses the base amount; 1.15 adds 15%. Any printer flow correction is applied separately, once.',
     get: (m) => m.flow.multiplier, put: (m, v, machine) => ({ ...m, flow: { ...m.flow,
       // Keep the existing physical filament-input ceiling when changing the extrusion multiplier.
       max_volumetric_speed_actual: filamentCeiling(m, machine), multiplier: v } }) },
   { key: 'flatSpeed', engineKey: 'speed_flat', label: 'Flat extrusion speed override', unit: 'mm/s', min: 1, max: 150, step: 1,
+    help: 'Speed for horizontal base and supported lines. Leave empty to keep the pattern speeds. Raised lines keep their own speeds.',
     get: (m) => m.print_defaults?.speed_flat ?? null, put: (m, v) => ({ ...m, print_defaults: { ...m.print_defaults, speed_flat: v } }) },
   { key: 'maxFilamentVolume', label: 'Maximum filament volume', unit: 'mm³/s', min: 0.1, max: 30, step: 0.05,
+    help: 'Limits raw filament input before foaming. The slicer slows down when a line would exceed this amount.',
     get: (m, machine) => filamentCeiling(m, machine),
     put: (m, v) => ({ ...m, flow: { ...m.flow, max_volumetric_speed_actual: v } }) },
   { key: 'flatBeadWidth', label: 'Measured flat bead width', unit: 'mm', min: 0.1, max: 3, step: 0.01,
+    help: 'Leave empty until measured. Enter the cooled width of an isolated straight bead printed with the calibration width and height, at the same temperature, flow and speed. Adjusts flat coverage without adding flow. Measure again after changing these settings.',
     get: (m) => m.flow.measured_line_width ?? null, put: (m, v) => ({ ...m, flow: { ...m.flow, measured_line_width: v } }) },
   { key: 'calibrationLineWidth', label: 'Calibration commanded width', unit: 'mm', min: 0.1, max: 3, step: 0.01,
+    help: 'Width commanded when printing your calibration bead. This is a target, not a measurement of the cooled strand.',
     get: (m) => m.flow.calibration_line_width ?? m.print_defaults?.extrusion_width ?? 0.45, put: (m, v) => ({ ...m, flow: { ...m.flow, calibration_line_width: v } }) },
   { key: 'calibrationLayerHeight', label: 'Calibration layer height', unit: 'mm', min: 0.05, max: 1, step: 0.01,
+    help: 'Layer height used to print your measured calibration bead. Use the same height when comparing bead widths.',
     get: (m) => m.flow.calibration_layer_height ?? 0.2, put: (m, v) => ({ ...m, flow: { ...m.flow, calibration_layer_height: v } }) },
   { key: 'firstLayerTemp', label: 'Nozzle, first layer', unit: '°C', min: 150, max: 300, step: 1,
     get: (m) => m.temperature.first_layer, put: (m, v) => ({ ...m, temperature: { ...m.temperature, first_layer: v } }) },
@@ -31,6 +37,7 @@ export const FILAMENT_FIELDS = Object.freeze([
     get: (m) => m.bed_temperature, put: (m, v) => ({ ...m, bed_temperature: v }) },
   // (at most 15 mm, as the engine allows: longer retractions jam flexible filament)
   { key: 'retraction', label: 'Retraction length', unit: 'mm', min: 0, max: 15, step: 0.5,
+    help: 'Filament pulled back before qualifying travel moves to reduce strings. 0 turns retraction off. Required clearance lifts are kept.',
     get: (m) => m.retraction.length, put: (m, v) => ({ ...m, retraction: { ...m.retraction, length: v } }) },
   { key: 'retractMinTravel', label: 'Minimum travel for retraction', unit: 'mm', min: 0, max: 50, step: 0.5,
     get: (m) => m.retraction.min_travel, put: (m, v) => ({ ...m, retraction: { ...m.retraction, min_travel: v } }) },
@@ -45,6 +52,7 @@ export const FILAMENT_FIELDS = Object.freeze([
     get: (m) => m.retraction.seam_gap ?? 0, put: (m, v) => ({ ...m, retraction: { ...m.retraction, seam_gap: v } }) },
   // the lift a travel really gets: the filament's, or the studio's 3 mm when it sets none (emit.js travelLiftOf)
   { key: 'travelLift', label: 'Lift on a travel', unit: 'mm', min: 0, max: 10, step: 0.1,
+    help: 'Extra clearance during travel. The slicer still lifts when needed to clear raised printed material, even at 0.',
     get: (m) => m.retraction.z_hop ?? 3, put: (m, v) => ({ ...m, retraction: { ...m.retraction, z_hop: v } }) },
 ]);
 

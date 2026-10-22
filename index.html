@@ -285,7 +285,7 @@
 <dialog id="printer-dialog" aria-labelledby="printer-dialog-title">
   <form method="dialog">
     <h2 id="printer-dialog-title">Printer setup</h2>
-    <p class="muted">A setup holds the printer's limits, the filament's behaviour and how the layers are printed.</p>
+    <p class="muted">Choose your printer, filament and layers.</p>
     <div class="field-row stacked machine-picker">
       <label for="machine-search">Printer</label>
       <input id="machine-search" type="search" autocomplete="off" spellcheck="false" placeholder="Search printers…" aria-controls="machine-list" aria-describedby="machine-count">
@@ -294,16 +294,19 @@
     </div>
     <label class="field-row stacked" for="sel-material"><span>Filament</span><select id="sel-material"></select></label>
     <fieldset class="filament-settings" id="filament-settings">
-      <legend>Filament and flat-print calibration</legend>
-      <div class="filament-fields" id="filament-fields"></div>
-      <p class="small muted" id="filament-settings-note"></p>
+      <legend>Filament settings</legend>
+      <div id="filament-fields"></div>
+      <button type="button" class="link small" id="filament-reset" disabled>Reset filament defaults</button>
     </fieldset>
     <p class="muted small" id="dialog-note"></p>
     <div id="print-setup"></div>
     <div class="profile-add">
       <label class="btn" for="profile-file">Add a printer or filament file…</label>
       <input type="file" id="profile-file" class="visually-hidden" accept=".ini,.json,.gcode" multiple>
-      <p class="muted small">Use a complete PrusaSlicer config (.ini or sliced .gcode) or a self-contained Bambu Studio / OrcaSlicer printer or filament preset (.json). Print/process presets alone and files missing their parent settings are not complete printer profiles. Review import notes before printing.</p>
+      <details class="profile-import-help small muted">
+        <summary>Which files can I import?</summary>
+        <p>Use a complete PrusaSlicer .ini or sliced .gcode, or a self-contained Bambu Studio / OrcaSlicer printer or filament .json. Process-only presets and files missing parent settings cannot be imported. Review any import warnings before printing.</p>
+      </details>
       <p class="small"><a class="link" href="samples/printer-profile.ini" download>Download sample .ini</a> · <a class="link" href="samples/printer-profile.json" download>Sample .json</a> · <a class="link" href="profiles/README.md" target="_blank" rel="noopener">Profile requirements</a></p>
       <ul class="profile-list" id="profile-list" hidden></ul>
     </div>

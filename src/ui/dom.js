@@ -45,3 +45,25 @@ export const ICONS = {
   error: 'M9 1.8a7.2 7.2 0 100 14.4A7.2 7.2 0 009 1.8zM6.4 6.4l5.2 5.2M11.6 6.4l-5.2 5.2',
   chevron: 'M5 7l4 4 4-4',
 };
+
+let helpId = 0;
+
+/** A short explanation opened by mouse, touch or keyboard; native popovers handle Escape and outside clicks. */
+export function helpBubble(label, text) {
+  const id = `control-help-${++helpId}`;
+  const button = el('button', { type: 'button', class: 'help-button', 'aria-label': `About ${label.toLowerCase()}`, popovertarget: id }, icon(ICONS.info));
+  const bubble = el('span', { id, class: 'help-popover', popover: 'auto', text });
+  const position = () => {
+    const r = button.getBoundingClientRect(), b = bubble.getBoundingClientRect(), gap = 12;
+    bubble.style.left = `${Math.max(gap, Math.min(r.left, window.innerWidth - b.width - gap))}px`;
+    bubble.style.top = `${r.bottom + b.height + gap > window.innerHeight ? Math.max(gap, r.top - b.height - 8) : r.bottom + 8}px`;
+  };
+  const dismiss = () => bubble.hidePopover();
+  bubble.addEventListener('toggle', () => {
+    const open = bubble.matches(':popover-open');
+    if (open) position();
+    window[open ? 'addEventListener' : 'removeEventListener']('resize', dismiss);
+    window[open ? 'addEventListener' : 'removeEventListener']('scroll', dismiss, true);
+  });
+  return el('span', { class: 'control-help' }, button, bubble);
+}

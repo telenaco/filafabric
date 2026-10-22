@@ -352,6 +352,18 @@ input[type="range"] { width: 100%; height: 28px; margin: 0; accent-color: var(--
 .edge-ctl { margin-top: 16px; }
 .ctl-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 32px; }
 .ctl-label { font-weight: 600; }
+.ctl-heading, .field-heading { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.control-help { display: inline-flex; flex: none; }
+.help-button {
+  display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px;
+  padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--muted);
+}
+.help-button:hover, .control-help:has(:popover-open) .help-button { color: var(--accent); background: var(--accent-soft); }
+.help-popover {
+  position: fixed; inset: auto; margin: 0; width: max-content; max-width: min(280px, calc(100vw - 24px));
+  padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 8px;
+  background: var(--panel); color: var(--ink); box-shadow: var(--shadow); font-size: 13px; font-weight: 400; line-height: 1.5;
+}
 .ctl-readout { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
 .ctl-readout.editable {
   min-height: 32px; padding: 0 6px; margin-right: -6px; border: 0; border-radius: 6px; background: transparent;
@@ -487,10 +499,17 @@ input[role="switch"]:checked::before { transform: translateX(16px); }
 .filament-settings legend { padding: 0; margin-bottom: 8px; font-weight: 600; font-size: 13.5px; }
 .filament-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
 .filament-fields .field-row { font-weight: 500; }
-.filament-fields .field-row.changed span { color: var(--accent); }
+.filament-fields .field-row.changed label { color: var(--accent); }
+.filament-fields .field-heading { min-height: 44px; }
+.filament-fields .field-heading label { flex: 1; }
 .filament-fields input { font-variant-numeric: tabular-nums; }
+.filament-advanced { margin-top: 10px; border-top: 1px solid var(--line); }
+.filament-advanced > summary, .profile-import-help > summary { min-height: 44px; padding: 10px 0; cursor: pointer; font-weight: 600; }
+.filament-advanced > summary .small { margin-left: 8px; }
+.filament-advanced[open] { margin-bottom: 12px; }
 .filament-settings .small { margin: 8px 0 0; }
-.filament-settings .link { min-height: 28px; padding: 0; }
+.filament-settings .link { min-height: 44px; padding: 0; }
+.filament-settings .link:disabled { color: var(--muted); text-decoration: none; }
 @media (max-width: 420px) { .filament-fields { grid-template-columns: 1fr; } }
 
 /* ---------- print summary ---------- */

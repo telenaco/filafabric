@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "e8691fa4b1a9e13d16fec1b04f91d7ff29650e2592e58481480593cbf8f5602d",
+  "archiveSha256": "ee87f20ea55abe7cf118aec7c24c63b1c25149e17a4610ebcc402d73915f98c3",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -186,8 +186,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 34078,
-      "sha256": "568695d8fa6410533744ee531c5930399fa389f1105e5519c2b557ea9de777ec"
+      "bytes": 34102,
+      "sha256": "51d7b94f8d49e0f0be2c732a29a0b569af4a844e4b87f3cf6b832cd079fb2151"
     },
     {
       "path": "migrations/0001_study_exports.sql",
@@ -761,8 +761,8 @@
     },
     {
       "path": "src/ui/dom.js",
-      "bytes": 1944,
-      "sha256": "e348d74c5eccd200ad8ca9d67641f709fa014fb14ed5573411dd6187a7573b07"
+      "bytes": 3159,
+      "sha256": "e1d000f8d0e2269d46d2c8d925b3c4e52e9f213d1e15f22ee858a0eac771f3c3"
     },
     {
       "path": "src/ui/export-builder.js",
@@ -776,8 +776,8 @@
     },
     {
       "path": "src/ui/filament-settings.js",
-      "bytes": 6737,
-      "sha256": "b5a79bc691d1e87c66af0e5e1d439fdad2519c3cbe9e066015e40e5452f2c28f"
+      "bytes": 7900,
+      "sha256": "d4a9ceec31ee47e96bf14ccf31d5a7aba08832b12d686423c49718ccdf7fe433"
     },
     {
       "path": "src/ui/file-name.js",
@@ -811,8 +811,8 @@
     },
     {
       "path": "src/ui/main.js",
-      "bytes": 124671,
-      "sha256": "e3b31ee0a52fc67f7ceb22a07aaf17f4ce7b1f0c77ca34c66f8460781a2c26b2"
+      "bytes": 124058,
+      "sha256": "0cc1da8f0ade81c9cdb1134585660cd080d8bdadbf79921d6a17f802068727a4"
     },
     {
       "path": "src/ui/more-designs.js",
@@ -851,8 +851,8 @@
     },
     {
       "path": "src/ui/panels.js",
-      "bytes": 51107,
-      "sha256": "899f2138a165fa4ea782ac58b0d704d3cb36b0d0304237999c6e086bcb64167c"
+      "bytes": 49856,
+      "sha256": "71c3c2262c670ca21310fdb70d0ad1fc907f3208b1b9acd3f19c37500d222313"
     },
     {
       "path": "src/ui/param-schema.js",
@@ -916,8 +916,8 @@
     },
     {
       "path": "src/ui/styles.css",
-      "bytes": 48366,
-      "sha256": "e0a6d3a420534cd5687179822809df2b68b5179c47f3d8d1b410801b0bd7b3ae"
+      "bytes": 49673,
+      "sha256": "e47a816f3fab6267450274265e3dd53a86bffe7628a1943c2b3c7776ec5160dd"
     },
     {
       "path": "src/ui/svg-design.js",

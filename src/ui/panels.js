@@ -24,12 +24,11 @@
 //   toast(message)       say something briefly
 //   vectorSize()         [w, h] of the imported SVG, or null when none is imported
 //   svg()                what the import card shows, see SvgImportCard
-import { el } from './dom.js';
+import { el, helpBubble } from './dom.js';
 import { validNumber } from './numeric.js';
 import { FIELDS, createField } from '../engine/fields.js';
 import { PICTURE } from '../engine/picture.js';
 import { SHAPES } from '../engine/shapes.js';
-import { YELLOW_PRINTS_SOLID } from '../engine/drawing.js';
 import { shapeThumb } from './thumbs.js';
 
 const fmt = (n) => String(Math.round(n * 10) / 10);
@@ -76,7 +75,9 @@ export class SliderControl extends Control {
     this.readout.addEventListener('click', () => this.edit());
     // the end labels say which way is which; the sentence of help is a tooltip on the label, and still read out
     return el('div', { class: 'ctl' },
-      el('div', { class: 'ctl-top' }, el('label', { class: 'ctl-label', for: this.inputId, text: def.label, 'data-tip': def.help || false }), this.readout),
+      el('div', { class: 'ctl-top' }, el('span', { class: 'ctl-heading' },
+        el('label', { class: 'ctl-label', for: this.inputId, text: def.label, 'data-tip': !def.info && def.help || false }),
+        def.info && helpBubble(def.label, def.help)), this.readout),
       el('p', { class: 'ctl-help visually-hidden', id: `${this.inputId}-help`, text: def.help }),
       this.input,
       el('div', { class: 'ctl-ends', 'aria-hidden': 'true' }, el('span', { text: def.lo }), el('span', { text: def.hi })),
@@ -193,12 +194,12 @@ export class SizeControl extends Control {
     this.divider = el('div', { class: 'size-source-divider', text: 'or', 'aria-hidden': 'true' });
     this.svgSlot = el('div', { class: 'size-svg-slot' });
     this.brim = new SliderControl({ ...host, binding: () => host.binding('print') }, `${designId}-edge`, {
-      key: 'brim', label: 'Solid perimeters', help: 'Walls inside green and yellow solid shapes. Two is the default; 0 fills to the bead-safe edge without separate walls. Narrow areas keep only the walls that fit. Type up to 50. The mesh outlines have their own setting below.',
+      key: 'brim', label: 'Solid perimeters', info: true, help: 'Walls inside solid shapes. More walls strengthen their edges; 0 leaves only infill. Mesh edges use the separate Mesh outlines setting.',
       lo: 'Off', hi: 'Wide', unit: 'lines', edit: true,
     });
     this.brim.node.classList.add('brim-control');
     this.meshPerimeters = new SliderControl({ ...host, binding: () => host.binding('print') }, `${designId}-mesh-edge`, {
-      key: 'meshPerimeters', label: 'Mesh outlines', help: 'Extra rings on the mesh side of the outline and inside red SVG windows. Off by default: mesh ends reach the printed SVG edge. Increase for edge reinforcement. These rings add material independently of solid walls and layer counts. Type up to 50.',
+      key: 'meshPerimeters', label: 'Mesh outlines', info: true, help: 'Extra rings around the mesh and inside pattern windows. They reinforce loose ends and add material. 0 leaves them off; solid shapes use Solid perimeters.',
       lo: 'Off', hi: 'Wide', unit: 'lines', edit: true,
     });
     this.meshPerimeters.node.classList.add('brim-control');
@@ -803,17 +804,16 @@ export class PrintSetupCard extends Control {
     this.layers = new SliderControl(host, 'print', layers);
     this.solids = solids ? new SliderControl(host, 'print', solids) : null;
     this.readout = el('span', { class: 'ctl-readout', id: 'layer-thickness-value' });
-    this.note = el('p', { class: 'ctl-help', id: 'layer-thickness-note' });
+    this.thicknessHelp = helpBubble(thickness.label, thickness.help);
     this.grid = el('div', { class: 'patterns layer-choices', id: 'layer-thickness-choices', role: 'group', 'aria-labelledby': 'layer-thickness-label' });
     this.built = '';
     this.fold = null;
     this.node = el('section', { class: 'print-setup', 'aria-labelledby': 'print-setup-title' },
       el('h3', { id: 'print-setup-title', text: 'Layers' }),
       el('div', { class: 'ctl' },
-        el('div', { class: 'ctl-top' }, el('span', { class: 'ctl-label', id: 'layer-thickness-label', text: thickness.label }), this.readout),
-        el('p', { class: 'ctl-help', text: thickness.help }),
-        this.grid,
-        this.note),
+        el('div', { class: 'ctl-top' }, el('span', { class: 'ctl-heading' },
+          el('span', { class: 'ctl-label', id: 'layer-thickness-label', text: thickness.label }), this.thicknessHelp), this.readout),
+        this.grid),
       this.layers.node, this.solids?.node);
   }
 
@@ -838,7 +838,6 @@ export class PrintSetupCard extends Control {
     if (options.join(',') !== this.built) this.build(options);
     for (const btn of this.grid.children) btn.setAttribute('aria-pressed', String(Number(btn.dataset.layerHeight) === binding.get('layerHeight')));
     this.readout.textContent = binding.readout('layerHeight');
-    this.note.textContent = binding.note();
     this.fold?.update();
     this.layers.update();
     this.solids?.update();
@@ -893,15 +892,14 @@ export const SAMPLE_SVG = 'samples/filafabric-sample.svg';
  * reads a colour its own way adds a line of its own, its `svgNote`). The rules themselves are in engine/drawing.js.
  */
 export const DRAWING_GUIDE = Object.freeze([
-  { colour: 'red', name: 'Red closed shape', text: 'Filled with the pattern.' },
-  { colour: 'blue', name: 'Blue closed shape', text: 'Left empty: a hole. Blue inside red cuts a hole; red inside that blue is filled again.' },
-  { colour: 'green', name: 'Green closed shape', text: 'Printed solid, one layer by default (choose Solid layers for reinforcement): a coil if it is round, a zigzag otherwise. On the bed it builds up layer by layer with the pattern; inside a red shape it lies on the pattern and prints last.' },
-  { colour: 'yellow', name: 'Yellow closed shape', text: YELLOW_PRINTS_SOLID ? 'For now printed solid, exactly like green.' : 'Bends the pattern round its outline.' },
-  { colour: 'line', name: 'Any other line', text: 'Printed as drawn, first, on the first layer. Its stroke width sets the passes side by side: 0.4 mm one, 0.8 mm two, 1.2 mm three.' },
+  { colour: 'red', name: 'Red', text: 'Fill with the selected pattern.' },
+  { colour: 'blue', name: 'Blue', text: 'Cut out: leave empty.' },
+  { colour: 'green', name: 'Green', text: 'Fill solid. Thickness follows Solid layers.' },
+  { colour: 'line', name: 'Other lines', text: 'Print as drawn. Stroke width sets the printed width.' },
 ]);
-const GUIDE_FOOT = 'Where shapes sit inside each other, the innermost one decides. Use pure colours: red #ff0000, blue #0000ff, green #00ff00 (or #008000), yellow #ffff00; any other colour is a line.';
+const GUIDE_FOOT = 'Use pure RGB colours. For nested shapes, the innermost colour wins.';
 // red is filled once the pattern is cut to the shapes, which an import does; a design that draws the drawing itself fills it its own way
-const RED_CUT = 'Filled with this design\'s pattern. Turn off Fill its shapes with this pattern to cover the whole swatch instead.';
+const RED_CUT = 'Fill with the pattern when “Fill its shapes” is on.';
 
 /**
  * The SVG import. A drawing comes in once, here, and does three things everywhere in the studio: its lines print first,
@@ -927,9 +925,9 @@ export class SvgImportCard extends Control {
     // a drawing to try, for whoever has none: every colour the studio reads, in one file that can be opened to see how
     this.tryButton = el('button', { type: 'button', id: 'svg-sample-try', class: 'link small', text: 'use the sample drawing' });
     const download = el('a', { href: SAMPLE_SVG, download: 'filafabric-sample.svg', class: 'link small svg-sample-download', id: 'svg-sample-download',
-      title: `A 200 x 200 mm drawing with every colour: red shapes are filled, the blue star is a hole, the green ${YELLOW_PRINTS_SOLID ? 'and yellow shapes print solid' : 'shapes print solid, the yellow ones bend the pattern'}, and the lines print as paths. Open it in Inkscape or Illustrator to see how it is set up.` });
+      title: 'Example SVG with pattern areas, cutouts, solid shapes and printed lines.' });
     download.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7M5 7l3 3 3-3M3 12.5h10"/></svg>';
-    download.append('Download the SVG sample with colours');
+    download.append('Download sample SVG');
     this.sample = el('div', { class: 'svg-sample small muted' },
       el('p', {}, 'or ', this.tryButton),
       el('p', {}, download));
@@ -971,7 +969,7 @@ export class SvgImportCard extends Control {
     this.info.textContent = v ? `${v.name} · ${fmt(v.width)} × ${fmt(v.height)} mm` : '';
     this.info.hidden = !v;
     // what each colour does is in the guide below the button
-    this.pick.dataset.tip = `${v ? `Replace this drawing. Prints: ${s.summary}.` : 'Use the SVG document’s size and print its lines first.'} How a drawing prints, colour by colour, is below. Lines that meet are printed in as few strokes as they allow.`;
+    this.pick.dataset.tip = v ? 'Replace the imported SVG drawing.' : 'Import an SVG drawing at its document size.';
     this.pick.setAttribute('aria-description', this.pick.dataset.tip);
     this.redText.textContent = s.usesVector ? DRAWING_GUIDE[0].text : RED_CUT;
     this.designNote.hidden = !s.designNote;

@@ -15,7 +15,7 @@ import { buildVerdict, buildSquiggleVerdict, formatMinutes } from './verdict.js'
 import { stateToHash, hashToState, sanitizeState, PRINT_DEFAULTS } from './share.js';
 import { FILAMENT_FIELDS, filamentValue, withFilamentSettings, setFilamentSetting, withoutFilamentSettings } from './filament-settings.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
-import { $, $$, el, icon, ICONS } from './dom.js';
+import { $, $$, el, icon, ICONS, helpBubble } from './dom.js';
 import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, SectionFold, BackingCard } from './panels.js';
 import { addBackingMesh, BACKING_MESH, BACKING_MESH_LAYERS } from '../engine/backing.js';
 import { layerHeightOptions, defaultLayerHeight, resolveConfig } from '../engine/params.js';
@@ -367,10 +367,10 @@ let svgImportCard = null;
 let studyRecorder = null;
 
 const RAISED_DESIGNS = new Set(['loop-pile', 'relief', 'fringe', 'spacer', 'pillarweave']);
-const PRINT_SOLIDS = { key: 'solidLayers', label: 'Solid layers', help: 'Layers of infill in green and yellow solid shapes. One gives a single solid pass; choose more for reinforcement. The mesh pattern keeps its own layers.', lo: 'Single', hi: 'Reinforced', unit: '', edit: true };
+const PRINT_SOLIDS = { key: 'solidLayers', label: 'Solid layers', info: true, help: 'Layers of fill in solid SVG shapes. 1 prints a single layer; more adds thickness and reinforcement. This does not change the mesh layers.', lo: 'Single', hi: 'Reinforced', unit: '', edit: true };
 const PRINT_RANGES = { solidLayers: { min: 1, max: 8, step: 1 }, extraLayers: { min: 0, max: 10, step: 1 }, brim: { min: 0, max: 8, step: 1 }, meshPerimeters: { min: 0, max: 8, step: 1 } };
-const PRINT_THICKNESS = { label: 'Layer thickness', help: 'How thick every layer is. Thinner prints cleaner and slower; thicker is quick, but strands lie over each other less cleanly.' };
-const PRINT_LAYERS = { key: 'extraLayers', label: 'Extra layers', help: '0 keeps the original design. One-layer patterns alternate with a regenerated 90° pass across the same outline. Multi-layer patterns continue their original sequence: A–B–A–B. For raised designs, extra passes reinforce the backing beneath the texture; the texture prints once. The edge perimeters and imported SVG paths print once.', lo: 'Original', hi: 'More', unit: '', edit: true };
+const PRINT_THICKNESS = { label: 'Layer thickness', help: 'Height of each printed layer. Smaller values make finer, thinner strands. Changing this also changes the total thickness of the piece.' };
+const PRINT_LAYERS = { key: 'extraLayers', label: 'Extra layers', info: true, help: 'Adds reinforcing passes to the pattern or, for raised textures, its backing. 0 keeps the original design, including its native layers. Solid fill is controlled separately.', lo: 'Original', hi: 'More', unit: '', edit: true };
 
 /** The nozzle of the chosen printer (0.4 mm unless its profile says otherwise). */
 const nozzleDiameter = () => state.machines.get(state.machine)?.nozzle_diameter ?? 0.4;
@@ -455,7 +455,8 @@ const PRINT_BINDING = {
   },
   readout: (key) => {
     if (key in BACKING_READOUTS) return `${Math.round(PRINT_BINDING.get(key) * 10) / 10} ${BACKING_READOUTS[key]}`;
-    if (key === 'solidLayers') return `${state.print.solidLayers} solid ${state.print.solidLayers === 1 ? 'layer' : 'layers'} · ${Number((state.print.solidLayers * state.print.layerHeight).toFixed(3))} mm`;
+    if (key === 'solidLayers') return `${state.print.solidLayers} ${state.print.solidLayers === 1 ? 'layer' : 'layers'} · ${Number((state.print.solidLayers * state.print.layerHeight).toFixed(3))} mm`;
+    if (key === 'extraLayers') return `${state.print.extraLayers} extra`;
     if (['brim', 'meshPerimeters'].includes(key)) return state.print[key] ? `${state.print[key]} ${state.print[key] === 1 ? 'line' : 'lines'}` : 'Off';
     if (key === 'layerHeight') return `${Math.round(state.print.layerHeight * 1000) / 1000} mm${state.print.layerHeight === defaultLayerHeight(state.machines.get(state.machine)) ? ' (default)' : ''}`;
     return layerSetupText();
@@ -755,7 +756,11 @@ function renderFilamentSettings() {
   const material = state.materials.get(state.material), machine = state.machines.get(state.machine), box = $('#filament-fields');
   if (!material || !box) return;
   if (!box.children.length) {
-    box.append(...FILAMENT_FIELDS.map((f) => {
+    const basic = el('div', { class: 'filament-fields' });
+    const advancedFields = el('div', { class: 'filament-fields' });
+    const advanced = el('details', { class: 'filament-advanced', id: 'filament-advanced' },
+      el('summary', {}, 'Advanced ', el('span', { id: 'filament-advanced-changes', class: 'small muted', hidden: true })), advancedFields);
+    for (const f of FILAMENT_FIELDS) {
       const input = el('input', { type: 'number', id: `filament-${f.key}`, min: String(f.min), max: String(f.max), step: String(f.step), inputmode: 'decimal' });
       input.addEventListener('change', () => {
         const filament = state.materials.get(state.material);
@@ -765,8 +770,15 @@ function renderFilamentSettings() {
         schedule();
         commit();
       });
-      return el('label', { class: 'field-row', for: input.id, 'data-filament': f.key }, el('span', { text: `${f.label} (${f.unit})` }), input);
-    }));
+      const row = el('div', { class: 'field-row', 'data-filament': f.key },
+        el('span', { class: 'field-heading' }, el('label', { for: input.id, text: `${f.label} (${f.unit})` }), f.help && helpBubble(f.label, f.help)), input);
+      (['firstLayerTemp', 'nozzleTemp'].includes(f.key) ? basic : advancedFields).append(row);
+    }
+    box.append(basic, advanced);
+    $('#filament-reset').addEventListener('click', () => {
+      state.print = withoutFilamentSettings(state.print);
+      renderPrinter(); schedule(); commit();
+    });
   }
   const changed = [];
   for (const f of FILAMENT_FIELDS) {
@@ -775,20 +787,16 @@ function renderFilamentSettings() {
     if (document.activeElement !== input) input.value = value === null ? '' : String(value);
     input.placeholder = own === null ? (f.key === 'flatBeadWidth' ? 'Unmeasured' : 'Design speeds') : String(own);
     row.classList.toggle('changed', value !== own);
-    row.title = value !== own ? (own === null ? 'Optional setting added to this print setup' : `Changed: the filament profile says ${own} ${f.unit}`) : own === null ? 'Optional: leave empty until you have a measured value or a chosen flat speed' : 'From the filament profile';
+    input.setAttribute('aria-description', value !== own
+      ? (own === null ? 'Optional setting added to this print setup' : `Filament default: ${own} ${f.unit}`)
+      : 'Using the filament default');
     if (value !== own) changed.push(f);
   }
-  const note = $('#filament-settings-note');
-  const retractPolicy = filamentValue(material, state.print, 'retraction', machine) === 0
-    ? 'Retraction is disabled by the filament setting; required clearance lifts are retained. '
-    : `Retraction starts at ${filamentValue(material, state.print, 'retractMinTravel', machine)} mm of travel; required clearance lifts are retained. `;
-  note.replaceChildren((changed.length ? `Changed from the ${material.name} profile: ${changed.map((f) => f.label.toLowerCase()).join(', ')}. ` : `From the ${material.name} profile. `) + retractPolicy);
-  note.append(' Flat speed overrides horizontal base and supported extrusion only; empty keeps design speeds. Measure an isolated straight bead at the commanded width and layer height shown, with the same temperature, flow and speed. Enter its cooled width to calibrate flat coverage without an automatic flow increase. Leave measured width empty until measured; the profile reference width is not a measurement. Maximum volume limits raw filament input before foaming. Recalibrate after changing temperature, flow, speed or layer height.');
-  if (changed.length) {
-    const reset = el('button', { type: 'button', class: 'link small', text: 'Use the filament\'s values' });
-    reset.addEventListener('click', () => { state.print = withoutFilamentSettings(state.print); renderFilamentSettings(); renderPrinter(); schedule(); commit(); });
-    note.append(reset);
-  }
+  $('#filament-reset').disabled = !changed.length;
+  const advancedChanges = changed.filter(f => !['firstLayerTemp', 'nozzleTemp'].includes(f.key)).length;
+  const badge = $('#filament-advanced-changes');
+  badge.hidden = !advancedChanges;
+  badge.textContent = `${advancedChanges} changed`;
 }
 
 function renderPreviewMode() {
@@ -1629,13 +1637,13 @@ function bindMachinePicker() {
 function updateDialogNote() {
   const material = state.materials.get($('#sel-material').value);
   const machine = state.machines.get(state.machine);
-  // where each profile came from, and anything the importer had to guess or leave out
-  $('#dialog-note').textContent = [
-    machine && `Printer: ${machine.source ?? machine.name}.`,
+  // Keep actionable import warnings; profile provenance remains in the profile files and exports.
+  const notes = [
     ...(machine ? profiles.notesFor('machines', machine.id) : []),
-    material && `Filament: ${material.source ?? material.name}.`,
     ...(material ? profiles.notesFor('materials', material.id) : []),
-  ].filter(Boolean).join(' ');
+  ].filter(Boolean);
+  $('#dialog-note').textContent = notes.join(' ');
+  $('#dialog-note').hidden = !notes.length;
   renderProfileList();
   renderFilamentSettings();
 }
