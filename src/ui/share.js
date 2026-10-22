@@ -60,7 +60,7 @@ export function sanitizePrint(raw) {
   }
   const solid = typeof raw.solidLayers === 'number' || typeof raw.solidLayers === 'string' && raw.solidLayers.trim() !== '' ? Number(raw.solidLayers) : NaN;
   if (Number.isInteger(solid) && solid >= 1 && solid <= 8) out.solidLayers = solid;
-  const b = raw.brim;
+  const b = Object.hasOwn(raw, 'perimeters') ? raw.perimeters : raw.brim;
   const count = (typeof b === 'number' || typeof b === 'string' && b.trim() !== '') ? Number(b) : NaN;
   if (Number.isFinite(count) && count >= 0 && count <= 50) out.brim = Math.round(count);
   return out;

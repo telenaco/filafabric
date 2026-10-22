@@ -369,7 +369,7 @@ const RAISED_DESIGNS = new Set(['loop-pile', 'relief', 'fringe', 'spacer', 'pill
 const PRINT_SOLIDS = { key: 'solidLayers', label: 'Solid layers', help: 'Layers of infill in green and yellow solid shapes. One gives a single solid pass; choose more for reinforcement. The mesh pattern keeps its own layers.', lo: 'Single', hi: 'Reinforced', unit: '', edit: true };
 const PRINT_RANGES = { solidLayers: { min: 1, max: 8, step: 1 }, extraLayers: { min: 0, max: 10, step: 1 }, brim: { min: 0, max: 8, step: 1 } };
 const PRINT_THICKNESS = { label: 'Layer thickness', help: 'How thick every layer is. Thinner prints cleaner and slower; thicker is quick, but strands lie over each other less cleanly.' };
-const PRINT_LAYERS = { key: 'extraLayers', label: 'Extra layers', help: '0 keeps the original design. One-layer patterns alternate with a regenerated 90° pass across the same outline. Multi-layer patterns continue their original sequence: A–B–A–B. For raised designs, extra passes reinforce the backing beneath the texture; the texture prints once. The brim and imported SVG paths print once.', lo: 'Original', hi: 'More', unit: '', edit: true };
+const PRINT_LAYERS = { key: 'extraLayers', label: 'Extra layers', help: '0 keeps the original design. One-layer patterns alternate with a regenerated 90° pass across the same outline. Multi-layer patterns continue their original sequence: A–B–A–B. For raised designs, extra passes reinforce the backing beneath the texture; the texture prints once. The edge perimeters and imported SVG paths print once.', lo: 'Original', hi: 'More', unit: '', edit: true };
 
 /** The nozzle of the chosen printer (0.4 mm unless its profile says otherwise). */
 const nozzleDiameter = () => state.machines.get(state.machine)?.nozzle_diameter ?? 0.4;
@@ -438,7 +438,7 @@ const PRINT_BINDING = {
     }
     if (key in BACKING_KEYS) { state.print.backing = { ...(state.print.backing ?? backingKept), [BACKING_KEYS[key]]: value }; return; }
     if (key === 'solidLayers') { state.print.solidLayers = Math.max(1, Math.min(8, Math.round(value))); return; }
-    if (key === 'brim' && value > 50) { toast('Brim: enter a count from 0 to 50.'); return; }
+    if (key === 'brim' && value > 50) { toast('Perimeters: enter a count from 0 to 50.'); return; }
     if (key === 'extraLayers') {
       if (value > 250) { toast('Extra layers: enter a count from 0 to 250.'); return; }
       delete state.print.legacyCopies;
@@ -646,7 +646,7 @@ function exportOptions(width = null, height = null) {
     machine: state.machines.get(state.machine), material: printMaterial(), design: state.design,
     width, height, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : settingsOf(state.design),
     studySettings: { ...settingsOf(state.design) }, outline: placedOutline(width, height),
-    vector: state.vector, shapeOutline: !!state.outline?.page, solidLayers: state.print.solidLayers, extraLayers: state.print.extraLayers, legacyCopies: state.print.legacyCopies, brim: state.print.brim, backing: backingFor(),
+    vector: state.vector, shapeOutline: !!state.outline?.page, solidLayers: state.print.solidLayers, extraLayers: state.print.extraLayers, legacyCopies: state.print.legacyCopies, brim: state.print.brim, perimeters: state.print.brim, backing: backingFor(),
     image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale,
     panelSize: size,
   };
@@ -855,7 +855,7 @@ function regenerate() {
       const own = state.designs[mod.id];
       const [w, h] = mod.size(own);
       const previewState = { ...own, width: Math.min(w, cap), height: Math.min(h, cap) };
-      result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height, w, h), vector: mod.usesVector || mod.vectorGuides ? state.vector : null, vectorSize: [w, h], includeLines: !state.vector, picture: pictureFor(w, h) });
+      result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height, w, h), vector: mod.usesVector || mod.vectorGuides ? state.vector : null, vectorSize: [w, h], includeLines: !state.vector, picture: pictureFor(w, h), perimeters: state.print.brim });
     } else if (state.design === 'squiggle') {
       const s = state.squiggle;
       // a picture is shown whole: the preview is the whole swatch at the shape it has, shrunk to fit the window
@@ -887,7 +887,7 @@ function regenerate() {
       const [fullWidth, fullHeight] = BINDINGS[state.design].size.get();
       result = applySvgGuides(result, state.vector, { fullWidth, fullHeight, outline: mod.outline === false ? placedOutline(result.cfg.t.sample_width, result.cfg.t.sample_height, fullWidth, fullHeight) : null });
       // a drawing that is also the outline lies on the boundary itself, so its lines are not trimmed to it
-      result = composeSvgLines(result, state.vector, { fullWidth, fullHeight, clipLines: !state.outline?.page && !result.guideCount });
+      result = composeSvgLines(result, state.vector, { fullWidth, fullHeight, clipLines: !state.outline?.page && !result.guideCount, perimeters: state.print.brim });
     }
     const native = nativeLayerInfo(result);
     const extras = state.print.legacyCopies ? (native.repeatable && !native.raised ? native.patternLayers * (state.print.legacyCopies - 1) : 0) : state.print.extraLayers;
@@ -897,7 +897,7 @@ function regenerate() {
       colorChange: !!settingsOf(state.design).colorChange,
     });
     // green shapes print solid: on the bed layer by layer with the pattern, or last, on top of it and any extra layers
-    if (state.vector) result = applySvgSolids(result, state.vector, { fullWidth: selectedWidth, fullHeight: selectedHeight, layers: state.print.solidLayers });
+    if (state.vector) result = applySvgSolids(result, state.vector, { fullWidth: selectedWidth, fullHeight: selectedHeight, layers: state.print.solidLayers, perimeters: state.print.brim });
     // the backing mesh goes under all of it
     result = addBackingMesh(result, backingFor());
     // Offset the selected outline before clipping: a bounded preview must never invent an edge at its crop.
@@ -909,7 +909,7 @@ function regenerate() {
       const boundary = boundaryFor(fullWidth, fullHeight, placedOutline(fullWidth, fullHeight));
       brimOutline = state.vector ? conformalGuideRegion(boundary, vectorGuides(state.vector, fullWidth, fullHeight)).rings : boundary.rings;
     }
-    result = applyBrim(result, { count: allSolid && !backingFor() ? 0 : state.print.brim, outline: brimOutline, fullWidth, fullHeight });
+    result = applyBrim(result, { count: allSolid && !backingFor() ? 0 : state.print.brim, outline: brimOutline, fullWidth, fullHeight, label: 'Perimeters', requestedCount: state.print.brim });
     if (state.vector && result.cfg.t.sample_width === selectedWidth && result.cfg.t.sample_height === selectedHeight) result.documentSize = [state.vector.width, state.vector.height];
     showGenerated(result, snapshotKey());
   } catch (e) {
@@ -1920,7 +1920,7 @@ function recordBuildFailure(error, input = null) {
   const [width, height] = input ? [input.width, input.height] : BINDINGS[state.design].size.get();
   const captured = input ?? {
     design: state.design, width, height, studySettings: { ...settingsOf(state.design) },
-    machine: state.machines.get(state.machine), material: printMaterial(), solidLayers: state.print.solidLayers, extraLayers: state.print.extraLayers, brim: state.print.brim,
+    machine: state.machines.get(state.machine), material: printMaterial(), solidLayers: state.print.solidLayers, extraLayers: state.print.extraLayers, brim: state.print.brim, perimeters: state.print.brim,
     vector: state.vector, outline: state.outline?.rings,
   };
   const vector = captured.vector, sourcePaths = vector?.paths ?? [];
@@ -1930,7 +1930,7 @@ function recordBuildFailure(error, input = null) {
     settings: {
       ...settings,
       operation: input?.operation ?? (input ? 'panel' : 'preview'),
-      print: { layers: captured.layers, extraLayers: captured.extraLayers, brim: captured.brim, layerHeight: captured.material?.print_defaults?.layer_height },
+      print: { layers: captured.layers, extraLayers: captured.extraLayers, brim: captured.brim, perimeters: captured.perimeters, layerHeight: captured.material?.print_defaults?.layer_height },
       machine: captured.machine?.id, material: captured.material?.id,
       ...(input ? { repeat: captured.repeat, backingSpacing: captured.backingSpacing } : state.design === 'loop-pile' ? { advanced: { ...state.advanced } } : {}),
     },
@@ -2051,7 +2051,7 @@ function feedbackContext() {
         design: state.design,
         size: { width, height },
         settings: settingsOf(state.design),
-        print: { solidLayers: state.print.solidLayers, extraLayers: state.print.extraLayers, brim: state.print.brim, layerHeight: printMaterial()?.print_defaults?.layer_height },
+        print: { solidLayers: state.print.solidLayers, extraLayers: state.print.extraLayers, brim: state.print.brim, perimeters: state.print.brim, layerHeight: printMaterial()?.print_defaults?.layer_height },
         machine: state.machine,
         material: state.material,
         // counts only: the drawing stays on this device
@@ -2082,9 +2082,9 @@ function reportStudyExport(exportType, options = {}, stats = state.result?.stats
   const [width, height] = ['settings-json', 'build-error'].includes(exportType) ? BINDINGS[state.design].size.get() : [cfg?.t.sample_width, cfg?.t.sample_height];
   const vector = options.vector ?? state.vector;
   const plan = options.layerPlan ?? state.result?.layerPlan;
-  let print = stats?.print ?? { layerHeight: cfg?.t.layer_height, extraLayers: plan?.extraLayers ?? options.extraLayers ?? state.print.extraLayers, nativeLayers: plan?.nativeLayers, totalLayers: plan?.totalLayers, backingLayers: plan?.backingLayers, totalBackingLayers: plan?.totalBackingLayers, brim: options.brim ?? state.print.brim, nozzleDiameter: cfg?.t.nozzle_diameter, extrusionWidth: cfg?.t.extrusion_width };
+  let print = stats?.print ?? { layerHeight: cfg?.t.layer_height, extraLayers: plan?.extraLayers ?? options.extraLayers ?? state.print.extraLayers, nativeLayers: plan?.nativeLayers, totalLayers: plan?.totalLayers, backingLayers: plan?.backingLayers, totalBackingLayers: plan?.totalBackingLayers, brim: options.brim ?? state.print.brim, perimeters: options.perimeters ?? state.print.brim, nozzleDiameter: cfg?.t.nozzle_diameter, extrusionWidth: cfg?.t.extrusion_width };
   if (exportType === 'build-error') {
-    print = { layerHeight: options.material?.print_defaults?.layer_height ?? state.print.layerHeight, extraLayers: options.extraLayers ?? state.print.extraLayers, brim: options.brim ?? state.print.brim };
+    print = { layerHeight: options.material?.print_defaults?.layer_height ?? state.print.layerHeight, extraLayers: options.extraLayers ?? state.print.extraLayers, brim: options.brim ?? state.print.brim, perimeters: options.perimeters ?? state.print.brim };
     try {
       const current = resolveConfig(options.machine ?? state.machines.get(state.machine), options.material ?? printMaterial());
       Object.assign(print, { nozzleDiameter: current.t.nozzle_diameter, extrusionWidth: current.t.extrusion_width });

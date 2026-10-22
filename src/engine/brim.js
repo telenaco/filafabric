@@ -1,7 +1,7 @@
 import { ConfigError } from './params.js';
 import { PolygonBoundary } from './boundary.js';
 import { polygonRegion } from './polygon-region.js';
-import { clipStrands, segmentInside, segmentContact, contactGraph, analyzeFabric } from './fabric.js';
+import { clipStrands, segmentInside, segmentContact, contactGraph, analyzeFabric, simplifyStrands } from './fabric.js';
 import { emitStrands, travelLiftOf } from './emit.js';
 import { computeStats } from './stats.js';
 import { GcodeWriter, writeGcode } from './gcode.js';
@@ -158,7 +158,7 @@ function capsuleContour(ring, tolerance) {
 }
 
 /** Erode vector material by a distance. Boundary capsules handle concavity, holes and collapsing necks without a raster. */
-function insetRings(rings, radius) {
+export function insetRings(rings, radius) {
   const convex = convexInsets(rings, radius);
   if (convex !== null) return convex;
   // A drawn curve comes in as hundreds of edges a third of a millimetre long, and every edge is a capsule that overlaps
@@ -201,11 +201,14 @@ export function buildBrimStrands(rings, { count = 2, strandWidth = 0.45, layerHe
     if (!contours.length) break;
     for (const ring of contours) strands.push({ id: `brim-${run + 1}-${strands.length + 1}`, name: 'Brim', kind: 'base', layer: -1, brim: true, run, inset, pts: [...ring, ring[0]].map((p) => ({ ...p, z: layerHeight })) });
   }
-  if (!viewport) return strands;
+  // Remove sub-bead contour detail only when every replacement chord retains the original half-bead clearance.
+  const material = new PolygonBoundary(rings);
+  const simplified = simplifyStrands(strands, 0.005, { allowSegment: (a, b) => segmentInside(a, b, material, strandWidth / 2) });
+  if (!viewport) return simplified;
   const width = viewport.width ?? viewport[0], height = viewport.height ?? viewport[1];
   const x = viewport.x ?? 0, y = viewport.y ?? 0;
   const crop = new PolygonBoundary([rectangle(width, height).map((p) => ({ x: p.x + x, y: p.y + y }))]);
-  return strands.flatMap((strand) => {
+  return simplified.flatMap((strand) => {
     const parts = clipStrands([strand], crop, 0);
     // Clipping a closed contour can split one continuous corner at its original seam.
     if (parts.length > 1 && distance(parts.at(-1).pts.at(-1), parts[0].pts[0]) < 1e-7) {
@@ -295,9 +298,13 @@ export function headerNotes(result) {
 }
 
 /** Prepend brim and short bed ties. Native coordinates, classes and commands stay intact; only a missing startup prime is added. */
-export function applyBrim(result, { count = 2, outline = result.outline, fullWidth = result.cfg?.t.sample_width, fullHeight = result.cfg?.t.sample_height, maxTie = 12 } = {}) {
+export function applyBrim(result, { count = 2, outline = result.outline, fullWidth = result.cfg?.t.sample_width, fullHeight = result.cfg?.t.sample_height, maxTie = 12, label = 'Brim', requestedCount = count } = {}) {
   validateCount(count);
-  if (!count) return result;
+  if (!count) {
+    if (label !== 'Perimeters') return result;
+    return { ...result, perimeters: { count: requestedCount, runs: 0, connections: 0 },
+      gcode: writeGcode(result.moves, result.cfg, { stats: result.stats, comments: [...headerNotes(result), `Perimeters: ${requestedCount}${requestedCount ? ' inside solid shapes; no additional bed border' : '; no additional outlines'}`] }) };
+  }
   const { cfg } = result, { extrusion_width: strandWidth, layer_height: layerHeight } = cfg.t;
   const rings = outline ?? [rectangle(fullWidth, fullHeight)], boundary = new PolygonBoundary(rings);
   const viewport = { width: cfg.t.sample_width, height: cfg.t.sample_height };
@@ -307,8 +314,9 @@ export function applyBrim(result, { count = 2, outline = result.outline, fullWid
   } catch (error) {
     // the brim is an extra: an outline too detailed to offset leaves it out, and the design itself still prints
     if (!(error instanceof ConfigError)) throw error;
-    return { ...result, warnings: [...(result.warnings ?? []), `The brim was left out: ${error.errors?.[0] ?? error.message} The design prints without it.`] };
+    return { ...result, warnings: [...(result.warnings ?? []), `${label === 'Perimeters' ? 'The perimeters were' : 'The brim was'} left out: ${error.errors?.[0] ?? error.message} The design prints without it.`] };
   }
+  if (label === 'Perimeters') brim = brim.map((s) => ({ ...s, name: 'Perimeter', perimeter: true }));
   const body = result.strands ?? [];
   const connections = brimConnections(brim, body, boundary, { strandWidth, layerHeight, maxTie });
   const added = [...brim, ...connections], strands = [...added, ...body];
@@ -337,6 +345,6 @@ export function applyBrim(result, { count = 2, outline = result.outline, fullWid
   const fabric = analyzeFabric(strands, { strandWidth, layerHeight, boundary: result.pieceOutline ? new PolygonBoundary(result.pieceOutline) : boundary, supportedAt });
   const warnings = [...(result.warnings ?? []).filter((w) => !(result.fabric?.issues ?? []).includes(w)), ...fabric.issues];
   const metadata = { count, overlap: OVERLAP, strandWidth, pitch: strandWidth * (1 - OVERLAP), width: strandWidth * (1 + (count - 1) * (1 - OVERLAP)), runs: brim.length, connections: connections.length };
-  return { ...result, strands, moves, stats, fabric, warnings, brim: metadata, ...(result.report ? { report: { ...result.report, components: fabric.components } } : {}),
-    gcode: writeGcode(moves, cfg, { stats, comments: [...headerNotes(result), `Brim: ${count} runs, 20% bead overlap, inside the selected outline`] }) };
+  return { ...result, strands, moves, stats, fabric, warnings, brim: metadata, ...(label === 'Perimeters' ? { perimeters: metadata } : {}), ...(result.report ? { report: { ...result.report, components: fabric.components } } : {}),
+    gcode: writeGcode(moves, cfg, { stats, comments: [...headerNotes(result), `${label}: ${count} runs, 20% bead overlap, inside the selected outline`] }) };
 }

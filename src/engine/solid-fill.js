@@ -1,3 +1,4 @@
+import { perimeterFill, validatePerimeters } from './solid-perimeters.js';
 import { PolygonBoundary } from './boundary.js';
 import { serpentineChains } from './fill.js';
 import { offsetPolyline } from './drawing.js';
@@ -181,7 +182,9 @@ const rotate = (p, a) => ({ x: p.x * Math.cos(a) - p.y * Math.sin(a), y: p.x * M
  * pass, run back and forth and joined at alternate ends. A shape the lines cannot cross in one go (a U, a star) gets a
  * zigzag for each part. Returns polylines, the edge pass first.
  */
-export function zigzagPaths(ring, { bead = 0.45, overlap = SOLID_OVERLAP, angle = longAxis(ring), holes = [], edged = [] } = {}) {
+export function zigzagPaths(ring, { bead = 0.45, overlap = SOLID_OVERLAP, angle = longAxis(ring), holes = [], edged = [], perimeters = null } = {}) {
+  if (perimeters !== null) validatePerimeters(perimeters);
+  if (perimeters !== null) return perimeterFill(ring, { bead, overlap, perimeters, holes, edged, angle, legacy: () => zigzagPaths(ring, { bead, overlap, angle, holes, edged }) });
   const ccw = anticlockwise(ring);
   const pitch = bead * (1 - overlap);
   const edge = insetRing(ccw, bead / 2);
@@ -232,11 +235,16 @@ export function zigzagPaths(ring, { bead = 0.45, overlap = SOLID_OVERLAP, angle 
  * The fill of one shape for one layer, as polylines in print order. `layer` 0 is the first layer of the patch,
  * 1 the second: the coil reversed, or the zigzag turned a quarter turn.
  */
-export function solidLayer(ring, { bead = 0.45, overlap = SOLID_OVERLAP, layer = 0, holes = [], edged = [], kind = solidKind(ring, holes) } = {}) {
+export function solidLayer(ring, { bead = 0.45, overlap = SOLID_OVERLAP, layer = 0, holes = [], edged = [], kind = solidKind(ring, holes), perimeters = null } = {}) {
+  if (perimeters !== null) validatePerimeters(perimeters);
   if (kind === 'coil' && !holes.length) {
+    if (perimeters > 0) {
+      const paths = perimeterFill(ring, { bead, overlap, perimeters, holes, edged, angle: longAxis(ring), coil: (r) => coilPath(r, { bead, overlap }), legacy: () => [coilPath(ring, { bead, overlap })] });
+      return layer % 2 ? paths.map((p) => p.toReversed()) : paths;
+    }
     const path = coilPath(ring, { bead, overlap });
     return [layer % 2 ? path.slice().reverse() : path];
   }
   const angle = longAxis(ring) + (layer % 2 ? Math.PI / 2 : 0);
-  return zigzagPaths(ring, { bead, overlap, angle, holes, edged });
+  return zigzagPaths(ring, { bead, overlap, angle, holes, edged, perimeters });
 }

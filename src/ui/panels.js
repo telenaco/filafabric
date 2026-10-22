@@ -193,7 +193,7 @@ export class SizeControl extends Control {
     this.divider = el('div', { class: 'size-source-divider', text: 'or', 'aria-hidden': 'true' });
     this.svgSlot = el('div', { class: 'size-svg-slot' });
     this.brim = new SliderControl({ ...host, binding: () => host.binding('print') }, `${designId}-edge`, {
-      key: 'brim', label: 'Brim', help: 'Side-by-side runs around the inside edge, printed first to hold the fabric ends. Adjacent runs overlap 20%. Two is the default; 0 turns it off. Type up to 50. These are lines, not vertical layers.',
+      key: 'brim', label: 'Perimeters', help: 'Outlines side by side inside the shape. Solid infill leaves room for up to this many outlines; zigzag rows meet the innermost one. Two is the default; 0 removes extra outlines. Narrow areas keep only the outlines that fit. Type up to 50. This changes edge width, not the number of layers.',
       lo: 'Off', hi: 'Wide', unit: 'lines', edit: true,
     });
     this.brim.node.classList.add('brim-control');

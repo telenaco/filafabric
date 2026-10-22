@@ -60,7 +60,7 @@ export function outlineFromVector(vector, { maxPoints = 1800, maxRings = 64 } = 
  * as drawn (a line across a hole is what ties an island to the rest), trimmed only to the swatch. Neither is checked
  * against the outline.
  */
-export function composeSvgLines(result, vector, { fullWidth = vector.width, fullHeight = vector.height, offsetX = 0, offsetY = 0, clipLines = true } = {}) {
+export function composeSvgLines(result, vector, { fullWidth = vector.width, fullHeight = vector.height, offsetX = 0, offsetY = 0, clipLines = true, perimeters = 0 } = {}) {
   const { cfg } = result, h = cfg.t.layer_height, w = cfg.t.extrusion_width;
   const native = hasNativeHeight(result);
   const boundary = new PolygonBoundary(result.outline ?? [[{ x: 0, y: 0 }, { x: cfg.t.sample_width, y: 0 }, { x: cfg.t.sample_width, y: cfg.t.sample_height }, { x: 0, y: cfg.t.sample_height }]]);
@@ -74,7 +74,7 @@ export function composeSvgLines(result, vector, { fullWidth = vector.width, full
   // Collapse only exactly collinear samples before crossing analysis; preserve curves and every printed pass.
   const imported = simplifyStrands([...clipStrands(whole.map((poly) => ({ ...strand(poly), onBoundary: true })), swatch, 0), ...lines], 1e-9);
   const printedBoundary = !clipLines && (model.rings.length || model.guides.length) ? boundary : null;
-  const pattern = printedBoundary ? clipStrands(finishAtPrintedBoundary(result.strands, printedBoundary, w), swatch, 0) : result.strands;
+  const pattern = printedBoundary && !perimeters ? clipStrands(finishAtPrintedBoundary(result.strands, printedBoundary, w), swatch, 0) : result.strands;
   // the pattern keeps the print order its design gave it (row by row for lanes); only the drawing's own lines are reordered
   // a flat pattern keeps its own layers, the first on the bed beside the lines (it lifts over them where it crosses one);
   // a raised one stands on the lines' layer

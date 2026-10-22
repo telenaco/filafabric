@@ -1,3 +1,5 @@
+import { chainRowStrands } from './layers.js';
+import { validatePerimeters } from './solid-perimeters.js';
 import { DESIGNS } from '../ui/designs.js';
 import { generate } from './generate.js';
 import { generateSquiggle, SAMPLERS, createImageSampler } from './squiggle.js';
@@ -116,7 +118,8 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     const box = g.ring.reduce((b, p) => ({ minX: Math.min(b.minX, p.x), maxX: Math.max(b.maxX, p.x), minY: Math.min(b.minY, p.y), maxY: Math.max(b.maxY, p.y) }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
     return { ...g, box, area: new PolygonBoundary([g.ring, ...(g.holes ?? [])]), top: 0 }; // its holes (a lace's openings) are not under it
   });
-  const brim = options.brim ?? 2;
+  if (options.perimeters !== undefined) validatePerimeters(options.perimeters);
+  const brim = options.perimeters ?? options.brim ?? 2;
   const brimStrands = buildBrimStrands(boundary.rings, { count: brim, strandWidth: bead, layerHeight: h });
   // Older callers may still request whole copies; explicit extraLayers takes precedence.
   const legacyMode = options.extraLayers === undefined && options.layers !== undefined;
@@ -143,7 +146,7 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   };
   texture = withTextureLayers(texture, () => rotatedTexture());
   const globalLayers = vector ? 3 : 2;
-  const print = { layerHeight: h, layers, solidLayers: options.solidLayers ?? SOLID_LAYERS, brim, nozzleDiameter: cfg.t.nozzle_diameter, extrusionWidth: bead };
+  const print = { layerHeight: h, layers, solidLayers: options.solidLayers ?? SOLID_LAYERS, brim, ...(options.perimeters !== undefined ? { perimeters: options.perimeters } : {}), nozzleDiameter: cfg.t.nozzle_diameter, extrusionWidth: bead };
   const recordPlan = (result) => {
     const plan = result.layerPlan;
     if (!plan || (print.patternLayers !== undefined && (plan.patternLayers ?? -1) < (print.patternLayers ?? -1))) return;
@@ -163,7 +166,7 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   const emit = async (strands) => {
     for (const s of strands) {
       check(); if (s.pts.length < 2) continue;
-      if (s.brim) await add([`; brim run ${s.id}`]);
+      if (s.brim) await add([`; ${options.perimeters !== undefined ? 'perimeter' : 'brim'} run ${s.id}`]);
       const first = s.pts[0], planned = strandTravel(last, first, maxPrintedZ, cfg.derived.retraction), safe = planned.safeZ;
       if (last) await add(writer.move({ x: last.x, y: last.y, z: safe, cls: 'travel', extrude: false, retract: planned.retract ? 'retract' : undefined }));
       await add(writer.move({ x: first.x, y: first.y, z: safe, cls: 'travel', extrude: false }));
@@ -215,6 +218,14 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     recordPlan(layered);
     return layered.strands;
   };
+  const fitPerimeters = (strands) => {
+    if (!(options.perimeters > 0) || options.design !== 'zigzag') return strands;
+    const inset = bead / 2 + options.perimeters * bead * 0.8;
+    const clipped = clipStrands(strands, boundary, inset);
+    const maxJog = (options.settings?.spacing ?? 3) + 2 * (options.settings?.depth ?? 2) + 2;
+    const joined = chainRowStrands(clipped, boundary, { inset, maxJog });
+    return resolveCrossings(joined, { follow: true, preserve: true, lift: h, strandWidth: bead }).strands;
+  };
   const cache = new Map(), zOffset = (vector ? 3 : 2) * h;
   // Flat patterns start at the lower-left. Raised textures retain far-to-near shingle order.
   for (let rowIndex = 0; rowIndex < rows; rowIndex++) for (let j = 0; j < cols; j++) {
@@ -236,8 +247,9 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     if (outline || shapeOutline || guides.length) {
       if (guides.length && !designModule?.vectorGuides) placed = repelGuideStrands(placed, guides, { boundary, strandWidth: bead });
       placed = clipStrands(placed.filter((s) => !s.id.includes('anchor-')), boundary, bead / 2);
-      if (shapeOutline) placed = finishAtPrintedBoundary(placed, boundary, bead);
+      if (shapeOutline && !options.perimeters) placed = finishAtPrintedBoundary(placed, boundary, bead);
       if (guides.length) placed = resolveCrossings(placed, { follow: true, preserve: true, lift: h, strandWidth: bead }).strands;
+      placed = fitPerimeters(placed);
       let support;
       if (guides.length) {
         const extent = bounds({ pts: placed.flatMap((s) => s.pts) }), pad = Math.max(2 * backingSpacing, bead * 4);
@@ -245,6 +257,7 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
       } else support = clipStrands(basis, new PolygonBoundary([rectangle(w, ht, x, y)]), 0);
       placed = [...anchorTexture(support, placed, boundary, h, bead), ...placed];
     }
+    if (!outline && !shapeOutline && !guides.length) placed = fitPerimeters(placed);
     peakSectionMoves = Math.max(peakSectionMoves, placed.reduce((n, s) => n + s.pts.length + 3, 0));
     progress({ phase: 'texture', done: sections, total }); check();
     await add([`; texture section ${sections + 1}; origin ${x},${y}`]);
@@ -253,7 +266,7 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   }
   if (solids.length) {
     check();
-    const { strands: fill } = solidStrands(solids, [], { bead, layerHeight: h, layers: options.solidLayers ?? SOLID_LAYERS });
+    const { strands: fill } = solidStrands(solids, [], { bead, layerHeight: h, layers: options.solidLayers ?? SOLID_LAYERS, perimeters: options.perimeters ?? null });
     await add([`; solid shapes: ${solids.length} green, ${options.solidLayers ?? SOLID_LAYERS} layer(s) on top of the panel, ${Math.round(SOLID_OVERLAP * 100)}% overlap`]);
     await emit(clipStrands(fill, new PolygonBoundary([rectangle(width, height)]), 0));
     await flush();

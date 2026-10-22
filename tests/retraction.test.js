@@ -18,7 +18,9 @@ test('Filaflex Foamy retracts 1 mm at 40 mm/s on travels of at least 2 mm, and p
 });
 
 test('choosing a zero threshold retracts before every separated strand and primes before printing', () => {
-  const r = generateDesignExport({ machine, material: { ...material, retraction: { ...material.retraction, min_travel: 0 } }, design: 'zigzag', settings: designById('zigzag').defaults(), width: 40, height: 40, extraLayers: 0, brim: 0 });
+  // Islands require real travels now that a plain rectangle keeps both mesh passes continuous.
+  const outline = Array.from({ length: 6 }, (_, i) => { const x = i * 6.5; return [{ x, y: 0 }, { x: x + 3.5, y: 0 }, { x: x + 3.5, y: 40 }, { x, y: 40 }]; });
+  const r = generateDesignExport({ machine, material: { ...material, retraction: { ...material.retraction, min_travel: 0 } }, design: 'zigzag', settings: designById('zigzag').defaults(), width: 40, height: 40, outline, extraLayers: 0, brim: 0 });
   let travels = 0, open = false;
   for (let i = 1; i < r.moves.length; i++) {
     const m = r.moves[i], prev = r.moves[i - 1];

@@ -416,7 +416,7 @@ export function orderPlacements(placements, { reverse = false } = {}) {
 }
 
 /** Iterative 3D Douglas–Peucker, before crossing planning so exact joint knots are never simplified away. */
-export function simplifyStrands(strands, tolerance = 0.02) {
+export function simplifyStrands(strands, tolerance = 0.02, { allowSegment = null } = {}) {
   return strands.map((s) => {
     const pts = s.pts;
     if (pts.length < 3) return s;
@@ -432,6 +432,7 @@ export function simplifyStrands(strands, tolerance = 0.02) {
         const d = (p.x - a.x - t * dx) ** 2 + (p.y - a.y - t * dy) ** 2 + ((p.z ?? 0) - (a.z ?? 0) - t * dz) ** 2;
         if (d > best) { best = d; at = i; }
       }
+      if (at < 0 && hi - lo > 1 && allowSegment && !allowSegment(a, b)) at = Math.floor((lo + hi) / 2);
       if (at >= 0) { keep[at] = 1; stack.push([lo, at], [at, hi]); }
     }
     return { ...s, pts: pts.filter((_, i) => keep[i]) };

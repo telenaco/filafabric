@@ -9,7 +9,7 @@ import { defaultProfiles, loadProfile } from './helpers.js';
 // and the studio using what the profile says: its lift on a travel, its travel speed and its seam gap.
 
 const { machine, material } = defaultProfiles();
-const zigzag = (mat = material) => generateDesignExport({ machine, material: mat, design: 'zigzag', settings: designById('zigzag').defaults(), width: 40, height: 30, extraLayers: 0, brim: 2 });
+const zigzag = (mat = material, outline = null) => generateDesignExport({ machine, material: mat, design: 'zigzag', settings: designById('zigzag').defaults(), width: 40, height: 30, outline, extraLayers: 0, brim: 2 });
 
 test('Filaflex Foamy: 238 C, retract 1 mm at 40 mm/s, the same pushed back at 20 mm/s, lift 0.2 mm, travel 180 mm/s, seam gap 0.2 mm', () => {
   const cfg = resolveConfig(machine, material);
@@ -22,7 +22,8 @@ test('Filaflex Foamy: 238 C, retract 1 mm at 40 mm/s, the same pushed back at 20
 });
 
 test('required travels retain clearance and short flat travels can omit the optional hop', () => {
-  const r = zigzag();
+  const outline = Array.from({ length: 6 }, (_, i) => { const x = i * 7; return [{ x, y: 0 }, { x: x + 5, y: 0 }, { x: x + 5, y: 30 }, { x, y: 30 }]; });
+  const r = zigzag(material, outline);
   let top = -Infinity;
   const over = [];
   for (let i = 1; i < r.moves.length; i++) {
