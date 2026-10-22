@@ -13,6 +13,7 @@ import { stackLayers, addExtraLayers, nativeLayerInfo } from './stack.js';
 import { applyBrim } from './brim.js';
 import { addBackingMesh } from './backing.js';
 import { rotateDesignInput } from './rotate-design.js';
+import { prepareAdaptiveSolids } from './adaptive-solids.js';
 
 /** Generate the selected design once at its complete size, independently of the preview window. */
 export function generateDesignBase(input) {
@@ -64,7 +65,13 @@ export function generateDesignBase(input) {
 function withSolids(result, input) {
   if (!input.vector) return result;
   const [fullWidth, fullHeight] = input.vectorSize ?? [input.width, input.height], [offsetX, offsetY] = input.vectorOffset ?? [0, 0];
-  return applySvgSolids(result, input.vector, { fullWidth, fullHeight, offsetX, offsetY, layers: input.solidLayers, perimeters: input.perimeters ?? null });
+  return applySvgSolids(result, input.vector, { fullWidth, fullHeight, offsetX, offsetY, layers: input.solidLayers, perimeters: input.perimeters ?? null, generator: input.solidGenerator ?? 'classic' });
+}
+
+/** Browser and async callers initialize WASM explicitly before entering the synchronous geometry pipeline. */
+export async function generateDesignExportAsync(input) {
+  if (input.solidGenerator === 'arachne' && input.vector && input.perimeters > 0) await prepareAdaptiveSolids();
+  return generateDesignExport(input);
 }
 
 export function generateDesignExport(input) {

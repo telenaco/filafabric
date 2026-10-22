@@ -33,6 +33,7 @@ import { readSvgLines } from './svg-lines.js';
 import { composeSvgLines, outlineFromVector, vectorPatternRings } from '../engine/svg-lines.js';
 import { applySvgGuides, vectorGuides } from '../engine/svg-guides.js';
 import { applySvgSolids, solidOnly, withoutPattern } from '../engine/svg-solids.js';
+import { prepareAdaptiveSolids } from '../engine/adaptive-solids.js';
 import { summariseDrawing, describeDrawing, interpretDrawing } from '../engine/drawing.js';
 import { addExtraLayers, nativeLayerInfo } from '../engine/stack.js';
 import { generateDesignBase, compactDesignExport } from '../engine/design-export.js';
@@ -646,7 +647,7 @@ function exportOptions(width = null, height = null) {
     machine: state.machines.get(state.machine), material: printMaterial(), design: state.design,
     width, height, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : settingsOf(state.design),
     studySettings: { ...settingsOf(state.design) }, outline: placedOutline(width, height),
-    vector: state.vector, shapeOutline: !!state.outline?.page, solidLayers: state.print.solidLayers, extraLayers: state.print.extraLayers, legacyCopies: state.print.legacyCopies, brim: state.print.brim, perimeters: state.print.brim, backing: backingFor(),
+    vector: state.vector, shapeOutline: !!state.outline?.page, solidLayers: state.print.solidLayers, solidGenerator: 'arachne', extraLayers: state.print.extraLayers, legacyCopies: state.print.legacyCopies, brim: state.print.brim, perimeters: state.print.brim, backing: backingFor(),
     image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale,
     panelSize: size,
   };
@@ -771,14 +772,15 @@ function renderFilamentSettings() {
   for (const f of FILAMENT_FIELDS) {
     const row = box.querySelector(`[data-filament="${f.key}"]`), input = row.querySelector('input');
     const own = f.get(material), value = filamentValue(material, state.print, f.key);
-    if (document.activeElement !== input) input.value = String(value);
-    input.placeholder = String(own);
+    if (document.activeElement !== input) input.value = value === null ? '' : String(value);
+    input.placeholder = own === null ? (f.key === 'flatBeadWidth' ? 'Unmeasured' : 'Design speeds') : String(own);
     row.classList.toggle('changed', value !== own);
-    row.title = value !== own ? `Changed: the filament profile says ${own} ${f.unit}` : 'From the filament profile';
+    row.title = value !== own ? (own === null ? 'Optional setting added to this print setup' : `Changed: the filament profile says ${own} ${f.unit}`) : own === null ? 'Optional: leave empty until you have a measured value or a chosen flat speed' : 'From the filament profile';
     if (value !== own) changed.push(f);
   }
   const note = $('#filament-settings-note');
   note.replaceChildren(changed.length ? `Changed from the ${material.name} profile: ${changed.map((f) => f.label.toLowerCase()).join(', ')}. ` : `From the ${material.name} profile. Retraction starts at ${filamentValue(material, state.print, 'retractMinTravel')} mm of travel; required clearance lifts are retained. `);
+  note.append(' Flat speed overrides horizontal base and supported extrusion only; empty keeps design speeds. Measure an isolated straight bead at the commanded width and layer height shown, with the same temperature, flow and speed. Enter its cooled width to calibrate flat coverage without an automatic flow increase. Leave measured width empty until measured; the profile reference width is not a measurement. Maximum volume limits raw filament input before foaming. Recalibrate after changing temperature, flow, speed or layer height.');
   if (changed.length) {
     const reset = el('button', { type: 'button', class: 'link small', text: 'Use the filament\'s values' });
     reset.addEventListener('click', () => { state.print = withoutFilamentSettings(state.print); renderFilamentSettings(); renderPrinter(); schedule(); commit(); });
@@ -825,7 +827,9 @@ function showWholeOverview(input) {
   render();
 }
 
-function regenerate() {
+let regenerationEpoch = 0;
+async function regenerate() {
+  const epoch = ++regenerationEpoch;
   genTimer = null;
   previewBuild?.controller.abort();
   previewBuild = null;
@@ -847,6 +851,10 @@ function regenerate() {
     if (wholePreview) {
       previewAtSelectedSize(exportOptions(selectedWidth, selectedHeight));
       return;
+    }
+    if (state.vector && state.print.brim > 0) {
+      await prepareAdaptiveSolids();
+      if (epoch !== regenerationEpoch) return;
     }
     // 3D sample is a bounded corner of a large piece. 2D is the default for pieces larger than the bed (above).
     // Imported drawings keep their full scale within the explicitly labelled sample.
@@ -897,7 +905,7 @@ function regenerate() {
       colorChange: !!settingsOf(state.design).colorChange,
     });
     // green shapes print solid: on the bed layer by layer with the pattern, or last, on top of it and any extra layers
-    if (state.vector) result = applySvgSolids(result, state.vector, { fullWidth: selectedWidth, fullHeight: selectedHeight, layers: state.print.solidLayers, perimeters: state.print.brim });
+    if (state.vector) result = applySvgSolids(result, state.vector, { fullWidth: selectedWidth, fullHeight: selectedHeight, layers: state.print.solidLayers, perimeters: state.print.brim, generator: 'arachne' });
     // the backing mesh goes under all of it
     result = addBackingMesh(result, backingFor());
     // Offset the selected outline before clipping: a bounded preview must never invent an edge at its crop.

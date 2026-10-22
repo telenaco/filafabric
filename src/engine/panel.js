@@ -18,6 +18,7 @@ import { SOLID_OVERLAP } from './solid-fill.js';
 import { joinStrokes } from './travel.js';
 import { buildBrimStrands } from './brim.js';
 import { travelLiftOf, strandTravel } from './emit.js';
+import { prepareAdaptiveSolids } from './adaptive-solids.js';
 
 const rectangle = (w, h, x = 0, y = 0) => [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];
 const bounds = (s) => s.pts.reduce((b, p) => ({ minX: Math.min(b.minX, p.x), maxX: Math.max(b.maxX, p.x), minY: Math.min(b.minY, p.y), maxY: Math.max(b.maxY, p.y) }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
@@ -90,6 +91,7 @@ function textureResult(options, repeat, offsetX = 0, offsetY = 0) {
 
 /** Bounded-memory panel export. Texture repeats per section; full-document SVG strokes never repeat. */
 export async function exportPanel(options, { write, progress = () => {}, signal = null } = {}) {
+  if (options.solidGenerator === 'arachne' && options.vector && options.perimeters > 0) await prepareAdaptiveSolids();
   const { machine, material, width, height, repeat = 50, outline = null, vector = null, backingSpacing = 5, shapeOutline = false } = options;
   // the ranges the dialog suggests are not limits: anything that is a sensible size is used as typed (the bed and the
   // move budget still say no where the print could not happen)
@@ -266,7 +268,7 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   }
   if (solids.length) {
     check();
-    const { strands: fill } = solidStrands(solids, [], { bead, layerHeight: h, layers: options.solidLayers ?? SOLID_LAYERS, perimeters: options.perimeters ?? null });
+    const { strands: fill } = solidStrands(solids, [], { bead, layerHeight: h, layers: options.solidLayers ?? SOLID_LAYERS, perimeters: options.perimeters ?? null, generator: options.solidGenerator ?? 'classic', nozzleDiameter: cfg.t.nozzle_diameter });
     await add([`; solid shapes: ${solids.length} green, ${options.solidLayers ?? SOLID_LAYERS} layer(s) on top of the panel, ${Math.round(SOLID_OVERLAP * 100)}% overlap`]);
     await emit(clipStrands(fill, new PolygonBoundary([rectangle(width, height)]), 0));
     await flush();

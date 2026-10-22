@@ -4,13 +4,17 @@
   "source": "recreus.com/en/products/filaflex-95-foamy (0.4 mm nozzle, 0.2 mm layer)",
   "filament_diameter": 1.75,
   "density": 1.22,
-  "temperature": { "first_layer": 238, "print": 238 },
+  "temperature": {
+    "first_layer": 238,
+    "print": 238
+  },
   "bed_temperature": 50,
   "flow": {
     "multiplier": 0.73,
     "reference_line_width": 0.55,
     "foam_expansion": 1.5,
-    "max_volumetric_speed_nominal": 5.0
+    "max_volumetric_speed_nominal": 5,
+    "reference_line_width_note": "Source profile setting, not a bead measured at 238 C. Keep the engine default commanded width 0.45 mm and multiplier 0.73 until measuring a calibration bead."
   },
   "retraction": {
     "length": 1,
@@ -23,7 +27,9 @@
     "seam_gap": 0.2,
     "note": "From the full-bed seam test printed on the MK3S (FOAM99_45PAIRS, 21 October 2026: 45 pairs of 20 mm two-line circles, every travel lifted 0.2 mm at 180 mm/s): cleanest at 238 C with 1 mm retraction at 40 mm/s, pushed back exactly 1 mm at 20 mm/s (2.5 mm also good); 75 mm/s retraction lost circles; a 0.2 mm seam gap looked good (tried at 245 C). The lift on a travel is z_hop and the travel speed travel_speed_hint. Before: 4 mm at 65, 4.2 back, 3 mm lift, 248 C left a knot and strings at every seam."
   },
-  "fan": { "default": 0 },
+  "fan": {
+    "default": 0
+  },
   "travel_speed_hint": 180,
   "pressure_advance_k": null,
   "notes": "Dry at 55 C for at least 1 h. Direct-drive extruder recommended. Foams at 245-250 C; lower flow and higher temperature foam more. 238 C (from 21 October 2026, below Recreus's 248 C) strings least on the MK3S and foams a little less: check a swatch's weight and width."

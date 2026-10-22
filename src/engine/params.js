@@ -1,4 +1,5 @@
 import { validateMachine, validateMaterial } from './profiles.js';
+import { airStrandDiameter, roundedRectArea } from './extrusion.js';
 
 export class ConfigError extends Error {
   constructor(errors) {
@@ -44,6 +45,7 @@ export const DEFAULT_TEXTILE = Object.freeze({
   curve_resolution: 0.4,
   support_threshold: 0.4,
   unsupported_fraction: 0.6,
+  speed_flat: null,
   speed_base: 15,
   speed_supported: 12,
   speed_nonplanar: 8,
@@ -100,6 +102,7 @@ const MAX = {
   loop_pitch: 100,
   curve_resolution: 5,
   nozzle_cone_half_angle: 85,
+  speed_flat: 500,
   speed_base: 500,
   speed_supported: 500,
   speed_nonplanar: 500,
@@ -121,7 +124,7 @@ export function validateTextile(t) {
     if (!num(k) || t[k] < FLOW_RANGE.min || t[k] > FLOW_RANGE.max) errors.push(`${k} must be a number between ${FLOW_RANGE.min} and ${FLOW_RANGE.max} (%)`);
   }
   for (const k of BOOLEAN) if (typeof t[k] !== 'boolean') errors.push(`${k} must be true or false`);
-  for (const k of ['free_strand_diameter', 'loop_start_z', 'retraction_speed']) {
+  for (const k of ['free_strand_diameter', 'loop_start_z', 'retraction_speed', 'speed_flat']) {
     if (t[k] !== null && (!num(k) || t[k] <= 0)) errors.push(`${k} must be empty or a number greater than 0`);
   }
   if (t.retraction_length !== null && (!num('retraction_length') || t.retraction_length < 0)) {
@@ -189,8 +192,10 @@ export function resolveConfig(machine, material, overrides = {}) {
   ];
   // a material may carry `print_defaults` (the studio puts the chosen layer thickness there); a design's own overrides win
   // a printer profile may say what nozzle it has (an imported slicer printer does); a design's own overrides win
+  const measuredWidth = material?.flow?.measured_line_width;
   const t = { ...DEFAULT_TEXTILE,
     ...(machine?.nozzle_diameter > 0 ? { nozzle_diameter: machine.nozzle_diameter, extrusion_width: Math.round(machine.nozzle_diameter * 1.125 * 10000) / 10000 } : {}),
+    ...(measuredWidth > 0 ? { extrusion_width: measuredWidth } : {}),
     // a filament may say how fast to travel (`travel_speed_hint`): a design's own travel speed still wins
     ...(material?.travel_speed_hint > 0 ? { speed_travel: material.travel_speed_hint } : {}),
     layer_height: defaultLayerHeight(machine), ...(material?.print_defaults ?? {}), ...overrides };
@@ -204,7 +209,17 @@ export function resolveConfig(machine, material, overrides = {}) {
   const derived = {
     filamentDiameter: material.filament_diameter,
     multiplier,
-    maxVolActual: material.flow.max_volumetric_speed_nominal * multiplier,
+    // Legacy profiles express their ceiling before the multiplier. An explicit ceiling is raw filament input.
+    maxVolActual: material.flow.max_volumetric_speed_actual ?? material.flow.max_volumetric_speed_nominal * multiplier,
+    // Width measurement changes coverage, not the E used for the calibration line. Air strands are independent.
+    flatCalibration: measuredWidth > 0 ? {
+      measuredWidth, commandedWidth: material.flow.calibration_line_width ?? 0.45,
+      layerHeight: material.flow.calibration_layer_height ?? 0.2,
+    } : null,
+    flatFlowCorrection: measuredWidth > 0
+      ? roundedRectArea(material.flow.calibration_line_width ?? 0.45, material.flow.calibration_layer_height ?? 0.2)
+        / roundedRectArea(measuredWidth, material.flow.calibration_layer_height ?? 0.2)
+      : 1,
     freeDiameter: t.free_strand_diameter ?? t.nozzle_diameter,
     rowPitch: t.row_pitch_multiple * t.base_spacing,
     // loops sit one layer above the base strand; with no base they start on the bed layer
@@ -222,6 +237,13 @@ export function resolveConfig(machine, material, overrides = {}) {
       minTravel: r.min_travel,
       liftOnRetractOnly: r.lift_on_retract_only ?? false,
       clearance: t.layer_height,
+      // Nozzle footprint plus the flat bead footprint for selective travel collision checks.
+      travelRadius: (t.nozzle_diameter + t.extrusion_width) / 2,
+      nozzleRadius: t.nozzle_diameter / 2,
+      // A low travel must clear the nozzle tip/cone as well as the actual deposited strand footprint.
+      nozzleTipRadius: t.nozzle_tip_radius,
+      nozzleConeSlope: Math.tan(t.nozzle_cone_half_angle * Math.PI / 180),
+      geometryClearance: t.clearance,
       // how far short of its own start a loop stops before a travel (emit.js `seam`)
       seamGap: r.seam_gap ?? 0,
     },
@@ -238,7 +260,9 @@ export function resolveConfig(machine, material, overrides = {}) {
       y: (machine.bed.depth - t.sample_height - overhang) / 2,
     },
   };
-  return { machine, material, t, derived };
+  const cfg = { machine, material, t, derived };
+  derived.retraction.airRadii = Object.fromEntries(['rising', 'falling', 'unsupported'].map(cls => [cls, airStrandDiameter(cls, cfg) / 2]));
+  return cfg;
 }
 
 export function startPosition(cfg) {

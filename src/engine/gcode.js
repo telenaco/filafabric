@@ -127,7 +127,7 @@ export class GcodeWriter {
     const {machine,material,t}=this.cfg;
     const out=['; Textile G-code generator v1', '; machine: '+machine.id, '; material: '+material.id];
     const d = this.cfg.derived;
-    out.push('; resolved print setup '+JSON.stringify({ temperatures: d.temperatures, flowMultiplier: d.multiplier, filamentDiameter: d.filamentDiameter, extrusionWidth: t.extrusion_width, layerHeight: t.layer_height, retraction: d.retraction }));
+    out.push('; resolved print setup '+JSON.stringify({ temperatures: d.temperatures, flowMultiplier: d.multiplier, filamentDiameter: d.filamentDiameter, extrusionWidth: t.extrusion_width, layerHeight: t.layer_height, flatCalibration: d.flatCalibration, flatFlowCorrection: d.flatFlowCorrection, flatSpeed: t.speed_flat, maxFilamentVolume: d.maxVolActual, retraction: d.retraction }));
     if(info.stats) {
       out.push('; estimated time (no acceleration): '+fmt(info.stats.timeSec/60,1)+' min');
       out.push('; filament: '+fmt(info.stats.filamentMm,1)+' mm, loops: '+info.stats.loops);

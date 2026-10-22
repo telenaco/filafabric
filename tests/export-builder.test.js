@@ -95,7 +95,7 @@ test('worker generation protocol returns compact output and serializes preflight
   globalThis.self = { postMessage: (message) => messages.push(message) };
   try {
     await import('../src/ui/swatch-worker.js');
-    self.onmessage({ data: { type: 'start', input: { ...defaultProfiles(), design: 'crosshatch', width: 20, height: 20 } } });
+    await self.onmessage({ data: { type: 'start', input: { ...defaultProfiles(), design: 'crosshatch', width: 20, height: 20 } } });
     const done = messages.shift();
     assert.equal(done.type, 'done');
     assert.equal(done.result.moves, undefined);
@@ -104,12 +104,12 @@ test('worker generation protocol returns compact output and serializes preflight
     assert.equal(done.result.outline, undefined);
     assert.equal(done.result.stats.moveStartSec, undefined);
     assert.ok(done.result.gcode.includes('G1'));
-    self.onmessage({ data: { type: 'start', input: { ...defaultProfiles(), design: 'crosshatch', width: 300, height: 200 } } });
+    await self.onmessage({ data: { type: 'start', input: { ...defaultProfiles(), design: 'crosshatch', width: 300, height: 200 } } });
     assert.equal(messages[0].type, 'error');
     assert.equal(messages[0].name, 'PreflightError');
     assert.equal(typeof messages[0].message, 'string');
     messages.length = 0;
-    self.onmessage({ data: { type: 'start', preview: true, input: { ...defaultProfiles(), design: 'loop-pile', width: 30, height: 20 } } });
+    await self.onmessage({ data: { type: 'start', preview: true, input: { ...defaultProfiles(), design: 'loop-pile', width: 30, height: 20 } } });
     const preview = messages[0];
     assert.equal(preview.type, 'done');
     assert.equal(preview.result.cfg.t.sample_width, 30);

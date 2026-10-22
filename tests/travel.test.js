@@ -128,3 +128,50 @@ test('the imported example prints its ten wide lines as ten strokes, not thirty,
   assert.ok(lineStrands.length < passes, `${lineStrands.length} strokes for ${passes} passes`);
   assert.ok(composed.routing.afterMm <= composed.routing.beforeMm + 1e-6);
 });
+
+test('reversing an open strand preserves flow on the same physical segments', () => {
+  const s = poly('flow', [[0, 0], [2, 0], [5, 0]]);
+  s.pts[1].flow = 0.5; s.pts[2].flow = 1.5;
+  s.pts[1].width = 0.3; s.pts[2].width = 0.9;
+  const [out] = orderStrands([s], { start: { x: 5, y: 0 } });
+  assert.deepEqual(out.pts.map(p => p.x), [5, 2, 0]);
+  assert.deepEqual(out.pts.slice(1).map(p => p.flow), [1.5, 0.5]);
+  assert.deepEqual(out.pts.slice(1).map(p => p.width), [0.9, 0.3]);
+  assert.deepEqual(s.pts.slice(1).map(p => p.flow), [0.5, 1.5], 'input unchanged');
+});
+
+test('a rotated loop preserves the closing segment flow and can choose a seam alone', () => {
+  const s = poly('loop', [[0, 0], [4, 0], [4, 4], [0, 4], [0, 0]]);
+  s.pts.slice(1).forEach((p, i) => p.flow = i + 1);
+  for (const route of [orderStrands([s], { start: { x: 4, y: 0 }, improve: true }), improveTravel([s], { x: 4, y: 0 })]) {
+    assert.deepEqual(route[0].pts.map(p => [p.x, p.y]), [[4, 0], [4, 4], [0, 4], [0, 0], [4, 0]]);
+    assert.deepEqual(route[0].pts.slice(1).map(p => p.flow), [2, 3, 4, 1]);
+  }
+});
+
+test('explicit routing phases retain perimeters before core despite a nearer core', () => {
+  const out = orderStrands([seg('core', 0, 0, 1, 0, { routingGroup: 1 }), seg('wall', 10, 0, 11, 0, { routingGroup: 0 })], { improve: true });
+  assert.deepEqual(out.map(s => s.id), ['wall', 'core']);
+});
+
+test('already raised strands retain their dependency order and anchored direction', () => {
+  const raised = poly('raised', [[20, 0], [10, 0], [5, 0]]);
+  raised.pts[1].z = 0.6; raised.pts[1].cls = 'rising';
+  const out = orderStrands([raised, seg('later', 0, 0, 1, 0)], { improve: true });
+  assert.deepEqual(out.map(s => s.id), ['raised', 'later']);
+  assert.deepEqual(out[0].pts, raised.pts);
+});
+
+test('row-ordered paths keep their direction when mixed with loose imported lines', () => {
+  const rows = [seg('first-row', 10, 0, 0, 0, { rowOrder: 0 }), seg('second-row', 0, 1, 10, 1, { rowOrder: 1 })];
+  const out = orderStrands([...rows, seg('imported', 0, 2, 1, 2)], { improve: true });
+  assert.deepEqual(out.filter(s => Number.isFinite(s.rowOrder)).map(s => [s.id, s.pts[0].x]), [['first-row', 10], ['second-row', 0]]);
+});
+
+test('joint seam search retains a shorter route found with the original seams', () => {
+  const strands = [poly('a', [[12,17],[15,17],[15,20],[12,20],[12,17]]), poly('b', [[19,14],[22,14],[22,17],[19,17],[19,14]]), seg('c',2,17,19,17), seg('d',0,16,19,13), seg('e',6,6,11,14), seg('f',3,16,16,3)];
+  const start = { x: 0, y: 0 }, out = orderStrands(strands, { start, improve: true });
+  const approach = Math.hypot(out[0].pts[0].x, out[0].pts[0].y);
+  // Known feasible order e,a,c,b,d,f: distances sqrt(72), sqrt(10), 10, 0, 4, 3.
+  assert.ok(approach + travelDistance(out) <= Math.sqrt(72) + Math.sqrt(10) + 17 + 1e-9);
+});

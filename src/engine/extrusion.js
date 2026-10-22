@@ -20,9 +20,10 @@ export function classFlow(cls, t) {
   return 1;
 }
 
-/** Actual deposited volume per mm of path (after the material's flow multiplier and any extra flow in the air). */
+/** Raw filament volume per mm of path, before foam expansion; also used for the hotend input ceiling. */
 export function volumePerMm(cls, cfg, flow = 1) {
-  return strandArea(cls, cfg) * cfg.derived.multiplier * classFlow(cls, cfg.t) * flow;
+  const flatCorrection = cls === 'base' || cls === 'supported' ? cfg.derived.flatFlowCorrection ?? 1 : 1;
+  return strandArea(cls, cfg) * cfg.derived.multiplier * flatCorrection * classFlow(cls, cfg.t) * flow;
 }
 
 /**
@@ -54,7 +55,8 @@ export function classTargetSpeed(cls, t) {
 /** Linear speed (mm/s along the 3D vector) after all clamps. */
 export function moveSpeed(cls, dx, dy, dz, cfg, flow = 1) {
   const ds = Math.hypot(dx, dy, dz);
-  let v = classTargetSpeed(cls, cfg.t);
+  const flat = (cls === 'base' || cls === 'supported') && Math.abs(dz) < 1e-9;
+  let v = flat && cfg.t.speed_flat > 0 ? cfg.t.speed_flat : classTargetSpeed(cls, cfg.t);
   if (ds === 0) return v;
   const lim = cfg.derived.limits.max_feedrate;
   const cap = (limit, component) => {

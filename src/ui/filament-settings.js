@@ -4,6 +4,21 @@
 
 /** key: where it is kept in the print setup; get: the filament's own value; put: the filament with it changed. */
 export const FILAMENT_FIELDS = Object.freeze([
+  { key: 'flowMultiplier', label: 'Filament flow multiplier', unit: '×', min: 0.1, max: 2.5, step: 0.01,
+    get: (m) => m.flow.multiplier, put: (m, v) => ({ ...m, flow: { ...m.flow,
+      // Keep the existing physical filament-input ceiling when changing the extrusion multiplier.
+      max_volumetric_speed_actual: m.flow.max_volumetric_speed_actual ?? m.flow.max_volumetric_speed_nominal * m.flow.multiplier, multiplier: v } }) },
+  { key: 'flatSpeed', engineKey: 'speed_flat', label: 'Flat extrusion speed override', unit: 'mm/s', min: 1, max: 150, step: 1,
+    get: (m) => m.print_defaults?.speed_flat ?? null, put: (m, v) => ({ ...m, print_defaults: { ...m.print_defaults, speed_flat: v } }) },
+  { key: 'maxFilamentVolume', label: 'Maximum filament volume', unit: 'mm³/s', min: 0.1, max: 30, step: 0.05,
+    get: (m) => m.flow.max_volumetric_speed_actual ?? m.flow.max_volumetric_speed_nominal * m.flow.multiplier,
+    put: (m, v) => ({ ...m, flow: { ...m.flow, max_volumetric_speed_actual: v } }) },
+  { key: 'flatBeadWidth', label: 'Measured flat bead width', unit: 'mm', min: 0.1, max: 3, step: 0.01,
+    get: (m) => m.flow.measured_line_width ?? null, put: (m, v) => ({ ...m, flow: { ...m.flow, measured_line_width: v } }) },
+  { key: 'calibrationLineWidth', label: 'Calibration commanded width', unit: 'mm', min: 0.1, max: 3, step: 0.01,
+    get: (m) => m.flow.calibration_line_width ?? 0.45, put: (m, v) => ({ ...m, flow: { ...m.flow, calibration_line_width: v } }) },
+  { key: 'calibrationLayerHeight', label: 'Calibration layer height', unit: 'mm', min: 0.05, max: 1, step: 0.01,
+    get: (m) => m.flow.calibration_layer_height ?? 0.2, put: (m, v) => ({ ...m, flow: { ...m.flow, calibration_layer_height: v } }) },
   { key: 'firstLayerTemp', label: 'Nozzle, first layer', unit: '°C', min: 150, max: 300, step: 1,
     get: (m) => m.temperature.first_layer, put: (m, v) => ({ ...m, temperature: { ...m.temperature, first_layer: v } }) },
   { key: 'nozzleTemp', label: 'Nozzle, other layers', unit: '°C', min: 150, max: 300, step: 1,

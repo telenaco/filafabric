@@ -27,14 +27,14 @@
 
 ## Tasks and verification ledger
 
-- [ ] Vendor and attribute the pinned Arachne build and matching sources; prove the real WASM produces variable widths for a tapered solid.
-- [ ] Implement and test `prepareAdaptiveSolids()` and `adaptiveSolidPaths(ring, options)`; validate bounded inputs, triangulate holes, extract geometry/widths, preserve narrow features and single vertical layer.
-- [ ] Integrate adaptive geometry into SVG solid strands, async swatch worker and panel export; emit clear generator metadata, preserve variable flow through existing clipping and ordering.
-- [ ] Improve same-layer path ordering and seams with flow-correct reversal and dependency barriers; focused travel tests (routing worker owns travel.js, emit.js and fabric.js orderStrands).
-- [ ] Use local printed-height clearance and boundary-aware selective travel, retaining conservative fallbacks; near/distant raised obstacles and void tests.
-- [ ] Implement measured-width/flow/flat-speed calibration settings with persistence and volumetric limits; preserve unmeasured defaults (calibration worker owns params/extrusion/profile/UI calibration).
-- [ ] Run focused then full `npm test`; fresh independent review and fix confirmed findings.
-- [ ] Generate the requested drawing comparison, independently parse emitted G-code, document results and residual physical validation, commit locally and verify a clean project subtree.
+- [x] Vendor and attribute the pinned Arachne build and matching sources; prove the real WASM produces variable widths for a tapered solid.
+- [x] Implement and test `prepareAdaptiveSolids()` and `adaptiveSolidPaths(ring, options)`; validate bounded inputs, triangulate holes, extract geometry/widths, preserve narrow features and single vertical layer.
+- [x] Integrate adaptive geometry into SVG solid strands, async swatch worker and panel export; emit clear generator metadata, preserve variable flow through existing clipping and ordering.
+- [x] Improve same-layer path ordering and seams with flow-correct reversal and dependency barriers; focused travel tests (routing worker owns travel.js, emit.js and fabric.js orderStrands).
+- [x] Use local printed-height clearance and boundary-aware selective travel, retaining conservative fallbacks; near/distant raised obstacles and void tests.
+- [x] Implement measured-width/flow/flat-speed calibration settings with persistence and volumetric limits; preserve unmeasured defaults (calibration worker owns params/extrusion/profile/UI calibration).
+- [x] Run focused then full `npm test`; fresh independent review and fix confirmed findings.
+- [x] Generate the requested drawing comparison, independently parse emitted G-code, document results and residual physical validation, commit locally and verify a clean project subtree.
 
 For each implementation task: write a behavior test, observe the expected failure, implement, observe green, then commit its scoped files with verification evidence. Source/build dependencies and classic compatibility are checked before enabling browser Arachne by default. The source archive is offered through the local app; no publication is part of this task.
 

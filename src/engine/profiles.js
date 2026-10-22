@@ -60,6 +60,13 @@ export function validateMaterial(m) {
   need(errors, isNum(f.multiplier) && f.multiplier > 0, 'flow.multiplier must be > 0');
   need(errors, isNum(f.max_volumetric_speed_nominal) && f.max_volumetric_speed_nominal > 0, 'flow.max_volumetric_speed_nominal must be > 0');
   need(errors, isNum(f.foam_expansion) && f.foam_expansion >= 1, 'flow.foam_expansion must be >= 1');
+  for (const key of ['measured_line_width', 'calibration_line_width', 'calibration_layer_height', 'max_volumetric_speed_actual']) {
+    need(errors, f[key] === undefined || (isNum(f[key]) && f[key] > 0), `flow.${key} must be > 0 when given`);
+  }
+  if (isNum(f.measured_line_width) && f.measured_line_width > 0) {
+    const height = f.calibration_layer_height ?? 0.2, width = f.calibration_line_width ?? 0.45;
+    need(errors, width >= height && f.measured_line_width >= height, 'flow calibration widths must be at least the calibration layer height');
+  }
   const r = m.retraction || {};
   need(errors, isNum(r.length) && r.length >= 0, 'retraction.length must be >= 0');
   need(errors, isNum(r.speed) && r.speed > 0, 'retraction.speed must be > 0');

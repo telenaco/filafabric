@@ -15,7 +15,8 @@ test('squiggle G-code stays byte-identical (cross and parallel)', () => {
   const par = generateSquiggle(machine, material, { width: 40, height: 30, mode: 'parallel', colorChange: true });
   // (whole repeats: the columns are a whole number of waves long, from 2026-10-15)
   // (row order: each layer keeps the order and direction it was laid in, from 2026-10-21; the same segments as before)
-  // Snapshots include resolved/actual motion diagnostics and honor an explicit zero optional hop.
-  assert.equal(hash(cross.gcode), '97e9adad8baac69f0d80844142bb1e9e1d60d7f42651bbbc375b533a42744090');
-  assert.equal(hash(par.gcode), '7ad8c0454cbb468dd724c3be782cc942458fccc02e7c97a53c18c70a7ebea490');
+  // Added flat calibration / physical clearance metadata changes headers only (2026-10-22).
+  // Removing only the new fields reproduces the previous whole-file hashes; all commands are unchanged.
+  assert.equal(hash(cross.gcode), '2efe1e1553c23731418876138c489d2521daaddbd4de1be641befe954eb6c325');
+  assert.equal(hash(par.gcode), '38c17625d2f2f661044394605094b5d1f0150cdcd7f3449e0fb7760b0cfbd425');
 });

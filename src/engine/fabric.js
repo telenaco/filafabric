@@ -1,6 +1,6 @@
 // Geometric screening, not a material-strength model. All distances are millimetres.
 import { findCrossings } from './crossings.js';
-import { improveTravel } from './travel.js';
+import { improveTravel, reversePoints, rotatePoints } from './travel.js';
 const mix = (a, b, t) => ({ ...b, x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, z: (a.z ?? 0) + ((b.z ?? 0) - (a.z ?? 0)) * t });
 const cross = (ax, ay, bx, by) => ax * by - ay * bx;
 // Flow is stored on the destination point: it applies to the whole incoming extrusion move.
@@ -39,7 +39,7 @@ export function contactGraph(strands, { strandWidth = 0.45, layerHeight = 0.2, p
   let joints = 0;
   strands.forEach((s, si) => {
     for (let i = 1; i < s.pts.length; i++) {
-      const a = s.pts[i - 1], b = s.pts[i], width = strandWidth * widthFactor(b), pad = width / 2;
+      const a = s.pts[i - 1], b = s.pts[i], width = b.width ?? strandWidth * widthFactor(b), pad = width / 2;
       const x0 = Math.floor((Math.min(a.x, b.x) - pad) / cell), x1 = Math.floor((Math.max(a.x, b.x) + pad) / cell);
       const y0 = Math.floor((Math.min(a.y, b.y) - pad) / cell), y1 = Math.floor((Math.max(a.y, b.y) + pad) / cell);
       const seen = new Set();
@@ -350,40 +350,56 @@ export function orderStrands(strands, { start = null, improve = false } = {}) {
   for (const s of strands) { const k = s.layer ?? 0; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(s); }
   const out = [];
   for (const layer of [...groups.keys()].sort((a, b) => a - b)) {
-    const left = [...groups.get(layer)];
-    const layerStart = at, layerFirst = out.length;
-    let pause = left.some((s) => s.pauseBefore);
-    const hadPause = pause;
-    // lines laid row by row (orderLanePieces) keep that order and direction: an even texture matters more than travel
-    if (left.every((s) => Number.isFinite(s.rowOrder))) {
-      left.map((s, i) => [s, i]).sort((a, b) => a[0].rowOrder - b[0].rowOrder || a[1] - b[1]).forEach(([s], i) => out.push({ ...s, pauseBefore: pause && i === 0 }));
+    const layerStrands = groups.get(layer), hadLayerPause = layerStrands.some(s => s.pauseBefore), layerFirst = out.length;
+    // Crossing-resolved and anchored paths already carry order and direction dependencies.
+    const mixedRows = layerStrands.some(s => Number.isFinite(s.rowOrder)) && !layerStrands.every(s => Number.isFinite(s.rowOrder));
+    const constrained = mixedRows || layerStrands.some(s => s.pts.some(p => p.cls !== undefined || Math.abs((p.z ?? 0) - (s.pts[0]?.z ?? 0)) > 1e-6));
+    if (constrained) {
+      layerStrands.forEach((s, i) => out.push({ ...s, pauseBefore: hadLayerPause && i === 0 }));
       at = out.at(-1)?.pts.at(-1) ?? at;
       continue;
     }
-    while (left.length) {
-      let best = Infinity, pick = 0, vertex = 0, reverse = false, closed = false;
-      left.forEach((s, i) => {
-        if (!s.pts.length) return;
-        const a = s.pts[0], b = s.pts.at(-1), loop = Math.hypot(a.x - b.x, a.y - b.y) < 1e-6;
-        // a closed loop may start at any vertex but its repeated last one, an open strand at either end (walked in
-        // place: a list of the candidates for every strand at every pick was most of the time a packing of rings took)
-        const last = s.pts.length - 1;
-        for (let j = 0; loop ? j < last : j <= last; j = loop || j === last ? j + 1 : last) {
-          const p = s.pts[j], d = Math.hypot(p.x - at.x, p.y - at.y);
-          if (d < best - 1e-9) { best = d; pick = i; vertex = j; reverse = !loop && j > 0; closed = loop; }
-        }
-      });
-      const s = left.splice(pick, 1)[0];
-      let pts = s.pts;
-      if (closed && vertex) { const ring = pts.slice(0, -1); pts = [...ring.slice(vertex), ...ring.slice(0, vertex), ring[vertex]]; }
-      else if (reverse) pts = [...pts].reverse();
-      out.push({ ...s, pts, pauseBefore: pause }); pause = false;
-      at = pts.at(-1) ?? at;
+    const phases = new Map();
+    for (const s of layerStrands) {
+      const phase = Number.isFinite(s.routingGroup) ? s.routingGroup : 0;
+      if (!phases.has(phase)) phases.set(phase, []);
+      phases.get(phase).push(s);
     }
-    if (improve && out.length - layerFirst > 2) {
-      const better = improveTravel(out.splice(layerFirst), layerStart);
-      better.forEach((s, i) => out.push({ ...s, pauseBefore: hadPause && i === 0 }));
-      at = out.at(-1).pts.at(-1) ?? at;
+    for (const phase of [...phases.keys()].sort((a, b) => a - b)) {
+      const left = [...phases.get(phase)];
+      const layerStart = at, phaseFirst = out.length;
+      let pause = hadLayerPause && out.length === layerFirst;
+      const hadPause = pause;
+      // Row direction maintains even texture; only loose planar strands may turn around.
+      if (left.every((s) => Number.isFinite(s.rowOrder))) {
+        left.map((s, i) => [s, i]).sort((a, b) => a[0].rowOrder - b[0].rowOrder || a[1] - b[1]).forEach(([s], i) => out.push({ ...s, pauseBefore: pause && i === 0 }));
+        at = out.at(-1)?.pts.at(-1) ?? at;
+        continue;
+      }
+      while (left.length) {
+        let best = Infinity, pick = 0, vertex = 0, reverse = false, closed = false;
+        left.forEach((s, i) => {
+          if (!s.pts.length) return;
+          const a = s.pts[0], b = s.pts.at(-1), loop = Math.hypot(a.x - b.x, a.y - b.y) < 1e-6;
+          // Closed loops can start at any vertex; open strands can start at either end.
+          const last = s.pts.length - 1;
+          for (let j = 0; loop ? j < last : j <= last; j = loop || j === last ? j + 1 : last) {
+            const p = s.pts[j], d = Math.hypot(p.x - at.x, p.y - at.y);
+            if (d < best - 1e-9) { best = d; pick = i; vertex = j; reverse = !loop && j > 0; closed = loop; }
+          }
+        });
+        const s = left.splice(pick, 1)[0];
+        let pts = s.pts;
+        if (closed && vertex) pts = rotatePoints(pts, vertex);
+        else if (reverse) pts = reversePoints(pts);
+        out.push({ ...s, pts, pauseBefore: pause }); pause = false;
+        at = pts.at(-1) ?? at;
+      }
+      if (improve && out.length - phaseFirst > 0) {
+        const better = improveTravel(out.splice(phaseFirst), layerStart);
+        better.forEach((s, i) => out.push({ ...s, pauseBefore: hadPause && i === 0 }));
+        at = out.at(-1).pts.at(-1) ?? at;
+      }
     }
   }
   return out;

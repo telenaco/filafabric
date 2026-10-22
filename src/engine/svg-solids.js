@@ -8,6 +8,7 @@ import { writeGcode } from './gcode.js';
 import { headerNotes } from './brim.js';
 import { MAX_MOVES } from './tiler.js';
 import { ConfigError } from './params.js';
+import { adaptiveSolidPaths } from './adaptive-solids.js';
 
 /**
  * Green shapes of a drawing print solid, after the pattern and on top of it: the pattern is made as usual, over the
@@ -67,7 +68,7 @@ export function topOver(strands, ring, margin = 0, holes = [], holeMargin = 0) {
 }
 
 /** The solid fill strands of every shape: layer by layer, so each layer of every shape is down before the next. */
-export function solidStrands(solids, under, { bead = 0.45, layerHeight = 0.2, layers = SOLID_LAYERS, overlap = SOLID_OVERLAP, perimeters = null } = {}) {
+export function solidStrands(solids, under, { bead = 0.45, layerHeight = 0.2, layers = SOLID_LAYERS, overlap = SOLID_OVERLAP, perimeters = null, generator = 'classic', nozzleDiameter = 0.4 } = {}) {
   // a shape may come with the height already measured under it (a panel measures it as it prints)
   // a lace's pattern lies in its red windows, which are holes in the solid: the solid sits on whatever is under itself
   if (!Number.isInteger(layers) || layers < 1 || layers > 8) throw new ConfigError(['Solid layers must be an integer from 1 to 8.']);
@@ -76,10 +77,16 @@ export function solidStrands(solids, under, { bead = 0.45, layerHeight = 0.2, la
   for (let k = 0; k < layers; k++) {
     shapes.forEach((s, i) => {
       const z = s.top + (k + 1) * layerHeight;
-      const paths = solidLayer(s.ring, { bead, overlap, layer: k, kind: s.kind, holes: s.holes, edged: s.edged ?? [], perimeters });
-      const strands = paths.map((pts, j) => ({
+      const adaptive = generator === 'arachne' && perimeters > 0 && s.kind !== 'coil';
+      const paths = adaptive
+        ? adaptiveSolidPaths(s.ring, { bead, layerHeight, perimeters, holes: s.holes, edged: s.edged ?? [], layer: k, nozzleDiameter })
+        : solidLayer(s.ring, { bead, overlap, layer: k, kind: s.kind, holes: s.holes, edged: s.edged ?? [], perimeters }).map(pts => ({ pts }));
+      const travelBoundary = new PolygonBoundary([s.ring, ...s.holes]);
+      const strands = paths.map((path, j) => ({
         id: `solid-${i + 1}-${k + 1}-${out.length + j + 1}`, name: 'Solid shape', solid: s.kind, solidLayer: k, fixed: true, ground: s.top === 0,
-        kind: s.top === 0 && k === 0 ? 'base' : 'supported', pts: pts.map((p) => ({ x: p.x, y: p.y, z })),
+        ...(adaptive ? { generator: 'arachne', role: path.role, routingGroup: path.routingGroup } : {}),
+        travelBoundary,
+        kind: s.top === 0 && k === 0 ? 'base' : 'supported', pts: path.pts.map((p) => ({ ...p, z })),
       }));
       // Only reorder this shape at this height: keep layer precedence and a coil's spiral direction.
       const ordered = strands.length > 1 ? orderStrands(strands, { start: out.at(-1)?.pts.at(-1), improve: true }) : strands;
@@ -95,13 +102,13 @@ export function solidStrands(solids, under, { bead = 0.45, layerHeight = 0.2, la
  * pattern prints last: the moves already planned are kept exactly and its fill follows them after a lift clear of
  * everything printed. A shape on the bed prints layer by layer with a flat pattern, or before a raised one.
  */
-export function applySvgSolids(result, vector, { fullWidth = vector.width, fullHeight = vector.height, offsetX = 0, offsetY = 0, layers = SOLID_LAYERS, perimeters = null } = {}) {
+export function applySvgSolids(result, vector, { fullWidth = vector.width, fullHeight = vector.height, offsetX = 0, offsetY = 0, layers = SOLID_LAYERS, perimeters = null, generator = 'classic' } = {}) {
   const solids = vectorSolids(vector, fullWidth, fullHeight, offsetX, offsetY);
   if (!solids.length) return result;
   const { cfg } = result, h = cfg.t.layer_height, bead = cfg.t.extrusion_width;
   const W = cfg.t.sample_width, H = cfg.t.sample_height;
   const body = result.strands ?? [];
-  const { strands: fill, shapes } = solidStrands(solids, body, { bead, layerHeight: h, layers, perimeters });
+  const { strands: fill, shapes } = solidStrands(solids, body, { bead, layerHeight: h, layers, perimeters, generator, nozzleDiameter: cfg.t.nozzle_diameter });
   const swatch = new PolygonBoundary([[{ x: 0, y: 0 }, { x: W, y: 0 }, { x: W, y: H }, { x: 0, y: H }]]);
   const added = clipStrands(fill, swatch, 0);
   if (!added.length) return result;
@@ -141,11 +148,12 @@ export function applySvgSolids(result, vector, { fullWidth = vector.width, fullH
   const fabric = analyzeFabric(strands, { strandWidth: bead, layerHeight: h, boundary });
   const warnings = [...(result.warnings ?? []).filter((w) => !(result.fabric?.issues ?? []).includes(w)), ...fabric.issues];
   const coils = shapes.filter((s) => s.kind === 'coil').length, onBed = shapes.filter((s) => s.top === 0).length;
-  const solid = { count: shapes.length, coils, zigzags: shapes.length - coils, layers, perimeters: perimeters ?? 1, overlap: SOLID_OVERLAP };
+  const usedGenerator = fill.some(s => s.generator === 'arachne') ? 'arachne' : 'classic';
+  const solid = { count: shapes.length, coils, zigzags: shapes.length - coils, layers, perimeters: perimeters ?? 1, overlap: usedGenerator === 'arachne' ? 0.15 : SOLID_OVERLAP, generator: usedGenerator };
   return {
     ...result, strands, moves, stats, fabric, warnings, solid, pieceOutline: piece,
     ...(result.report ? { report: { ...result.report, components: fabric.components } } : {}),
-    gcode: writeGcode(moves, cfg, { stats, comments: [...headerNotes(result), `Solid shapes: ${shapes.length} green (${coils} coiled, ${shapes.length - coils} zigzag), ${layers} layer(s) each, ${perimeters ?? 1} inside perimeter(s) (${onBed} on the bed, layer by layer with the pattern; ${shapes.length - onBed} on top of the pattern, last), ${Math.round(SOLID_OVERLAP * 100)}% overlap`] }),
+    gcode: writeGcode(moves, cfg, { stats, comments: [...headerNotes(result), `Solid generator: ${usedGenerator} (round coils retain continuous spiral fill)`, `Solid shapes: ${shapes.length} green (${coils} coiled, ${shapes.length - coils} zigzag), ${layers} layer(s) each, ${perimeters ?? 1} inside perimeter(s) (${onBed} on the bed, layer by layer with the pattern; ${shapes.length - onBed} on top of the pattern, last), ${Math.round(solid.overlap * 100)}% overlap`] }),
   };
 }
 
