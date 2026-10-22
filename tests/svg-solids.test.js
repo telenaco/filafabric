@@ -21,7 +21,7 @@ test('a result without green shapes is returned as it is', () => {
 
 test('the fill lies on the highest strand under each shape, the native path is kept, and the fill comes last', () => {
   const base = generateDesignExport({ ...profiles, design: 'crosshatch', width: 80, height: 60, brim: 0 });
-  const out = applySvgSolids(base, drawing);
+  const out = applySvgSolids(base, drawing, { layers: 2 });
   assert.deepEqual(out.moves.slice(0, base.moves.length), base.moves, 'every move of the pattern is unchanged');
   const h = base.cfg.t.layer_height;
   for (const [i, ring] of [circle(20, 20, 6), square(45, 30, 12)].entries()) {
@@ -33,7 +33,7 @@ test('the fill lies on the highest strand under each shape, the native path is k
   }
   assert.equal(out.solid.count, 2);
   assert.equal(out.solid.coils, 1);
-  assert.equal(out.solid.layers, SOLID_LAYERS);
+  assert.equal(out.solid.layers, 2);
   // nothing prints after the fill, and the lift to it clears everything printed before
   const firstFill = out.moves.findIndex((m) => m.extrude && /^solid-/.test(m.tag));
   assert.ok(out.moves.slice(firstFill).every((m) => !m.extrude || /^solid-/.test(m.tag)));
@@ -77,7 +77,7 @@ test('a repeating panel prints the green shapes once, on top, after every sectio
 test('solid paths use short travel within each shape layer without changing extrusion geometry', () => {
   const ring = square(0, 0, 100).slice(0, -1).map((p) => ({ ...p, y: p.y * 0.3 }));
   const holes = [25, 50, 75].map((x) => circle(x, 15, 4, 80));
-  const { strands } = solidStrands([{ ring, holes }], [], { bead: 0.45, layerHeight: 0.2 });
+  const { strands } = solidStrands([{ ring, holes }], [], { bead: 0.45, layerHeight: 0.2, layers: 2 });
   const key = (a, b) => [a, b].map((p) => `${Math.round(p.x * 1e6)},${Math.round(p.y * 1e6)}`).sort().join(':');
   const segments = (paths) => paths.flatMap((pts) => pts.slice(1).map((p, i) => key(pts[i], p))).sort();
   let previousLayer = -1;

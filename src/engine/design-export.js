@@ -61,7 +61,7 @@ export function generateDesignBase(input) {
 function withSolids(result, input) {
   if (!input.vector) return result;
   const [fullWidth, fullHeight] = input.vectorSize ?? [input.width, input.height], [offsetX, offsetY] = input.vectorOffset ?? [0, 0];
-  return applySvgSolids(result, input.vector, { fullWidth, fullHeight, offsetX, offsetY });
+  return applySvgSolids(result, input.vector, { fullWidth, fullHeight, offsetX, offsetY, layers: input.solidLayers });
 }
 
 export function generateDesignExport(input) {

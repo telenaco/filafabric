@@ -40,7 +40,7 @@ export function hashToState(hash) {
  * Layer thickness (mm), additional layers above the native design, and side-by-side brim runs, with any change to the
  * filament's temperatures and retraction (filament-settings.js). Invalid values use the defaults.
  */
-export const PRINT_DEFAULTS = Object.freeze({ layerHeight: 0.2, extraLayers: 0, brim: 2 });
+export const PRINT_DEFAULTS = Object.freeze({ layerHeight: 0.2, extraLayers: 0, solidLayers: 1, brim: 2 });
 export function sanitizePrint(raw) {
   const out = { ...PRINT_DEFAULTS };
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
@@ -58,6 +58,8 @@ export function sanitizePrint(raw) {
     const copies = Math.round(Number(raw.layers));
     if (Number.isFinite(copies) && copies >= 2 && copies <= 50) out.legacyCopies = copies;
   }
+  const solid = typeof raw.solidLayers === 'number' || typeof raw.solidLayers === 'string' && raw.solidLayers.trim() !== '' ? Number(raw.solidLayers) : NaN;
+  if (Number.isInteger(solid) && solid >= 1 && solid <= 8) out.solidLayers = solid;
   const b = raw.brim;
   const count = (typeof b === 'number' || typeof b === 'string' && b.trim() !== '') ? Number(b) : NaN;
   if (Number.isFinite(count) && count >= 0 && count <= 50) out.brim = Math.round(count);

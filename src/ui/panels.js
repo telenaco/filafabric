@@ -792,9 +792,10 @@ export class DesignPanel extends Control {
  * @param defs { thickness: { label, help }, layers: a slider description }
  */
 export class PrintSetupCard extends Control {
-  constructor(host, { thickness, layers }) {
+  constructor(host, { thickness, layers, solids = null }) {
     super(host);
     this.layers = new SliderControl(host, 'print', layers);
+    this.solids = solids ? new SliderControl(host, 'print', solids) : null;
     this.readout = el('span', { class: 'ctl-readout', id: 'layer-thickness-value' });
     this.note = el('p', { class: 'ctl-help', id: 'layer-thickness-note' });
     this.grid = el('div', { class: 'patterns layer-choices', id: 'layer-thickness-choices', role: 'group', 'aria-labelledby': 'layer-thickness-label' });
@@ -807,7 +808,7 @@ export class PrintSetupCard extends Control {
         el('p', { class: 'ctl-help', text: thickness.help }),
         this.grid,
         this.note),
-      this.layers.node);
+      this.layers.node, this.solids?.node);
   }
 
   get binding() {
@@ -834,6 +835,7 @@ export class PrintSetupCard extends Control {
     this.note.textContent = binding.note();
     this.fold?.update();
     this.layers.update();
+    this.solids?.update();
   }
 
   redraw() {
@@ -887,7 +889,7 @@ export const SAMPLE_SVG = 'samples/filafabric-sample.svg';
 export const DRAWING_GUIDE = Object.freeze([
   { colour: 'red', name: 'Red closed shape', text: 'Filled with the pattern.' },
   { colour: 'blue', name: 'Blue closed shape', text: 'Left empty: a hole. Blue inside red cuts a hole; red inside that blue is filled again.' },
-  { colour: 'green', name: 'Green closed shape', text: 'Printed solid, two layers: a coil if it is round, a zigzag otherwise. On the bed it builds up layer by layer with the pattern; inside a red shape it lies on the pattern and prints last.' },
+  { colour: 'green', name: 'Green closed shape', text: 'Printed solid, one layer by default (choose Solid layers for reinforcement): a coil if it is round, a zigzag otherwise. On the bed it builds up layer by layer with the pattern; inside a red shape it lies on the pattern and prints last.' },
   { colour: 'yellow', name: 'Yellow closed shape', text: YELLOW_PRINTS_SOLID ? 'For now printed solid, exactly like green.' : 'Bends the pattern round its outline.' },
   { colour: 'line', name: 'Any other line', text: 'Printed as drawn, first, on the first layer. Its stroke width sets the passes side by side: 0.4 mm one, 0.8 mm two, 1.2 mm three.' },
 ]);

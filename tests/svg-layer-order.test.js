@@ -18,7 +18,7 @@ const zMin = (s) => Math.min(...s.pts.map((p) => p.z));
 function laceZigzag(extraLayers = 0) {
   const vector = lace();
   return generateDesignExport({ machine, material, design: 'zigzag', settings: designById('zigzag').defaults(), width: vector.width, height: vector.height,
-    vector, outline: vectorPatternRings(vector), shapeOutline: true, extraLayers, brim: 0 });
+    vector, outline: vectorPatternRings(vector), shapeOutline: true, solidLayers: 2, extraLayers, brim: 0 });
 }
 
 test('with a drawing, the pattern keeps its own layers: its first layer lies on the bed beside the drawing\'s lines', () => {

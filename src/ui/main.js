@@ -366,7 +366,8 @@ let svgImportCard = null;
 let studyRecorder = null;
 
 const RAISED_DESIGNS = new Set(['loop-pile', 'relief', 'fringe', 'spacer', 'pillarweave']);
-const PRINT_RANGES = { extraLayers: { min: 0, max: 10, step: 1 }, brim: { min: 0, max: 8, step: 1 } };
+const PRINT_SOLIDS = { key: 'solidLayers', label: 'Solid layers', help: 'Layers of infill in green and yellow solid shapes. One gives a single solid pass; choose more for reinforcement. The mesh pattern keeps its own layers.', lo: 'Single', hi: 'Reinforced', unit: '', edit: true };
+const PRINT_RANGES = { solidLayers: { min: 1, max: 8, step: 1 }, extraLayers: { min: 0, max: 10, step: 1 }, brim: { min: 0, max: 8, step: 1 } };
 const PRINT_THICKNESS = { label: 'Layer thickness', help: 'How thick every layer is. Thinner prints cleaner and slower; thicker is quick, but strands lie over each other less cleanly.' };
 const PRINT_LAYERS = { key: 'extraLayers', label: 'Extra layers', help: '0 keeps the original design. One-layer patterns alternate with a regenerated 90° pass across the same outline. Multi-layer patterns continue their original sequence: A–B–A–B. For raised designs, extra passes reinforce the backing beneath the texture; the texture prints once. The brim and imported SVG paths print once.', lo: 'Original', hi: 'More', unit: '', edit: true };
 
@@ -393,11 +394,16 @@ function normalisePrint() {
 const backingFor = (design = state.design) => (RAISED_DESIGNS.has(design) ? null : state.print.backing ?? null);
 
 function layerSetupText() {
+  const solid = state.vector && interpretDrawing(state.vector).solids.length ? ` · solids: ${state.print.solidLayers} × ${state.print.layerHeight} mm` : '';
+  return patternLayerSetupText() + solid;
+}
+
+function patternLayerSetupText() {
   const plan = state.result?.designId === state.design ? state.result.layerPlan : null;
   if (plan?.mode === 'backing' && plan.repeatable) return `${plan.backingLayers} backing + ${state.print.extraLayers} extra = ${plan.backingLayers + state.print.extraLayers} · texture once`;
   if (plan && !plan.repeatable) return plan.nativeLayers === null ? 'Original raised structure' : `${plan.nativeLayers} original · SVG only`;
   const mesh = backingFor() ? BACKING_MESH_LAYERS : 0;
-  if (plan) return `${mesh ? `${mesh} mesh + ` : ''}${plan.nativeLayers} + ${state.print.extraLayers} extra = ${mesh + plan.nativeLayers + state.print.extraLayers} layers`;
+  if (plan) return `${mesh ? `${mesh} mesh + ` : ''}${plan.patternLayers ?? plan.nativeLayers} pattern passes + ${state.print.extraLayers} extra${plan.fixedLayers ? ' · drawing lines once' : ''}`;
   return RAISED_DESIGNS.has(state.design) ? `${state.print.extraLayers} extra backing layers · texture once` : `${mesh ? `${mesh} mesh + ` : ''}${state.print.extraLayers} extra layers`;
 }
 
@@ -431,6 +437,7 @@ const PRINT_BINDING = {
       return;
     }
     if (key in BACKING_KEYS) { state.print.backing = { ...(state.print.backing ?? backingKept), [BACKING_KEYS[key]]: value }; return; }
+    if (key === 'solidLayers') { state.print.solidLayers = Math.max(1, Math.min(8, Math.round(value))); return; }
     if (key === 'brim' && value > 50) { toast('Brim: enter a count from 0 to 50.'); return; }
     if (key === 'extraLayers') {
       if (value > 250) { toast('Extra layers: enter a count from 0 to 250.'); return; }
@@ -447,6 +454,7 @@ const PRINT_BINDING = {
   },
   readout: (key) => {
     if (key in BACKING_READOUTS) return `${Math.round(PRINT_BINDING.get(key) * 10) / 10} ${BACKING_READOUTS[key]}`;
+    if (key === 'solidLayers') return `${state.print.solidLayers} solid ${state.print.solidLayers === 1 ? 'layer' : 'layers'} · ${Number((state.print.solidLayers * state.print.layerHeight).toFixed(3))} mm`;
     if (key === 'brim') return state.print.brim ? `${state.print.brim} ${state.print.brim === 1 ? 'line' : 'lines'}` : 'Off';
     if (key === 'layerHeight') return `${Math.round(state.print.layerHeight * 1000) / 1000} mm${state.print.layerHeight === defaultLayerHeight(state.machines.get(state.machine)) ? ' (default)' : ''}`;
     return layerSetupText();
@@ -513,7 +521,7 @@ function buildPanels() {
   const pilePatterns = new SectionFold(host, $('#lp-pattern').closest('section'), { id: 'lp-pattern-section' });
   controls.push(pilePatterns);
   // the layers every design shares live in the printer setup
-  const layersCard = new PrintSetupCard(host, { thickness: PRINT_THICKNESS, layers: PRINT_LAYERS });
+  const layersCard = new PrintSetupCard(host, { thickness: PRINT_THICKNESS, layers: PRINT_LAYERS, solids: PRINT_SOLIDS });
   $('#print-setup').replaceChildren(layersCard.node);
   controls.push(layersCard);
 }
@@ -638,7 +646,7 @@ function exportOptions(width = null, height = null) {
     machine: state.machines.get(state.machine), material: printMaterial(), design: state.design,
     width, height, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : settingsOf(state.design),
     studySettings: { ...settingsOf(state.design) }, outline: placedOutline(width, height),
-    vector: state.vector, shapeOutline: !!state.outline?.page, extraLayers: state.print.extraLayers, legacyCopies: state.print.legacyCopies, brim: state.print.brim, backing: backingFor(),
+    vector: state.vector, shapeOutline: !!state.outline?.page, solidLayers: state.print.solidLayers, extraLayers: state.print.extraLayers, legacyCopies: state.print.legacyCopies, brim: state.print.brim, backing: backingFor(),
     image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale,
     panelSize: size,
   };
@@ -889,7 +897,7 @@ function regenerate() {
       colorChange: !!settingsOf(state.design).colorChange,
     });
     // green shapes print solid: on the bed layer by layer with the pattern, or last, on top of it and any extra layers
-    if (state.vector) result = applySvgSolids(result, state.vector, { fullWidth: selectedWidth, fullHeight: selectedHeight });
+    if (state.vector) result = applySvgSolids(result, state.vector, { fullWidth: selectedWidth, fullHeight: selectedHeight, layers: state.print.solidLayers });
     // the backing mesh goes under all of it
     result = addBackingMesh(result, backingFor());
     // Offset the selected outline before clipping: a bounded preview must never invent an edge at its crop.
@@ -1912,7 +1920,7 @@ function recordBuildFailure(error, input = null) {
   const [width, height] = input ? [input.width, input.height] : BINDINGS[state.design].size.get();
   const captured = input ?? {
     design: state.design, width, height, studySettings: { ...settingsOf(state.design) },
-    machine: state.machines.get(state.machine), material: printMaterial(), extraLayers: state.print.extraLayers, brim: state.print.brim,
+    machine: state.machines.get(state.machine), material: printMaterial(), solidLayers: state.print.solidLayers, extraLayers: state.print.extraLayers, brim: state.print.brim,
     vector: state.vector, outline: state.outline?.rings,
   };
   const vector = captured.vector, sourcePaths = vector?.paths ?? [];
@@ -2043,7 +2051,7 @@ function feedbackContext() {
         design: state.design,
         size: { width, height },
         settings: settingsOf(state.design),
-        print: { extraLayers: state.print.extraLayers, brim: state.print.brim, layerHeight: printMaterial()?.print_defaults?.layer_height },
+        print: { solidLayers: state.print.solidLayers, extraLayers: state.print.extraLayers, brim: state.print.brim, layerHeight: printMaterial()?.print_defaults?.layer_height },
         machine: state.machine,
         material: state.material,
         // counts only: the drawing stays on this device

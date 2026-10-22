@@ -143,7 +143,7 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   };
   texture = withTextureLayers(texture, () => rotatedTexture());
   const globalLayers = vector ? 3 : 2;
-  const print = { layerHeight: h, layers, brim, nozzleDiameter: cfg.t.nozzle_diameter, extrusionWidth: bead };
+  const print = { layerHeight: h, layers, solidLayers: options.solidLayers ?? SOLID_LAYERS, brim, nozzleDiameter: cfg.t.nozzle_diameter, extrusionWidth: bead };
   const recordPlan = (result) => {
     const plan = result.layerPlan;
     if (!plan || (print.patternLayers !== undefined && (plan.patternLayers ?? -1) < (print.patternLayers ?? -1))) return;
@@ -253,8 +253,8 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
   }
   if (solids.length) {
     check();
-    const { strands: fill } = solidStrands(solids, [], { bead, layerHeight: h });
-    await add([`; solid shapes: ${solids.length} green, ${SOLID_LAYERS} layers on top of the panel, ${Math.round(SOLID_OVERLAP * 100)}% overlap`]);
+    const { strands: fill } = solidStrands(solids, [], { bead, layerHeight: h, layers: options.solidLayers ?? SOLID_LAYERS });
+    await add([`; solid shapes: ${solids.length} green, ${options.solidLayers ?? SOLID_LAYERS} layer(s) on top of the panel, ${Math.round(SOLID_OVERLAP * 100)}% overlap`]);
     await emit(clipStrands(fill, new PolygonBoundary([rectangle(width, height)]), 0));
     await flush();
   }

@@ -63,7 +63,7 @@ test('every travel still retracts, mesh and design alike', () => {
 test('a lace gets the mesh under its whole piece, green body and windows, and keeps its layer order on top', () => {
   const vector = parseSvg(fs.readFileSync(path.join(projectRoot, 'samples', 'lace-sample.svg'), 'utf8'), 'lace-sample.svg');
   const r = generateDesignExport({ machine, material, design: 'zigzag', settings: designById('zigzag').defaults(), width: vector.width, height: vector.height,
-    vector, outline: vectorPatternRings(vector), shapeOutline: true, extraLayers: 0, brim: 0, backing: {} });
+    vector, outline: vectorPatternRings(vector), shapeOutline: true, solidLayers: 2, extraLayers: 0, brim: 0, backing: {} });
   const h = r.cfg.t.layer_height;
   const mesh = r.strands.filter((s) => s.backingMesh);
   const piece = new PolygonBoundary(r.pieceOutline);
