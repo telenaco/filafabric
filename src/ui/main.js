@@ -1705,9 +1705,8 @@ function renderTiles() {
   $('#design-list').replaceChildren(
     heading('Essentials', 'Flat lines in one or two layers, with only a few controls'),
     ...essentials.map(makeTile),
-    heading('More structures', 'Easiest first'),
-    ...others.map(makeTile),
   );
+  $('#experimental-design-list').replaceChildren(...others.map(makeTile));
   renderTilePressed();
 }
 
