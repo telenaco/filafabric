@@ -103,3 +103,44 @@ test('a turned rectangle zigzags along its own long side, and a star is filled i
   assert.ok(uncovered(turned, solidLayer(turned, { bead, layer: 1 })) < 0.002);
   assert.ok(uncovered(star, solidLayer(star, { bead })) < 0.01);
 });
+
+test('perforated solid fill follows each branch continuously around curved windows', () => {
+  const ring = rect(0, 0, 60, 30);
+  const centres = [{ x: 15, y: 15 }, { x: 30, y: 15 }, { x: 45, y: 15 }];
+  const holes = centres.map((c) => circle(c.x, c.y, 4));
+  for (const layer of [0, 1]) {
+    const paths = solidLayer(ring, { bead, holes, layer });
+    assert.ok(paths.length < 30, `${paths.length} separate strokes for three windows on layer ${layer}`);
+    for (const pts of paths) for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      for (const p of [a, b]) assert.ok(p.x >= bead / 2 - 1e-6 && p.x <= 60 - bead / 2 + 1e-6 && p.y >= bead / 2 - 1e-6 && p.y <= 30 - bead / 2 + 1e-6, 'a bead stays inside the outside edge');
+      for (const c of centres) assert.ok(segDistance(c, a, b) >= 4 + bead / 2 - 0.005, 'a connection keeps a bead clear of a curved window');
+    }
+    // Interior points two bead widths away from the rims must still be covered: short fill pieces cannot simply be dropped.
+    const segments = paths.flatMap((pts) => pts.slice(1).map((b, i) => [pts[i], b]));
+    for (let y = 1; y < 29; y += 0.7) for (let x = 1; x < 59; x += 0.7) {
+      if (centres.some((c) => Math.hypot(x - c.x, y - c.y) < 4 + 2 * bead)) continue;
+      assert.ok(segments.some(([a, b]) => segDistance({ x, y }, a, b) <= bead / 2 + 0.02), `bare solid at ${x}, ${y} on layer ${layer}`);
+    }
+  }
+});
+
+test('solid fill preserves narrow windows when connecting adjacent rows', () => {
+  const ring = rect(0, 0, 30, 18), hole = rect(14, 2, 0.15, 14);
+  const paths = solidLayer(ring, { bead, holes: [hole] });
+  for (const pts of paths) for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i];
+    // Intersect with the open slot analytically along X; midpoint sampling can miss a 0.15 mm opening.
+    const dx = b.x - a.x;
+    if (Math.abs(dx) < 1e-12) {
+      assert.ok(!(a.x > 14 && a.x < 14.15 && Math.max(a.y, b.y) > 2 && Math.min(a.y, b.y) < 16));
+    } else {
+      const lo = Math.max(0, Math.min((14 - a.x) / dx, (14.15 - a.x) / dx));
+      const hi = Math.min(1, Math.max((14 - a.x) / dx, (14.15 - a.x) / dx));
+      if (hi > lo + 1e-9) {
+        const ys = [lo, hi].map((t) => a.y + t * (b.y - a.y));
+        assert.ok(!(Math.max(...ys) > 2 && Math.min(...ys) < 16), 'no extrusion cuts across the narrow slot');
+      }
+    }
+  }
+});

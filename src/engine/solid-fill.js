@@ -1,6 +1,7 @@
 import { PolygonBoundary } from './boundary.js';
 import { serpentineChains } from './fill.js';
 import { offsetPolyline } from './drawing.js';
+import { segmentInside } from './fabric.js';
 
 /**
  * Solid fill for a closed shape: every part of it covered by strands laid side by side, each overlapping its neighbour
@@ -201,8 +202,14 @@ export function zigzagPaths(ring, { bead = 0.45, overlap = SOLID_OVERLAP, angle 
   // evenly spaced lanes from one side of the core to the other, never further apart than a pitch
   const count = Math.max(1, Math.ceil(span / pitch - 1e-9) + 1);
   const lanes = count === 1 ? [(box.minY + box.maxY) / 2] : Array.from({ length: count }, (_, k) => box.minY + (span * k) / (count - 1));
-  // the ends are pulled in a hair, so a join along the core's own edge counts as inside it
-  const chains = serpentineChains(boundary, 'y', lanes.map((y, k) => (k === 0 ? y + 1e-4 : k === count - 1 ? y - 1e-4 : y)), { inset: 1e-3, minLength: 1e-3, maxJog: 4 * pitch });
+  // Fill one connected branch at a time instead of sweeping back across every window in each row.
+  // A link may leave the inner fill core beside a curved rim, but its centreline must stay half a bead
+  // inside the solid. Check every boundary crossing, including windows too narrow for point sampling.
+  const connectorBoundary = new PolygonBoundary([edge, ...holeEdges].map((r) => r.map((p) => rotate(p, -angle))));
+  const chains = serpentineChains(boundary, 'y', lanes.map((y, k) => (k === 0 ? y + 1e-4 : k === count - 1 ? y - 1e-4 : y)), {
+    inset: 1e-3, minLength: 1e-3, maxJog: 4 * pitch, gap: 0,
+    allowConnector: (a, b) => segmentInside(a, b, connectorBoundary),
+  });
   for (const segments of chains) {
     const pts = [];
     for (const seg of segments) pts.push({ x: seg.from, y: seg.c }, { x: seg.to, y: seg.c });
