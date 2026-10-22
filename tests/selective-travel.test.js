@@ -80,6 +80,22 @@ test('a short travel across a known void retracts and clears it', () => {
   assert.ok(moves.slice(3).some(m => !m.extrude && m.z >= 0.4));
 });
 
+test('an empty planar opening does not cause a cosmetic hop when filament retraction is disabled', () => {
+  const moves = pair(.5, { allowTravel: () => false, retraction: { ...r, length: 0, zHop: 0 } });
+  const lastA = moves.findLastIndex(m => m.tag === 'a'), firstB = moves.findIndex(m => m.tag === 'b');
+  assert.ok(moves.slice(lastA+1, firstB).every(m => m.z === .2));
+  assert.equal(moves.filter(m => m.retract).length, 0);
+});
+
+test('zero retraction still clears raised material and filament-change pauses across an opening', () => {
+  for (const pauseBefore of [false, true]) {
+    const moves=emitStrands([strand('ridge',[p(0,-1),p(0,0,.8),p(0,1)]),strand('a',[p(-2,0),p(-.5,0)]),strand('b',[p(.5,0),p(2,0)],{pauseBefore})],{retraction:{...r,length:0,zHop:0},allowTravel:()=>false});
+    const a=moves.findLastIndex(m=>m.tag==='a'),b=moves.findIndex(m=>m.tag==='b');
+    assert.ok(moves.slice(a+1,b).some(m=>m.z>=1-1e-9),'actual printed obstacle clearance remains');
+    assert.equal(moves.filter(m=>m.retract).length,0);
+  }
+});
+
 test('the travel sweep accounts for the nozzle and a variable-width printed bead', () => {
   const ridge = strand('ridge', [p(0, -1), { ...p(0, 0, 0.8), width: 1.4 }, { ...p(0, 1), width: 1.4 }]);
   const moves = emitStrands([ridge, strand('flat', [p(-2, 1.7), p(-0.5, 1.7)]), strand('next', [p(0.5, 1.7), p(2, 1.7)])], { retraction: { ...r, nozzleRadius: 0.2, travelRadius: 0.425 } });

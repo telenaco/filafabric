@@ -33,7 +33,7 @@ export function emitStrands(strands, { startLift = null, travelLift = null, retr
   const printedGeometry = new PrintedClearance(retraction);
   const planTravel = (from, strand) => {
     const to = strand.pts[0], boundary = strand.travelBoundary ?? travelBoundary;
-    // A known opening is never treated as a tiny harmless planar step. Lift and retract across it.
+    // A known opening can force retraction; collision clearance is still decided from printed geometry.
     const acrossVoid = (allowTravel && !allowTravel(from, to)) || (boundary && !segmentInside(from, to, boundary));
     return strandTravel(from, to, printedGeometry, retraction, travelLift, strand.pauseBefore, acrossVoid);
   };
@@ -106,8 +106,8 @@ export function strandTravel(from, to, printedMaxZ, retraction, lift = travelLif
   printedMaxZ = typeof printedMaxZ === 'number' ? printedMaxZ : pause ? printedMaxZ.maxZ : printedMaxZ.heightAlong(from, to);
   const distance = from ? Math.hypot(to.x - from.x, to.y - from.y) : 0;
   const retract = !!from && (retraction?.length ?? 0) > 0 && (pause || acrossVoid || distance >= (retraction.minTravel ?? 0));
-  const required = !!from && (pause || acrossVoid || Math.abs(from.z - to.z) > 1e-9 || printedMaxZ > Math.max(from.z, to.z) + 1e-9);
-  const optional = from && retraction?.liftOnRetractOnly && !retract && !pause && !acrossVoid ? 0 : lift;
+  const required = !!from && (pause || (acrossVoid && retract) || Math.abs(from.z - to.z) > 1e-9 || printedMaxZ > Math.max(from.z, to.z) + 1e-9);
+  const optional = from && retraction?.liftOnRetractOnly && !retract && !pause ? 0 : lift;
   const hop = required ? Math.max(lift, retraction?.clearance ?? 0.2) : optional;
   return { retract, safeZ: Math.max(printedMaxZ, from?.z ?? to.z, to.z) + hop };
 }

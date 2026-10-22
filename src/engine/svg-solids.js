@@ -9,6 +9,7 @@ import { headerNotes } from './brim.js';
 import { MAX_MOVES } from './tiler.js';
 import { ConfigError } from './params.js';
 import { adaptiveSolidPaths } from './adaptive-solids.js';
+import { joinDenseInfill } from './solid-infill-joins.js';
 
 /**
  * Green shapes of a drawing print solid, after the pattern and on top of it: the pattern is made as usual, over the
@@ -90,7 +91,7 @@ export function solidStrands(solids, under, { bead = 0.45, layerHeight = 0.2, la
       }));
       // Only reorder this shape at this height: keep layer precedence and a coil's spiral direction.
       const ordered = strands.length > 1 ? orderStrands(strands, { start: out.at(-1)?.pts.at(-1), improve: true }) : strands;
-      out.push(...ordered);
+      out.push(...(adaptive ? joinDenseInfill(ordered, { boundary: travelBoundary, bead, layerHeight }) : ordered));
     });
   }
   return { strands: out, shapes };
