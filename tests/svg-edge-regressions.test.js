@@ -132,6 +132,6 @@ test('SVG design panel exports the actual document once instead of sample hearts
   const sections = text.slice(text.indexOf('; texture section 1'), text.indexOf('; BODY END'));
   assert.doesNotMatch(sections, /\bE\d/, 'no sample geometry in either texture section');
   // The 60 x 30 mm document is centred on the 250 x 210 mm bed: its one line remains (2,7) to (58,7).
-  // (approached at Foamy's own 0.2 mm lift and 180 mm/s travel)
-  assert.match(text, /; BODY START\nG1 X97 Y97 Z0\.4 F10800\nG1 Z0\.2 F720\nG1 X153 E/);
+  // Zero filament retraction means no optional hop on this unobstructed approach.
+  assert.match(text, /; BODY START\nG1 X97 Y97 Z0\.2 F10800\nG1 X153 E/);
 });

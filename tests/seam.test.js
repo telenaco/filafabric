@@ -4,13 +4,13 @@ import { emitStrands } from '../src/engine/emit.js';
 import { resolveConfig } from '../src/engine/params.js';
 import { writeGcode } from '../src/engine/gcode.js';
 import { computeStats } from '../src/engine/stats.js';
-import { defaultProfiles } from './helpers.js';
+import { defaultProfiles, retractingMaterial } from './helpers.js';
 
 // How a strand ends before a travel (emit.js `seam`): a gap before a loop's own start, coasting, and a wipe that pulls
 // the retraction in as it goes over what was just printed.
 
 const { machine, material } = defaultProfiles();
-const cfg = resolveConfig(machine, material, { sample_width: 60, sample_height: 40 });
+const cfg = resolveConfig(machine, retractingMaterial(material), { sample_width: 60, sample_height: 40 });
 const retraction = cfg.derived.retraction;
 const square = (x, y, s = 10) => ({ id: `sq-${x}`, kind: 'base', pts: [[x, y], [x + s, y], [x + s, y + s], [x, y + s], [x, y]].map(([px, py]) => ({ x: px, y: py, z: 0.2 })) });
 const line = (x, y) => ({ id: `line-${x}`, kind: 'base', pts: [{ x, y, z: 0.2 }, { x: x + 20, y, z: 0.2 }] });
@@ -77,7 +77,7 @@ test('in the G-code the wipe pulls the filament in at the retraction speed while
   assert.ok(Math.abs(pulls.reduce((n, l) => n - Number(/E(-[\d.]+)/.exec(l)[1]), 0) - retraction.length) < 1e-4);
   assert.equal(body.filter((l) => /^G1 E-/.test(l)).length, 0, 'no separate retraction');
   assert.ok(body.some((l) => l === `G1 E${retraction.length + retraction.restartExtra} F${Math.round(retraction.deretractSpeed * 60)}`), 'primed back with its extra');
-  // 3 mm of wipe pulling 4 mm at 65 mm/s: 48.75 mm/s along it
+  // Wipe XY speed is limited so its distributed filament pull uses the configured retraction speed.
   const f = Number(/F(\d+)/.exec(pulls.find((l) => /F\d+/.test(l)))[1]);
   assert.equal(f, Math.round(((3 * retraction.speed) / retraction.length) * 60));
   const stats = computeStats(moves, cfg, []);

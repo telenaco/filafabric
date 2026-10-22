@@ -3,21 +3,22 @@ import assert from 'node:assert/strict';
 import { resolveConfig } from '../src/engine/params.js';
 import { computeStats } from '../src/engine/stats.js';
 import { writeGcode, GcodeWriter } from '../src/engine/gcode.js';
-import { defaultProfiles } from './helpers.js';
+import { defaultProfiles, retractingMaterial } from './helpers.js';
 
 test('export records resolved flow, temperatures and travel policy', () => {
   const { machine, material } = defaultProfiles(), cfg = resolveConfig(machine, material);
   const line = new GcodeWriter(cfg).header().find((s) => s.startsWith('; resolved print setup '));
   assert.ok(line, 'resolved profile values belong in the export');
   const data = JSON.parse(line.slice('; resolved print setup '.length));
-  assert.equal(data.flowMultiplier, 0.73);
-  assert.equal(data.temperatures.first, 238);
-  assert.equal(data.retraction.minTravel, 2);
+  assert.ok(Math.abs(data.flowMultiplier - 1.0925) < 1e-9);
+  assert.equal(data.temperatures.first, 240);
+  assert.equal(data.retraction.minTravel, 1);
+  assert.equal(data.retraction.length, 0);
   assert.equal(data.retraction.liftOnRetractOnly, true);
 });
 
 test('motion diagnostics separate extrusion, travel and retract time and record actual heights', () => {
-  const { machine, material } = defaultProfiles(), cfg = resolveConfig(machine, material, { sample_width: 20, sample_height: 20 });
+  const { machine, material } = defaultProfiles(), cfg = resolveConfig(machine, retractingMaterial(material), { sample_width: 20, sample_height: 20 });
   const moves = [
     { x: 1, y: 1, z: 0.2, cls: 'travel', extrude: false },
     { x: 11, y: 1, z: 0.2, cls: 'base', extrude: true, tag: 'a' },
@@ -46,9 +47,10 @@ test('motion diagnostics separate extrusion, travel and retract time and record 
 test('streamed panels record actual motion diagnostics and honor the travel threshold', async () => {
   const { exportPanel } = await import('../src/engine/panel.js');
   const { machine, material } = defaultProfiles();
-  material.retraction.min_travel = 1000;
+  const active = retractingMaterial(material);
+  active.retraction.min_travel = 1000;
   let text = '';
-  await exportPanel({ machine, material, design: 'zigzag', width: 20, height: 20, repeat: 20, brim: 0 }, { write: async (part) => { text += part; } });
+  await exportPanel({ machine, material: active, design: 'zigzag', width: 20, height: 20, repeat: 20, brim: 0 }, { write: async (part) => { text += part; } });
   const body = text.split('; BODY START')[1].split('; BODY END')[0];
   assert.ok(!/^G1 E-/m.test(body), 'the streamed path respects the chosen minimum travel');
   const line = text.split('\n').find((s) => s.startsWith('; actual motion summary '));

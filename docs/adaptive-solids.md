@@ -8,7 +8,7 @@ Each flat region and its holes are triangulated into a watertight one-layer mesh
 
 Width travels with its incoming segment, including after clipping, reversal and loop-seam rotation. Wall paths precede dense core paths within each solid layer. The already resolved mesh order, direction, raised crossings and colour-change precedence remain constraints on path optimization. The travel planner uses locally printed geometry to clear nearby raised strands rather than the highest distant point everywhere. Travel across a known void retains a retract and lift even below the normal travel-length threshold; streamed callers without a local height history retain the conservative global fallback.
 
-See `foamy-calibration.md` for recording measured bead width and qualified flat-print speed. No new physical calibration is assumed here. The tested 238 C and retraction settings remain the defaults.
+See `foamy-calibration.md` for recording measured bead width and qualified flat-print speed. No new physical calibration is assumed here. The later user-authorized comparison defaults follow the supplied Prusa file; see `prusa-profile-alignment.md`. This supersedes the earlier 238 C / active-retraction defaults.
 
 ## Verification
 

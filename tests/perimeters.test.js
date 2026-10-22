@@ -57,7 +57,8 @@ test('export perimeters remain independent of one solid layer and two non-planar
   assert.equal(pattern.length, 2);
   assert.equal(out.layerPlan.patternLayers, 2);
   assert.ok(pattern[1].pts.some((p) => p.z > 0.3));
-  assert.ok(pattern.flatMap((s) => s.pts).every((p) => p.x >= 0.945 - 1e-4 && p.y >= 0.945 - 1e-4));
+  const clearance = out.cfg.t.extrusion_width * (0.5 + 2 * 0.8);
+  assert.ok(pattern.flatMap((s) => s.pts).every((p) => p.x >= clearance - 1e-4 && p.y >= clearance - 1e-4));
   assert.ok(out.gcode.includes('Perimeters: 2'));
 });
 

@@ -313,7 +313,8 @@ test('imported drawing lines print their passes on the first layer under any pat
   assert.equal(first.length, 1, 'three passes, printed as one stroke');
   const ys = [...new Set(first[0].pts.map((p) => Math.round(p.y * 1000) / 1000))].sort((a, b) => a - b);
   assert.equal(ys.length, 3, 'three runs');
-  assert.ok(Math.abs(ys[1] - ys[0] - 0.36) < 1e-6 && Math.abs(ys[2] - ys[1] - 0.36) < 1e-6);
+  const pitch = composed.cfg.t.extrusion_width * 0.8;
+  assert.ok(Math.abs(ys[1] - ys[0] - pitch) < 1e-6 && Math.abs(ys[2] - ys[1] - pitch) < 1e-6);
 });
 
 test('a small motif on a big page is cut down to the drawing, with its lines and colours unchanged', () => {

@@ -3,27 +3,26 @@ import assert from 'node:assert/strict';
 import { resolveConfig } from '../src/engine/params.js';
 import { generateDesignExport } from '../src/engine/design-export.js';
 import { designById } from '../src/ui/designs.js';
-import { defaultProfiles, loadProfile } from './helpers.js';
+import { defaultProfiles, loadProfile, retractingMaterial } from './helpers.js';
 
-// The Filaflex Foamy profile as the full-bed seam test (FOAM99_45PAIRS, 21 October 2026) found it cleanest on the MK3S,
-// and the studio using what the profile says: its lift on a travel, its travel speed and its seam gap.
+// Current defaults follow the user's supplied Prusa comparison. Retraction mechanics opt in explicitly below.
 
 const { machine, material } = defaultProfiles();
 const zigzag = (mat = material, outline = null) => generateDesignExport({ machine, material: mat, design: 'zigzag', settings: designById('zigzag').defaults(), width: 40, height: 30, outline, extraLayers: 0, brim: 2 });
 
-test('Filaflex Foamy: 238 C, retract 1 mm at 40 mm/s, the same pushed back at 20 mm/s, lift 0.2 mm, travel 180 mm/s, seam gap 0.2 mm', () => {
+test('Filaflex Foamy follows the Prusa reference: 240 C, no filament retraction or optional hop, travel 180 mm/s, seam gap 0.2 mm', () => {
   const cfg = resolveConfig(machine, material);
-  assert.deepEqual(cfg.derived.temperatures, { first: 238, print: 238, bed: 50 });
+  assert.deepEqual(cfg.derived.temperatures, { first: 240, print: 240, bed: 50 });
   const r = cfg.derived.retraction;
   assert.deepEqual({ length: r.length, speed: r.speed, deretractSpeed: r.deretractSpeed, restartExtra: r.restartExtra, zHop: r.zHop, minTravel: r.minTravel, seamGap: r.seamGap },
-    { length: 1, speed: 40, deretractSpeed: 20, restartExtra: 0, zHop: 0.2, minTravel: 2, seamGap: 0.2 });
+    { length: 0, speed: 35, deretractSpeed: 25, restartExtra: 0, zHop: 0, minTravel: 1, seamGap: 0.2 });
   assert.equal(cfg.t.speed_travel, 180, 'the profile\'s travel speed');
   assert.equal(resolveConfig(machine, material, { speed_travel: 120 }).t.speed_travel, 120, 'a design\'s own travel speed still wins');
 });
 
 test('required travels retain clearance and short flat travels can omit the optional hop', () => {
   const outline = Array.from({ length: 6 }, (_, i) => { const x = i * 7; return [{ x, y: 0 }, { x: x + 5, y: 0 }, { x: x + 5, y: 30 }, { x, y: 30 }]; });
-  const r = zigzag(material, outline);
+  const r = zigzag(retractingMaterial(material), outline);
   let top = -Infinity;
   const over = [];
   for (let i = 1; i < r.moves.length; i++) {
@@ -38,7 +37,7 @@ test('required travels retain clearance and short flat travels can omit the opti
   assert.ok(over.some((d) => Math.abs(d - 0.2) < 1e-9), 'required lifts retain 0.2 mm clearance');
   assert.ok(Math.max(...r.moves.filter((m) => !m.extrude).slice(2).map((m) => m.z)) < 3, 'no 3 mm lifts');
   assert.match(r.gcode, /^G1 X[\d.]+ Y[\d.]+ F10800$/m, 'travels at 180 mm/s');
-  assert.match(r.gcode, /^M109 S238/m);
+  assert.match(r.gcode, /^M109 S240/m);
   assert.match(r.gcode, /^G1 E-1 F2400$/m);
   assert.match(r.gcode, /^G1 E1 F1200$/m);
 });

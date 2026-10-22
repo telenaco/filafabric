@@ -4,7 +4,7 @@ import { distanceField, contourLoops, generateSpiralTextile, generateSpiral } fr
 import { generateWeaveTextile, generateWeave, WEAVE_BINDINGS, WEAVE_BINDING_IDS, MAX_PIECES } from '../src/engine/weave.js';
 import { PolygonBoundary } from '../src/engine/boundary.js';
 import { ConfigError } from '../src/engine/params.js';
-import { defaultProfiles } from './helpers.js';
+import { defaultProfiles, retractingMaterial } from './helpers.js';
 
 const { machine, material } = defaultProfiles();
 const rect = (w, h) => new PolygonBoundary([[{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: 0, y: h }]]);
@@ -163,13 +163,14 @@ test('an outline weaves only inside it', () => {
 
 test('generateWeave returns moves with lifts, stats and G-code, deterministically', () => {
   const params = { width: 24, height: 24, pitch: 4, binding: 'plain' };
-  const r = generateWeave(machine, material, params);
+  const active = retractingMaterial(material);
+  const r = generateWeave(machine, active, params);
   assert.ok(r.stats.hops > 50, 'a lift for every piece');
   assert.equal(r.stats.crossings, 36);
-  assert.ok(r.moves.some((m) => m.retract === 'retract'), 'the Foamy profile retracts between pieces');
-  const without = generateWeave(machine, { ...material, retraction: { ...material.retraction, length: 0 } }, params);
+  assert.ok(r.moves.some((m) => m.retract === 'retract'), 'explicit active retraction applies between pieces');
+  const without = generateWeave(machine, material, params);
   assert.ok(!without.moves.some((m) => m.retract), 'a profile that asks for no retraction gets none');
-  assert.equal(generateWeave(machine, material, params).gcode, r.gcode);
+  assert.equal(generateWeave(machine, active, params).gcode, r.gcode);
 });
 
 test('too many pieces is refused plainly', () => {

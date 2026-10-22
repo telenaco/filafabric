@@ -46,7 +46,7 @@ test('wipe and subsequent travel share one balanced retraction based on the wipe
 test('Foamy selective travel threshold is adjustable and survives saved print settings', () => {
   const { machine, material } = defaultProfiles();
   const configured = resolveConfig(machine, material).derived.retraction;
-  assert.equal(configured.minTravel, 2);
+  assert.equal(configured.minTravel, 1);
   assert.equal(configured.liftOnRetractOnly, true);
   const print = sanitizePrint({ retractMinTravel: 3.5, travelLift: 0 });
   const changed = resolveConfig(machine, withFilamentSettings(material, print)).derived.retraction;

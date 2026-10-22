@@ -120,6 +120,9 @@ export class GcodeWriter {
       print_width: fmt(Math.min(machine.bed.width,t.sample_width+2*MESH_MARGIN),1),
       print_height: fmt(Math.min(machine.bed.depth,t.sample_height+2*MESH_MARGIN),1),
       machine_limits: limitsBlock(this.cfg), prime_line: primeBlock(this.cfg),
+      // Firmware-specific current commands are opt-in through an explicit machine profile only.
+      motor_current: machine.motor_current ? [`${machine.motor_current.command} E${machine.motor_current.extruder} ; extruder motor current`] : [],
+      motor_current_restore: machine.motor_current ? [`${machine.motor_current.command} E${machine.motor_current.restore_extruder ?? machine.motor_current.extruder} ; restore extruder motor current`] : [],
       raise_z: fmt(Math.min(this.maxZ+1,machine.bed.max_z),2), park_z: fmt(Math.min(this.maxZ+49,machine.bed.max_z),2),
     };
   }
@@ -127,7 +130,7 @@ export class GcodeWriter {
     const {machine,material,t}=this.cfg;
     const out=['; Textile G-code generator v1', '; machine: '+machine.id, '; material: '+material.id];
     const d = this.cfg.derived;
-    out.push('; resolved print setup '+JSON.stringify({ temperatures: d.temperatures, flowMultiplier: d.multiplier, filamentDiameter: d.filamentDiameter, extrusionWidth: t.extrusion_width, layerHeight: t.layer_height, flatCalibration: d.flatCalibration, flatFlowCorrection: d.flatFlowCorrection, flatSpeed: t.speed_flat, maxFilamentVolume: d.maxVolActual, retraction: d.retraction }));
+    out.push('; resolved print setup '+JSON.stringify({ temperatures: d.temperatures, flowMultiplier: d.multiplier, filamentDiameter: d.filamentDiameter, extrusionWidth: t.extrusion_width, layerHeight: t.layer_height, flatCalibration: d.flatCalibration, flatFlowCorrection: d.flatFlowCorrection, flatSpeed: t.speed_flat, maxFilamentVolume: d.maxVolActual, retraction: d.retraction, motorCurrent: machine.motor_current ?? null, machineFlowMultiplier: machine.extrusion.flow_multiplier ?? 1 }));
     if(info.stats) {
       out.push('; estimated time (no acceleration): '+fmt(info.stats.timeSec/60,1)+' min');
       out.push('; filament: '+fmt(info.stats.filamentMm,1)+' mm, loops: '+info.stats.loops);
@@ -160,7 +163,10 @@ export class GcodeWriter {
     if(m.extrude){this.minPrintZ=Math.min(this.minPrintZ,fromZ,m.z);this.maxPrintZ=Math.max(this.maxPrintZ,fromZ,m.z);}else{this.travelMoves++;if(this.moves>1)this.travelMm+=Math.hypot(dx,dy);}
     const parts=['G1'],X=fmt(m.x+o.x,3),Y=fmt(m.y+o.y,3),Z=fmt(m.z,3);
     if(X!==this.outX){parts.push('X'+X);this.outX=X;} if(Y!==this.outY){parts.push('Y'+Y);this.outY=Y;} if(Z!==this.outZ){parts.push('Z'+Z);this.outZ=Z;}
-    if(m.extrude){this.extrudingMoves++;this.cumE+=segmentE(ds,m.cls,this.cfg,m.flow??1);const target=roundTo(this.cumE,5);parts.push('E'+fmt(target-this.emittedE,5));this.emittedE=target;}
+    if(m.extrude){this.extrudingMoves++;this.cumE+=segmentE(ds,m.cls,this.cfg,m.flow??1);
+      // Coordinate rounding can collapse tiny kernel segments. Carry their E forward instead of pushing at rest.
+      if(parts.length===1)return out;
+      const target=roundTo(this.cumE,5);parts.push('E'+fmt(target-this.emittedE,5));this.emittedE=target;}
     // a wipe pulls filament in as it moves (emit.js), as fast as a retraction pulls it
     else if(m.pull>0) parts.push('E-'+fmt(m.pull,5));
     const speed=moveSpeedOf(m,dx,dy,dz,ds,this.cfg,r),F=Math.round(speed*60);this.timeSec+=ds/speed;this.timeByKind[m.extrude?'extrusion':'travel']+=ds/speed;

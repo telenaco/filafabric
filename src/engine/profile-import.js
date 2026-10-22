@@ -73,7 +73,7 @@ export function parseConfigText(text) {
 
 /* ---------- G-code ---------- */
 
-const KNOWN = ['machine_limits', 'prime_line', 'first_layer_temp', 'bed_temp', 'nozzle_diameter', 'printer_model_check', 'print_min_x', 'print_min_y', 'print_width', 'print_height', 'raise_z', 'park_z'];
+const KNOWN = ['motor_current', 'motor_current_restore', 'machine_limits', 'prime_line', 'first_layer_temp', 'bed_temp', 'nozzle_diameter', 'printer_model_check', 'print_min_x', 'print_min_y', 'print_width', 'print_height', 'raise_z', 'park_z'];
 
 /** `[name]` or `{name}`, with an optional first-extruder index, for any of the names: the same value in either syntax. */
 const placeholder = (names) => {
@@ -155,6 +155,7 @@ function genericStart() {
     'M109 S{first_layer_temp} ; wait for extruder',
     'G28 ; home all axes',
     'M107 ; fan off',
+    'M221 S100 ; profile flow is applied to computed E',
     '{prime_line}',
     'G92 E0',
   ];
@@ -178,7 +179,9 @@ function startBlock(text, notes, label) {
     return genericStart();
   }
   if (dropped.length) notes.push(`${label}: ${dropped.length} start G-code line(s) used slicer macros this tool cannot fill and were left out.`);
-  const out = [...lines];
+  // M221 was imported into machine.extrusion.flow_multiplier. Applying it again in firmware would square the scale.
+  const out = lines.filter(line => !/^\s*M221\b[^;]*\bS\s*[+-]?(?:\d+(?:\.\d*)?|\.\d+)/i.test(line));
+  out.unshift('M221 S100 ; profile flow is applied to computed E');
   if (!out.some((l) => l.includes('{machine_limits}'))) out.unshift('{machine_limits}');
   // the printer's own purge is kept and this tool's prime line left out, so the nozzle is not primed twice
   if (!out.some((l) => l.includes('{prime_line}')) && !primes(out)) out.push('{prime_line}', 'G92 E0');
@@ -235,7 +238,104 @@ function limitsFrom(get) {
   return { default_mode: 'normal', emit_to_gcode: usage === 'emit_to_gcode' && flavor !== 'klipper', modes };
 }
 
-function machineFrom(get, { id, name, source, notes }) {
+/** Resolve only the known machine-command conditions. Unknown conditions keep neither branch. */
+function machineCondition(expression, get) {
+  const match = /^print_settings_id\s*=~\s*\/\.\*(?:\(([^()]*)\)|([^()]*))\.\*\/$/.exec(expression.trim());
+  if (match) {
+    const preset = get('print_settings_id'), alternatives = match[1] ?? match[2];
+    // Literal alternatives and single-character dots have no nested repetition or executable expressions.
+    if (preset === undefined || !/^[A-Za-z0-9 @._|\-]+$/.test(alternatives)) return null;
+    return alternatives.split('|').some(part => new RegExp(part).test(String(preset)));
+  }
+  const height = /^layer_height\s*(<=|>=|==|!=|<|>)\s*(\d*\.?\d+)$/.exec(expression.trim());
+  if (!height) return null;
+  const actual = num(get('layer_height')), expected = Number(height[2]);
+  if (actual === null) return null;
+  switch (height[1]) {
+    case '<': return actual < expected;
+    case '>': return actual > expected;
+    case '<=': return actual <= expected;
+    case '>=': return actual >= expected;
+    case '==': return actual === expected;
+    default: return actual !== expected;
+  }
+}
+
+function machineCommandText(text, get) {
+  const input = String(text ?? ''), stack = [], output = [];
+  const tokens = /\{(if\s+[^}]+|elsif\s+[^}]+|else|endif)\}/g;
+  let last = 0;
+  const active = () => stack.every(frame => frame.active);
+  for (const match of input.matchAll(tokens)) {
+    if (active()) output.push(input.slice(last, match.index));
+    const token = match[1];
+    if (token.startsWith('if ')) {
+      const answer = machineCondition(token.slice(3), get), parent = active();
+      stack.push({ parent, known: answer !== null, matched: answer === true, active: parent && answer === true });
+    } else if (token === 'endif') {
+      if (!stack.length) return '';
+      stack.pop();
+    } else {
+      const frame = stack.at(-1);
+      if (!frame) return '';
+      if (token === 'else') {
+        frame.active = frame.parent && frame.known && !frame.matched;
+        frame.matched = true;
+      } else {
+        const answer = machineCondition(token.slice(6), get);
+        frame.known &&= answer !== null;
+        frame.active = frame.parent && frame.known && !frame.matched && answer === true;
+        frame.matched ||= answer === true;
+      }
+    }
+    last = match.index + match[0].length;
+  }
+  if (stack.length) return '';
+  output.push(input.slice(last));
+  return output.join('');
+}
+
+function lastMachineValue(text, command, axis) {
+  let value;
+  const pattern = new RegExp(`^\\s*${command}\\b[^;]*?\\b${axis}\\s*([+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+))(?=\\s|$)`, 'i');
+  for (const line of String(text ?? '').split(/\r?\n/)) {
+    const match = pattern.exec(line.replace(/;.*$/, ''));
+    if (match && Number.isFinite(Number(match[1])) && Number(match[1]) > 0) value = Number(match[1]);
+  }
+  return value;
+}
+
+/** Concrete startup commands precede the first layer marker, not the last motor reset in the file. */
+function concreteMachineCommands(text) {
+  const trailer = /^;\s*(?:prusaslicer|superslicer|slic3r)_config\s*=\s*begin/im.exec(String(text));
+  if (!trailer) return null;
+  const commands = String(text).slice(0, trailer.index);
+  const firstLayer = /^;\s*(?:LAYER_CHANGE\b|LAYER\s*:|Z\s*:)/im.exec(commands);
+  if (!firstLayer) return null;
+  const start = commands.slice(0, firstLayer.index), end = commands.slice(firstLayer.index);
+  return {
+    current: lastMachineValue(start, 'M907', 'E'),
+    restore: lastMachineValue(end, 'M907', 'E'),
+    flow: lastMachineValue(start, 'M221', 'S'),
+  };
+}
+
+function motorCurrentTemplate(lines, token, before = null) {
+  let replaced = false;
+  const out = lines.flatMap(line => {
+    if (!/^\s*M907\s+E[+-]?(?:\d+(?:\.\d*)?|\.\d+)\s*(?:;.*)?$/i.test(line)) return [line];
+    if (replaced) return [];
+    replaced = true;
+    return [token];
+  });
+  if (!replaced) {
+    const index = before ? out.findIndex(line => before.test(line)) : -1;
+    out.splice(index < 0 ? out.length : index, 0, token);
+  }
+  return out;
+}
+
+function machineFrom(get, { id, name, source, notes, concreteCode = null }) {
   const bed = pick(bedFromShape(get('bed_shape') ?? get('printable_area')), null);
   if (!bed) throw new ProfileImportError([get('inherits')
     ? 'This preset inherits its printer settings from another file. Export a complete config (including bed_shape / printable_area), or a bundle containing its parent presets.'
@@ -247,6 +347,13 @@ function machineFrom(get, { id, name, source, notes }) {
   if (get('layer_height') !== undefined && !(layerHeight > 0 && layerHeight <= 0.8 * (nozzle ?? 0.4) + 1e-9)) throw new ProfileImportError(['layer_height must be positive and at most 80% of the nozzle diameter']);
   if (nozzle === null) notes.push(`${name}: no nozzle diameter is given; 0.4 mm is assumed. Check it before printing.`);
   if (layerHeight === null) notes.push(`${name}: no print layer height is given; a nozzle-based default is used. Import a complete config to use your slicer's print preset.`);
+  const sourceStart = get('start_gcode') ?? get('machine_start_gcode');
+  const sourceEnd = get('end_gcode') ?? get('machine_end_gcode');
+  const selectedStart = machineCommandText(sourceStart, get), selectedEnd = machineCommandText(sourceEnd, get);
+  // A sliced file is stronger evidence than a footer template or its named preset.
+  const current = concreteCode ? concreteCode.current : lastMachineValue(selectedStart, 'M907', 'E');
+  const restore = concreteCode ? concreteCode.restore : lastMachineValue(selectedEnd, 'M907', 'E');
+  const flowPercent = concreteCode ? concreteCode.flow : lastMachineValue(selectedStart, 'M221', 'S');
   const x0 = Math.min(10, bed.width / 4);
   const machine = {
     id,
@@ -254,7 +361,8 @@ function machineFrom(get, { id, name, source, notes }) {
     firmware: flavor,
     source,
     bed: { width: bed.width, depth: bed.depth, max_z: pick(num(get('max_print_height')), num(get('printable_height')), 200) },
-    extrusion: { relative_e: true },
+    extrusion: { relative_e: true, ...(flowPercent !== undefined ? { flow_multiplier: flowPercent / 100 } : {}) },
+    ...(current !== undefined ? { motor_current: { command: 'M907', extruder: current, restore_extruder: restore ?? current } } : {}),
     accel_syntax: flavor === 'marlin2' || flavor === 'klipper' ? 'P_R_T' : 'S_T',
     output: { format: 'gcode', extension: '.gcode' },
     limits: limitsFrom(get),
@@ -263,9 +371,13 @@ function machineFrom(get, { id, name, source, notes }) {
     ...(layerHeight !== null ? { print_defaults: { layer_height: layerHeight } } : {}),
     // no purge area is known: the prime line goes along the front edge, inside the bed
     prime: { x0, x1: Math.min(bed.width - 10, x0 + 60), y: 1, liftZ: 2, filamentMm: 12 },
-    start_gcode: startBlock(get('start_gcode') ?? get('machine_start_gcode'), notes, name),
-    end_gcode: endBlock(get('end_gcode') ?? get('machine_end_gcode'), notes, name),
+    start_gcode: startBlock(sourceStart, notes, name),
+    end_gcode: endBlock(sourceEnd, notes, name),
   };
+  if (machine.motor_current) {
+    machine.start_gcode = motorCurrentTemplate(machine.start_gcode, '{motor_current}');
+    machine.end_gcode = motorCurrentTemplate(machine.end_gcode, '{motor_current_restore}', /^\s*M84\b/i);
+  }
   return machine;
 }
 
@@ -292,11 +404,14 @@ function materialFrom(get, { id, name, source, notes }) {
   const volumetric = num(get('filament_max_volumetric_speed'));
   const retractLength = pick(num(get('filament_retract_length')), num(get('filament_retraction_length')), num(get('retract_length')), 0.8);
   const retractSpeed = pick(num(get('filament_retract_speed')), num(get('filament_retraction_speed')), num(get('retract_speed')), 35);
+  const returnSpeed = ['filament_deretract_speed', 'filament_deretraction_speed', 'deretract_speed'].map(key => num(get(key))).find(value => value > 0) ?? retractSpeed;
+  const firstWidth = num(get('first_layer_extrusion_width'));
   const material = {
     id,
     name,
     source,
     filament_diameter: diameter,
+    ...(firstWidth > 0 ? { print_defaults: { extrusion_width: firstWidth } } : {}),
     density: pick(num(get('filament_density')), 1.24),
     temperature: { first_layer: first, print: temperature },
     bed_temperature: bed,
@@ -309,7 +424,8 @@ function materialFrom(get, { id, name, source, notes }) {
     retraction: {
       length: retractLength,
       speed: retractSpeed,
-      deretract_speed: retractSpeed,
+      deretract_speed: returnSpeed,
+      ...(get('retract_lift') !== undefined || get('filament_retract_lift') !== undefined ? { lift_on_retract_only: true } : {}),
       z_hop: pick(num(get('filament_retract_lift')), num(get('filament_z_hop')), num(get('retract_lift')), 0),
       min_travel: pick(num(get('retract_before_travel')), num(get('retraction_minimum_travel')), 2),
       restart_extra: pick(num(get('filament_retract_restart_extra')), num(get('retract_restart_extra')), num(get('filament_retract_restart_extra_length')), 0),
@@ -396,6 +512,7 @@ export function importProfiles(text, filename = 'profile') {
       if (section.kind === 'printer' && print) {
         const printValues = resolve(print);
         if (printValues.layer_height !== undefined) values.layer_height = printValues.layer_height;
+        values.print_settings_id = print.name;
       }
       const get = (key) => values[key];
       // a printer and a filament in one file are each named as the slicer names them
@@ -406,7 +523,7 @@ export function importProfiles(text, filename = 'profile') {
       const wantsMaterial = section.kind === 'filament' || (section.kind === 'config' && get('filament_diameter') !== undefined);
       if (wantsMachine) {
         const named = nameOf('printer_settings_id');
-        machines.push(machineFrom(get, { id: slug(named || base) + (named ? '' : suffix), name: named || plain, source, notes }));
+        machines.push(machineFrom(get, { id: slug(named || base) + (named ? '' : suffix), name: named || plain, source, notes, concreteCode: section.kind === 'config' ? concreteMachineCommands(text) : null }));
       }
       if (wantsMaterial) {
         const named = nameOf('filament_settings_id');

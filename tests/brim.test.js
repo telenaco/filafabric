@@ -93,7 +93,7 @@ test('short valid bed ties weld exposed motif edges to the brim without changing
   assert.deepEqual(result.strands.slice(-body.length),body);
   assert.ok(result.brim.connections>=1);
   assert.equal(contactGraph(result.strands).components,1);
-  checkSafe(result.strands.filter(s=>s.brim),[rectangle()]);
+  checkSafe(result.strands.filter(s=>s.brim),[rectangle()],result.cfg.t.extrusion_width);
 });
 
 

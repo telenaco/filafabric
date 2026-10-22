@@ -195,29 +195,33 @@ export function resolveConfig(machine, material, overrides = {}) {
   const measuredWidth = material?.flow?.measured_line_width;
   const t = { ...DEFAULT_TEXTILE,
     ...(machine?.nozzle_diameter > 0 ? { nozzle_diameter: machine.nozzle_diameter, extrusion_width: Math.round(machine.nozzle_diameter * 1.125 * 10000) / 10000 } : {}),
-    ...(measuredWidth > 0 ? { extrusion_width: measuredWidth } : {}),
     // a filament may say how fast to travel (`travel_speed_hint`): a design's own travel speed still wins
     ...(material?.travel_speed_hint > 0 ? { speed_travel: material.travel_speed_hint } : {}),
-    layer_height: defaultLayerHeight(machine), ...(material?.print_defaults ?? {}), ...overrides };
+    layer_height: defaultLayerHeight(machine), ...(material?.print_defaults ?? {}),
+    ...(measuredWidth > 0 ? { extrusion_width: measuredWidth } : {}), ...overrides };
   const errors = [...profileErrors, ...validateTextile(t)];
   if (errors.length) throw new ConfigError(errors);
 
   const mode = t.limits_mode in machine.limits.modes ? t.limits_mode : machine.limits.default_mode;
-  const multiplier = material.flow.multiplier;
+  // M221 from the printer profile is incorporated in E once; emitted firmware flow stays at 100%.
+  const printerFlow = machine.extrusion.flow_multiplier ?? 1;
+  const multiplier = material.flow.multiplier * printerFlow;
   const r = material.retraction;
   const overhang = t.include_loops && t.boundary_policy === 'feet-only' ? t.loop_length + (t.random_enabled ? t.amp_length : 0) : 0;
   const derived = {
     filamentDiameter: material.filament_diameter,
     multiplier,
+    materialMultiplier: material.flow.multiplier,
+    printerFlowMultiplier: printerFlow,
     // Legacy profiles express their ceiling before the multiplier. An explicit ceiling is raw filament input.
     maxVolActual: material.flow.max_volumetric_speed_actual ?? material.flow.max_volumetric_speed_nominal * multiplier,
     // Width measurement changes coverage, not the E used for the calibration line. Air strands are independent.
     flatCalibration: measuredWidth > 0 ? {
-      measuredWidth, commandedWidth: material.flow.calibration_line_width ?? 0.45,
+      measuredWidth, commandedWidth: material.flow.calibration_line_width ?? material.print_defaults?.extrusion_width ?? 0.45,
       layerHeight: material.flow.calibration_layer_height ?? 0.2,
     } : null,
     flatFlowCorrection: measuredWidth > 0
-      ? roundedRectArea(material.flow.calibration_line_width ?? 0.45, material.flow.calibration_layer_height ?? 0.2)
+      ? roundedRectArea(material.flow.calibration_line_width ?? material.print_defaults?.extrusion_width ?? 0.45, material.flow.calibration_layer_height ?? 0.2)
         / roundedRectArea(measuredWidth, material.flow.calibration_layer_height ?? 0.2)
       : 1,
     freeDiameter: t.free_strand_diameter ?? t.nozzle_diameter,

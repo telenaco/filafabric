@@ -56,7 +56,7 @@ test('its look can be changed, and it can pause for another colour once it is do
 });
 
 test('a zero threshold retracts before every travel, mesh and design alike', () => {
-  const r = coil({}, { ...material, retraction: { ...material.retraction, min_travel: 0 } });
+  const r = coil({}, { ...material, retraction: { ...material.retraction, length: 1, min_travel: 0 } });
   for (let i = 1; i < r.moves.length; i++) if (!r.moves[i].extrude && r.moves[i - 1].extrude) assert.equal(r.moves[i].retract, 'retract', `travel after move ${i - 1}`);
 });
 

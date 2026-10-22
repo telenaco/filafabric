@@ -3,24 +3,24 @@ import assert from 'node:assert/strict';
 import { resolveConfig } from '../src/engine/params.js';
 import { generateDesignExport } from '../src/engine/design-export.js';
 import { designById } from '../src/ui/designs.js';
-import { defaultProfiles } from './helpers.js';
+import { defaultProfiles, retractingMaterial } from './helpers.js';
 
 const { machine, material } = defaultProfiles();
 
-test('Filaflex Foamy retracts 1 mm at 40 mm/s on travels of at least 2 mm, and pushes the same 1 mm back at 20 mm/s', () => {
-  // (the full-bed seam test: 75 mm/s lost circles, an extra push left a knot; filaflex-profile.test.js has the rest)
+test('Filaflex Foamy disables retraction in the filament profile and retains the supplied reference speeds', () => {
   const r = resolveConfig(machine, material).derived.retraction;
-  assert.equal(r.length, 1);
+  assert.equal(r.length, 0);
   assert.equal(r.restartExtra, 0);
-  assert.equal(r.speed, 40);
-  assert.equal(r.deretractSpeed, 20);
-  assert.equal(r.minTravel, 2);
+  assert.equal(r.speed, 35);
+  assert.equal(r.deretractSpeed, 25);
+  assert.equal(r.minTravel, 1);
 });
 
 test('choosing a zero threshold retracts before every separated strand and primes before printing', () => {
   // Islands require real travels now that a plain rectangle keeps both mesh passes continuous.
   const outline = Array.from({ length: 6 }, (_, i) => { const x = i * 6.5; return [{ x, y: 0 }, { x: x + 3.5, y: 0 }, { x: x + 3.5, y: 40 }, { x, y: 40 }]; });
-  const r = generateDesignExport({ machine, material: { ...material, retraction: { ...material.retraction, min_travel: 0 } }, design: 'zigzag', settings: designById('zigzag').defaults(), width: 40, height: 40, outline, extraLayers: 0, brim: 0 });
+  const active = retractingMaterial(material);
+  const r = generateDesignExport({ machine, material: { ...active, retraction: { ...active.retraction, min_travel: 0 } }, design: 'zigzag', settings: designById('zigzag').defaults(), width: 40, height: 40, outline, extraLayers: 0, brim: 0 });
   let travels = 0, open = false;
   for (let i = 1; i < r.moves.length; i++) {
     const m = r.moves[i], prev = r.moves[i - 1];
@@ -40,7 +40,7 @@ test('choosing a zero threshold retracts before every separated strand and prime
 test('a move can carry its own retraction, so swatches with different settings can share one print', async () => {
   const { writeGcode } = await import('../src/engine/gcode.js');
   const { computeStats } = await import('../src/engine/stats.js');
-  const cfg = resolveConfig(machine, material, { sample_width: 40, sample_height: 20 });
+  const cfg = resolveConfig(machine, retractingMaterial(material), { sample_width: 40, sample_height: 20 });
   const own = { ...cfg.derived.retraction, length: 3, speed: 50, restartExtra: 0.5 };
   const moves = [
     { x: 0, y: 0, z: 0.2, cls: 'travel', extrude: false },

@@ -13,10 +13,16 @@ User authorized importing the supplied Prusa comparison's no-retraction policy, 
 
 ## Tasks
 
-- [ ] Import and validate explicit printer current and firmware flow; choose concrete G-code commands over inactive preset branches, and expose resolved diagnostics.
-- [ ] Resolve the printer flow factor once; honor imported commanded flat width and preserve explicit measured-width calibration precedence.
-- [ ] Update Foamy defaults to the authorized Prusa comparison settings, preserve previous seam-test provenance and adjust old behavior tests to opt into their old retraction fixtures explicitly.
-- [ ] Verify zero body retract/prime commands, nominal mesh filament/mm within 1% of Prusa, safe raised clearance, exact M907 and M221 commands, profile round trips and full test suite.
-- [ ] Regenerate the user's drawing, independently compare output commands, update corresponding source snapshot and docs, commit all changes locally and confirm the project subtree is clean.
+- [x] Import and validate explicit printer current and firmware flow; choose concrete G-code commands over inactive preset branches, and expose resolved diagnostics.
+- [x] Resolve the printer flow factor once; honor imported commanded flat width and preserve explicit measured-width calibration precedence.
+- [x] Update Foamy defaults to the authorized Prusa comparison settings, preserve previous seam-test provenance and adjust old behavior tests to opt into their old retraction fixtures explicitly.
+- [x] Verify zero body retract/prime commands, nominal mesh filament/mm within 1% of Prusa, safe raised clearance, exact M907 and M221 commands, profile round trips and full test suite.
+- [x] Regenerate the user's drawing, independently compare output commands, update corresponding source snapshot and docs, commit all changes locally and confirm the project subtree is clean.
 
 Use test-first behavior checks for each resolver/import change. Physical quality remains a new print comparison, not a consequence of passing software tests.
+
+## Verification result
+
+Final full suite: 970 tests, 959 passed, 11 intentional skips, zero failures. Review findings for machine-aware inherited volume ceilings and commanded-width validation were corrected and rechecked. A regression test also verifies that sub-resolution kernel segments carry E into the next moving extrusion instead of creating stationary pushes.
+
+The independent drawing audit confirms zero retract/prime commands, nominal flat input 0.0342546 mm/mm versus Prusa solid average 0.0344227 (0.49% lower), M221 S100 with effective flow 1.0925, E538 start/restore, one solid layer and two raised native mesh passes. Motion estimates: 26.10 versus 21.84 minutes. Actual physical comparison remains pending. See ../../prusa-profile-alignment.md for paths, hashes and limitations. Browser preview confirmed the actual SVG and profile controls.

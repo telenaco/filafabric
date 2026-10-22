@@ -2,21 +2,25 @@
 // it is changed; a change is kept in the print setup (and so in links, saved files and undo) and only what differs from
 // the profile is stored. Choosing another filament starts again from its own values.
 
+// An explicit ceiling is already raw filament input. Legacy ceilings include both material and printer flow.
+const filamentCeiling = (material, machine) => material.flow.max_volumetric_speed_actual
+  ?? material.flow.max_volumetric_speed_nominal * (material.flow.multiplier * (machine?.extrusion?.flow_multiplier ?? 1));
+
 /** key: where it is kept in the print setup; get: the filament's own value; put: the filament with it changed. */
 export const FILAMENT_FIELDS = Object.freeze([
   { key: 'flowMultiplier', label: 'Filament flow multiplier', unit: '×', min: 0.1, max: 2.5, step: 0.01,
-    get: (m) => m.flow.multiplier, put: (m, v) => ({ ...m, flow: { ...m.flow,
+    get: (m) => m.flow.multiplier, put: (m, v, machine) => ({ ...m, flow: { ...m.flow,
       // Keep the existing physical filament-input ceiling when changing the extrusion multiplier.
-      max_volumetric_speed_actual: m.flow.max_volumetric_speed_actual ?? m.flow.max_volumetric_speed_nominal * m.flow.multiplier, multiplier: v } }) },
+      max_volumetric_speed_actual: filamentCeiling(m, machine), multiplier: v } }) },
   { key: 'flatSpeed', engineKey: 'speed_flat', label: 'Flat extrusion speed override', unit: 'mm/s', min: 1, max: 150, step: 1,
     get: (m) => m.print_defaults?.speed_flat ?? null, put: (m, v) => ({ ...m, print_defaults: { ...m.print_defaults, speed_flat: v } }) },
   { key: 'maxFilamentVolume', label: 'Maximum filament volume', unit: 'mm³/s', min: 0.1, max: 30, step: 0.05,
-    get: (m) => m.flow.max_volumetric_speed_actual ?? m.flow.max_volumetric_speed_nominal * m.flow.multiplier,
+    get: (m, machine) => filamentCeiling(m, machine),
     put: (m, v) => ({ ...m, flow: { ...m.flow, max_volumetric_speed_actual: v } }) },
   { key: 'flatBeadWidth', label: 'Measured flat bead width', unit: 'mm', min: 0.1, max: 3, step: 0.01,
     get: (m) => m.flow.measured_line_width ?? null, put: (m, v) => ({ ...m, flow: { ...m.flow, measured_line_width: v } }) },
   { key: 'calibrationLineWidth', label: 'Calibration commanded width', unit: 'mm', min: 0.1, max: 3, step: 0.01,
-    get: (m) => m.flow.calibration_line_width ?? 0.45, put: (m, v) => ({ ...m, flow: { ...m.flow, calibration_line_width: v } }) },
+    get: (m) => m.flow.calibration_line_width ?? m.print_defaults?.extrusion_width ?? 0.45, put: (m, v) => ({ ...m, flow: { ...m.flow, calibration_line_width: v } }) },
   { key: 'calibrationLayerHeight', label: 'Calibration layer height', unit: 'mm', min: 0.05, max: 1, step: 0.01,
     get: (m) => m.flow.calibration_layer_height ?? 0.2, put: (m, v) => ({ ...m, flow: { ...m.flow, calibration_layer_height: v } }) },
   { key: 'firstLayerTemp', label: 'Nozzle, first layer', unit: '°C', min: 150, max: 300, step: 1,
@@ -48,23 +52,23 @@ const field = (key) => FILAMENT_FIELDS.find((f) => f.key === key);
 const inRange = (f, v) => typeof v === 'number' && Number.isFinite(v) && v >= f.min && v <= f.max;
 
 /** The value a setting has now: the change in `print`, or the filament's own. */
-export function filamentValue(material, print, key) {
+export function filamentValue(material, print, key, machine = null) {
   const f = field(key);
-  return inRange(f, print?.[key]) ? print[key] : f.get(material);
+  return inRange(f, print?.[key]) ? print[key] : f.get(material, machine);
 }
 
 /** The filament with the changes in `print` made to it (the profile itself is left as it is). */
-export function withFilamentSettings(material, print) {
+export function withFilamentSettings(material, print, machine = null) {
   let out = material;
-  for (const f of FILAMENT_FIELDS) if (inRange(f, print?.[f.key]) && print[f.key] !== f.get(material)) out = f.put(out, print[f.key]);
+  for (const f of FILAMENT_FIELDS) if (inRange(f, print?.[f.key]) && print[f.key] !== f.get(material, machine)) out = f.put(out, print[f.key], machine);
   return out;
 }
 
 /** The print setup with one setting changed: a value the same as the filament's, empty or out of range, is no change. */
-export function setFilamentSetting(print, material, key, value) {
+export function setFilamentSetting(print, material, key, value, machine = null) {
   const f = field(key), out = { ...print };
   const v = value === null || value === '' ? NaN : Number(value);
-  if (inRange(f, v) && v !== f.get(material)) out[key] = v;
+  if (inRange(f, v) && v !== f.get(material, machine)) out[key] = v;
   else delete out[key];
   return out;
 }

@@ -745,14 +745,14 @@ function printMaterial() {
   const base = state.materials.get(state.material);
   normalisePrint();
   if (!base) return base;
-  const material = withFilamentSettings(base, state.print);
+  const material = withFilamentSettings(base, state.print, state.machines.get(state.machine));
   if (material.print_defaults?.layer_height === state.print.layerHeight) return material;
   return { ...material, print_defaults: { ...(material.print_defaults ?? {}), layer_height: state.print.layerHeight } };
 }
 
 /** The filament's temperatures and retraction in the printer setup, each showing its value now. */
 function renderFilamentSettings() {
-  const material = state.materials.get(state.material), box = $('#filament-fields');
+  const material = state.materials.get(state.material), machine = state.machines.get(state.machine), box = $('#filament-fields');
   if (!material || !box) return;
   if (!box.children.length) {
     box.append(...FILAMENT_FIELDS.map((f) => {
@@ -760,7 +760,7 @@ function renderFilamentSettings() {
       input.addEventListener('change', () => {
         const filament = state.materials.get(state.material);
         if (input.value !== '' && !(Number(input.value) >= f.min && Number(input.value) <= f.max)) toast(`${f.label}: enter ${f.min} to ${f.max} ${f.unit}.`);
-        state.print = setFilamentSetting(state.print, filament, f.key, input.value);
+        state.print = setFilamentSetting(state.print, filament, f.key, input.value, state.machines.get(state.machine));
         renderPrinter();
         schedule();
         commit();
@@ -771,7 +771,7 @@ function renderFilamentSettings() {
   const changed = [];
   for (const f of FILAMENT_FIELDS) {
     const row = box.querySelector(`[data-filament="${f.key}"]`), input = row.querySelector('input');
-    const own = f.get(material), value = filamentValue(material, state.print, f.key);
+    const own = f.get(material, machine), value = filamentValue(material, state.print, f.key, machine);
     if (document.activeElement !== input) input.value = value === null ? '' : String(value);
     input.placeholder = own === null ? (f.key === 'flatBeadWidth' ? 'Unmeasured' : 'Design speeds') : String(own);
     row.classList.toggle('changed', value !== own);
@@ -779,7 +779,10 @@ function renderFilamentSettings() {
     if (value !== own) changed.push(f);
   }
   const note = $('#filament-settings-note');
-  note.replaceChildren(changed.length ? `Changed from the ${material.name} profile: ${changed.map((f) => f.label.toLowerCase()).join(', ')}. ` : `From the ${material.name} profile. Retraction starts at ${filamentValue(material, state.print, 'retractMinTravel')} mm of travel; required clearance lifts are retained. `);
+  const retractPolicy = filamentValue(material, state.print, 'retraction', machine) === 0
+    ? 'Retraction is disabled by the filament setting; required clearance lifts are retained. '
+    : `Retraction starts at ${filamentValue(material, state.print, 'retractMinTravel', machine)} mm of travel; required clearance lifts are retained. `;
+  note.replaceChildren((changed.length ? `Changed from the ${material.name} profile: ${changed.map((f) => f.label.toLowerCase()).join(', ')}. ` : `From the ${material.name} profile. `) + retractPolicy);
   note.append(' Flat speed overrides horizontal base and supported extrusion only; empty keeps design speeds. Measure an isolated straight bead at the commanded width and layer height shown, with the same temperature, flow and speed. Enter its cooled width to calibrate flat coverage without an automatic flow increase. Leave measured width empty until measured; the profile reference width is not a measurement. Maximum volume limits raw filament input before foaming. Recalibrate after changing temperature, flow, speed or layer height.');
   if (changed.length) {
     const reset = el('button', { type: 'button', class: 'link small', text: 'Use the filament\'s values' });
@@ -1230,7 +1233,7 @@ function currentPrintSizeProblem() {
 function setupSummary() {
   const machine = state.machines.get(state.machine), material = state.materials.get(state.material);
   if (!machine || !material) return null;
-  const heat = `${filamentValue(material, state.print, 'nozzleTemp')} °C`, retract = filamentValue(material, state.print, 'retraction');
+  const heat = `${filamentValue(material, state.print, 'nozzleTemp', machine)} °C`, retract = filamentValue(material, state.print, 'retraction', machine);
   return { name: `${shortMachine(machine.name)} · ${material.name}`, sub: `${state.print.layerHeight} mm thickness · ${layerSetupText()} · ${heat} · ${retract ? `${retract} mm retraction` : 'no retraction'}` };
 }
 

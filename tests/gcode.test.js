@@ -4,8 +4,21 @@ import { writeGcode, preflight, PreflightError, GcodeWriter } from '../src/engin
 import { resolveConfig } from '../src/engine/params.js';
 import { plan } from '../src/engine/planner.js';
 import { computeStats } from '../src/engine/stats.js';
-import { defaultProfiles } from './helpers.js';
+import { defaultProfiles, retractingMaterial } from './helpers.js';
 import { scene } from './scene.js';
+
+test('sub-resolution extrusion is carried into the next moving segment instead of emitted as a stationary push', () => {
+  const { machine, material } = defaultProfiles();
+  const writer = new GcodeWriter(resolveConfig(machine, material));
+  const move = (x, extrude) => ({ x, y: 10, z: .2, extrude, cls: extrude ? 'base' : 'travel' });
+  writer.move(move(10, false));
+  assert.deepEqual(writer.move(move(10.0003, true)), []);
+  const line = writer.move(move(10.1, true)).find(line => line.startsWith('G1'));
+  assert.match(line, /X/);
+  const totalE = Number(/\bE([\d.]+)/.exec(line)[1]);
+  const expected = .1 * .2 * (.42 - .2 * (1 - Math.PI / 4)) * 1.15 * .95 / (Math.PI * (1.75 / 2) ** 2);
+  assert.ok(Math.abs(totalE - expected) < .000005, 'the tiny segment E is preserved in cumulative rounding');
+});
 
 test('printing temperature changes once when extrusion leaves the bed layer, never for a travel hop', () => {
   const { machine, material } = defaultProfiles();
@@ -26,8 +39,8 @@ test('equal first-layer and printing temperatures produce no body temperature co
   assert.ok(!writer.move({ x: 10, y: 10, z: 1, extrude: true, cls: 'supported' }).some((line) => line.startsWith('M104')));
 });
 
-function build(over = {}) {
-  const s = scene({ sample_width: 20, sample_height: 20, ...over });
+function build(over = {}, profiles = {}) {
+  const s = scene({ sample_width: 20, sample_height: 20, ...over }, profiles);
   const planned = plan(s.cfg, s.base, s.tiled.placements, s.boundary);
   const stats = computeStats(planned.moves, s.cfg, s.tiled.placements);
   return { ...s, moves: planned.moves, gcode: writeGcode(planned.moves, s.cfg, { stats }) };
@@ -109,11 +122,12 @@ test('round trip: bounds, feedrates, Z-component limit and total E', () => {
 });
 
 test('retract and unretract are emitted as relative E moves with the material speeds, the prime with its extra push', () => {
-  const { gcode } = build({ retraction_length: 2.5 });
+  const material = retractingMaterial(defaultProfiles().material);
+  const { gcode } = build({ retraction_length: 2.5 }, { material });
   const lines = gcode.split('\n');
   assert.ok(lines.some((l) => /^G1 E-2\.5 F2400$/.test(l)));
   assert.ok(lines.some((l) => /^G1 E2\.5 F1200$/.test(l)), 'Foamy pushes back what it pulled');
-  const s = scene({ sample_width: 20, sample_height: 20, retraction_length: 2.5 });
+  const s = scene({ sample_width: 20, sample_height: 20, retraction_length: 2.5 }, { material });
   s.cfg.derived.retraction = { ...s.cfg.derived.retraction, restartExtra: 0.3 };
   const pushed = writeGcode(plan(s.cfg, s.base, s.tiled.placements, s.boundary).moves, s.cfg).split('\n');
   assert.ok(pushed.some((l) => /^G1 E2\.8 F1200$/.test(l)), 'and an extra push on top when the filament asks for one');
