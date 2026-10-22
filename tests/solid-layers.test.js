@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateDesignExport } from '../src/engine/design-export.js';
+import { vectorPatternRings } from '../src/engine/svg-lines.js';
 import { solidStrands } from '../src/engine/svg-solids.js';
 import { exportPanel } from '../src/engine/panel.js';
 import { sanitizePrint, encodeState, decodeState } from '../src/ui/share.js';
@@ -53,4 +54,23 @@ test('changing solid layers preserves both mesh passes and their non-planar geom
   assert.equal(two.layerPlan.patternLayers, 2);
   assert.deepEqual(mesh(one), mesh(two), 'solid thickness does not flatten, repeat or reroute the mesh');
   assert.ok(mesh(one).some((s) => s.pts.some((p) => p.z > one.cfg.t.layer_height + 1e-6)), 'raised crossings remain');
+});
+
+test('zero optional hop still clears a tall ground solid before the native raised pattern', () => {
+  const profiles = defaultProfiles();
+  profiles.material.retraction.z_hop = 0;
+  const closed = (x, y, w, h) => [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }, { x, y }];
+  const vector = { name: 'handoff.svg', width: 40, height: 40, paths: [closed(2, 2, 8, 8), closed(15, 2, 22, 35)], styles: [{ color: 'green', width: 0.2 }, { color: 'red', width: 0.2 }] };
+  const out = generateDesignExport({ ...profiles, design: 'spacer', width: 40, height: 40, vector, outline: vectorPatternRings(vector), shapeOutline: true, solidLayers: 8, extraLayers: 0, brim: 0 });
+  const end = out.moves.findLastIndex((m) => m.extrude && m.tag?.startsWith('solid-'));
+  assert.ok(end >= 0);
+  const top = out.moves[end].z;
+  let from = out.moves[end];
+  let lateral = 0;
+  for (const m of out.moves.slice(end + 1)) {
+    if (m.extrude) break;
+    if (Math.hypot(m.x - from.x, m.y - from.y) > 1e-6) { lateral++; assert.ok(m.z > top + 0.1, 'handoff clears the tallest completed solid'); }
+    from = m;
+  }
+  assert.ok(lateral > 0);
 });

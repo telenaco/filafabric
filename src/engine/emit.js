@@ -16,7 +16,7 @@
  */
 export function emitStrands(strands, { startLift = null, travelLift = null, retraction = null, seam = null } = {}) {
   // the first approach comes down from the prime line: the filament's lift over the bed, or 5 mm
-  startLift ??= retraction?.zHop > 0 ? retraction.zHop : 5;
+  startLift ??= retraction?.zHop ?? 5;
   travelLift ??= travelLiftOf(retraction);
   seam ??= retraction?.seamGap > 0 ? { gap: retraction.seamGap } : null;
   const moves = [];
@@ -25,7 +25,7 @@ export function emitStrands(strands, { startLift = null, travelLift = null, retr
   const printable = strands.filter((s) => s.pts.length >= 2);
   // whether a travel follows each strand, and whether it retracts: decided as the next strand's start decides it
   const needsTravel = (from, to) => to.pauseBefore || Math.hypot(to.pts[0].x - from.x, to.pts[0].y - from.y) >= 1e-6 || Math.abs(to.pts[0].z - from.z) >= 1e-6;
-  const retractsTo = (from, to) => !!retraction && retraction.length > 0 && Math.hypot(to.pts[0].x - from.x, to.pts[0].y - from.y) >= retraction.minTravel;
+  const retractsTo = (from, to) => strandTravel(from, to.pts[0], printedMaxZ, retraction, travelLift, to.pauseBefore).retract;
   let cur = null, at = null, pulled = false;
   let printedMaxZ = -Infinity;
   printable.forEach((strand, index) => {
@@ -34,21 +34,21 @@ export function emitStrands(strands, { startLift = null, travelLift = null, retr
       moves.push(travel(first.x, first.y, first.z + startLift));
       moves.push(travel(first.x, first.y, first.z));
     } else if (needsTravel(cur, strand)) {
-      const safeZ = Math.max(printedMaxZ, cur.z, first.z) + travelLift;
+      const { safeZ, retract } = strandTravel(cur, first, printedMaxZ, retraction, travelLift, strand.pauseBefore);
       // the lift starts where the nozzle is: the strand's end, or where its wipe left it
       const lift = travel(at.x, at.y, safeZ);
       // a long enough travel retracts first and primes again at the start of the next strand (as the loop pile does);
       // a wipe has already pulled it in
-      if (retractsTo(cur, strand)) {
+      if (retract) {
         if (!pulled) lift.retract = 'retract';
         pendingUnretract = true;
       }
-      moves.push(lift);
+      if (Math.abs(safeZ - at.z) > 1e-9 || lift.retract) moves.push(lift);
       if (strand.pauseBefore) {
         moves.push(travel(at.x, at.y, safeZ, 'M600 ; Pause for filament color change', `Filament change pause before ${strand.name}`));
       }
       moves.push(travel(first.x, first.y, safeZ));
-      moves.push(travel(first.x, first.y, first.z));
+      if (Math.abs(safeZ - first.z) > 1e-9) moves.push(travel(first.x, first.y, first.z));
     }
     pulled = false;
     const kindClass = strand.kind === 'base' ? 'base' : 'supported';
@@ -72,7 +72,7 @@ export function emitStrands(strands, { startLift = null, travelLift = null, retr
       if (ending.coasted.length) at = ending.coasted.at(-1);
       // the wipe pulls the whole retraction in over its length, when the travel after it retracts at all
       const wipe = ending.wiped.slice(1), length = pathLength(ending.wiped);
-      const pull = retractsTo(strand.pts.at(-1), next) && length > 1e-9 ? retraction.length : 0;
+      const pull = needsTravel(ending.wiped.at(-1) ?? at, next) && retractsTo(ending.wiped.at(-1) ?? at, next) && length > 1e-9 ? retraction.length : 0;
       for (let i = 0; i < wipe.length; i++) {
         const a = ending.wiped[i], b = wipe[i], d = Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z);
         moves.push({ x: b.x, y: b.y, z: b.z, cls: 'travel', extrude: false, ...(pull ? { pull: (pull * d) / length } : {}) });
@@ -80,14 +80,24 @@ export function emitStrands(strands, { startLift = null, travelLift = null, retr
       if (wipe.length) at = wipe.at(-1);
       pulled = pull > 0;
     }
-    cur = strand.pts[strand.pts.length - 1];
+    cur = at;
     for (const p of strand.pts) printedMaxZ = Math.max(printedMaxZ, p.z);
   });
   return moves;
 }
 
-/** How high a travel lifts over the highest thing printed: the filament's lift when it sets one (0.2 mm for Foamy), else 3 mm. */
-export const travelLiftOf = (retraction) => (retraction?.zHop > 0 ? retraction.zHop : 3);
+/** Optional travel lift; an explicit zero is honored. Missing settings retain the 3 mm fallback. */
+export const travelLiftOf = (retraction) => retraction?.zHop ?? 3;
+
+/** Plan from the actual nozzle position. Short planar travels can omit a cosmetic hop, never required clearance. */
+export function strandTravel(from, to, printedMaxZ, retraction, lift = travelLiftOf(retraction), pause = false) {
+  const distance = from ? Math.hypot(to.x - from.x, to.y - from.y) : 0;
+  const retract = !!from && (retraction?.length ?? 0) > 0 && (pause || distance >= (retraction.minTravel ?? 0));
+  const required = !!from && (pause || Math.abs(from.z - to.z) > 1e-9 || printedMaxZ > Math.max(from.z, to.z) + 1e-9);
+  const optional = from && retraction?.liftOnRetractOnly && !retract && !pause ? 0 : lift;
+  const hop = required ? Math.max(lift, retraction?.clearance ?? 0.2) : optional;
+  return { retract, safeZ: Math.max(printedMaxZ, from?.z ?? to.z, to.z) + hop };
+}
 
 const span = (a, b) => Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z);
 const pathLength = (pts) => pts.reduce((n, p, i) => (i ? n + span(pts[i - 1], p) : 0), 0);

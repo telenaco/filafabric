@@ -17,7 +17,8 @@
     "speed": 40,
     "deretract_speed": 20,
     "z_hop": 0.2,
-    "min_travel": 0,
+    "min_travel": 2,
+    "lift_on_retract_only": true,
     "restart_extra": 0,
     "seam_gap": 0.2,
     "note": "From the full-bed seam test printed on the MK3S (FOAM99_45PAIRS, 21 October 2026: 45 pairs of 20 mm two-line circles, every travel lifted 0.2 mm at 180 mm/s): cleanest at 238 C with 1 mm retraction at 40 mm/s, pushed back exactly 1 mm at 20 mm/s (2.5 mm also good); 75 mm/s retraction lost circles; a 0.2 mm seam gap looked good (tried at 245 C). The lift on a travel is z_hop and the travel speed travel_speed_hint. Before: 4 mm at 65, 4.2 back, 3 mm lift, 248 C left a knot and strings at every seam."

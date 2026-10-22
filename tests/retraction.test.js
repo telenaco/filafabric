@@ -7,18 +7,18 @@ import { defaultProfiles } from './helpers.js';
 
 const { machine, material } = defaultProfiles();
 
-test('Filaflex Foamy retracts 1 mm at 40 mm/s on every travel, however short, and pushes the same 1 mm back at 20 mm/s', () => {
+test('Filaflex Foamy retracts 1 mm at 40 mm/s on travels of at least 2 mm, and pushes the same 1 mm back at 20 mm/s', () => {
   // (the full-bed seam test: 75 mm/s lost circles, an extra push left a knot; filaflex-profile.test.js has the rest)
   const r = resolveConfig(machine, material).derived.retraction;
   assert.equal(r.length, 1);
   assert.equal(r.restartExtra, 0);
   assert.equal(r.speed, 40);
   assert.equal(r.deretractSpeed, 20);
-  assert.equal(r.minTravel, 0);
+  assert.equal(r.minTravel, 2);
 });
 
-test('every travel between strands of a design retracts first and primes again before printing', () => {
-  const r = generateDesignExport({ machine, material, design: 'zigzag', settings: designById('zigzag').defaults(), width: 40, height: 40, extraLayers: 0, brim: 0 });
+test('choosing a zero threshold retracts before every separated strand and primes before printing', () => {
+  const r = generateDesignExport({ machine, material: { ...material, retraction: { ...material.retraction, min_travel: 0 } }, design: 'zigzag', settings: designById('zigzag').defaults(), width: 40, height: 40, extraLayers: 0, brim: 0 });
   let travels = 0, open = false;
   for (let i = 1; i < r.moves.length; i++) {
     const m = r.moves[i], prev = r.moves[i - 1];

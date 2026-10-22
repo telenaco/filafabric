@@ -15,6 +15,7 @@ test('squiggle G-code stays byte-identical (cross and parallel)', () => {
   const par = generateSquiggle(machine, material, { width: 40, height: 30, mode: 'parallel', colorChange: true });
   // (whole repeats: the columns are a whole number of waves long, from 2026-10-15)
   // (row order: each layer keeps the order and direction it was laid in, from 2026-10-21; the same segments as before)
-  assert.equal(hash(cross.gcode), '8f70beb9fcf324cf8aebf2a094e18a0bafaa7ed0f1030fe3ccb1a629a7f53ae7');
-  assert.equal(hash(par.gcode), '56e1c9932466910c0ea3a639b993c3c9ea9cbf1f668538c3e308f37b6e8fd50f');
+  // Snapshots include resolved/actual motion diagnostics and honor an explicit zero optional hop.
+  assert.equal(hash(cross.gcode), '97e9adad8baac69f0d80844142bb1e9e1d60d7f42651bbbc375b533a42744090');
+  assert.equal(hash(par.gcode), '7ad8c0454cbb468dd724c3be782cc942458fccc02e7c97a53c18c70a7ebea490');
 });

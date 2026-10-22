@@ -220,6 +220,8 @@ export function resolveConfig(machine, material, overrides = {}) {
       // how high a travel lifts over what is printed (emit.js; 0: the studio's own 3 mm)
       zHop: r.z_hop,
       minTravel: r.min_travel,
+      liftOnRetractOnly: r.lift_on_retract_only ?? false,
+      clearance: t.layer_height,
       // how far short of its own start a loop stops before a travel (emit.js `seam`)
       seamGap: r.seam_gap ?? 0,
     },

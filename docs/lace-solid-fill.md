@@ -8,7 +8,7 @@ The green solid regions of an imported drawing now print adjacent rows as connec
 - Rows are placed in the same inset fill core as before. A short connection may leave that core beside a curved rim, provided it stays inside the half-bead inset printable region and outside every window. The connection check includes boundary intersections, so narrow windows are not missed by coarse sampling.
 - Short scanline spans are retained. This change does not remove small details to reduce the path count.
 - Travel ordering preserves the extrusion segments, each shape's height and layer precedence. Single-path coils keep their original spiral direction.
-- The existing two solid layers, mesh paths, material temperatures, flow and retract/lift settings are retained for this change.
+- The continuity/routing commits retained the existing two solid layers and material settings. The subsequent independent solid-layer and travel changes are documented below.
 
 ## Drawing-2 reproduction
 
@@ -29,3 +29,26 @@ The added extrusion length consists of short links that replace separate row sta
 `node --test tests/solid-fill.test.js tests/svg-solids.test.js` covers continuous filling around curved windows, narrow slots, full bead clearance between closely spaced tiny windows, interior coverage, extrusion-segment preservation and layer heights/order. `npm test` runs the complete suite.
 
 The clearance regression also rejects an in-memory mutant that accepts every proposed connector: its unsafe connection comes within 0.1613 mm of a window, below the 0.225 mm bead-radius clearance.
+
+## Independent solid thickness and selective travel
+
+Printer setup > Layers > Solid layers now defaults to **1**. Choose 1–8 for green/yellow dense solid shapes independently of the pattern. The setting survives saved/shared state and applies to preview, swatch export and streamed panels. Old saved states without a solid-layer count use the new single-layer default; select 2 to reproduce their previous solid thickness. Export filenames carry the selected solid count and export metadata records it.
+
+Both native zigzag mesh passes and their non-planar crossings remain intact. Changing the solid count does not flatten, repeat or reroute those mesh strands. Other patterns keep their own structural layer plans.
+
+The Foamy profile now retracts for travels of at least **2 mm**, adjustable under Temperatures and retraction. Its optional lift follows retraction; short flat travels omit both. The 1 mm retract at 40 mm/s, 0.2 mm optional lift, 0.2 mm seam gap, 238 C temperature and calibrated flow remain. Setting the minimum travel to 0 restores retraction on every actual travel. Explicit zero optional lift is honored, but clearance over raised geometry and color-change pauses still lifts at least the layer thickness. Travel distance starts at the actual seam/wipe endpoint, with balanced retract/unretract handling.
+
+Final drawing-2 reproduction, using the same mesh, dimensions and material as above:
+
+| Metric | Original export | All fixes, solid 1 | All fixes, solid 2 |
+| --- | ---: | ---: | ---: |
+| Solid paths | 5,538 | 532 | 1,088 |
+| Retraction cycles | 6,398 | 787 | 929 |
+| XY travel between body moves | 49.51 m | 6.32 m | 7.24 m |
+| Commanded motion, no acceleration | 61.81 min | 27.66 min | 49.76 min |
+
+The single-solid-layer result still has two mesh passes, with actual extrusion reaching Z0.7413 mm. The two regenerated cases have identical native mesh strand coordinates. The XY metric excludes the initial prime-line approach. Time excludes heating, startup, acceleration and operator pauses; 27.66 minutes is a software estimate, not a measured print time or a guarantee of PrusaSlicer finishing quality. One solid layer also uses less material and may change the solid region's strength.
+
+G-code records resolved temperature/flow/retraction settings, motion time by category, retract counts and actual extrusion Z range. Streamed output records its completed motion summary in the footer. The legacy estimate remains explicitly labeled as excluding acceleration.
+
+Regression coverage includes solid-layer persistence and mesh preservation, short flat travel, raised crossings, pauses, zero-hop solid-to-native handoff, seam/wipe distances, wipe endpoints coinciding with the next start, and agreement between incremental and full-export diagnostics. Independent review found the wipe endpoint, zero-hop handoff and missing streamed summary issues; each was fixed with a regression. Browser verification confirmed the independent 1–8 control, the 2 mm threshold, and leaving Solid layers at 1 without console errors.

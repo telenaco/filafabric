@@ -13,7 +13,7 @@ import { defaultProfiles, projectRoot } from './helpers.js';
 const { machine, material } = defaultProfiles();
 const zMin = (s) => Math.min(...s.pts.map((p) => p.z));
 const length = (list) => list.reduce((n, s) => n + s.pts.slice(1).reduce((m, p, i) => m + Math.hypot(p.x - s.pts[i].x, p.y - s.pts[i].y), 0), 0);
-const coil = (backing) => generateDesignExport({ machine, material, design: 'coil', settings: designById('coil').defaults(), width: 60, height: 50, extraLayers: 0, brim: 0, backing });
+const coil = (backing, mat = material) => generateDesignExport({ machine, material: mat, design: 'coil', settings: designById('coil').defaults(), width: 60, height: 50, extraLayers: 0, brim: 0, backing });
 
 test('the standard backing is the zigzag mesh the studio was tuned with: 3.7 mm apart, 2 mm deep, 6 mm waves', () => {
   assert.deepEqual({ ...BACKING_MESH }, { spacing: 3.7, depth: 2, wavelength: 6, pause: false });
@@ -55,8 +55,8 @@ test('its look can be changed, and it can pause for another colour once it is do
   assert.equal(coil({}).gcode.includes('M600'), false, 'no pause unless asked');
 });
 
-test('every travel still retracts, mesh and design alike', () => {
-  const r = coil({});
+test('a zero threshold retracts before every travel, mesh and design alike', () => {
+  const r = coil({}, { ...material, retraction: { ...material.retraction, min_travel: 0 } });
   for (let i = 1; i < r.moves.length; i++) if (!r.moves[i].extrude && r.moves[i - 1].extrude) assert.equal(r.moves[i].retract, 'retract', `travel after move ${i - 1}`);
 });
 

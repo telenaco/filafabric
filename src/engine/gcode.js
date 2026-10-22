@@ -109,6 +109,7 @@ export class GcodeWriter {
     const errors = preflight([], cfg); if (errors.length) throw new PreflightError(errors);
     this.cfg=cfg; this.pos=startPosition(cfg); this.outX=null; this.outY=null; this.outZ=null; this.outF=null;
     this.emittedE=0; this.cumE=0; this.fan=0; this.maxZ=0; this.timeSec=0; this.moves=0; this.extrudingMoves=0; this.printTemperatureApplied=false;
+    this.timeByKind={extrusion:0,travel:0,retraction:0,unretraction:0}; this.retractions=0; this.travelMoves=0; this.travelMm=0; this.minPrintZ=Infinity; this.maxPrintZ=-Infinity; this.pulling=false;
   }
   vars() {
     const {machine,t,derived}=this.cfg, o=derived.origin;
@@ -125,9 +126,12 @@ export class GcodeWriter {
   header(info={}) {
     const {machine,material,t}=this.cfg;
     const out=['; Textile G-code generator v1', '; machine: '+machine.id, '; material: '+material.id];
+    const d = this.cfg.derived;
+    out.push('; resolved print setup '+JSON.stringify({ temperatures: d.temperatures, flowMultiplier: d.multiplier, filamentDiameter: d.filamentDiameter, extrusionWidth: t.extrusion_width, layerHeight: t.layer_height, retraction: d.retraction }));
     if(info.stats) {
       out.push('; estimated time (no acceleration): '+fmt(info.stats.timeSec/60,1)+' min');
       out.push('; filament: '+fmt(info.stats.filamentMm,1)+' mm, loops: '+info.stats.loops);
+      out.push('; motion summary '+JSON.stringify({ timeBasis: 'commanded motion without acceleration; excludes heating and startup', retractions: info.stats.retractions, travelMoves: info.stats.travelMoves, xyTravelMm: info.stats.travelMm, timeByKind: info.stats.timeByKind, extrusionRangeZ: info.stats.extrusionRangeZ }));
     }
     for(const key of Object.keys(t).sort()) out.push('; param '+key+' = '+JSON.stringify(t[key]));
     for(const comment of info.comments??[]) out.push('; '+String(comment).replace(/[\r\n]+/g,' '));
@@ -146,22 +150,25 @@ export class GcodeWriter {
       this.printTemperatureApplied=true;
       if(derived.temperatures.print!==derived.temperatures.first) out.push('M104 S'+derived.temperatures.print+' ; printing temperature');
     }
-    if(m.retract==='retract') {const f=Math.round(r.speed*60);out.push('G1 E-'+fmt(r.length,5)+' F'+f);this.outF=f;this.timeSec+=r.length/r.speed;}
-    else if(m.retract==='unretract') {const f=Math.round(r.deretractSpeed*60),push=r.length+(r.restartExtra??0);out.push('G1 E'+fmt(push,5)+' F'+f);this.outF=f;this.timeSec+=push/r.deretractSpeed;}
+    if(m.retract==='retract') {const f=Math.round(r.speed*60);out.push('G1 E-'+fmt(r.length,5)+' F'+f);this.outF=f;this.timeSec+=r.length/r.speed;this.timeByKind.retraction+=r.length/r.speed;this.retractions++;}
+    else if(m.retract==='unretract') {const f=Math.round(r.deretractSpeed*60),push=r.length+(r.restartExtra??0);out.push('G1 E'+fmt(push,5)+' F'+f);this.outF=f;this.timeSec+=push/r.deretractSpeed;this.timeByKind.unretraction+=push/r.deretractSpeed;}
+    if(m.pull>0 && !this.pulling)this.retractions++; this.pulling=m.pull>0;
     const want=fanFor(m.cls,t);
     if(want!==this.fan) {out.push(want===0?'M107 ; fan off':'M106 S'+Math.round(want*255/100)+' ; fan '+want+'%');this.fan=want;}
-    const dx=m.x-this.pos.x,dy=m.y-this.pos.y,dz=m.z-this.pos.z,ds=Math.hypot(dx,dy,dz);this.pos={x:m.x,y:m.y,z:m.z};
+    const fromZ=this.pos.z; const dx=m.x-this.pos.x,dy=m.y-this.pos.y,dz=m.z-this.pos.z,ds=Math.hypot(dx,dy,dz);this.pos={x:m.x,y:m.y,z:m.z};
     if(ds<1e-9)return out;
+    if(m.extrude){this.minPrintZ=Math.min(this.minPrintZ,fromZ,m.z);this.maxPrintZ=Math.max(this.maxPrintZ,fromZ,m.z);}else{this.travelMoves++;if(this.moves>1)this.travelMm+=Math.hypot(dx,dy);}
     const parts=['G1'],X=fmt(m.x+o.x,3),Y=fmt(m.y+o.y,3),Z=fmt(m.z,3);
     if(X!==this.outX){parts.push('X'+X);this.outX=X;} if(Y!==this.outY){parts.push('Y'+Y);this.outY=Y;} if(Z!==this.outZ){parts.push('Z'+Z);this.outZ=Z;}
     if(m.extrude){this.extrudingMoves++;this.cumE+=segmentE(ds,m.cls,this.cfg,m.flow??1);const target=roundTo(this.cumE,5);parts.push('E'+fmt(target-this.emittedE,5));this.emittedE=target;}
     // a wipe pulls filament in as it moves (emit.js), as fast as a retraction pulls it
     else if(m.pull>0) parts.push('E-'+fmt(m.pull,5));
-    const speed=moveSpeedOf(m,dx,dy,dz,ds,this.cfg,r),F=Math.round(speed*60);this.timeSec+=ds/speed;
+    const speed=moveSpeedOf(m,dx,dy,dz,ds,this.cfg,r),F=Math.round(speed*60);this.timeSec+=ds/speed;this.timeByKind[m.extrude?'extrusion':'travel']+=ds/speed;
     if(F!==this.outF){parts.push('F'+F);this.outF=F;}
     if(parts.length>1)out.push(parts.join(' '));return out;
   }
-  footer() {return ['; BODY END',...fillTemplate(this.cfg.machine.end_gcode,this.vars())];}
+  motionSummary() {return {timeBasis:'commanded motion without acceleration; excludes heating and startup',retractions:this.retractions,travelMoves:this.travelMoves,xyTravelMm:this.travelMm,timeByKind:this.timeByKind,extrusionRangeZ:{min:Number.isFinite(this.minPrintZ)?this.minPrintZ:null,max:Number.isFinite(this.maxPrintZ)?this.maxPrintZ:null}};}
+  footer() {return ['; BODY END','; actual motion summary '+JSON.stringify(this.motionSummary()),...fillTemplate(this.cfg.machine.end_gcode,this.vars())];}
 }
 
 /** A move's speed (mm/s): its class's, or for a wipe that pulls filament in, what pulls it at the retraction speed. */

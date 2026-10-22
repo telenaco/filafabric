@@ -11,8 +11,10 @@ export const FILAMENT_FIELDS = Object.freeze([
   { key: 'bedTemp', label: 'Bed', unit: '°C', min: 0, max: 120, step: 1,
     get: (m) => m.bed_temperature, put: (m, v) => ({ ...m, bed_temperature: v }) },
   // (at most 15 mm, as the engine allows: longer retractions jam flexible filament)
-  { key: 'retraction', label: 'Retraction on every travel', unit: 'mm', min: 0, max: 15, step: 0.5,
+  { key: 'retraction', label: 'Retraction length', unit: 'mm', min: 0, max: 15, step: 0.5,
     get: (m) => m.retraction.length, put: (m, v) => ({ ...m, retraction: { ...m.retraction, length: v } }) },
+  { key: 'retractMinTravel', label: 'Minimum travel for retraction', unit: 'mm', min: 0, max: 50, step: 0.5,
+    get: (m) => m.retraction.min_travel, put: (m, v) => ({ ...m, retraction: { ...m.retraction, min_travel: v } }) },
   { key: 'retractSpeed', label: 'Retraction speed', unit: 'mm/s', min: 10, max: 120, step: 5,
     get: (m) => m.retraction.speed, put: (m, v) => ({ ...m, retraction: { ...m.retraction, speed: v } }) },
   // pushed back after a travel on top of the retraction: a flexible strand may need a little to build its pressure up
@@ -23,8 +25,8 @@ export const FILAMENT_FIELDS = Object.freeze([
   { key: 'seamGap', label: 'Seam gap', unit: 'mm', min: 0, max: 5, step: 0.1,
     get: (m) => m.retraction.seam_gap ?? 0, put: (m, v) => ({ ...m, retraction: { ...m.retraction, seam_gap: v } }) },
   // the lift a travel really gets: the filament's, or the studio's 3 mm when it sets none (emit.js travelLiftOf)
-  { key: 'travelLift', label: 'Lift on a travel', unit: 'mm', min: 0.1, max: 10, step: 0.1,
-    get: (m) => (m.retraction.z_hop > 0 ? m.retraction.z_hop : 3), put: (m, v) => ({ ...m, retraction: { ...m.retraction, z_hop: v } }) },
+  { key: 'travelLift', label: 'Lift on a travel', unit: 'mm', min: 0, max: 10, step: 0.1,
+    get: (m) => m.retraction.z_hop ?? 3, put: (m, v) => ({ ...m, retraction: { ...m.retraction, z_hop: v } }) },
 ]);
 
 const field = (key) => FILAMENT_FIELDS.find((f) => f.key === key);

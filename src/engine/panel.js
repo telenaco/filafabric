@@ -15,7 +15,7 @@ import { solidStrands, SOLID_LAYERS } from './svg-solids.js';
 import { SOLID_OVERLAP } from './solid-fill.js';
 import { joinStrokes } from './travel.js';
 import { buildBrimStrands } from './brim.js';
-import { travelLiftOf } from './emit.js';
+import { travelLiftOf, strandTravel } from './emit.js';
 
 const rectangle = (w, h, x = 0, y = 0) => [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }];
 const bounds = (s) => s.pts.reduce((b, p) => ({ minX: Math.min(b.minX, p.x), maxX: Math.max(b.maxX, p.x), minY: Math.min(b.minY, p.y), maxY: Math.max(b.maxY, p.y) }), { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity });
@@ -164,14 +164,14 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     for (const s of strands) {
       check(); if (s.pts.length < 2) continue;
       if (s.brim) await add([`; brim run ${s.id}`]);
-      const first = s.pts[0], safe = Math.max(maxPrintedZ, first.z, last?.z ?? 0) + travelLiftOf(cfg.derived.retraction);
-      if (last) await add(writer.move({ x: last.x, y: last.y, z: safe, cls: 'travel', extrude: false, retract: cfg.derived.retraction.length ? 'retract' : undefined }));
+      const first = s.pts[0], planned = strandTravel(last, first, maxPrintedZ, cfg.derived.retraction), safe = planned.safeZ;
+      if (last) await add(writer.move({ x: last.x, y: last.y, z: safe, cls: 'travel', extrude: false, retract: planned.retract ? 'retract' : undefined }));
       await add(writer.move({ x: first.x, y: first.y, z: safe, cls: 'travel', extrude: false }));
       await add(writer.move({ x: first.x, y: first.y, z: first.z, cls: 'travel', extrude: false }));
       for (let i = 1; i < s.pts.length; i++) {
         const p = s.pts[i], a = s.pts[i - 1];
         const cls = p.cls ?? (s.kind === 'base' ? 'base' : p.z > first.z + 0.4 ? (p.z >= a.z ? 'rising' : 'falling') : 'supported');
-        await add(writer.move({ ...p, cls, tag: s.id, extrude: true, retract: last && i === 1 && cfg.derived.retraction.length ? 'unretract' : undefined }));
+        await add(writer.move({ ...p, cls, tag: s.id, extrude: true, retract: planned.retract && i === 1 ? 'unretract' : undefined }));
         maxPrintedZ = Math.max(maxPrintedZ, p.z);
         for (const g of solids) if (p.z > g.top && p.x >= g.box.minX && p.x <= g.box.maxX && p.y >= g.box.minY && p.y <= g.box.maxY && g.area.contains(p.x, p.y)) g.top = p.z;
       }

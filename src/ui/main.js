@@ -778,7 +778,7 @@ function renderFilamentSettings() {
     if (value !== own) changed.push(f);
   }
   const note = $('#filament-settings-note');
-  note.replaceChildren(changed.length ? `Changed from the ${material.name} profile: ${changed.map((f) => f.label.toLowerCase()).join(', ')}. ` : `From the ${material.name} profile. Retraction applies before every travel. `);
+  note.replaceChildren(changed.length ? `Changed from the ${material.name} profile: ${changed.map((f) => f.label.toLowerCase()).join(', ')}. ` : `From the ${material.name} profile. Retraction starts at ${filamentValue(material, state.print, 'retractMinTravel')} mm of travel; required clearance lifts are retained. `);
   if (changed.length) {
     const reset = el('button', { type: 'button', class: 'link small', text: 'Use the filament\'s values' });
     reset.addEventListener('click', () => { state.print = withoutFilamentSettings(state.print); renderFilamentSettings(); renderPrinter(); schedule(); commit(); });

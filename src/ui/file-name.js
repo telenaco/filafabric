@@ -120,7 +120,7 @@ export function exportFileName(design, s, keys, { size, print, material, docName
   const mm = (n) => String(n);
   const head = [design.file, preset, `${mm(size[0])}x${mm(size[1])}mm`, panel ? 'panel' : ''].filter(Boolean);
   const count = Object.hasOwn(print, 'extraLayers') ? `extra${print.extraLayers}` : `layers${print.layers}`;
-  const tail = [`brim${print.brim ?? 2}`, `lh${showValue(print.layerHeight)}`, count, material, ownName(docName)];
+  const tail = [...(print.solidLayers !== undefined ? [`solid${print.solidLayers}`] : []), `brim${print.brim ?? 2}`, `lh${showValue(print.layerHeight)}`, count, material, ownName(docName)];
   return settingsFileName({ head, s, keys, tail }, { max: 180 });
 }
 
@@ -144,9 +144,10 @@ export function parseFileName(name) {
   const panel = tokens[i] === 'panel';
   if (panel) i++;
   const settings = {};
-  let layerHeight = null, layers = null, extraLayers = null, brim = null, material = null, swatchName = null, settingsDigest = null;
+  let layerHeight = null, layers = null, extraLayers = null, solidLayers = null, brim = null, material = null, swatchName = null, settingsDigest = null;
   for (; i < tokens.length; i++) {
     const t = tokens[i];
+    if (/^solid[1-8]$/.test(t) && /^(?:brim\d+|lh\d)/.test(tokens[i + 1] ?? '')) { solidLayers = Number(t.slice(5)); continue; }
     if (/^h-[0-9a-f]{16}$/.test(t)) { settingsDigest = t.slice(2); continue; }
     // Brim precedes the height/count pair, leaving legacy material IDs such as 'brim2' unambiguous.
     if (/^brim\d+$/.test(t) && /^lh\d+(\.\d+)?$/.test(tokens[i + 1] ?? '') && /^(?:layers|extra)\d+$/.test(tokens[i + 2] ?? '')) { brim = Number(t.slice(4)); continue; }
@@ -164,5 +165,5 @@ export function parseFileName(name) {
     if (number) settings[number[1]] = number[2];
     else if (dash > 0) settings[t.slice(0, dash)] = t.slice(dash + 1);
   }
-  return { design, preset, size: [Number(dims[1]), Number(dims[2])], panel, settings, layerHeight, layers, ...(extraLayers !== null ? { extraLayers } : {}), brim, material, swatchName, ...(settingsDigest ? { settingsDigest } : {}) };
+  return { design, preset, size: [Number(dims[1]), Number(dims[2])], panel, settings, layerHeight, layers, ...(solidLayers !== null ? { solidLayers } : {}), ...(extraLayers !== null ? { extraLayers } : {}), brim, material, swatchName, ...(settingsDigest ? { settingsDigest } : {}) };
 }

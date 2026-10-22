@@ -16,12 +16,12 @@ test('Filaflex Foamy: 238 C, retract 1 mm at 40 mm/s, the same pushed back at 20
   assert.deepEqual(cfg.derived.temperatures, { first: 238, print: 238, bed: 50 });
   const r = cfg.derived.retraction;
   assert.deepEqual({ length: r.length, speed: r.speed, deretractSpeed: r.deretractSpeed, restartExtra: r.restartExtra, zHop: r.zHop, minTravel: r.minTravel, seamGap: r.seamGap },
-    { length: 1, speed: 40, deretractSpeed: 20, restartExtra: 0, zHop: 0.2, minTravel: 0, seamGap: 0.2 });
+    { length: 1, speed: 40, deretractSpeed: 20, restartExtra: 0, zHop: 0.2, minTravel: 2, seamGap: 0.2 });
   assert.equal(cfg.t.speed_travel, 180, 'the profile\'s travel speed');
   assert.equal(resolveConfig(machine, material, { speed_travel: 120 }).t.speed_travel, 120, 'a design\'s own travel speed still wins');
 });
 
-test('a travel lifts 0.2 mm over the highest thing printed so far, and moves at 180 mm/s', () => {
+test('required travels retain clearance and short flat travels can omit the optional hop', () => {
   const r = zigzag();
   let top = -Infinity;
   const over = [];
@@ -33,8 +33,8 @@ test('a travel lifts 0.2 mm over the highest thing printed so far, and moves at 
   }
   assert.ok(over.length > 5);
   // (the one move from the brim into the pattern starts from the pattern's own approach, 0.2 mm up: 0.4 mm over)
-  assert.ok(over.every((d) => d > 0.2 - 1e-9 && d < 0.4 + 1e-9), `lifts of ${[...new Set(over.map((d) => d.toFixed(2)))].join(', ')} mm`);
-  assert.ok(over.filter((d) => Math.abs(d - 0.2) < 1e-9).length >= over.length - 1, 'all but that one 0.2 mm');
+  assert.ok(over.every((d) => d >= -1e-9 && d < 0.4 + 1e-9), `lifts of ${[...new Set(over.map((d) => d.toFixed(2)))].join(', ')} mm`);
+  assert.ok(over.some((d) => Math.abs(d - 0.2) < 1e-9), 'required lifts retain 0.2 mm clearance');
   assert.ok(Math.max(...r.moves.filter((m) => !m.extrude).slice(2).map((m) => m.z)) < 3, 'no 3 mm lifts');
   assert.match(r.gcode, /^G1 X[\d.]+ Y[\d.]+ F10800$/m, 'travels at 180 mm/s');
   assert.match(r.gcode, /^M109 S238/m);
@@ -51,13 +51,13 @@ test('a closed loop stops 0.2 mm short of its own start before a travel (the bri
   assert.ok(Math.abs(Math.hypot(end.x - start.x, end.y - start.y) - 0.2) < 0.02, `ends ${Math.hypot(end.x - start.x, end.y - start.y).toFixed(3)} mm from its start`);
 });
 
-test('a filament that sets no lift keeps the 3 mm lift, and one with no travel speed of its own keeps 150 mm/s', () => {
+test('a filament that explicitly sets zero lift does not gain a 3 mm hop, and one with no travel speed of its own keeps 150 mm/s', () => {
   const ninja = loadProfile('materials', 'ninjatek-ninjaflex-85a');
   assert.equal(ninja.retraction.z_hop, 0);
   const cfg = resolveConfig(machine, ninja);
   assert.equal(cfg.t.speed_travel, ninja.travel_speed_hint);
   const r = zigzag(ninja);
-  assert.ok(r.moves.some((m) => !m.extrude && m.z > 3), 'lifted 3 mm over the print');
+  assert.ok(!r.moves.some((m) => !m.extrude && m.z > 3), 'zero optional lift does not become 3 mm');
   assert.equal(cfg.derived.retraction.seamGap, 0, 'and its loops close as drawn');
   const noHint = { ...ninja, travel_speed_hint: undefined };
   assert.equal(resolveConfig(machine, noHint).t.speed_travel, 150, 'the studio\'s own default');

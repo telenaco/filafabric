@@ -2,7 +2,7 @@ import { interpretDrawing } from './drawing.js';
 import { solidKind, solidLayer, SOLID_OVERLAP } from './solid-fill.js';
 import { PolygonBoundary } from './boundary.js';
 import { clipStrands, analyzeFabric, orderStrands } from './fabric.js';
-import { emitStrands, travelLiftOf } from './emit.js';
+import { emitStrands, travelLiftOf, strandTravel } from './emit.js';
 import { computeStats } from './stats.js';
 import { writeGcode } from './gcode.js';
 import { headerNotes } from './brim.js';
@@ -129,7 +129,7 @@ export function applySvgSolids(result, vector, { fullWidth = vector.width, fullH
     let printedTop = 0;
     for (const m of moves) if (m.extrude && m.z > printedTop) printedTop = m.z;
     for (const st of raised) for (const p of st.pts) if (p.z > printedTop) printedTop = p.z;
-    const lift = travelLiftOf(retraction), safeZ = printedTop + lift;
+    const lift = Math.max(travelLiftOf(retraction), retraction?.clearance ?? h), safeZ = printedTop + lift;
     moves = joinMoves(moves, emitStrands(raised, { retraction, startLift: safeZ - raised[0].pts[0].z, travelLift: lift }), retraction, safeZ);
   }
   if (moves.length > MAX_MOVES) throw new ConfigError([`The solid shapes would take the print past ${MAX_MOVES.toLocaleString('en')} moves. Use fewer or smaller green shapes, or a smaller swatch.`]);
@@ -223,7 +223,7 @@ function joinMoves(before, after, retraction, safeZ = null) {
     // over the highest thing printed (not over the travels, which would raise every join)
     top = first.z;
     for (const m of before) if (m.extrude && m.z > top) top = m.z;
-    top += travelLiftOf(retraction);
+    top = strandTravel(last, first, top, retraction).safeZ;
   }
   const lift = { x: last.x, y: last.y, z: top, cls: 'travel', extrude: false };
   const rest = [...after];
