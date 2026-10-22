@@ -70,6 +70,22 @@ h1, h2, h3 { margin: 0; }
 .size-source-divider::before, .size-source-divider::after { content: ''; flex: 1; border-top: 1px solid var(--line); }
 .brim-control { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
 .svg-layer-control .switch-row { margin-top: 12px; }
+/* the colour guide: what each colour of a drawing prints as, folded under one line with the colours beside it */
+.svg-guide { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.svg-guide summary { cursor: pointer; display: flex; align-items: center; gap: 10px; min-height: 32px; font-weight: 600; width: fit-content; }
+.svg-guide-chips { display: inline-flex; align-items: center; gap: 4px; }
+.svg-guide-chips .svg-chip.line { width: 10px; margin-top: 0; }
+.svg-guide-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.svg-guide-list li { display: grid; grid-template-columns: 14px 1fr; gap: 8px; align-items: start; line-height: 1.45; }
+.svg-guide-list .svg-chip { margin-top: 3px; }
+.svg-guide-note { color: var(--ink); }
+/* the drawing's own colours, as they are in the file (not theme colours) */
+.svg-chip { width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0, 0, 0, 0.25); flex: none; }
+.svg-chip.red { background: #ff0000; }
+.svg-chip.blue { background: #0000ff; }
+.svg-chip.green { background: #00ff00; }
+.svg-chip.yellow { background: #ffff00; }
+.svg-chip.line { height: 2px; margin-top: 8px; border: 0; border-radius: 1px; background: currentColor; }
 /* each section of a design's panel is a card; its header names it, pictures it and, while closed, says what it is set to */
 .panel > .group { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
 .panel > .group:not(.section-fold) { padding: 12px 14px; }
@@ -220,6 +236,10 @@ h1, h2, h3 { margin: 0; }
 /* the headings that split the list: the essentials, then the rest */
 .design-group { grid-column: 1 / -1; margin: 10px 0 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); }
 .design-group:first-child { margin-top: 0; }
+.experimental-designs { margin-top: 16px; border-top: 1px solid var(--line); }
+.experimental-designs > summary { min-height: 44px; padding: 12px 0; cursor: pointer; font-size: 14px; font-weight: 700; }
+.experimental-note { display: block; margin-top: 4px; font-size: 12.5px; font-weight: 400; color: var(--muted); }
+.experimental-designs > summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 4px; }
 /* the size line that takes the place of the width and height while an SVG sets the size */
 .size-follows { margin: 0; }
 .profile-add { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
@@ -336,6 +356,18 @@ input[type="range"] { width: 100%; height: 28px; margin: 0; accent-color: var(--
 .edge-ctl { margin-top: 16px; }
 .ctl-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 32px; }
 .ctl-label { font-weight: 600; }
+.ctl-heading, .field-heading { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.control-help { display: inline-flex; flex: none; }
+.help-button {
+  display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px;
+  padding: 0; border: 0; border-radius: 8px; background: transparent; color: var(--muted);
+}
+.help-button:hover, .control-help:has(:popover-open) .help-button { color: var(--accent); background: var(--accent-soft); }
+.help-popover {
+  position: fixed; inset: auto; margin: 0; width: max-content; max-width: min(280px, calc(100vw - 24px));
+  padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 8px;
+  background: var(--panel); color: var(--ink); box-shadow: var(--shadow); font-size: 13px; font-weight: 400; line-height: 1.5;
+}
 .ctl-readout { color: var(--accent); font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
 .ctl-readout.editable {
   min-height: 32px; padding: 0 6px; margin-right: -6px; border: 0; border-radius: 6px; background: transparent;
@@ -466,6 +498,23 @@ input[role="switch"]:checked::before { transform: translateX(16px); }
 }
 .field-row.inline { grid-template-columns: auto 1fr; align-items: center; gap: 10px; font-weight: 500; min-height: 40px; }
 .field-row.inline input { min-height: 0; width: 20px; height: 20px; accent-color: var(--accent); }
+/* the filament's temperatures and retraction in the printer setup: two by two, one column on a phone */
+.filament-settings { margin: 4px 0 12px; padding: 0; border: 0; min-width: 0; }
+.filament-settings legend { padding: 0; margin-bottom: 8px; font-weight: 600; font-size: 13.5px; }
+.filament-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+.filament-fields .field-row { font-weight: 500; }
+.filament-fields .field-row.changed label { color: var(--accent); }
+.filament-fields .field-heading { min-height: 44px; }
+.filament-fields .field-heading label { flex: 1; }
+.filament-fields input { font-variant-numeric: tabular-nums; }
+.filament-advanced { margin-top: 10px; border-top: 1px solid var(--line); }
+.filament-advanced > summary, .profile-import-help > summary { min-height: 44px; padding: 10px 0; cursor: pointer; font-weight: 600; }
+.filament-advanced > summary .small { margin-left: 8px; }
+.filament-advanced[open] { margin-bottom: 12px; }
+.filament-settings .small { margin: 8px 0 0; }
+.filament-settings .link { min-height: 44px; padding: 0; }
+.filament-settings .link:disabled { color: var(--muted); text-decoration: none; }
+@media (max-width: 420px) { .filament-fields { grid-template-columns: 1fr; } }
 
 /* ---------- print summary ---------- */
 .summary {
@@ -496,7 +545,7 @@ input[role="switch"]:checked::before { transform: translateX(16px); }
 .check-link { min-height: 40px; padding: 0 4px; background: transparent; border: 0; text-decoration: underline; text-underline-offset: 3px; font-weight: 600; color: inherit; }
 .check-explain { margin-top: 10px !important; font-size: 13.5px; }
 .figures-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
-.figures { display: flex; gap: 18px; }
+.figures { display: flex; flex-wrap: wrap; gap: 10px 18px; }
 .figures.overview-figures { flex-wrap: wrap; gap: 10px 18px; }
 .estimate-info { flex-basis: 100%; margin: 0; }
 #calculate-full-estimate { min-height: 44px; }

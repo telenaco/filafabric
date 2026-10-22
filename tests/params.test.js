@@ -8,14 +8,15 @@ const { machine, material } = defaultProfiles();
 test('defaults resolve against MK3S + Foamy', () => {
   const cfg = resolveConfig(machine, material);
   assert.equal(cfg.derived.rowPitch, 5);
-  assert.ok(Math.abs(cfg.derived.maxVolActual - 3.65) < 1e-9);
+  assert.ok(Math.abs(cfg.derived.maxVolActual - 1.311) < 1e-9);
   assert.equal(cfg.derived.loopBaseZ, 0.4);
   assert.deepEqual(cfg.derived.origin, { x: 75, y: 55 });
   assert.equal(cfg.derived.limitsMode, 'normal');
   assert.equal(cfg.derived.limits.max_feedrate.z, 12);
   assert.equal(cfg.derived.freeDiameter, 0.4);
   assert.equal(cfg.derived.retraction.length, 0);
-  assert.equal(cfg.derived.temperatures.first, 248);
+  assert.equal(cfg.derived.retraction.restartExtra, 0);
+  assert.equal(cfg.derived.temperatures.first, 240);
 });
 
 test('overrides win and nulls fall back to the material', () => {

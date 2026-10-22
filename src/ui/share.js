@@ -4,6 +4,8 @@ import { ADVANCED_DEFAULTS, PRIMARY_KEYS, sanitizePrimary } from './controls.js'
 import { sanitizeSquiggle } from './squiggle-controls.js';
 import { DESIGNS, READY_IDS } from './designs.js';
 import { sanitizeSvgLines } from '../engine/svg-lines.js';
+import { sanitizeFilamentSettings } from './filament-settings.js';
+import { BACKING_MESH } from '../engine/backing.js';
 
 /** The designs a link can open, in gallery order (planned placeholders are not loadable). The first opens by default. */
 export const DESIGN_IDS = READY_IDS;
@@ -34,11 +36,17 @@ export function hashToState(hash) {
   return m ? decodeState(m[1]) : null;
 }
 
-/** Layer thickness (mm), additional layers above the native design, and side-by-side brim runs. Invalid values use the defaults. */
-export const PRINT_DEFAULTS = Object.freeze({ layerHeight: 0.2, extraLayers: 0, brim: 2 });
+/**
+ * Layer thickness (mm), additional layers above the native design, and side-by-side brim runs, with any change to the
+ * filament's temperatures and retraction (filament-settings.js). Invalid values use the defaults.
+ */
+export const PRINT_DEFAULTS = Object.freeze({ layerHeight: 0.2, extraLayers: 0, solidLayers: 1, brim: 2, meshPerimeters: 0 });
 export function sanitizePrint(raw) {
   const out = { ...PRINT_DEFAULTS };
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
+  Object.assign(out, sanitizeFilamentSettings(raw));
+  const backing = sanitizeBacking(raw.backing);
+  if (backing) out.backing = backing;
   const h = Number(raw.layerHeight);
   if (raw.layerHeight !== null && raw.layerHeight !== '' && Number.isFinite(h) && h > 0 && h <= 2) out.layerHeight = h;
   const e = raw.extraLayers;
@@ -50,10 +58,31 @@ export function sanitizePrint(raw) {
     const copies = Math.round(Number(raw.layers));
     if (Number.isFinite(copies) && copies >= 2 && copies <= 50) out.legacyCopies = copies;
   }
-  const b = raw.brim;
+  const solid = typeof raw.solidLayers === 'number' || typeof raw.solidLayers === 'string' && raw.solidLayers.trim() !== '' ? Number(raw.solidLayers) : NaN;
+  if (Number.isInteger(solid) && solid >= 1 && solid <= 8) out.solidLayers = solid;
+  const b = Object.hasOwn(raw, 'perimeters') ? raw.perimeters : raw.brim;
   const count = (typeof b === 'number' || typeof b === 'string' && b.trim() !== '') ? Number(b) : NaN;
   if (Number.isFinite(count) && count >= 0 && count <= 50) out.brim = Math.round(count);
+  // Old links used one count for solid walls and mesh rings; preserve their geometry on migration.
+  const meshRaw = Object.hasOwn(raw, 'meshPerimeters') ? raw.meshPerimeters : b;
+  const mesh = (typeof meshRaw === 'number' || typeof meshRaw === 'string' && meshRaw.trim() !== '') ? Number(meshRaw) : NaN;
+  if (Number.isFinite(mesh) && mesh >= 0 && mesh <= 50) out.meshPerimeters = Math.round(mesh);
   return out;
+}
+
+/**
+ * The backing mesh under the design, kept only while it is on: { spacing, depth, wavelength, pause }. `true` is the
+ * standard mesh; a missing or impossible value takes the standard one's.
+ */
+export function sanitizeBacking(raw) {
+  if (raw === true) return { ...BACKING_MESH };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const num = (v, lo, hi, fallback) => {
+    const n = typeof v === 'number' || (typeof v === 'string' && v.trim() !== '') ? Number(v) : NaN;
+    return Number.isFinite(n) && n > lo && n <= hi ? n : fallback;
+  };
+  return { spacing: num(raw.spacing, 0.5, 50, BACKING_MESH.spacing), depth: num(raw.depth, 0, 20, BACKING_MESH.depth),
+    wavelength: num(raw.wavelength, 1, 100, BACKING_MESH.wavelength), pause: raw.pause === true };
 }
 
 const MAX_OUTLINE_RINGS = 64;

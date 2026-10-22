@@ -63,7 +63,8 @@ test('composed zigzag ends reach the SVG border after the shared inset step', ()
   const vector = { name: 'diamond.svg', width: 30, height: 30, paths: [[...rings[0], rings[0][0]]], styles: [{ color: 'red', width: 0.45 }] };
   const r = composeSvgLines(d.generate(machine, material, { ...d.defaults(), width: 30, height: 30 }, { outline: rings }), vector, { clipLines: false });
   const ends = r.strands.filter((s) => s.id.startsWith('pattern-')).flatMap((s) => [s.pts[0], s.pts.at(-1)]);
-  assert.ok(ends.filter((p) => edgeDistance(p, rings) < 1e-6).length > 4);
+  assert.equal(ends.length, 4, 'one continuous strand per mesh pass, two ends each');
+  assert.ok(ends.every((p) => edgeDistance(p, rings) < 1e-6));
   assert.ok(r.strands.filter((s) => s.id.startsWith('pattern-')).every((s) => s.pts.slice(1).every((p, i) => segmentInside(s.pts[i], p, new PolygonBoundary(rings)))));
 });
 
@@ -131,5 +132,6 @@ test('SVG design panel exports the actual document once instead of sample hearts
   const sections = text.slice(text.indexOf('; texture section 1'), text.indexOf('; BODY END'));
   assert.doesNotMatch(sections, /\bE\d/, 'no sample geometry in either texture section');
   // The 60 x 30 mm document is centred on the 250 x 210 mm bed: its one line remains (2,7) to (58,7).
-  assert.match(text, /; BODY START\nG1 X97 Y97 Z3\.2 F9000\nG1 Z0\.2 F720\nG1 X153 E/);
+  // Zero filament retraction means no optional hop on this unobstructed approach.
+  assert.match(text, /; BODY START\nG1 X97 Y97 Z0\.2 F10800\nG1 X153 E/);
 });

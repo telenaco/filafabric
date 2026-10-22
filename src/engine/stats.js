@@ -1,10 +1,14 @@
-import { moveSpeed, segmentE, filamentArea } from './extrusion.js';
+import { segmentE, filamentArea } from './extrusion.js';
 import { startPosition } from './params.js';
+import { moveSpeedOf, GcodeWriter } from './gcode.js';
 
-/** Summary numbers for the UI and the G-code header. Time ignores acceleration. */
+/** timeSec/moveStartSec retain the commanded-body playback clock. estimatedTimeSec
+ * additionally models acceleration on the actual rounded start/body/end G-code. */
 export function computeStats(moves, cfg, placements) {
   let pos = startPosition(cfg);
   let timeSec = 0;
+  const timeByKind = { extrusion: 0, travel: 0, retraction: 0, unretraction: 0 };
+  let retractions = 0, travelMoves = 0, pulling = false, minPrintZ = Infinity, maxPrintZ = -Infinity;
   let filamentMm = 0;
   const lengthByClass = { base: 0, supported: 0, rising: 0, falling: 0, unsupported: 0, travel: 0 };
   const r = cfg.derived.retraction;
@@ -16,12 +20,16 @@ export function computeStats(moves, cfg, placements) {
   let previous = null;
   let previousExtruded = false;
   const moveStartSec = new Float64Array(moves.length);
+  const timingWriter = new GcodeWriter(cfg);
+  timingWriter.header();
   let moveIndex = 0;
 
   for (const m of moves) {
+    timingWriter.move(m);
     moveStartSec[moveIndex++] = timeSec;
     const dx = m.x - pos.x, dy = m.y - pos.y, dz = m.z - pos.z;
     const ds = Math.hypot(dx, dy, dz);
+    const fromZ = pos.z;
     pos = { x: m.x, y: m.y, z: m.z };
     if (m.extrude) {
       extrudingMoves++;
@@ -33,11 +41,22 @@ export function computeStats(moves, cfg, placements) {
     }
     previous = m;
     previousExtruded = m.extrude;
-    if (m.retract === 'retract') timeSec += r.length / r.speed;
-    if (m.retract === 'unretract') timeSec += r.length / r.deretractSpeed;
+    // a move may carry its own retraction (gcode.js)
+    const mr = m.retraction ?? r;
+    if (m.retract === 'retract') { const seconds = mr.length / mr.speed; timeSec += seconds; timeByKind.retraction += seconds; retractions++; }
+    if (m.pull > 0 && !pulling) retractions++;
+    pulling = m.pull > 0;
+    if (m.retract === 'unretract') {
+      // the extra push after a travel is filament laid down, as much as any extrusion
+      const seconds = (mr.length + (mr.restartExtra ?? 0)) / mr.deretractSpeed;
+      timeSec += seconds; timeByKind.unretraction += seconds;
+      filamentMm += mr.restartExtra ?? 0;
+    }
     if (m.violation) violations++;
     if (ds < 1e-9) continue;
-    timeSec += ds / moveSpeed(m.cls, dx, dy, dz, cfg, m.flow ?? 1);
+    const seconds = ds / moveSpeedOf(m, dx, dy, dz, ds, cfg, mr);
+    timeSec += seconds; timeByKind[m.extrude ? 'extrusion' : 'travel'] += seconds;
+    if (m.extrude) { minPrintZ = Math.min(minPrintZ, fromZ, m.z); maxPrintZ = Math.max(maxPrintZ, fromZ, m.z); } else travelMoves++;
     lengthByClass[m.cls] += ds;
     if (m.extrude) filamentMm += segmentE(ds, m.cls, cfg, m.flow ?? 1);
   }
@@ -52,8 +71,13 @@ export function computeStats(moves, cfg, placements) {
   }
 
   const volumeMm3 = filamentMm * filamentArea(cfg.derived.filamentDiameter);
+  timingWriter.footer();
+  const motionEstimate = timingWriter.motionEstimate;
   return {
-    timeSec,
+    timeSec, timeByKind, retractions, travelMoves,
+    estimatedTimeSec: motionEstimate.estimatedTimeSec,
+    motionEstimate,
+    extrusionRangeZ: { min: Number.isFinite(minPrintZ) ? minPrintZ : null, max: Number.isFinite(maxPrintZ) ? maxPrintZ : null },
     filamentMm,
     filamentGrams: (volumeMm3 / 1000) * cfg.material.density,
     loops: placements.length,

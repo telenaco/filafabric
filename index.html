@@ -72,6 +72,7 @@
 </header>
 
 <div id="more-menu" class="menu" popover>
+  <a class="menu-item" href="./source.html" target="_blank" rel="noopener">Slicing engine source and licences</a>
   <button type="button" class="menu-item" id="btn-panel">Export repeating garment panel…</button>
   <button type="button" class="menu-item" id="btn-help"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M6.2 6.2a1.9 1.9 0 113 1.5c-.8.5-1.2.9-1.2 1.7M8 11.6v.1"/></svg>Getting started</button>
   <button type="button" class="menu-item" id="btn-privacy"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.8l5 2v4c0 3-2.2 5.3-5 6.4-2.8-1.1-5-3.4-5-6.4v-4z"/><path d="M5.8 8l1.6 1.6 2.9-3"/></svg>Privacy and cookies</button>
@@ -89,6 +90,10 @@
   <aside class="designs" aria-labelledby="designs-title">
     <h2 class="eyebrow" id="designs-title" title="Essentials first, then the rest easiest first. Every design opens at 100 × 100 mm. The order ranks the default geometry by free spans, slopes, nozzle lifts and clearance flags; physical testing pending.">Designs</h2>
     <div class="design-list" id="design-list"></div>
+    <details class="experimental-designs" id="experimental-designs">
+      <summary>More structures<span class="experimental-note">Experimental, untested patterns. They may not print reliably yet.</span></summary>
+      <div class="design-list" id="experimental-design-list"></div>
+    </details>
     <p class="more-designs">More structures are on the way.</p>
     <p class="site-credit"><a href="https://www.bubaki.com/" target="_blank" rel="noopener">© 2026 Bubaki</a></p>
   </aside>
@@ -284,7 +289,7 @@
 <dialog id="printer-dialog" aria-labelledby="printer-dialog-title">
   <form method="dialog">
     <h2 id="printer-dialog-title">Printer setup</h2>
-    <p class="muted">A setup holds the printer's limits, the filament's behaviour and how the layers are printed.</p>
+    <p class="muted">Choose your printer, filament and layers.</p>
     <div class="field-row stacked machine-picker">
       <label for="machine-search">Printer</label>
       <input id="machine-search" type="search" autocomplete="off" spellcheck="false" placeholder="Search printers…" aria-controls="machine-list" aria-describedby="machine-count">
@@ -292,12 +297,20 @@
       <p id="machine-count" class="small muted" aria-live="polite"></p>
     </div>
     <label class="field-row stacked" for="sel-material"><span>Filament</span><select id="sel-material"></select></label>
+    <fieldset class="filament-settings" id="filament-settings">
+      <legend>Filament settings</legend>
+      <div id="filament-fields"></div>
+      <button type="button" class="link small" id="filament-reset" disabled>Reset filament defaults</button>
+    </fieldset>
     <p class="muted small" id="dialog-note"></p>
     <div id="print-setup"></div>
     <div class="profile-add">
       <label class="btn" for="profile-file">Add a printer or filament file…</label>
       <input type="file" id="profile-file" class="visually-hidden" accept=".ini,.json,.gcode" multiple>
-      <p class="muted small">Use a complete PrusaSlicer config (.ini or sliced .gcode) or a self-contained Bambu Studio / OrcaSlicer printer or filament preset (.json). Print/process presets alone and files missing their parent settings are not complete printer profiles. Review import notes before printing.</p>
+      <details class="profile-import-help small muted">
+        <summary>Which files can I import?</summary>
+        <p>Use a complete PrusaSlicer .ini or sliced .gcode, or a self-contained Bambu Studio / OrcaSlicer printer or filament .json. Process-only presets and files missing parent settings cannot be imported. Review any import warnings before printing.</p>
+      </details>
       <p class="small"><a class="link" href="samples/printer-profile.ini" download>Download sample .ini</a> · <a class="link" href="samples/printer-profile.json" download>Sample .json</a> · <a class="link" href="profiles/README.md" target="_blank" rel="noopener">Profile requirements</a></p>
       <ul class="profile-list" id="profile-list" hidden></ul>
     </div>
@@ -393,6 +406,6 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-<script type="module" src="src/boot.js?v=20261021-open-gate"></script>
+<script type="module" src="src/boot.js?v=20261021-filaflex-238"></script>
 </body>
 </html>

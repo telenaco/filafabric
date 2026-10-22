@@ -1,22 +1,26 @@
 import { interpretDrawing } from './drawing.js';
 import { solidKind, solidLayer, SOLID_OVERLAP } from './solid-fill.js';
 import { PolygonBoundary } from './boundary.js';
-import { clipStrands, analyzeFabric } from './fabric.js';
-import { emitStrands } from './emit.js';
+import { clipStrands, analyzeFabric, orderStrands } from './fabric.js';
+import { emitStrands, travelLiftOf, strandTravel } from './emit.js';
 import { computeStats } from './stats.js';
 import { writeGcode } from './gcode.js';
 import { headerNotes } from './brim.js';
 import { MAX_MOVES } from './tiler.js';
 import { ConfigError } from './params.js';
+import { adaptiveSolidPaths } from './adaptive-solids.js';
+import { joinDenseInfill } from './solid-infill-joins.js';
 
 /**
  * Green shapes of a drawing print solid, after the pattern and on top of it: the pattern is made as usual, over the
  * whole swatch, and then each green shape is filled (a coil if it is round, a zigzag otherwise, neighbouring passes
  * overlapping by 20%) in SOLID_LAYERS layers, the first one layer above the highest strand already printed under the
  * shape. So a green circle is a solid disc lying on the fabric, joined to it wherever the fabric reaches up to it.
+ * A green shape with nothing under it (a lace's body round its windows) lies on the bed and prints layer by layer with a
+ * flat pattern instead, as a slicer would.
  */
 
-export const SOLID_LAYERS = 2;
+export const SOLID_LAYERS = 1;
 
 /** A design whose own strands stand up off the bed (loops, pillars, a spacer): its heights are kept as they are. */
 export const hasNativeHeight = (result) => !!(result.placements?.length || result.spacer || result.pillarWeave);
@@ -65,70 +69,92 @@ export function topOver(strands, ring, margin = 0, holes = [], holeMargin = 0) {
 }
 
 /** The solid fill strands of every shape: layer by layer, so each layer of every shape is down before the next. */
-export function solidStrands(solids, under, { bead = 0.45, layerHeight = 0.2, layers = SOLID_LAYERS, overlap = SOLID_OVERLAP } = {}) {
+export function solidStrands(solids, under, { bead = 0.45, layerHeight = 0.2, layers = SOLID_LAYERS, overlap = SOLID_OVERLAP, perimeters = null, generator = 'classic', nozzleDiameter = 0.4 } = {}) {
   // a shape may come with the height already measured under it (a panel measures it as it prints)
   // a lace's pattern lies in its red windows, which are holes in the solid: the solid sits on whatever is under itself
+  if (!Number.isInteger(layers) || layers < 1 || layers > 8) throw new ConfigError(['Solid layers must be an integer from 1 to 8.']);
   const shapes = solids.map((s) => ({ ...s, holes: s.holes ?? [], kind: solidKind(s.ring, s.holes ?? []), top: s.top ?? topOver(under, s.ring, 0, s.holes ?? [], bead) }));
   const out = [];
   for (let k = 0; k < layers; k++) {
     shapes.forEach((s, i) => {
       const z = s.top + (k + 1) * layerHeight;
-      for (const pts of solidLayer(s.ring, { bead, overlap, layer: k, kind: s.kind, holes: s.holes, edged: s.edged ?? [] })) {
-        out.push({ id: `solid-${i + 1}-${k + 1}-${out.length + 1}`, name: 'Solid shape', solid: s.kind, solidLayer: k, fixed: true, ground: s.top === 0,
-          kind: s.top === 0 && k === 0 ? 'base' : 'supported', pts: pts.map((p) => ({ x: p.x, y: p.y, z })) });
-      }
+      const adaptive = generator === 'arachne' && perimeters > 0 && s.kind !== 'coil';
+      const paths = adaptive
+        ? adaptiveSolidPaths(s.ring, { bead, layerHeight, perimeters, holes: s.holes, edged: s.edged ?? [], layer: k, nozzleDiameter })
+        : solidLayer(s.ring, { bead, overlap, layer: k, kind: s.kind, holes: s.holes, edged: s.edged ?? [], perimeters }).map(pts => ({ pts }));
+      const travelBoundary = new PolygonBoundary([s.ring, ...s.holes]);
+      const strands = paths.map((path, j) => ({
+        id: `solid-${i + 1}-${k + 1}-${out.length + j + 1}`, name: 'Solid shape', solid: s.kind, solidLayer: k, fixed: true, ground: s.top === 0,
+        ...(adaptive ? { generator: 'arachne', role: path.role, routingGroup: path.routingGroup } : {}),
+        travelBoundary,
+        kind: s.top === 0 && k === 0 ? 'base' : 'supported', pts: path.pts.map((p) => ({ ...p, z })),
+      }));
+      // Only reorder this shape at this height: keep layer precedence and a coil's spiral direction.
+      const ordered = strands.length > 1 ? orderStrands(strands, { start: out.at(-1)?.pts.at(-1), improve: true }) : strands;
+      out.push(...(adaptive ? joinDenseInfill(ordered, { boundary: travelBoundary, bead, layerHeight }) : ordered));
     });
   }
   return { strands: out, shapes };
 }
 
 /**
- * Adds the green shapes of `vector` to a finished result, printed last. `fullWidth` x `fullHeight` is the size the
- * drawing is placed at and `offsetX`, `offsetY` where this result's swatch lies in it (a preview window or a section).
- * The moves already planned are kept exactly; the fill follows them after a lift clear of everything printed.
+ * Adds the green shapes of `vector` to a finished result. `fullWidth` x `fullHeight` is the size the drawing is placed
+ * at and `offsetX`, `offsetY` where this result's swatch lies in it (a preview window or a section). A shape on the
+ * pattern prints last: the moves already planned are kept exactly and its fill follows them after a lift clear of
+ * everything printed. A shape on the bed prints layer by layer with a flat pattern, or before a raised one.
  */
-export function applySvgSolids(result, vector, { fullWidth = vector.width, fullHeight = vector.height, offsetX = 0, offsetY = 0 } = {}) {
+export function applySvgSolids(result, vector, { fullWidth = vector.width, fullHeight = vector.height, offsetX = 0, offsetY = 0, layers = SOLID_LAYERS, perimeters = null, generator = 'classic' } = {}) {
   const solids = vectorSolids(vector, fullWidth, fullHeight, offsetX, offsetY);
   if (!solids.length) return result;
   const { cfg } = result, h = cfg.t.layer_height, bead = cfg.t.extrusion_width;
   const W = cfg.t.sample_width, H = cfg.t.sample_height;
   const body = result.strands ?? [];
-  const { strands: fill, shapes } = solidStrands(solids, body, { bead, layerHeight: h });
+  const { strands: fill, shapes } = solidStrands(solids, body, { bead, layerHeight: h, layers, perimeters, generator, nozzleDiameter: cfg.t.nozzle_diameter });
   const swatch = new PolygonBoundary([[{ x: 0, y: 0 }, { x: W, y: 0 }, { x: W, y: H }, { x: 0, y: H }]]);
   const added = clipStrands(fill, swatch, 0);
   if (!added.length) return result;
   const retraction = cfg.derived.retraction;
   const ground = added.filter((st) => st.ground), raised = added.filter((st) => !st.ground);
   let moves = result.moves ?? [];
-  // a solid lying on the bed (a lace's body) prints before the pattern, right after the drawing's own lines (the edges of
-  // its windows, on the same first layer): the pattern then lies against it, and the nozzle never comes down beside
-  // strands already printed higher up. A flat result's moves are its strands emitted in order, so they split there.
-  const lead = hasNativeHeight(result) ? 0 : Math.max(0, body.findIndex((st) => st.name !== 'Imported SVG lines'));
-  const split = lead ? emitStrands(body.slice(0, lead), { retraction }).length : 0;
-  if (ground.length) moves = joinMoves(joinMoves(moves.slice(0, split), emitStrands(ground, { retraction }), retraction), moves.slice(split), retraction);
+  const native = hasNativeHeight(result);
+  // the drawing's own lines (the edges of its windows) print first, on the first layer
+  const firstPattern = body.findIndex((st) => st.name !== 'Imported SVG lines');
+  const lead = native ? 0 : firstPattern < 0 ? body.length : firstPattern;
+  let order = [...body.slice(0, lead), ...ground, ...body.slice(lead)];
+  if (ground.length && !native) {
+    // a solid lying on the bed (a lace's body) prints layer by layer with a flat pattern, each of its layers among the
+    // pattern's strands at its height (layeredGround). A flat result's moves are its strands emitted in order, so they
+    // are emitted again in the new order.
+    order = [...body.slice(0, lead), ...layeredGround(body.slice(lead), ground)];
+    moves = emitStrands(order, { retraction });
+  } else if (ground.length) {
+    // a raised design's solid on the bed prints before it: the nozzle never comes down beside loops already standing
+    moves = joinMoves(emitStrands(ground, { retraction }), moves, retraction);
+  }
   // a solid on top of the pattern (a button on a garment) prints last, once everything under it is down
   if (raised.length) {
     // (a loop, not Math.max(...): a full-size print has far more moves than a call can take arguments)
     let printedTop = 0;
-    for (const m of moves) if (m.z > printedTop) printedTop = m.z;
+    for (const m of moves) if (m.extrude && m.z > printedTop) printedTop = m.z;
     for (const st of raised) for (const p of st.pts) if (p.z > printedTop) printedTop = p.z;
-    const safeZ = printedTop + 3;
-    moves = joinMoves(moves, emitStrands(raised, { retraction, startLift: safeZ - raised[0].pts[0].z, travelLift: 3 }), retraction, safeZ);
+    const lift = Math.max(travelLiftOf(retraction), retraction?.clearance ?? h), safeZ = printedTop + lift;
+    moves = joinMoves(moves, emitStrands(raised, { retraction, startLift: safeZ - raised[0].pts[0].z, travelLift: lift }), retraction, safeZ);
   }
   if (moves.length > MAX_MOVES) throw new ConfigError([`The solid shapes would take the print past ${MAX_MOVES.toLocaleString('en')} moves. Use fewer or smaller green shapes, or a smaller swatch.`]);
-  const strands = [...body.slice(0, lead), ...ground, ...body.slice(lead), ...raised];
+  const strands = [...order, ...raised];
   const stats = { ...result.stats, ...computeStats(moves, cfg, result.placements ?? []), loops: result.stats.loops };
   // the piece's outline: the pattern's, unless solids lie outside it (a lace's green body round its red windows)
   const piece = pieceRings(result.outline ?? swatch.rings, shapes.map((sh) => sh.ring));
   const boundary = new PolygonBoundary(piece);
   const fabric = analyzeFabric(strands, { strandWidth: bead, layerHeight: h, boundary });
   const warnings = [...(result.warnings ?? []).filter((w) => !(result.fabric?.issues ?? []).includes(w)), ...fabric.issues];
-  const coils = shapes.filter((s) => s.kind === 'coil').length;
-  const solid = { count: shapes.length, coils, zigzags: shapes.length - coils, layers: SOLID_LAYERS, overlap: SOLID_OVERLAP };
+  const coils = shapes.filter((s) => s.kind === 'coil').length, onBed = shapes.filter((s) => s.top === 0).length;
+  const usedGenerator = fill.some(s => s.generator === 'arachne') ? 'arachne' : 'classic';
+  const solid = { count: shapes.length, coils, zigzags: shapes.length - coils, layers, perimeters: perimeters ?? 1, overlap: usedGenerator === 'arachne' ? 0.15 : SOLID_OVERLAP, generator: usedGenerator };
   return {
     ...result, strands, moves, stats, fabric, warnings, solid, pieceOutline: piece,
     ...(result.report ? { report: { ...result.report, components: fabric.components } } : {}),
-    gcode: writeGcode(moves, cfg, { stats, comments: [...headerNotes(result), `Solid shapes: ${shapes.length} green (${coils} coiled, ${shapes.length - coils} zigzag), ${SOLID_LAYERS} layers on top of the pattern, ${Math.round(SOLID_OVERLAP * 100)}% overlap`] }),
+    gcode: writeGcode(moves, cfg, { stats, comments: [...headerNotes(result), `Solid generator: ${usedGenerator} (round coils retain continuous spiral fill)`, `Solid shapes: ${shapes.length} green (${coils} coiled, ${shapes.length - coils} zigzag), ${layers} layer(s) each, ${perimeters ?? 1} inside perimeter(s) (${onBed} on the bed, layer by layer with the pattern; ${shapes.length - onBed} on top of the pattern, last), ${Math.round(solid.overlap * 100)}% overlap`] }),
   };
 }
 
@@ -168,6 +194,34 @@ export function pieceRings(outlineRings, solidRings) {
   return [...rings, ...loose.filter((s) => !around.includes(s))];
 }
 
+/**
+ * A flat pattern's strands in their own order, with each layer of the solids on the bed placed among them as a slicer
+ * prints, layer by layer: the solid's first layer before the pattern's first, its second after the pattern's first and
+ * before its second, and so on (a pattern under a drawing numbers its layers from 1; the drawing's lines are 0). Each
+ * solid layer comes after every strand of a lower layer, so the nozzle never comes down beside it.
+ */
+export function layeredGround(pattern, ground) {
+  const byLayer = new Map();
+  for (const st of ground) {
+    if (!byLayer.has(st.solidLayer)) byLayer.set(st.solidLayer, { k: st.solidLayer, strands: [] });
+    byLayer.get(st.solidLayer).strands.push(st);
+  }
+  const layers = [...byLayer.values()].sort((a, b) => a.k - b.k);
+  let previous = 0;
+  for (const layer of layers) {
+    let at = 0;
+    for (let i = 0; i < pattern.length; i++) if ((pattern[i].layer ?? 1) <= layer.k) at = i + 1;
+    layer.at = Math.max(previous, at);
+    previous = layer.at;
+  }
+  const out = [];
+  for (let i = 0; i <= pattern.length; i++) {
+    for (const layer of layers) if (layer.at === i) out.push(...layer.strands);
+    if (i < pattern.length) out.push(pattern[i]);
+  }
+  return out;
+}
+
 /** `before` then `after`, joined by a lift clear of everything printed (and a balanced retraction for a long move). */
 function joinMoves(before, after, retraction, safeZ = null) {
   if (!before.length) return after;
@@ -175,9 +229,10 @@ function joinMoves(before, after, retraction, safeZ = null) {
   const last = before.at(-1), first = after[0];
   let top = safeZ;
   if (top === null) {
+    // over the highest thing printed (not over the travels, which would raise every join)
     top = first.z;
-    for (const m of before) if (m.z > top) top = m.z;
-    top += 3;
+    for (const m of before) if (m.extrude && m.z > top) top = m.z;
+    top = strandTravel(last, first, top, retraction).safeZ;
   }
   const lift = { x: last.x, y: last.y, z: top, cls: 'travel', extrude: false };
   const rest = [...after];

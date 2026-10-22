@@ -27,7 +27,7 @@ const near = (p, q) => dist(p, q) < 1e-6;
 function joinable(s) {
   if (s.name === 'Structural tie' || (s.layer ?? 0) < 0 || s.pts.length < 2 || near(s.pts[0], s.pts.at(-1))) return false;
   const z = s.pts[0].z ?? 0;
-  return s.pts.every((p) => p.cls === undefined && Math.abs((p.z ?? 0) - z) < 1e-6);
+  return s.pts.every((p) => p.cls === undefined && p.flow === undefined && p.width === undefined && Math.abs((p.z ?? 0) - z) < 1e-6);
 }
 
 /**
@@ -99,10 +99,22 @@ export function joinStrokes(strands, { within = 0.1, allow = null } = {}) {
   return joinNetwork(mergeTouching(strands, { within, allow }), { within, allow });
 }
 
-/** The ring of a closed strand without its repeated end, rotated to start at vertex v and closed again. */
-function rotated(pts, v) {
+/** Incoming flow and class belong to the segment, rather than the vertex's XY position. */
+function withSegment(point, segment) {
+  const { flow, cls, width, ...position } = point;
+  return { ...position, ...(segment.flow !== undefined ? { flow: segment.flow } : {}), ...(segment.cls !== undefined ? { cls: segment.cls } : {}), ...(segment.width !== undefined ? { width: segment.width } : {}) };
+}
+
+export function reversePoints(pts) {
+  return pts.map((_, i) => i === 0 ? pts.at(-1) : withSegment(pts[pts.length - 1 - i], pts[pts.length - i]));
+}
+
+/** Rotate the ring, retaining the closing segment's settings when its first vertex moves inside. */
+export function rotatePoints(pts, v) {
+  if (!v) return pts;
   const ring = pts.slice(0, -1);
-  return v ? [...ring.slice(v), ...ring.slice(0, v), ring[v]] : pts;
+  ring[0] = withSegment(ring[0], pts.at(-1));
+  return [...ring.slice(v), ...ring.slice(0, v), ring[v]];
 }
 
 /**
@@ -112,13 +124,24 @@ function rotated(pts, v) {
  * @param budget  at most this many candidate moves are evaluated (the result is the same on every machine)
  */
 export function improveTravel(strands, start, { budget = 3_000_000 } = {}) {
+  if (strands.length < 2) return searchTravel(strands, start, budget, true);
+  // Seam changes alter local minima. Compare the original-seam search and joint search within one shared budget.
+  const legacyBudget = Math.floor(budget / 2);
+  const legacy = searchTravel(strands, start, legacyBudget, false);
+  const joint = searchTravel(strands, start, budget - legacyBudget, true);
+  const cost = route => route.reduce((sum, strand, i) => sum + dist(i ? route[i - 1].pts.at(-1) : start, strand.pts[0]), 0);
+  return cost(joint) < cost(legacy) - 1e-9 ? joint : legacy;
+}
+
+function searchTravel(strands, start, budget, jointSeams) {
   const n = strands.length;
-  if (n < 2) return strands;
+  if (!n) return strands;
   const first = strands.map((s) => s.pts[0]);
   const last = strands.map((s) => s.pts.at(-1));
   const closed = strands.map((_, i) => near(first[i], last[i]));
   const order = Array.from({ length: n }, (_, i) => i);
   const flip = new Uint8Array(n);
+  const seams = new Uint32Array(n);
   const entry = (i) => (flip[i] ? last[i] : first[i]);
   const exit = (i) => (flip[i] ? first[i] : last[i]);
   let spent = 0;
@@ -132,11 +155,31 @@ export function improveTravel(strands, start, { budget = 3_000_000 } = {}) {
   while (improved && spent < budget) {
     improved = false;
 
+    // Optimize individual orientations and seams again after order changes, including a layer containing one loop.
+    for (let p = 0; jointSeams && p < n && spent < budget; p++) {
+      const idx = order[p], from = p === 0 ? start : exit(order[p - 1]);
+      const to = p + 1 < n ? entry(order[p + 1]) : null;
+      const cost = (a, b) => dist(from, a) + (to ? dist(b, to) : 0);
+      let best = cost(entry(idx), exit(idx));
+      if (closed[idx]) {
+        for (let v = 0; v < strands[idx].pts.length - 1 && spent < budget; v++) {
+          spent++;
+          const point = strands[idx].pts[v], candidate = cost(point, point);
+          if (candidate < best - 1e-9) {
+            best = candidate; seams[idx] = v; first[idx] = last[idx] = point; improved = true;
+          }
+        }
+      } else {
+        spent++;
+        if (cost(exit(idx), entry(idx)) < best - 1e-9) { flip[idx] ^= 1; improved = true; }
+      }
+    }
+
     // 2-opt: reversing order[i..j] (each strand flipped) changes only the move into i and the move out of j
     for (let i = 0; i < n - 1 && spent < budget; i++) {
       const before0 = i === 0 ? start : exit(order[i - 1]);
       const head = entry(order[i]);
-      for (let j = i + 1; j < n; j++) {
+      for (let j = i + 1; j < n && spent < budget; j++) {
         spent++;
         const tail = exit(order[j]);
         const next = j + 1 < n ? entry(order[j + 1]) : null;
@@ -159,7 +202,7 @@ export function improveTravel(strands, start, { budget = 3_000_000 } = {}) {
         const gain = dist(prev, entry(a)) + (next ? dist(exit(z), next) : 0) - (next ? dist(prev, next) : 0);
         if (gain < 1e-9) continue;
         let bestCost = gain - 1e-9, bestGap = -1, bestTurn = false;
-        for (let k = 0; k <= n; k++) {
+        for (let k = 0; k <= n && spent + 2 <= budget; k++) {
           if (k >= i && k <= i + len) continue;
           spent += 2;
           const x = k === 0 ? start : exit(order[k - 1]);
@@ -180,23 +223,24 @@ export function improveTravel(strands, start, { budget = 3_000_000 } = {}) {
     }
   }
 
-  // closed shapes start where it is shortest to come from the strand before and go on to the one after
   const result = order.map((idx) => {
-    const s = strands[idx];
-    if (closed[idx] || !flip[idx]) return s;
-    return { ...s, pts: [...s.pts].reverse() };
+    const strand = strands[idx];
+    const pts = closed[idx] ? rotatePoints(strand.pts, seams[idx]) : flip[idx] ? reversePoints(strand.pts) : strand.pts;
+    return pts === strand.pts ? strand : { ...strand, pts };
   });
-  for (let p = 0; p < result.length; p++) {
-    const s = result[p];
-    if (!closed[order[p]] || s.pts.length < 4) continue;
-    const from = p === 0 ? start : result[p - 1].pts.at(-1);
-    const to = p + 1 < result.length ? result[p + 1].pts[0] : null;
-    let bestV = 0, best = Infinity;
-    for (let v = 0; v < s.pts.length - 1; v++) {
-      const c = dist(from, s.pts[v]) + (to ? dist(s.pts[v], to) : 0);
-      if (c < best - 1e-9) { best = c; bestV = v; }
+  if (!jointSeams) {
+    for (let p = 0; p < n && spent < budget; p++) {
+      const strand = result[p];
+      if (!closed[order[p]]) continue;
+      const from = p ? result[p - 1].pts.at(-1) : start, to = result[p + 1]?.pts[0];
+      let best = dist(from, strand.pts[0]) + (to ? dist(strand.pts[0], to) : 0), vertex = 0;
+      for (let v = 1; v < strand.pts.length - 1 && spent < budget; v++) {
+        spent++;
+        const point = strand.pts[v], candidate = dist(from, point) + (to ? dist(point, to) : 0);
+        if (candidate < best - 1e-9) { best = candidate; vertex = v; }
+      }
+      if (vertex) result[p] = { ...strand, pts: rotatePoints(strand.pts, vertex) };
     }
-    if (bestV) result[p] = { ...s, pts: rotated(s.pts, bestV) };
   }
   return result;
 }

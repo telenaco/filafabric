@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FilaFabric source and licences</title>
+<main style="max-width:48rem;margin:3rem auto;padding:0 1rem;font:1rem/1.6 system-ui">
+<h1>FilaFabric source and licences</h1>
+<p>The adaptive solid slicer contains the real Arachne engine from Cura and OrcaSlicer, compiled to WebAssembly by Three_Slicer. It is used for flat walls and dense fill; FilaFabric retains its own fabric patterns and printer commands.</p>
+<p>The pinned Arachne kernel is licensed under the <a href="vendor/arachne/LICENSE.txt">GNU Affero General Public License, version 3 or later</a>, with upstream copyright notices retained. Its matching sources and the local integration source offer are linked below.</p>
+<p><strong>Publication decision pending:</strong> FilaFabric’s application-wide publication licence requires the owner’s decision before this Arachne-enabled application is published. This page does not select an application licence. See the <a href="docs/source-offer.md">source-offer and publication notes</a>.</p>
+<ul><li><a href="vendor/arachne/filafabric-source.tar.gz" download>Download FilaFabric integration source</a> — the app's JavaScript, HTML, CSS, profiles, tests and tools; run <code>npm test</code> to verify and <code>npm run serve</code> to serve locally.</li>
+<li><a href="vendor/arachne/corresponding-source.tar.gz" download>Download the matching upstream engine build sources</a> — C++, dependency headers, build scripts, licences and provenance for the pinned WASM.</li>
+<li><a href="vendor/arachne/NOTICE.md">Upstream version, attribution and build instructions</a></li>
+<li><a href="vendor/arachne/filafabric-source.manifest.json">Integration source manifest and checksums</a> — rebuild with <code>npm run source:snapshot</code> and check currentness with <code>npm run source:verify</code> after reviewing and staging intended new source files.</li></ul>
+<p>Other components retain their respective licences, including <a href="vendor/three/LICENSE">Three.js</a> and the fonts distributed with the app. Neither this page nor using the kernel publishes any local drawing or print file.</p>
+<p><a href="./">Return to FilaFabric</a></p></main></html>

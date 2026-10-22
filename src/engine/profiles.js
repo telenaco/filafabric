@@ -20,6 +20,13 @@ export function validateMachine(m) {
   need(errors, m.bed && isNum(m.bed.depth) && m.bed.depth > 0, 'bed.depth must be > 0');
   need(errors, m.bed && isNum(m.bed.max_z) && m.bed.max_z > 0, 'bed.max_z must be > 0');
   need(errors, m.extrusion && m.extrusion.relative_e === true, 'extrusion.relative_e must be true (v1 supports relative E only)');
+  need(errors, m.extrusion?.flow_multiplier === undefined || (isNum(m.extrusion.flow_multiplier) && m.extrusion.flow_multiplier > 0), 'extrusion.flow_multiplier must be > 0 when given');
+  if (m.motor_current !== undefined) {
+    const current = m.motor_current;
+    need(errors, current && current.command === 'M907', 'motor_current.command must be M907 when given');
+    need(errors, current && isNum(current.extruder) && current.extruder > 0, 'motor_current.extruder must be > 0');
+    need(errors, current && (current.restore_extruder === undefined || (isNum(current.restore_extruder) && current.restore_extruder > 0)), 'motor_current.restore_extruder must be > 0 when given');
+  }
   need(errors, ['S_T', 'P_R_T'].includes(m.accel_syntax), 'accel_syntax must be "S_T" or "P_R_T"');
   need(errors, typeof m.printer_model_check === 'string', 'printer_model_check must be a string');
   need(errors, m.nozzle_diameter === undefined || (isNum(m.nozzle_diameter) && m.nozzle_diameter >= 0.1 && m.nozzle_diameter <= 2), 'nozzle_diameter must be between 0.1 and 2 mm when given');
@@ -60,12 +67,22 @@ export function validateMaterial(m) {
   need(errors, isNum(f.multiplier) && f.multiplier > 0, 'flow.multiplier must be > 0');
   need(errors, isNum(f.max_volumetric_speed_nominal) && f.max_volumetric_speed_nominal > 0, 'flow.max_volumetric_speed_nominal must be > 0');
   need(errors, isNum(f.foam_expansion) && f.foam_expansion >= 1, 'flow.foam_expansion must be >= 1');
+  for (const key of ['measured_line_width', 'calibration_line_width', 'calibration_layer_height', 'max_volumetric_speed_actual']) {
+    need(errors, f[key] === undefined || (isNum(f[key]) && f[key] > 0), `flow.${key} must be > 0 when given`);
+  }
+  if (isNum(f.measured_line_width) && f.measured_line_width > 0) {
+    const height = f.calibration_layer_height ?? 0.2, width = f.calibration_line_width ?? m.print_defaults?.extrusion_width ?? 0.45;
+    need(errors, width >= height && f.measured_line_width >= height, 'flow calibration widths must be at least the calibration layer height');
+  }
   const r = m.retraction || {};
   need(errors, isNum(r.length) && r.length >= 0, 'retraction.length must be >= 0');
   need(errors, isNum(r.speed) && r.speed > 0, 'retraction.speed must be > 0');
   need(errors, isNum(r.deretract_speed) && r.deretract_speed > 0, 'retraction.deretract_speed must be > 0');
   need(errors, isNum(r.z_hop) && r.z_hop >= 0, 'retraction.z_hop must be >= 0');
   need(errors, isNum(r.min_travel) && r.min_travel >= 0, 'retraction.min_travel must be >= 0');
+  need(errors, r.lift_on_retract_only === undefined || typeof r.lift_on_retract_only === 'boolean', 'retraction.lift_on_retract_only must be boolean when given');
+  need(errors, r.restart_extra === undefined || (isNum(r.restart_extra) && r.restart_extra >= 0 && r.restart_extra <= 10), 'retraction.restart_extra must be 0-10 when given');
+  need(errors, r.seam_gap === undefined || (isNum(r.seam_gap) && r.seam_gap >= 0 && r.seam_gap <= 5), 'retraction.seam_gap must be 0-5 when given');
   need(errors, m.fan && isNum(m.fan.default) && m.fan.default >= 0 && m.fan.default <= 100, 'fan.default must be in 0-100');
   return errors;
 }

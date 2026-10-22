@@ -5,7 +5,7 @@ base plus a dense pile of raised, anchored 3D loops. First target: Prusa MK3S, F
 sample. Machine and material profiles are data files, so more machines can be added from G-code you share.
 
 **Status:** the generator and the studio are built for the Prusa MK3S, with thirty-one structures (thirty-two tiles, with the Advanced zigzag mesh preset) (Zigzag mesh, Loop pile, Squiggle &
-Gyroid, Advanced zigzag mesh, SVG design, Halftone net, Spacer net, Pillar weave, Coil, Weave, Spiral panel, Bouclé & picots, Relief, Fringe, Crosshatch & isogrid, Auxetic mesh, Dip weave,
+Gyroid, Advanced zigzag mesh, Drawing & infill, Halftone net, Spacer net, Pillar weave, Coil, Weave, Spiral panel, Bouclé & picots, Relief, Fringe, Crosshatch & isogrid, Auxetic mesh, Dip weave,
 Spiderweb, Ring mail, Meander, Harmonograph, Truchet tiles, Voronoi lace, Turing stripes, Conformal mesh, Sunflower, Rosette,
 Flow lines, Bubbles, Parquet, Spirograph, Star lattice), a strand-shape and pattern library,
 and the automated tests passing. See `docs/fabric-structures.md` for the library.
@@ -18,10 +18,16 @@ The first physical print has not been done yet, so start with a small test swatc
 A swatch is sewn or welded to the next piece, so a pattern meets the edge at the end of a repeat, never part-way
 through one (`src/engine/repeats.js`). The wave length, line spacing, tile or cell size you set is a target: the
 pattern uses the nearest size that fits a whole number of times (9.6 zigzags in 100 mm become 10 of 10 mm), its lanes
-run from one edge to the other with a wavy line kept a full swing in, and cells are whole: bubbles and chainmail rings
+run from one edge to the other, and cells are whole: bubbles and chainmail rings
 sit inside the edge, Voronoi cells are closed by a wall along it, Truchet and basket blocks fill the swatch, star
 lattices meet the edge on a line of symmetry. A pattern that meets a straight edge at a slant (a 45° hatch, a
 herringbone, a radial web or rosette) cannot end on a whole repeat, and is cut there as before.
+
+Wavy lanes (the Zigzag mesh, the backing mesh, the wavy backings; `src/engine/wavegrid.js`) lie half a spacing in from
+the edges they run along, as if the swatch were cut from a larger piece: a piece above or below carries them on at the
+same spacing, and a wave that swings past the edge is cut by it, so the top and bottom meet the pattern the way the
+sides do. (Until 21 October 2026 the outermost lines were kept a full swing in, which left a row of open notches
+along the top and bottom deeper than the cells inside.)
 
 ## Demo prints
 
@@ -165,13 +171,50 @@ spool; PLA is rigid. [Material sources and adaptations](profiles/MATERIAL_SOURCE
 revision and how cooling is mapped to this tool's path roles. First-layer heat is retained through bed extrusion;
 the printing temperature is sent once extrusion rises above the bed layer, including streamed exports.
 
+**Temperatures and retraction** in the printer setup show the chosen filament's nozzle temperature (first layer and
+the rest), bed temperature, retraction length and speed, the extra push after a travel, the seam gap and the lift on a
+travel, and can be changed there (`src/ui/filament-settings.js`). A change is kept with the print setup (undo, links,
+saved files) and only for that filament: choosing another starts from its own values, and *Use the filament's values*
+undoes it. Retraction applies before every travel the filament's `min_travel` allows; after it, the filament is pushed
+back the same length plus its `restart_extra` (PrusaSlicer's *extra length on restart*, read from imported slicer
+files). A travel lifts the filament's `z_hop` over the highest thing printed so far (3 mm when it sets none), at its
+`travel_speed_hint` (150 mm/s when it sets none; a design's own travel speed wins), and a closed loop stops its
+`seam_gap` short of its own start before a travel (`src/engine/emit.js`).
+
+**Filaflex 95A Foamy prints at 238 °C, retracts 1 mm at 40 mm/s before every travel, however short, pushes the same
+1 mm back at 20 mm/s, lifts 0.2 mm on a travel at 180 mm/s, and stops each loop 0.2 mm short of its start** (from 21
+October 2026). That is the cleanest of a full-bed seam test printed on the MK3S (`FOAM99_45PAIRS`: 45 pairs of 20 mm
+two-line circles, all with the 0.2 mm lift at 180 mm/s): 238 °C was the cleanest row, 1 mm (and 2.5 mm) at 40 mm/s
+the cleanest retraction, 75 mm/s lost circles, and a 0.2 mm seam gap looked good (at 245 °C). Before it, 4 mm at
+65 mm/s, 4.2 back, a 3 mm lift and 248 °C left a knot and a string at every seam; 2.5 out and 2.5 back started thin for
+6 cm after a travel, and 6 out and 7 back left a blob. 238 °C is below Recreus's 248 °C, so the foam rises a little less:
+check a swatch's width and weight. Circles at the very edges of that bed (it ran from 5 to 245 mm) printed dashed
+whatever their settings: keep test prints in the middle of the bed.
+`node tools/export-retraction-test.mjs` writes six 50 × 30 mm Zigzag mesh swatches, A to F (3, 4 and 5 mm, each with
+no extra and with 0.2 mm), to `DemoTestingPrints/retraction-test/` with an `INDEX.md`: one print with all six on the
+bed (A B C in front, D E F behind, each printed whole with its own retraction and marked by one to six short bars at
+its left), and each on its own. A move may carry its own retraction for this (`m.retraction`, read by the G-code writer
+and the statistics); the move between two swatches retracts and primes with the settings of the one it leaves
+(`tools/plate.mjs`). The swatches look much alike, as the difference is only where a strand starts and stops, so
+`node tools/export-seam-test.mjs` writes one print where that is all there is: circles of 20 mm, each a two-line brim
+as the studio prints one (two loops overlapping 20%, first layer only, each starting and closing on one spot), to
+`DemoTestingPrints/seam-test/` with an `INDEX.md`. A first version (nine blocks: 0.1–0.3 mm extra push, 15–40 mm/s
+push-back) showed the same knot and strings at every seam whatever the push, a little worse at 40 mm/s; so it is now
+twelve pairs, each changing one thing from the filament's own settings: the lift on a travel (0.2 mm, Recreus's z-hop,
+and 1 mm against the usual 3), the retraction (2.5 and 5 mm), its speed (40 and 90 mm/s), no extra push, the two loops
+joined into one strand, and the temperature (243 and 238 °C, waited for with `M109 R`, and 238 °C with the 0.2 mm lift).
+
 ## Printable SVG and garment panels
 
 **Import SVG** sits above the pattern settings. No drawing to hand? `samples/filafabric-sample.svg` is a 200 × 200 mm
 sample with the main colours in it (red shapes to fill, a blue star cut out of one, green solids, wide red lines), and
 `samples/lace-sample.svg` is a 170 × 110 mm lace medallion drawn with the lace rules below: the import
 card offers to try it in one click or to download it and open it in Inkscape or Illustrator to see how it is set up.
-Colour and stroke width say what each part of the drawing does:
+Every design takes a drawing and fills its red shapes with its own pattern; **Drawing & infill** is the one for a
+drawing on its own, its red shapes filled with a slicer infill pattern (gyroid, honeycomb…) instead, or only outlined.
+It is out of the gallery for now (`hidden: true` on its card, from 21 October 2026); links and saved files still open it.
+Colour and stroke width say what each part of the drawing does, and the import card says it too, under **How a drawing
+prints** (`DRAWING_GUIDE` in `src/ui/panels.js`, in every design):
 
 | In the drawing | What it prints |
 |---|---|
@@ -180,10 +223,12 @@ Colour and stroke width say what each part of the drawing does:
 | A closed shape in pure **green** (`#00ff00`) | Printed solid: a coil if it is round, a zigzag otherwise, two layers, 20% overlap |
 | A closed shape in pure **yellow** (`#ffff00`) | For now printed solid, exactly like green. (Yellow will later carry the conformal mesh guides that bend the pattern; that machinery is kept, switched off by `YELLOW_PRINTS_SOLID` in `src/engine/drawing.js`.) |
 | Shapes inside shapes | **The innermost shape decides** what prints in each place: red the pattern, blue nothing, green solid. Blue inside red cuts a hole in the pattern; red inside that blue is pattern again; green inside red is a solid on top of the pattern (a button) |
-| A lace | A green outline is the solid lace body; draw its openings inside it in blue and its patterned parts in red. The body prints first, on the bed, round them; the pattern fills the red windows; a green shape inside a window is solid again, on top. With no red at all, the piece is the solid alone (no pattern, no brim) |
+| A lace | A green outline is the solid lace body; draw its openings inside it in blue and its patterned parts in red. The body lies on the bed round them and prints layer by layer with a flat pattern, as a slicer would: the body's first layer, the pattern's first, the body's second, the pattern's second; the pattern fills the red windows; a green shape inside a window is solid again, on top, last. With no red at all, the piece is the solid alone (no pattern, no brim) |
 | A shape that is not closed (a red line, for example) | Never filled; it is a line, printed as drawn at its stroke width |
 | Any open path, or a closed shape in another colour | A line, printed as drawn |
 | A line's stroke width | The number of passes: width ÷ extrusion width, rounded, at least one. A line as wide as the nozzle is one pass; a 0.8 mm line is two passes side by side and a 1.2 mm line three |
+
+The drawing's lines print first, on the first layer. A flat pattern keeps its own layers with a drawing: its first lies on the bed beside the lines (lifting over a line where it crosses one, and finishing on the edges it meets), its second one layer up; a raised design stands on the lines' layer. (Before 21 October 2026 every layer of a flat pattern was put at one height, a layer above the lines.)
 
 Colour comes from the fill, or from the stroke when the fill is `none`; the stroke width of a red or blue shape is only a marker. Physical document dimensions, margins and transforms are retained; resizing the design scales the drawing (and its line widths) too. A drawing that carries no colours at all (an older saved file) keeps the previous rule: closed paths are shapes and shapes inside shapes alternate fill, hole. **Fill its shapes with this pattern** cuts the pattern to the red area, less the blue holes in it. Save/Open settings includes the imported paths and their colours; share links omit them to keep links small. `tests/fixtures/red-blue-lines.svg` is a small example of all of this.
 
@@ -299,6 +344,17 @@ the slider's 0–10 range can be typed, up to 250, subject to the
 normal geometry and move budgets. Old saved whole-copy counts migrate using the selected design's native passes.
 Exported settings and anonymous study records include original, extra and total pass counts. These are logical
 pattern passes: local crossing lifts can make the finished fabric taller than the count times the layer height.
+
+## Backing mesh
+
+**Backing mesh**, the last card of every flat design's panel (a lace, the coil, any one-layer pattern), prints a
+zigzag mesh under the whole piece first: two flat layers, the second half a wave along so the two cross all along,
+lines **3.7 mm apart, 2 mm each way, 6 mm waves** as standard (the Zigzag mesh settings it was tuned with). The design
+and the drawing then print as they would on their own, two layers higher; the brim goes round it on the bed. Its three
+sliders show while it is on, and *Change colour after the backing* pauses (M600) once the mesh is down, so the design
+can be another filament. The setting is shared by every design, like the brim, and travels in links and saved files.
+Raised designs (loop pile, relief, fringe, spacer, pillar weave) stand on their own base and do not offer it: use
+**Extra layers** there. `src/engine/backing.js` `addBackingMesh()`.
 
 ## Open requests
 

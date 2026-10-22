@@ -70,6 +70,7 @@ export const ADVANCED_GROUPS = [
 
 /** Plain labels for error messages: key -> label. Primary controls included. */
 export const FIELD_LABELS = Object.freeze({
+  speed_flat: 'Flat extrusion speed',
   sample_width: 'Width', sample_height: 'Height', loop_z_lift: 'Pile height', loop_width: 'Loop width',
   loop_length: 'Loop length', loop_pitch: 'Loop density', leg_gap: 'Room between loops', clearance: 'Room between loops',
   base_spacing: 'Base openness', random_enabled: 'Natural variation', boundary_policy: 'Loops at the back edge',

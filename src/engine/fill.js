@@ -81,10 +81,10 @@ export function orderLanePieces(rows, { gap = BRANCH_GAP, reverse = false, forwa
  * @param lanes     lane coordinates, in order
  * @param opts      inset: pull each stretch's ends in by this much (mm); minLength: drop shorter stretches;
  *                  maxJog: longest allowed shift along the lane between one stretch's end and the next's start;
- *                  gap, reverse, forward: as orderLanePieces
+ *                  gap, reverse, forward: as orderLanePieces; allowConnector(a, b): optional exact XY connection check
  * @returns strands: arrays of segments { lane, c, from, to }, printed from -> to, in print order
  */
-export function serpentineChains(boundary, axis, lanes, { inset = 0, minLength = 1, maxJog = Infinity, gap = BRANCH_GAP, reverse = false, forward = true } = {}) {
+export function serpentineChains(boundary, axis, lanes, { inset = 0, minLength = 1, maxJog = Infinity, gap = BRANCH_GAP, reverse = false, forward = true, allowConnector = null } = {}) {
   const rows = lanes.map((c) => boundary.intervals(axis, c)
     .map(([a, b]) => ({ lo: a + inset, hi: b - inset }))
     .filter((p) => p.hi - p.lo >= minLength));
@@ -93,7 +93,9 @@ export function serpentineChains(boundary, axis, lanes, { inset = 0, minLength =
   for (const { lane, piece, forward: dir } of orderLanePieces(rows, { gap, reverse, forward })) {
     const seg = { lane, c: lanes[lane], from: dir ? piece.lo : piece.hi, to: dir ? piece.hi : piece.lo };
     const joins = cur && Math.abs(seg.lane - last.lane) === 1 && Math.abs(last.to - seg.from) <= maxJog
-      && connectorInside(boundary, axis, last.c, last.to, seg.c, seg.from);
+      && (allowConnector
+        ? allowConnector(axis === 'y' ? { x: last.to, y: last.c } : { x: last.c, y: last.to }, axis === 'y' ? { x: seg.from, y: seg.c } : { x: seg.c, y: seg.from })
+        : connectorInside(boundary, axis, last.c, last.to, seg.c, seg.from));
     if (joins) cur.push(seg);
     else { cur = [seg]; strands.push(cur); }
     last = seg;

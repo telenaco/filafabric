@@ -9,7 +9,7 @@ import { SHAPE_IDS } from '../src/engine/shapes.js';
 import { FIELD_IDS } from '../src/engine/fields.js';
 import { SQUIGGLE_DEFAULTS, SQ_PATTERNS, sanitizeSquiggle } from '../src/ui/squiggle-controls.js';
 import { SAMPLERS, generateSquiggle } from '../src/engine/squiggle.js';
-import { defaultProfiles, projectRoot } from './helpers.js';
+import { defaultProfiles, loadProfile, projectRoot } from './helpers.js';
 
 const fixture = (name) => fs.readFileSync(path.join(projectRoot, 'tests', 'fixtures', name), 'utf8');
 
@@ -26,7 +26,9 @@ test('a 0.4 mm nozzle suggests layers of 0.10, 0.15, 0.20 and 0.25 mm by default
 });
 
 test('printer defaults follow the nozzle, preserve exact imported thickness and allow explicit overrides', () => {
-  const { machine, material } = defaultProfiles();
+  const { machine } = defaultProfiles();
+  // Test automatic nozzle-derived width with a material that does not pin a comparison width.
+  const material = loadProfile('materials', 'generic-flex-mk3');
   for (const [nozzle_diameter, height] of [[0.4, 0.2], [0.6, 0.3], [0.9, 0.45]]) {
     const printer = { ...machine, nozzle_diameter };
     assert.equal(defaultLayerHeight(printer), height);

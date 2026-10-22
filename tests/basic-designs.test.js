@@ -6,8 +6,8 @@ import { backingLines, backingStack } from '../src/engine/backing.js';
 import { meanderLayers } from '../src/engine/meander.js';
 import { boundaryFor } from '../src/engine/layers.js';
 import { findCrossings } from '../src/engine/crossings.js';
-import { fitLanes } from '../src/engine/repeats.js';
-import { DESIGNS, ESSENTIALS, designById } from '../src/ui/designs.js';
+import { fitCells } from '../src/engine/repeats.js';
+import { DESIGNS, ESSENTIALS, designById, galleryGroups } from '../src/ui/designs.js';
 import { defaultProfiles } from './helpers.js';
 
 const box = boundaryFor(60, 60);
@@ -32,8 +32,8 @@ test('a lane swings by exactly the amplitude, and a square wave steps straight u
     // away from the ends, where the lanes are joined by short jogs
     const ys = flat(lines).filter((p) => p.x > 3 && p.x < 57).map((p) => p.y);
     assert.ok(lines.length >= 1);
-    // lanes about 20 mm apart from one edge to the other, a full swing in: each swings 2 mm either side of its centre
-    const lanes = fitLanes(0.3 + 2, 60 - 0.3 - 2, 20);
+    // lanes about 20 mm apart, the outer ones half a spacing in from the edge: each swings 2 mm either side of its centre
+    const lanes = fitCells(0, 60, 20).centres;
     for (const c of lanes) {
       const near = ys.filter((y) => Math.abs(y - c) < 3);
       assert.ok(Math.max(...near) - c > 1.9 && Math.max(...near) - c < 2.05, `${shape} up at ${c}`);
@@ -140,6 +140,17 @@ test('the essentials are real, ready cards and come first', () => {
   assert.equal(designById('crosshatch').status, 'ready');
   assert.equal(ESSENTIALS.includes('crosshatch'), false);
   for (const id of ESSENTIALS) assert.equal(designById(id)?.status, 'ready', id);
+});
+
+test('a hidden card leaves the gallery but still opens: Drawing & infill, for now', () => {
+  const { essentials, others } = galleryGroups();
+  const shown = [...essentials, ...others].map((d) => d.id);
+  assert.equal(designById('svgdesign').hidden, true);
+  assert.equal(designById('svgdesign').status, 'ready', 'a link or a saved file still opens it');
+  assert.equal(shown.includes('svgdesign'), false);
+  assert.equal(shown.includes('crosshatch'), false);
+  assert.deepEqual(essentials.map((d) => d.id), ESSENTIALS.filter((id) => id !== 'svgdesign'), 'the other essentials keep their order');
+  assert.ok(others.length > 10 && others.every((d) => !ESSENTIALS.includes(d.id)));
   assert.equal(designById('zigzag-mesh').name, 'Advanced zigzag mesh');
   assert.equal(designById('zigzag-mesh').status, 'preset');
 });
@@ -200,8 +211,8 @@ test('the backing wave has a depth and a length you set, and a second backing is
   const swing = (depth) => {
     const lines = backingLines(b, { style: 'wave', angle: 0, spacing: 20, depth, wavelength: 8 });
     const ys = lines.flat().filter((p) => p.x > 3 && p.x < 57).map((p) => p.y);
-    // around one lane in the middle (whole repeats place the lanes from one edge to the other, a full swing in)
-    const lanes = fitLanes(0.3 + depth, 60 - 0.3 - depth, 20);
+    // around one lane in the middle (whole repeats place the lanes half a spacing in from each edge)
+    const lanes = fitCells(0, 60, 20).centres;
     const mid = lanes[Math.floor(lanes.length / 2)];
     const near = ys.filter((y) => Math.abs(y - mid) < depth + 1);
     return Math.max(...near) - Math.min(...near);

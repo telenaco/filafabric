@@ -14,7 +14,9 @@
     "serve": "node tools/serve.mjs --open",
     "vendor": "node tools/vendor-three.mjs",
     "golden": "node tools/update-golden.mjs",
-    "profiles": "node tools/profiles-index.mjs"
+    "profiles": "node tools/profiles-index.mjs",
+    "source:snapshot": "node tools/source-snapshot.mjs",
+    "source:verify": "node tools/source-verify.mjs"
   },
   "devDependencies": {
     "three": "^0.169.0"

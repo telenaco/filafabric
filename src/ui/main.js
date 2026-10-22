@@ -7,21 +7,23 @@ import { createPreview, ROLES } from './preview.js';
 import { createOverview } from './overview.js';
 import { useWholeOverview, canSimplifyPreview } from '../engine/overview.js';
 import { bedSizeLimits, printSizeProblem } from './bed-size.js';
-import { PrintEstimates } from './print-estimates.js';
+import { PrintEstimates, printTimeSeconds } from './print-estimates.js';
 import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airStrandMm, fitAspect, pileLiftFactor } from './controls.js';
 import { SQ_RANGES, SQUIGGLE_DEFAULTS, describeSquiggle, sizeForAspect } from './squiggle-controls.js';
 import { PICTURE, withPicture, pictureDarkness } from '../engine/picture.js';
 import { buildVerdict, buildSquiggleVerdict, formatMinutes } from './verdict.js';
 import { stateToHash, hashToState, sanitizeState, PRINT_DEFAULTS } from './share.js';
+import { FILAMENT_FIELDS, filamentValue, withFilamentSettings, setFilamentSetting, withoutFilamentSettings } from './filament-settings.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
-import { $, $$, el, icon, ICONS } from './dom.js';
-import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, SectionFold } from './panels.js';
+import { $, $$, el, icon, ICONS, helpBubble } from './dom.js';
+import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, SectionFold, BackingCard } from './panels.js';
+import { addBackingMesh, BACKING_MESH, BACKING_MESH_LAYERS } from '../engine/backing.js';
 import { layerHeightOptions, defaultLayerHeight, resolveConfig } from '../engine/params.js';
 import { TooltipLayer } from './tooltip.js';
 // versioned with the release in boot.js, so a returning browser never pairs this file with an older printer loader
 import { ProfileStore } from './profile-store.js?v=20261019-printer-setup';
 import { machineSuggestions } from './machine-search.js?v=20261019-printer-setup';
-import { DESIGNS, ESSENTIALS, designById, isReady, baseDesignSettings } from './designs.js';
+import { DESIGNS, designById, isReady, baseDesignSettings, galleryGroups } from './designs.js';
 import { THUMBS, shapeThumb, presetThumb } from './thumbs.js';
 import { swatchCode } from './swatch.js';
 import { exportFileName, relevantKeys } from './file-name.js';
@@ -31,6 +33,7 @@ import { readSvgLines } from './svg-lines.js';
 import { composeSvgLines, outlineFromVector, vectorPatternRings } from '../engine/svg-lines.js';
 import { applySvgGuides, vectorGuides } from '../engine/svg-guides.js';
 import { applySvgSolids, solidOnly, withoutPattern } from '../engine/svg-solids.js';
+import { prepareAdaptiveSolids } from '../engine/adaptive-solids.js';
 import { summariseDrawing, describeDrawing, interpretDrawing } from '../engine/drawing.js';
 import { addExtraLayers, nativeLayerInfo } from '../engine/stack.js';
 import { generateDesignBase, compactDesignExport } from '../engine/design-export.js';
@@ -364,9 +367,10 @@ let svgImportCard = null;
 let studyRecorder = null;
 
 const RAISED_DESIGNS = new Set(['loop-pile', 'relief', 'fringe', 'spacer', 'pillarweave']);
-const PRINT_RANGES = { extraLayers: { min: 0, max: 10, step: 1 }, brim: { min: 0, max: 8, step: 1 } };
-const PRINT_THICKNESS = { label: 'Layer thickness', help: 'How thick every layer is. Thinner prints cleaner and slower; thicker is quick, but strands lie over each other less cleanly.' };
-const PRINT_LAYERS = { key: 'extraLayers', label: 'Extra layers', help: '0 keeps the original design. One-layer patterns alternate with a regenerated 90° pass across the same outline. Multi-layer patterns continue their original sequence: A–B–A–B. For raised designs, extra passes reinforce the backing beneath the texture; the texture prints once. The brim and imported SVG paths print once.', lo: 'Original', hi: 'More', unit: '', edit: true };
+const PRINT_SOLIDS = { key: 'solidLayers', label: 'Solid layers', info: true, help: 'Layers of fill in solid SVG shapes. 1 prints a single layer; more adds thickness and reinforcement. This does not change the mesh layers.', lo: 'Single', hi: 'Reinforced', unit: '', edit: true };
+const PRINT_RANGES = { solidLayers: { min: 1, max: 8, step: 1 }, extraLayers: { min: 0, max: 10, step: 1 }, brim: { min: 0, max: 8, step: 1 }, meshPerimeters: { min: 0, max: 8, step: 1 } };
+const PRINT_THICKNESS = { label: 'Layer thickness', help: 'Height of each printed layer. Smaller values make finer, thinner strands. Changing this also changes the total thickness of the piece.' };
+const PRINT_LAYERS = { key: 'extraLayers', label: 'Extra layers', info: true, help: 'Adds reinforcing passes to the pattern or, for raised textures, its backing. 0 keeps the original design, including its native layers. Solid fill is controlled separately.', lo: 'Original', hi: 'More', unit: '', edit: true };
 
 /** The nozzle of the chosen printer (0.4 mm unless its profile says otherwise). */
 const nozzleDiameter = () => state.machines.get(state.machine)?.nozzle_diameter ?? 0.4;
@@ -387,33 +391,73 @@ function normalisePrint() {
   if (RAISED_DESIGNS.has(state.design) && state.print.legacyCopies) { state.print.extraLayers = 0; delete state.print.legacyCopies; }
 }
 
+/** The backing mesh under the current design: its settings, or null when it is off or the design stands on its own base. */
+const backingFor = (design = state.design) => (RAISED_DESIGNS.has(design) ? null : state.print.backing ?? null);
+
 function layerSetupText() {
+  const solid = state.vector && interpretDrawing(state.vector).solids.length ? ` · solids: ${state.print.solidLayers} × ${state.print.layerHeight} mm` : '';
+  return patternLayerSetupText() + solid;
+}
+
+function patternLayerSetupText() {
   const plan = state.result?.designId === state.design ? state.result.layerPlan : null;
   if (plan?.mode === 'backing' && plan.repeatable) return `${plan.backingLayers} backing + ${state.print.extraLayers} extra = ${plan.backingLayers + state.print.extraLayers} · texture once`;
   if (plan && !plan.repeatable) return plan.nativeLayers === null ? 'Original raised structure' : `${plan.nativeLayers} original · SVG only`;
-  if (plan) return `${plan.nativeLayers} + ${state.print.extraLayers} extra = ${plan.nativeLayers + state.print.extraLayers} layers`;
-  return RAISED_DESIGNS.has(state.design) ? `${state.print.extraLayers} extra backing layers · texture once` : `${state.print.extraLayers} extra layers`;
+  const mesh = backingFor() ? BACKING_MESH_LAYERS : 0;
+  if (plan) return `${mesh ? `${mesh} mesh + ` : ''}${plan.patternLayers ?? plan.nativeLayers} pattern passes + ${state.print.extraLayers} extra${plan.fixedLayers ? ' · drawing lines once' : ''}`;
+  return RAISED_DESIGNS.has(state.design) ? `${state.print.extraLayers} extra backing layers · texture once` : `${mesh ? `${mesh} mesh + ` : ''}${state.print.extraLayers} extra layers`;
 }
 
+// the backing mesh's card, in every flat design's panel: the Zigzag mesh's own sliders, starting from the standard mesh
+const BACKING_CARD = {
+  label: 'Backing mesh',
+  help: 'A zigzag mesh under the whole piece: two layers, printed first, with the design on top.',
+  sliders: [
+    { key: 'backingSpacing', label: 'Line spacing', help: 'Distance between neighbouring lines of the mesh.', lo: 'Dense', hi: 'Open', unit: 'mm', edit: true },
+    { key: 'backingDepth', label: 'Wave depth', help: 'How far each line swings to either side of its centre line.', lo: 'Shallow', hi: 'Deep', unit: 'mm', edit: true },
+    { key: 'backingWavelength', label: 'Wave length', help: 'Length of one full wave, from one peak to the next on the same side.', lo: 'Tight', hi: 'Long', unit: 'mm', edit: true },
+  ],
+  pause: { label: 'Change colour after the backing', help: 'Pause once the mesh is down (M600) so you can load another filament for the design.' },
+};
+const BACKING_KEYS = { backingSpacing: 'spacing', backingDepth: 'depth', backingWavelength: 'wavelength', backingPause: 'pause' };
+const BACKING_RANGES = { backingSpacing: { min: 0.8, max: 10, step: 0.1 }, backingDepth: { min: 0.4, max: 8, step: 0.1 }, backingWavelength: { min: 2, max: 20, step: 0.5 } };
+const BACKING_READOUTS = { backingSpacing: 'mm apart', backingDepth: 'mm each way', backingWavelength: 'mm per wave' };
+// while the mesh is off, its last settings, so switching it on again brings them back
+let backingKept = { ...BACKING_MESH };
+
 const PRINT_BINDING = {
-  get: (key) => state.print[key],
+  get: (key) => {
+    if (key === 'backing') return !!state.print.backing;
+    if (key in BACKING_KEYS) return (state.print.backing ?? backingKept)[BACKING_KEYS[key]];
+    return state.print[key];
+  },
   set: (key, value) => {
-    if (key === 'brim' && value > 50) { toast('Brim: enter a count from 0 to 50.'); return; }
+    if (key === 'backing') {
+      if (value) state.print.backing = { ...backingKept };
+      else { if (state.print.backing) backingKept = { ...state.print.backing }; delete state.print.backing; }
+      return;
+    }
+    if (key in BACKING_KEYS) { state.print.backing = { ...(state.print.backing ?? backingKept), [BACKING_KEYS[key]]: value }; return; }
+    if (key === 'solidLayers') { state.print.solidLayers = Math.max(1, Math.min(8, Math.round(value))); return; }
+    if (['brim', 'meshPerimeters'].includes(key) && value > 50) { toast('Perimeters: enter a count from 0 to 50.'); return; }
     if (key === 'extraLayers') {
       if (value > 250) { toast('Extra layers: enter a count from 0 to 250.'); return; }
       delete state.print.legacyCopies;
     }
-    state.print[key] = ['extraLayers', 'brim'].includes(key) ? Math.max(0, Math.round(value)) : value;
+    state.print[key] = ['extraLayers', 'brim', 'meshPerimeters'].includes(key) ? Math.max(0, Math.round(value)) : value;
   },
   available: (key) => key !== 'extraLayers' || !(state.result?.designId === state.design && state.result.layerPlan?.repeatable === false),
-  range: (key) => PRINT_RANGES[key],
+  range: (key) => PRINT_RANGES[key] ?? BACKING_RANGES[key],
   options: () => layerChoices(),
   note: () => {
     const machine = state.machines.get(state.machine);
     return `${nozzleDiameter()} mm nozzle · ${defaultLayerHeight(machine)} mm ${machine?.print_defaults?.layer_height ? 'from the imported print profile' : 'nozzle-based default'}. Choose another thickness above if needed.`;
   },
   readout: (key) => {
-    if (key === 'brim') return state.print.brim ? `${state.print.brim} ${state.print.brim === 1 ? 'line' : 'lines'}` : 'Off';
+    if (key in BACKING_READOUTS) return `${Math.round(PRINT_BINDING.get(key) * 10) / 10} ${BACKING_READOUTS[key]}`;
+    if (key === 'solidLayers') return `${state.print.solidLayers} ${state.print.solidLayers === 1 ? 'layer' : 'layers'} · ${Number((state.print.solidLayers * state.print.layerHeight).toFixed(3))} mm`;
+    if (key === 'extraLayers') return `${state.print.extraLayers} extra`;
+    if (['brim', 'meshPerimeters'].includes(key)) return state.print[key] ? `${state.print[key]} ${state.print[key] === 1 ? 'line' : 'lines'}` : 'Off';
     if (key === 'layerHeight') return `${Math.round(state.print.layerHeight * 1000) / 1000} mm${state.print.layerHeight === defaultLayerHeight(state.machines.get(state.machine)) ? ' (default)' : ''}`;
     return layerSetupText();
   },
@@ -456,6 +500,15 @@ function buildPanels() {
     $('#settings-body').append(panel.node);
     controls.push(panel);
   }
+  // the backing mesh at the end of every flat design's panel (a raised one stands on its own base)
+  for (const mod of DESIGNS) {
+    if (mod.status !== 'ready' || RAISED_DESIGNS.has(mod.id)) continue;
+    const panel = $(`#panel-${mod.id}`);
+    if (!panel) continue;
+    const card = new BackingCard(host, mod.id, BACKING_CARD);
+    panel.append(card.node);
+    controls.push(card);
+  }
   for (const id of ['loop-pile', 'squiggle']) {
     const b = BINDINGS[id];
     const size = new SizeControl(host, id);
@@ -470,7 +523,7 @@ function buildPanels() {
   const pilePatterns = new SectionFold(host, $('#lp-pattern').closest('section'), { id: 'lp-pattern-section' });
   controls.push(pilePatterns);
   // the layers every design shares live in the printer setup
-  const layersCard = new PrintSetupCard(host, { thickness: PRINT_THICKNESS, layers: PRINT_LAYERS });
+  const layersCard = new PrintSetupCard(host, { thickness: PRINT_THICKNESS, layers: PRINT_LAYERS, solids: PRINT_SOLIDS });
   $('#print-setup').replaceChildren(layersCard.node);
   controls.push(layersCard);
 }
@@ -508,7 +561,8 @@ function svgSituation() {
     vector: v,
     summary: v ? summaryOf(v) : '',
     usesVector: !!mod.usesVector,
-    idleNote: mod.svgNote ?? 'Its lines print first, with this pattern above, and its closed shapes can shape the pattern.',
+    // a design that reads a colour its own way says so in the colour guide
+    designNote: mod.svgNote ?? null,
     allowsOutline: true,
     hasShapes: !!(v && shapesOf(v)),
     outlineOn: registered,
@@ -594,7 +648,7 @@ function exportOptions(width = null, height = null) {
     machine: state.machines.get(state.machine), material: printMaterial(), design: state.design,
     width, height, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : settingsOf(state.design),
     studySettings: { ...settingsOf(state.design) }, outline: placedOutline(width, height),
-    vector: state.vector, shapeOutline: !!state.outline?.page, extraLayers: state.print.extraLayers, legacyCopies: state.print.legacyCopies, brim: state.print.brim,
+    vector: state.vector, shapeOutline: !!state.outline?.page, solidLayers: state.print.solidLayers, solidGenerator: 'arachne', extraLayers: state.print.extraLayers, legacyCopies: state.print.legacyCopies, brim: state.print.brim, perimeters: state.print.brim, meshPerimeters: state.print.meshPerimeters, backing: backingFor(),
     image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale,
     panelSize: size,
   };
@@ -684,12 +738,65 @@ function parallelDepth() {
   return minCrossingAmplitude(s.height / Math.max(2, Math.floor(s.height / s.spacing)));
 }
 
-/** The chosen material with the chosen layer thickness: every design reads its layer height from the config it makes. */
+/**
+ * The chosen material with the chosen layer thickness, temperatures and retraction: every design reads its layer height
+ * from the config it makes, and the G-code its temperatures and retraction.
+ */
 function printMaterial() {
   const base = state.materials.get(state.material);
   normalisePrint();
-  if (!base || base.print_defaults?.layer_height === state.print.layerHeight) return base;
-  return { ...base, print_defaults: { ...(base.print_defaults ?? {}), layer_height: state.print.layerHeight } };
+  if (!base) return base;
+  const material = withFilamentSettings(base, state.print, state.machines.get(state.machine));
+  if (material.print_defaults?.layer_height === state.print.layerHeight) return material;
+  return { ...material, print_defaults: { ...(material.print_defaults ?? {}), layer_height: state.print.layerHeight } };
+}
+
+/** The filament's temperatures and retraction in the printer setup, each showing its value now. */
+function renderFilamentSettings() {
+  const material = state.materials.get(state.material), machine = state.machines.get(state.machine), box = $('#filament-fields');
+  if (!material || !box) return;
+  if (!box.children.length) {
+    const basic = el('div', { class: 'filament-fields' });
+    const advancedFields = el('div', { class: 'filament-fields' });
+    const advanced = el('details', { class: 'filament-advanced', id: 'filament-advanced' },
+      el('summary', {}, 'Advanced ', el('span', { id: 'filament-advanced-changes', class: 'small muted', hidden: true })), advancedFields);
+    for (const f of FILAMENT_FIELDS) {
+      const input = el('input', { type: 'number', id: `filament-${f.key}`, min: String(f.min), max: String(f.max), step: String(f.step), inputmode: 'decimal' });
+      input.addEventListener('change', () => {
+        const filament = state.materials.get(state.material);
+        if (input.value !== '' && !(Number(input.value) >= f.min && Number(input.value) <= f.max)) toast(`${f.label}: enter ${f.min} to ${f.max} ${f.unit}.`);
+        state.print = setFilamentSetting(state.print, filament, f.key, input.value, state.machines.get(state.machine));
+        renderPrinter();
+        schedule();
+        commit();
+      });
+      const row = el('div', { class: 'field-row', 'data-filament': f.key },
+        el('span', { class: 'field-heading' }, el('label', { for: input.id, text: `${f.label} (${f.unit})` }), f.help && helpBubble(f.label, f.help)), input);
+      (['firstLayerTemp', 'nozzleTemp'].includes(f.key) ? basic : advancedFields).append(row);
+    }
+    box.append(basic, advanced);
+    $('#filament-reset').addEventListener('click', () => {
+      state.print = withoutFilamentSettings(state.print);
+      renderPrinter(); schedule(); commit();
+    });
+  }
+  const changed = [];
+  for (const f of FILAMENT_FIELDS) {
+    const row = box.querySelector(`[data-filament="${f.key}"]`), input = row.querySelector('input');
+    const own = f.get(material, machine), value = filamentValue(material, state.print, f.key, machine);
+    if (document.activeElement !== input) input.value = value === null ? '' : String(value);
+    input.placeholder = own === null ? (f.key === 'flatBeadWidth' ? 'Unmeasured' : 'Design speeds') : String(own);
+    row.classList.toggle('changed', value !== own);
+    input.setAttribute('aria-description', value !== own
+      ? (own === null ? 'Optional setting added to this print setup' : `Filament default: ${own} ${f.unit}`)
+      : 'Using the filament default');
+    if (value !== own) changed.push(f);
+  }
+  $('#filament-reset').disabled = !changed.length;
+  const advancedChanges = changed.filter(f => !['firstLayerTemp', 'nozzleTemp'].includes(f.key)).length;
+  const badge = $('#filament-advanced-changes');
+  badge.hidden = !advancedChanges;
+  badge.textContent = `${advancedChanges} changed`;
 }
 
 function renderPreviewMode() {
@@ -731,7 +838,9 @@ function showWholeOverview(input) {
   render();
 }
 
-function regenerate() {
+let regenerationEpoch = 0;
+async function regenerate() {
+  const epoch = ++regenerationEpoch;
   genTimer = null;
   previewBuild?.controller.abort();
   previewBuild = null;
@@ -754,6 +863,10 @@ function regenerate() {
       previewAtSelectedSize(exportOptions(selectedWidth, selectedHeight));
       return;
     }
+    if (state.vector && state.print.brim > 0) {
+      await prepareAdaptiveSolids();
+      if (epoch !== regenerationEpoch) return;
+    }
     // 3D sample is a bounded corner of a large piece. 2D is the default for pieces larger than the bed (above).
     // Imported drawings keep their full scale within the explicitly labelled sample.
     const cap = state.vector && Math.max(state.vector.width, state.vector.height) <= 250 && state.vector.width <= machine.bed.width && state.vector.height <= machine.bed.depth ? 250 : 100;
@@ -761,7 +874,7 @@ function regenerate() {
       const own = state.designs[mod.id];
       const [w, h] = mod.size(own);
       const previewState = { ...own, width: Math.min(w, cap), height: Math.min(h, cap) };
-      result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height, w, h), vector: mod.usesVector || mod.vectorGuides ? state.vector : null, vectorSize: [w, h], includeLines: !state.vector, picture: pictureFor(w, h) });
+      result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height, w, h), vector: mod.usesVector || mod.vectorGuides ? state.vector : null, vectorSize: [w, h], includeLines: !state.vector, picture: pictureFor(w, h), perimeters: state.print.meshPerimeters, printedBoundary: !!state.vector && !!state.outline?.page });
     } else if (state.design === 'squiggle') {
       const s = state.squiggle;
       // a picture is shown whole: the preview is the whole swatch at the shape it has, shrunk to fit the window
@@ -793,7 +906,7 @@ function regenerate() {
       const [fullWidth, fullHeight] = BINDINGS[state.design].size.get();
       result = applySvgGuides(result, state.vector, { fullWidth, fullHeight, outline: mod.outline === false ? placedOutline(result.cfg.t.sample_width, result.cfg.t.sample_height, fullWidth, fullHeight) : null });
       // a drawing that is also the outline lies on the boundary itself, so its lines are not trimmed to it
-      result = composeSvgLines(result, state.vector, { fullWidth, fullHeight, clipLines: !state.outline?.page && !result.guideCount });
+      result = composeSvgLines(result, state.vector, { fullWidth, fullHeight, clipLines: !state.outline?.page && !result.guideCount, perimeters: state.print.brim, meshPerimeters: state.print.meshPerimeters });
     }
     const native = nativeLayerInfo(result);
     const extras = state.print.legacyCopies ? (native.repeatable && !native.raised ? native.patternLayers * (state.print.legacyCopies - 1) : 0) : state.print.extraLayers;
@@ -802,8 +915,10 @@ function regenerate() {
         outline: result.outline, vectorSize: [selectedWidth, selectedHeight] })),
       colorChange: !!settingsOf(state.design).colorChange,
     });
-    // green shapes print solid, last, on top of the pattern and any extra layers
-    if (state.vector) result = applySvgSolids(result, state.vector, { fullWidth: selectedWidth, fullHeight: selectedHeight });
+    // green shapes print solid: on the bed layer by layer with the pattern, or last, on top of it and any extra layers
+    if (state.vector) result = applySvgSolids(result, state.vector, { fullWidth: selectedWidth, fullHeight: selectedHeight, layers: state.print.solidLayers, perimeters: state.print.brim, generator: 'arachne' });
+    // the backing mesh goes under all of it
+    result = addBackingMesh(result, backingFor());
     // Offset the selected outline before clipping: a bounded preview must never invent an edge at its crop.
     const pictured = state.design === 'squiggle' && state.squiggle.pattern === 'image' && state.image && !state.vector;
     const fullWidth = pictured ? result.cfg.t.sample_width : selectedWidth;
@@ -813,7 +928,7 @@ function regenerate() {
       const boundary = boundaryFor(fullWidth, fullHeight, placedOutline(fullWidth, fullHeight));
       brimOutline = state.vector ? conformalGuideRegion(boundary, vectorGuides(state.vector, fullWidth, fullHeight)).rings : boundary.rings;
     }
-    result = applyBrim(result, { count: allSolid ? 0 : state.print.brim, outline: brimOutline, fullWidth, fullHeight });
+    result = applyBrim(result, { count: allSolid && !backingFor() ? 0 : state.print.meshPerimeters, outline: brimOutline, fullWidth, fullHeight, label: 'Perimeters', requestedCount: state.print.brim });
     if (state.vector && result.cfg.t.sample_width === selectedWidth && result.cfg.t.sample_height === selectedHeight) result.documentSize = [state.vector.width, state.vector.height];
     showGenerated(result, snapshotKey());
   } catch (e) {
@@ -1015,6 +1130,7 @@ function reportItems(r, item) {
 }
 
 function renderFigures() {
+  const minutes = stats => { const seconds=printTimeSeconds(stats); return seconds===null ? '—' : formatMinutes(seconds/60); };
   const host = $('#figures');
   const toggle = $('#btn-details');
   const fig = (value, unit, label) => el('div', { class: 'figure' },
@@ -1031,10 +1147,10 @@ function renderFigures() {
     const scope = estimate?.full ? 'Whole-piece' : 'Sample';
     host.classList.toggle('stale', !!state.error);
     host.replaceChildren();
-    if (estimate) host.append(fig(formatMinutes(estimate.timeSec / 60), 'min', `${scope} print time`),
+    if (estimate) host.append(fig(minutes(estimate), 'min', `${scope} motion estimate`),
       fig(grams(estimate.filamentGrams ?? 0), 'g', `${scope} filament`));
     const info = generating ? `Generating the G-code for the whole ${w} × ${h} mm piece, the same work Export does. You can keep looking; the time appears when it is done.`
-      : estimate?.full ? `From the G-code for the whole ${w} × ${h} mm piece${readyGcode?.key === key ? ', which is ready: Export saves it straight away' : ''}. Time excludes acceleration.`
+      : estimate?.full ? `From the G-code for the whole ${w} × ${h} mm piece${readyGcode?.key === key ? ', which is ready: Export saves it straight away' : ''}. Includes acceleration and startup motion; heating, homing and bed levelling are extra.`
         : estimate ? `From a ${estimate.width} × ${estimate.height} mm 3D sample only, not the whole ${w} × ${h} mm piece.`
           : `The 2D view is a drawing, so it has no print time. Time and filament come from the G-code for the whole ${w} × ${h} mm piece.`;
     host.append(el('p', { class: 'estimate-info small muted', text: problem && !estimate?.full ? `${info} ${problem}` : info }));
@@ -1058,12 +1174,13 @@ function renderFigures() {
   const mod = designById(state.design);
   host.classList.toggle('stale', !!state.error);
   host.replaceChildren(
-    fig(formatMinutes(stats.timeSec / 60), 'min', sampled ? 'Preview print time' : 'Print time'),
+    fig(minutes(stats), 'min', sampled ? 'Preview motion estimate' : 'Motion estimate'),
     fig(grams(stats.filamentGrams), 'g', sampled ? 'Preview filament' : 'Filament'),
     !mod.legacy
       ? (() => { const f = mod.figure(state.result); return fig(f.value, f.unit, f.label); })()
       : isSq ? fig('2', '', 'Layers') : fig(stats.loops.toLocaleString('en'), '', 'Loops'),
   );
+  host.append(el('p',{class:'estimate-info small muted',text:printTimeSeconds(stats)===null ? 'Motion estimate unavailable: this file contains motion the timing model cannot predict.' : 'Includes acceleration and startup motion. Heating, homing, bed levelling and manual pauses are extra.'}));
   toggle.textContent = state.details ? 'Hide details' : 'Details';
   toggle.setAttribute('aria-expanded', String(state.details));
 
@@ -1083,16 +1200,17 @@ function renderFigures() {
       item('G-code moves', stats.moves.toLocaleString('en')),
       item('Steepest slope', `${stats.maxSlopeDeg.toFixed(1)}°`),
       ...(state.result.report ? reportItems(state.result.report, item) : []),
-      el('p', { class: 'note', text: 'Time ignores acceleration. Each lift ends one strand and starts the next, which is where blobs and strings come from.' })
+      el('p', { class: 'note', text: 'Motion time uses acceleration, axis limits and classic jerk with bounded lookahead. Print-order playback keeps the commanded-motion clock. Short print runs and long travels can contribute to blobs and strings.' })
     );
   }
   const what = !mod.legacy ? mod.summary(state.result) : isSq ? 'a two-layer squiggle mesh' : `${stats.loops} loops`;
-  $('#preview').setAttribute('aria-label', `3D preview: ${what} on a ${t.sample_width} by ${t.sample_height} millimetre swatch, about ${formatMinutes(stats.timeSec / 60)} minutes.`);
+  $('#preview').setAttribute('aria-label', `3D preview: ${what} on a ${t.sample_width} by ${t.sample_height} millimetre swatch, ${printTimeSeconds(stats)===null ? 'motion estimate unavailable' : `about ${minutes(stats)} minutes of modeled motion`}.`);
 }
 
 function renderPlayback() {
   const total = state.result ? state.result.stats.timeSec / 60 : 0;
   $('#time-label').textContent = `${formatMinutes(total * state.fraction)} of ${formatMinutes(total)} min`;
+  $('#time-label').title = 'Print order uses commanded motion without acceleration; the motion estimate above includes acceleration and startup/end motion.';
   $('#play-icon').setAttribute('d', state.playing ? PAUSE_ICON : PLAY_ICON);
   $('#btn-play').setAttribute('aria-label', state.playing ? 'Pause' : 'Play the print order');
   $('#scrub').value = String(Math.round(state.fraction * 1000));
@@ -1126,7 +1244,8 @@ function currentPrintSizeProblem() {
 function setupSummary() {
   const machine = state.machines.get(state.machine), material = state.materials.get(state.material);
   if (!machine || !material) return null;
-  return { name: `${shortMachine(machine.name)} · ${material.name}`, sub: `${state.print.layerHeight} mm thickness · ${layerSetupText()}` };
+  const heat = `${filamentValue(material, state.print, 'nozzleTemp', machine)} °C`, retract = filamentValue(material, state.print, 'retraction', machine);
+  return { name: `${shortMachine(machine.name)} · ${material.name}`, sub: `${state.print.layerHeight} mm thickness · ${layerSetupText()} · ${heat} · ${retract ? `${retract} mm retraction` : 'no retraction'}` };
 }
 
 const shortMachine = (name) => name.replace('Original ', '').replace(' i3', '').replace(' / MK3S+', '');
@@ -1143,6 +1262,7 @@ function renderPrinter() {
   $('#printer-dot').className = 'status-dot ok';
   $('#btn-printer').title = 'Printer, filament, layer thickness and extra layers above the original design. Add your own printer or filament from a PrusaSlicer or Bambu Studio export.';
   $('#btn-printer').setAttribute('aria-label', `Printer setup: ${shortMachine(machine.name)} with ${shortMaterial(material.name)}, ${layers}`);
+  renderFilamentSettings();
 }
 
 function renderSizes() {
@@ -1517,14 +1637,15 @@ function bindMachinePicker() {
 function updateDialogNote() {
   const material = state.materials.get($('#sel-material').value);
   const machine = state.machines.get(state.machine);
-  // where each profile came from, and anything the importer had to guess or leave out
-  $('#dialog-note').textContent = [
-    machine && `Printer: ${machine.source ?? machine.name}.`,
+  // Keep actionable import warnings; profile provenance remains in the profile files and exports.
+  const notes = [
     ...(machine ? profiles.notesFor('machines', machine.id) : []),
-    material && `Filament: ${material.source ?? material.name}.`,
     ...(material ? profiles.notesFor('materials', material.id) : []),
-  ].filter(Boolean).join(' ');
+  ].filter(Boolean);
+  $('#dialog-note').textContent = notes.join(' ');
+  $('#dialog-note').hidden = !notes.length;
   renderProfileList();
+  renderFilamentSettings();
 }
 
 /** The profiles added here, each with a way to remove it. The ones in the profiles folder go when their file does. */
@@ -1556,8 +1677,8 @@ function renderProfileList() {
 function renderTiles() {
   const ranking = new Map(PRINTABILITY.map((p, i) => [p.id, { ...p, rank: i + 1 }]));
   const byRank = (a, b) => (ranking.get(a.id)?.rank ?? 1000) - (ranking.get(b.id)?.rank ?? 1000);
-  const essentials = ESSENTIALS.map((id) => DESIGNS.find((d) => d.id === id)).filter(Boolean);
-  const others = DESIGNS.filter((d) => !ESSENTIALS.includes(d.id) && !d.hidden).sort(byRank);
+  const { essentials, others: rest } = galleryGroups();
+  const others = rest.sort(byRank);
   const makeTile = (d) => {
     const ready = d.status === 'ready';
     const planned = d.status === 'planned';
@@ -1584,9 +1705,8 @@ function renderTiles() {
   $('#design-list').replaceChildren(
     heading('Essentials', 'Flat lines in one or two layers, with only a few controls'),
     ...essentials.map(makeTile),
-    heading('More structures', 'Easiest first'),
-    ...others.map(makeTile),
   );
+  $('#experimental-design-list').replaceChildren(...others.map(makeTile));
   renderTilePressed();
 }
 
@@ -1821,7 +1941,7 @@ function recordBuildFailure(error, input = null) {
   const [width, height] = input ? [input.width, input.height] : BINDINGS[state.design].size.get();
   const captured = input ?? {
     design: state.design, width, height, studySettings: { ...settingsOf(state.design) },
-    machine: state.machines.get(state.machine), material: printMaterial(), extraLayers: state.print.extraLayers, brim: state.print.brim,
+    machine: state.machines.get(state.machine), material: printMaterial(), solidLayers: state.print.solidLayers, extraLayers: state.print.extraLayers, brim: state.print.brim, perimeters: state.print.brim, meshPerimeters: state.print.meshPerimeters,
     vector: state.vector, outline: state.outline?.rings,
   };
   const vector = captured.vector, sourcePaths = vector?.paths ?? [];
@@ -1831,7 +1951,7 @@ function recordBuildFailure(error, input = null) {
     settings: {
       ...settings,
       operation: input?.operation ?? (input ? 'panel' : 'preview'),
-      print: { layers: captured.layers, extraLayers: captured.extraLayers, brim: captured.brim, layerHeight: captured.material?.print_defaults?.layer_height },
+      print: { layers: captured.layers, extraLayers: captured.extraLayers, brim: captured.brim, perimeters: captured.perimeters, meshPerimeters: captured.meshPerimeters, layerHeight: captured.material?.print_defaults?.layer_height },
       machine: captured.machine?.id, material: captured.material?.id,
       ...(input ? { repeat: captured.repeat, backingSpacing: captured.backingSpacing } : state.design === 'loop-pile' ? { advanced: { ...state.advanced } } : {}),
     },
@@ -1952,7 +2072,7 @@ function feedbackContext() {
         design: state.design,
         size: { width, height },
         settings: settingsOf(state.design),
-        print: { extraLayers: state.print.extraLayers, brim: state.print.brim, layerHeight: printMaterial()?.print_defaults?.layer_height },
+        print: { solidLayers: state.print.solidLayers, extraLayers: state.print.extraLayers, brim: state.print.brim, perimeters: state.print.brim, meshPerimeters: state.print.meshPerimeters, layerHeight: printMaterial()?.print_defaults?.layer_height },
         machine: state.machine,
         material: state.material,
         // counts only: the drawing stays on this device
@@ -1983,9 +2103,9 @@ function reportStudyExport(exportType, options = {}, stats = state.result?.stats
   const [width, height] = ['settings-json', 'build-error'].includes(exportType) ? BINDINGS[state.design].size.get() : [cfg?.t.sample_width, cfg?.t.sample_height];
   const vector = options.vector ?? state.vector;
   const plan = options.layerPlan ?? state.result?.layerPlan;
-  let print = stats?.print ?? { layerHeight: cfg?.t.layer_height, extraLayers: plan?.extraLayers ?? options.extraLayers ?? state.print.extraLayers, nativeLayers: plan?.nativeLayers, totalLayers: plan?.totalLayers, backingLayers: plan?.backingLayers, totalBackingLayers: plan?.totalBackingLayers, brim: options.brim ?? state.print.brim, nozzleDiameter: cfg?.t.nozzle_diameter, extrusionWidth: cfg?.t.extrusion_width };
+  let print = stats?.print ?? { layerHeight: cfg?.t.layer_height, extraLayers: plan?.extraLayers ?? options.extraLayers ?? state.print.extraLayers, nativeLayers: plan?.nativeLayers, totalLayers: plan?.totalLayers, backingLayers: plan?.backingLayers, totalBackingLayers: plan?.totalBackingLayers, brim: options.brim ?? state.print.brim, perimeters: options.perimeters ?? state.print.brim, meshPerimeters: options.meshPerimeters ?? state.print.meshPerimeters, nozzleDiameter: cfg?.t.nozzle_diameter, extrusionWidth: cfg?.t.extrusion_width };
   if (exportType === 'build-error') {
-    print = { layerHeight: options.material?.print_defaults?.layer_height ?? state.print.layerHeight, extraLayers: options.extraLayers ?? state.print.extraLayers, brim: options.brim ?? state.print.brim };
+    print = { layerHeight: options.material?.print_defaults?.layer_height ?? state.print.layerHeight, extraLayers: options.extraLayers ?? state.print.extraLayers, brim: options.brim ?? state.print.brim, perimeters: options.perimeters ?? state.print.brim, meshPerimeters: options.meshPerimeters ?? state.print.meshPerimeters };
     try {
       const current = resolveConfig(options.machine ?? state.machines.get(state.machine), options.material ?? printMaterial());
       Object.assign(print, { nozzleDiameter: current.t.nozzle_diameter, extrusionWidth: current.t.extrusion_width });
@@ -2245,14 +2365,15 @@ function bindStatic() {
   const dialog = $('#printer-dialog');
   $('#btn-printer').addEventListener('click', () => { $('#machine-search').value = ''; fillDialogSelects(); dialog.showModal(); });
   bindMachinePicker();
-  $('#sel-material').addEventListener('change', (e) => { state.material = e.target.value; updateDialogNote(); schedule(); commit(); });
+  // another filament starts from its own temperatures and retraction
+  $('#sel-material').addEventListener('change', (e) => { state.material = e.target.value; state.print = withoutFilamentSettings(state.print); updateDialogNote(); schedule(); commit(); });
   // a printer or filament profile as the slicers export it: PrusaSlicer .ini or sliced .gcode, Bambu Studio .json
   $('#profile-file').addEventListener('change', async (e) => {
     for (const file of [...e.target.files]) {
       try {
         const got = profiles.add(await file.text(), file.name);
         if (got.machines[0]) { state.machine = got.machines[0].id; state.print.layerHeight = defaultLayerHeight(got.machines[0]); }
-        if (got.materials[0]) state.material = got.materials[0].id;
+        if (got.materials[0]) { state.material = got.materials[0].id; state.print = withoutFilamentSettings(state.print); }
         toast(`Added ${[...got.machines.map((m) => `${m.name} (printer)`), ...got.materials.map((m) => `${m.name} (filament)`)].join(' and ')}`);
       } catch (err) {
         toast(`${file.name}: ${err.errors?.[0] ?? err.message}`);

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { buildBrimStrands, applyBrim } from '../src/engine/brim.js';
 import { PolygonBoundary } from '../src/engine/boundary.js';
-import { safePoint, segmentInside, contactGraph } from '../src/engine/fabric.js';
+import { safePoint, segmentInside, contactGraph, segmentContact } from '../src/engine/fabric.js';
 import { layeredResult } from '../src/engine/layers.js';
 import { ConfigError } from '../src/engine/params.js';
 import { parseSvg } from '../src/engine/svg-parse.js';
@@ -93,7 +93,7 @@ test('short valid bed ties weld exposed motif edges to the brim without changing
   assert.deepEqual(result.strands.slice(-body.length),body);
   assert.ok(result.brim.connections>=1);
   assert.equal(contactGraph(result.strands).components,1);
-  checkSafe(result.strands.filter(s=>s.brim),[rectangle()]);
+  checkSafe(result.strands.filter(s=>s.brim),[rectangle()],result.cfg.t.extrusion_width);
 });
 
 
@@ -142,7 +142,14 @@ test('high-resolution convex SVG circles retain two safe brim contours',()=>{
   for(const n of [1000,1800]) {
     const ring=circleRing(90,n),strands=buildBrimStrands([ring]);
     assert.equal(strands.length,2);
-    assert.ok(strands.every(s=>s.pts.length>900),'fine vector outline retains its geometry');
+    for (const strand of strands) {
+      const radius = 90 - strand.inset;
+      for (let i = 0; i < n; i += 37) {
+        const a = i * 2 * Math.PI / n, probe = P(100 + radius * Math.cos(a), 100 + radius * Math.sin(a));
+        const deviation = Math.min(...strand.pts.slice(1).map((q, k) => segmentContact(probe, probe, strand.pts[k], q).distance));
+        assert.ok(deviation <= 0.006, 'fine vector outline stays within 0.006 mm after safe point reduction');
+      }
+    }
     const b=new PolygonBoundary([ring]);
     for(const s of strands) for(let i=0;i<s.pts.length;i+=37) assert.ok(safePoint(s.pts[i],b,.225));
   }

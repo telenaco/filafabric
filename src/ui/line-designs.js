@@ -12,7 +12,7 @@ import { spirographLayers } from '../engine/spirograph.js';
 import { starLayers, STAR_TILINGS, STAR_TILING_IDS } from '../engine/starlattice.js';
 import { FIELD_IDS } from '../engine/fields.js';
 import { patternField, withPicture } from '../engine/picture.js';
-import { interpretDrawing } from '../engine/drawing.js';
+import { interpretDrawing, YELLOW_PRINTS_SOLID } from '../engine/drawing.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const PATTERN_SCALE = { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false };
@@ -44,7 +44,8 @@ LINE_DESIGNS.push(layered({
   about: 'The two layers are the level lines of the two halves of one complex function, so wherever the grid bends they still cross at exactly 90° and the cells stay square, only larger or smaller. Bend it round a buttonhole, round two holes, round two poles like the field of a magnet, or into two families of spirals. Every hole gets a ring round it, a hem, held by the lines that run into it.',
   file: 'conformal',
   vectorGuides: true,
-  svgNote: 'Red defines the fabric, blue leaves holes, and yellow closed contours guide the conformal mesh. Stroke width sets wall passes.',
+  // (yellow prints solid for now, so this design reads no colour its own way; see YELLOW_PRINTS_SOLID)
+  svgNote: YELLOW_PRINTS_SOLID ? undefined : 'In this design yellow closed shapes are holes the grid bends round, each with a ring round it.',
   c: CONFORMAL,
   bundle: 'map',
   controls: [

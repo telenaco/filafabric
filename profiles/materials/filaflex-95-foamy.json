@@ -1,27 +1,38 @@
 {
   "id": "filaflex-95-foamy",
   "name": "Recreus Filaflex 95A Foamy",
-  "source": "recreus.com/en/products/filaflex-95-foamy (0.4 mm nozzle, 0.2 mm layer)",
+  "source": "User-authorized Prusa comparison: prusaSlicer.gcode, Generic FLEX, 0.20mm SPEED @MK3; physical material Recreus Filaflex 95 Foamy",
   "filament_diameter": 1.75,
   "density": 1.22,
-  "temperature": { "first_layer": 248, "print": 248 },
+  "temperature": {
+    "first_layer": 240,
+    "print": 240
+  },
   "bed_temperature": 50,
   "flow": {
-    "multiplier": 0.73,
-    "reference_line_width": 0.55,
+    "multiplier": 1.15,
+    "reference_line_width": 0.42,
     "foam_expansion": 1.5,
-    "max_volumetric_speed_nominal": 5.0
+    "max_volumetric_speed_nominal": 1.2,
+    "max_volumetric_speed_actual": 1.311,
+    "reference_line_width_note": "Prusa comparison first_layer_extrusion_width=0.42, not a measured foamed bead. Filament multiplier 1.15 combines with the MK3 printer's 0.95 firmware flow once. Raw-input ceiling is 1.2 x 1.15 x 0.95 = 1.311 mm3/s."
   },
   "retraction": {
     "length": 0,
-    "speed": 75,
+    "speed": 35,
     "deretract_speed": 25,
-    "z_hop": 0.2,
-    "min_travel": 10,
-    "note": "Recreus recommends 2.5-6 mm at 75 mm/s; the user's working Generic FLEX profile uses none. Start with none; raise if stringing hurts."
+    "z_hop": 0,
+    "min_travel": 1,
+    "lift_on_retract_only": true,
+    "restart_extra": 0,
+    "seam_gap": 0.2,
+    "note": "Prusa comparison filament_retract_length=0 overrides the printer's retract_length=0.8. Retraction is disabled by the filament profile, not the printer. The optional hop is zero as in the reference's actual print body; required nonplanar clearance remains. Historical FOAM99_45PAIRS seam test (21 October 2026) used 238 C, 1 mm at 40 mm/s, return 20 mm/s and 0.2 mm lift; these historical settings are superseded by the user's 22 October comparison request."
   },
-  "fan": { "default": 0 },
+  "fan": {
+    "default": 0
+  },
+  "print_defaults": { "extrusion_width": 0.42, "speed_flat": 20 },
   "travel_speed_hint": 180,
   "pressure_advance_k": null,
-  "notes": "Dry at 55 C for at least 1 h. Direct-drive extruder recommended. Foams at 245-250 C; lower flow and higher temperature foam more."
+  "notes": "Comparison defaults deliberately follow the supplied successful Prusa print: 240 C, Generic FLEX multiplier 1.15, no filament retraction, commanded first-layer width 0.42 mm and requested first-layer speed 20 mm/s with volumetric limiting. This is an imported comparison setup, not a new physical calibration or a manufacturer Foamy recommendation. No measured bead width is assumed. Two native mesh passes and required raised clearance are retained."
 }

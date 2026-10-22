@@ -155,7 +155,7 @@ export function markRowOrder(pts, order) {
  * Joins polylines (in the order given) into longer strands: a polyline continues the strand before it when its start
  * is within `maxJog` of that strand's end and the connector stays inside the boundary; otherwise it starts a new one.
  */
-export function chainPolylines(list, boundary, maxJog = 6) {
+export function chainPolylines(list, boundary, maxJog = 6, inset = 0) {
   const chains = [];
   let cur = null;
   for (const pts of list) {
@@ -163,7 +163,7 @@ export function chainPolylines(list, boundary, maxJog = 6) {
     if (cur) {
       const end = cur[cur.length - 1];
       const d = Math.hypot(pts[0].x - end.x, pts[0].y - end.y);
-      if (d <= maxJog && segmentInside(end, pts[0], boundary)) {
+      if (d <= maxJog && segmentInside(end, pts[0], boundary, inset)) {
         appendPoints(cur, densify([end, pts[0]]), 1);
         appendPoints(cur, pts, 1);
         continue;
@@ -174,6 +174,23 @@ export function chainPolylines(list, boundary, maxJog = 6) {
   }
   if (cur) chains.push(cur);
   return chains;
+}
+
+/** Rejoin consecutive fragments of the same ordered row pass after a panel-edge clip. Native XYZ points stay intact. */
+export function chainRowStrands(strands, boundary, { maxJog = 6, inset = 0 } = {}) {
+  const out = [];
+  for (const strand of strands) {
+    const previous = out.at(-1), a = previous?.pts.at(-1), b = strand.pts[0];
+    const ordered = Number.isFinite(strand.rowOrder) && strand.rowOrder === previous?.rowOrder && strand.layer === previous?.layer;
+    const d = a ? Math.hypot(b.x - a.x, b.y - a.y) : Infinity;
+    if (!ordered || d > maxJog || (d < 1e-8 && Math.abs(b.z - a.z) > 1e-8) || !segmentInside(a, b, boundary, inset)) {
+      out.push({ ...strand, pts: [...strand.pts] }); continue;
+    }
+    const n = Math.max(1, Math.ceil(d / 0.4));
+    for (let k = 1; k < n; k++) previous.pts.push({ ...b, x: a.x + (b.x - a.x) * k / n, y: a.y + (b.y - a.y) * k / n, z: a.z + (b.z - a.z) * k / n });
+    appendPoints(previous.pts, strand.pts, d < 1e-8 ? 1 : 0);
+  }
+  return out;
 }
 
 /**

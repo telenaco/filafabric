@@ -128,8 +128,11 @@ export function createPreview(container) {
     for (let i = 1; i < moves.length; i++) {
       const a = moves[i - 1], b = moves[i];
       if (b.extrude) {
-        // flow within 10% of nominal draws at the role's width; any other flow is drawn in quarter steps
-        const flow = b.flow !== undefined && Math.abs(b.flow - 1) >= 0.1 ? Math.max(0.25, Math.round(b.flow * 4) / 4) : 1;
+        // Adaptive flat widths describe physical geometry; E flow is an area ratio, not a width ratio.
+        // Bucket physical width to 0.01 mm; ordinary air-flow previews retain their existing quarter steps.
+        const flat = b.cls === 'base' || b.cls === 'supported';
+        const flow = flat && b.width > 0 ? Math.round(b.width * 100) / 100 / cfg.t.extrusion_width
+          : b.flow !== undefined && Math.abs(b.flow - 1) >= 0.1 ? Math.max(0.25, Math.round(b.flow * 4) / 4) : 1;
         const key = flow === 1 ? ROLE_OF[b.cls] : `${ROLE_OF[b.cls]}@${flow}`;
         const bk = (buckets[key] ??= { pos: [], idx: [] });
         bk.pos.push(a.x, a.y, a.z, b.x, b.y, b.z);

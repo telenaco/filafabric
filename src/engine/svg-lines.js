@@ -60,7 +60,7 @@ export function outlineFromVector(vector, { maxPoints = 1800, maxRings = 64 } = 
  * as drawn (a line across a hole is what ties an island to the rest), trimmed only to the swatch. Neither is checked
  * against the outline.
  */
-export function composeSvgLines(result, vector, { fullWidth = vector.width, fullHeight = vector.height, offsetX = 0, offsetY = 0, clipLines = true } = {}) {
+export function composeSvgLines(result, vector, { fullWidth = vector.width, fullHeight = vector.height, offsetX = 0, offsetY = 0, clipLines = true, perimeters = 0, meshPerimeters = perimeters } = {}) {
   const { cfg } = result, h = cfg.t.layer_height, w = cfg.t.extrusion_width;
   const native = hasNativeHeight(result);
   const boundary = new PolygonBoundary(result.outline ?? [[{ x: 0, y: 0 }, { x: cfg.t.sample_width, y: 0 }, { x: cfg.t.sample_width, y: cfg.t.sample_height }, { x: 0, y: cfg.t.sample_height }]]);
@@ -74,9 +74,11 @@ export function composeSvgLines(result, vector, { fullWidth = vector.width, full
   // Collapse only exactly collinear samples before crossing analysis; preserve curves and every printed pass.
   const imported = simplifyStrands([...clipStrands(whole.map((poly) => ({ ...strand(poly), onBoundary: true })), swatch, 0), ...lines], 1e-9);
   const printedBoundary = !clipLines && (model.rings.length || model.guides.length) ? boundary : null;
-  const pattern = printedBoundary ? clipStrands(finishAtPrintedBoundary(result.strands, printedBoundary, w), swatch, 0) : result.strands;
+  const pattern = printedBoundary && !meshPerimeters ? clipStrands(finishAtPrintedBoundary(result.strands, printedBoundary, w), swatch, 0) : result.strands;
   // the pattern keeps the print order its design gave it (row by row for lanes); only the drawing's own lines are reordered
-  const body = pattern.map((s, i) => ({ ...s, id: `pattern-${s.id}`, layer: (s.layer ?? 0) + 1, rowOrder: i, pts: s.pts.map(({ cls, ...p }) => ({ ...p, z: native ? p.z + h : 2 * h, ...(native && cls ? { cls } : {}) })) }));
+  // a flat pattern keeps its own layers, the first on the bed beside the lines (it lifts over them where it crosses one);
+  // a raised one stands on the lines' layer
+  const body = pattern.map((s, i) => ({ ...s, id: `pattern-${s.id}`, layer: (s.layer ?? 0) + 1, rowOrder: i, pts: s.pts.map(({ cls, ...p }) => ({ ...p, z: native ? p.z + h : Math.max(h, p.z), ...(native && cls ? { cls } : {}) })) }));
   let strands = [...imported, ...body];
   checkMoveBudget(strands);
   const beforeMm = travelDistance(strands);
@@ -99,5 +101,5 @@ export function composeSvgLines(result, vector, { fullWidth = vector.width, full
   const fabric = analyzeFabric(strands, { strandWidth: w, layerHeight: h, boundary });
   const warnings = [...(result.warnings ?? []).filter((w) => !result.fabric?.issues.includes(w)), ...fabric.issues];
   const report = result.report ? { ...result.report, components: fabric.components } : result.report;
-  return { ...result, strands, moves, stats, fabric, report, vector: { name: vector.name, paths: imported.length, width: fullWidth, height: fullHeight, offsetX, offsetY }, routing: { beforeMm, afterMm: travelDistance(strands) }, warnings, gcode: writeGcode(moves, cfg, { stats, comments: [`SVG first layer: ${vector.name}`, `SVG document ${fullWidth} x ${fullHeight} mm; preview window ${offsetX}, ${offsetY}`] }) };
+  return { ...result, strands, moves, stats, fabric, report, printedBoundary: !!printedBoundary, vector: { name: vector.name, paths: imported.length, width: fullWidth, height: fullHeight, offsetX, offsetY }, routing: { beforeMm, afterMm: travelDistance(strands) }, warnings, gcode: writeGcode(moves, cfg, { stats, comments: [`SVG first layer: ${vector.name}`, `SVG document ${fullWidth} x ${fullHeight} mm; preview window ${offsetX}, ${offsetY}`] }) };
 }

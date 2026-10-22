@@ -11,3 +11,8 @@ export function loadProfile(kind, id) {
 export function defaultProfiles() {
   return { machine: loadProfile('machines', 'prusa-mk3s'), material: loadProfile('materials', 'filaflex-95-foamy') };
 }
+
+/** Explicit active-retraction fixture for feature tests; current Foamy defaults disable filament retraction. */
+export function retractingMaterial(material) {
+  return { ...material, retraction: { ...material.retraction, length: 1, speed: 40, deretract_speed: 20, min_travel: 2, z_hop: 0.2 } };
+}

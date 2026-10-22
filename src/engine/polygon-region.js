@@ -4,6 +4,7 @@ import { ConfigError } from './params.js';
 /** Boundary extraction for a boolean material predicate over straight polygon edges. */
 export function polygonRegion(candidates, material) {
   const edges = candidates.flatMap((ring) => ring.map((a, i) => ({ a, b: ring[(i + 1) % ring.length], cuts: [0, 1] }))).filter((e) => Math.hypot(e.b.x - e.a.x, e.b.y - e.a.y) > 1e-9);
+  for (const e of edges) { e.minX = Math.min(e.a.x, e.b.x); e.maxX = Math.max(e.a.x, e.b.x); e.minY = Math.min(e.a.y, e.b.y); e.maxY = Math.max(e.a.y, e.b.y); }
   const box = candidates.flat().reduce((b, p) => ({ minX: Math.min(b.minX, p.x), minY: Math.min(b.minY, p.y), maxX: Math.max(b.maxX, p.x), maxY: Math.max(b.maxY, p.y) }), { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }), cell = Math.max(0.1, Math.sqrt(Math.max(1, (box.maxX - box.minX) * (box.maxY - box.minY)) / Math.max(1, edges.length)) * 4);
   const grid = new Map();
   let comparisons = 0, entries = 0;
@@ -28,6 +29,8 @@ export function polygonRegion(candidates, material) {
       const key = `${x},${y}`, prior = grid.get(key) ?? [];
       for (const j of prior) if (!seen.has(j)) {
         seen.add(j);
+        const q = edges[j];
+        if (e.maxX < q.minX - 1e-8 || q.maxX < e.minX - 1e-8 || e.maxY < q.minY - 1e-8 || q.maxY < e.minY - 1e-8) continue;
         if (++comparisons > 2000000) throw new ConfigError(['These overlapping polygon contours are too complex; simplify their edges.']);
         cutPair(e, edges[j]);
       }
@@ -43,7 +46,7 @@ export function polygonRegion(candidates, material) {
       let a = point(ts[j - 1]), b = point(ts[j]);
       const dx = b.x - a.x, dy = b.y - a.y, len = Math.hypot(dx, dy);
       if (len < 1e-7) continue;
-      const p = point((ts[j] + ts[j - 1]) / 2), epsilon = Math.min(1e-5, len / 100);
+      const p = point((ts[j] + ts[j - 1]) / 2), epsilon = Math.min(1e-7, len / 100);
       const left = material(p.x - dy / len * epsilon, p.y + dx / len * epsilon), right = material(p.x + dy / len * epsilon, p.y - dx / len * epsilon);
       if (left === right) continue;
       if (!left) [a, b] = [b, a];

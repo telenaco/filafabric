@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applySvgSolids, vectorSolids, topOver, SOLID_LAYERS } from '../src/engine/svg-solids.js';
+import { applySvgSolids, vectorSolids, topOver, solidStrands, SOLID_LAYERS } from '../src/engine/svg-solids.js';
+import { solidLayer } from '../src/engine/solid-fill.js';
 import { exportPanel } from '../src/engine/panel.js';
 import { generateDesignExport } from '../src/engine/design-export.js';
 import { boundaryFor } from '../src/engine/layers.js';
@@ -20,7 +21,7 @@ test('a result without green shapes is returned as it is', () => {
 
 test('the fill lies on the highest strand under each shape, the native path is kept, and the fill comes last', () => {
   const base = generateDesignExport({ ...profiles, design: 'crosshatch', width: 80, height: 60, brim: 0 });
-  const out = applySvgSolids(base, drawing);
+  const out = applySvgSolids(base, drawing, { layers: 2 });
   assert.deepEqual(out.moves.slice(0, base.moves.length), base.moves, 'every move of the pattern is unchanged');
   const h = base.cfg.t.layer_height;
   for (const [i, ring] of [circle(20, 20, 6), square(45, 30, 12)].entries()) {
@@ -32,12 +33,13 @@ test('the fill lies on the highest strand under each shape, the native path is k
   }
   assert.equal(out.solid.count, 2);
   assert.equal(out.solid.coils, 1);
-  assert.equal(out.solid.layers, SOLID_LAYERS);
+  assert.equal(out.solid.layers, 2);
   // nothing prints after the fill, and the lift to it clears everything printed before
   const firstFill = out.moves.findIndex((m) => m.extrude && /^solid-/.test(m.tag));
   assert.ok(out.moves.slice(firstFill).every((m) => !m.extrude || /^solid-/.test(m.tag)));
-  const highest = Math.max(...base.moves.map((m) => m.z));
-  assert.ok(out.moves.slice(base.moves.length, firstFill).some((m) => !m.extrude && m.z > highest + 2), 'travels in clear of the print');
+  // (by the filament's own lift over the highest thing printed: 0.2 mm for Foamy)
+  const highest = Math.max(...base.moves.filter((m) => m.extrude).map((m) => m.z)), lift = base.cfg.derived.retraction.zHop;
+  assert.ok(out.moves.slice(base.moves.length, firstFill).some((m) => !m.extrude && m.z >= highest + lift - 1e-9), 'travels in clear of the print');
   assert.match(out.gcode, /; Solid shapes: 2 green \(1 coiled, 1 zigzag\)/);
 });
 
@@ -70,4 +72,27 @@ test('a repeating panel prints the green shapes once, on top, after every sectio
   const before = [...text.slice(0, at).matchAll(/^G1 [^\n]*Z([\d.]+)/gm)].map((m) => +m[1]);
   assert.ok(zs.length === 0 || Math.min(...zs) > 0, 'the fill prints');
   assert.ok(Math.max(...before) > 0);
+});
+
+test('solid paths use short travel within each shape layer without changing extrusion geometry', () => {
+  const ring = square(0, 0, 100).slice(0, -1).map((p) => ({ ...p, y: p.y * 0.3 }));
+  const holes = [25, 50, 75].map((x) => circle(x, 15, 4, 80));
+  const { strands } = solidStrands([{ ring, holes }], [], { bead: 0.45, layerHeight: 0.2, layers: 2 });
+  const key = (a, b) => [a, b].map((p) => `${Math.round(p.x * 1e6)},${Math.round(p.y * 1e6)}`).sort().join(':');
+  const segments = (paths) => paths.flatMap((pts) => pts.slice(1).map((p, i) => key(pts[i], p))).sort();
+  let previousLayer = -1;
+  for (const st of strands) {
+    assert.ok(st.solidLayer >= previousLayer, 'the next layer never moves ahead of the current one');
+    previousLayer = st.solidLayer;
+  }
+  for (const layer of [0, 1]) {
+    const planned = strands.filter((st) => st.solidLayer === layer);
+    const travel = planned.slice(1).reduce((mm, st, i) => {
+      const end = planned[i].pts.at(-1), start = st.pts[0];
+      return mm + Math.hypot(start.x - end.x, start.y - end.y);
+    }, 0);
+    assert.ok(travel < 125, `layer ${layer} travels ${travel} mm between its solid paths`);
+    assert.ok(planned.every((st) => st.pts.every((p) => Math.abs(p.z - (layer + 1) * 0.2) < 1e-9)));
+    assert.deepEqual(segments(planned.map((st) => st.pts)), segments(solidLayer(ring, { bead: 0.45, holes, layer })), 'routing preserves every extrusion segment');
+  }
 });

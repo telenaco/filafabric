@@ -284,7 +284,7 @@ export const DESIGNS = [
   },
 ];
 
-// the SVG design card comes first after the original structures, then the line-algorithm library and the newer line designs
+// the Drawing & infill card (svgdesign) comes first after the original structures, then the line-algorithm library and the newer line designs
 DESIGNS.push(...BASIC_DESIGNS, ...SVG_DESIGNS, ...MORE_DESIGNS, ...LINE_DESIGNS, ...PUBLICATION_DESIGNS);
 
 /**
@@ -296,6 +296,18 @@ export const ESSENTIALS = Object.freeze(['zigzag', 'squiggle', 'coil', 'starlatt
 const BY_ID = new Map(DESIGNS.map((d) => [d.id, d]));
 
 export const designById = (id) => BY_ID.get(id);
+
+/**
+ * The gallery: the essentials in their order, then every other card (the caller ranks those). A hidden card is in
+ * neither, but still opens from a link or a saved file; it keeps its place in ESSENTIALS for when it comes back.
+ */
+export function galleryGroups() {
+  const shown = (d) => !!d && !d.hidden;
+  return {
+    essentials: ESSENTIALS.map(designById).filter(shown),
+    others: DESIGNS.filter((d) => !ESSENTIALS.includes(d.id) && shown(d)),
+  };
+}
 export const READY_IDS = Object.freeze(DESIGNS.filter((d) => d.status === 'ready').map((d) => d.id));
 export const isReady = (id) => READY_IDS.includes(id);
 

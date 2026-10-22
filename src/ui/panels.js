@@ -12,6 +12,7 @@
 //       PresetsSection, SizeSection, ShapeSection, ChoiceSection, SwitchSection, SlidersSection, PatternSection
 //     DesignPanel         one design's whole panel, built from the `controls` its registry entry describes
 //     SvgImportCard       the single place a drawing comes in: its lines, and optionally its shape as the outline
+//     BackingCard         the backing mesh under a flat design, shared by every design through the print setup
 //
 // The panel does not know the studio. It is given a `host`, an object with these methods:
 //   binding(id)          { get(key), set(key, value), range(key), readout(key), size: { ranges, get(), set(w, h, preset) } }
@@ -23,7 +24,7 @@
 //   toast(message)       say something briefly
 //   vectorSize()         [w, h] of the imported SVG, or null when none is imported
 //   svg()                what the import card shows, see SvgImportCard
-import { el } from './dom.js';
+import { el, helpBubble } from './dom.js';
 import { validNumber } from './numeric.js';
 import { FIELDS, createField } from '../engine/fields.js';
 import { PICTURE } from '../engine/picture.js';
@@ -74,7 +75,9 @@ export class SliderControl extends Control {
     this.readout.addEventListener('click', () => this.edit());
     // the end labels say which way is which; the sentence of help is a tooltip on the label, and still read out
     return el('div', { class: 'ctl' },
-      el('div', { class: 'ctl-top' }, el('label', { class: 'ctl-label', for: this.inputId, text: def.label, 'data-tip': def.help || false }), this.readout),
+      el('div', { class: 'ctl-top' }, el('span', { class: 'ctl-heading' },
+        el('label', { class: 'ctl-label', for: this.inputId, text: def.label, 'data-tip': !def.info && def.help || false }),
+        def.info && helpBubble(def.label, def.help)), this.readout),
       el('p', { class: 'ctl-help visually-hidden', id: `${this.inputId}-help`, text: def.help }),
       this.input,
       el('div', { class: 'ctl-ends', 'aria-hidden': 'true' }, el('span', { text: def.lo }), el('span', { text: def.hi })),
@@ -191,16 +194,22 @@ export class SizeControl extends Control {
     this.divider = el('div', { class: 'size-source-divider', text: 'or', 'aria-hidden': 'true' });
     this.svgSlot = el('div', { class: 'size-svg-slot' });
     this.brim = new SliderControl({ ...host, binding: () => host.binding('print') }, `${designId}-edge`, {
-      key: 'brim', label: 'Brim', help: 'Side-by-side runs around the inside edge, printed first to hold the fabric ends. Adjacent runs overlap 20%. Two is the default; 0 turns it off. Type up to 50. These are lines, not vertical layers.',
+      key: 'brim', label: 'Solid perimeters', info: true, help: 'Walls inside solid shapes. More walls strengthen their edges; 0 leaves only infill. Mesh edges use the separate Mesh outlines setting.',
       lo: 'Off', hi: 'Wide', unit: 'lines', edit: true,
     });
     this.brim.node.classList.add('brim-control');
+    this.meshPerimeters = new SliderControl({ ...host, binding: () => host.binding('print') }, `${designId}-mesh-edge`, {
+      key: 'meshPerimeters', label: 'Mesh outlines', info: true, help: 'Extra rings around the mesh and inside pattern windows. They reinforce loose ends and add material. 0 leaves them off; solid shapes use Solid perimeters.',
+      lo: 'Off', hi: 'Wide', unit: 'lines', edit: true,
+    });
+    this.meshPerimeters.node.classList.add('brim-control');
     this.warn = el('p', { class: 'ctl-warn small', hidden: true });
-    this.node = el('div', { class: 'size-control' }, this.inputs, this.divider, this.svgSlot, this.note, this.warn, this.error, this.brim.node);
+    this.node = el('div', { class: 'size-control' }, this.inputs, this.divider, this.svgSlot, this.note, this.warn, this.error, this.brim.node, this.meshPerimeters.node);
   }
 
   update() {
     this.brim.update();
+    this.meshPerimeters.update();
     const limits = this.host.sizeLimits?.(this.designId);
     for (const [f, max] of [[this.width, limits?.width], [this.height, limits?.height]]) {
       if (max !== undefined) f.input.max = String(max);
@@ -790,22 +799,22 @@ export class DesignPanel extends Control {
  * @param defs { thickness: { label, help }, layers: a slider description }
  */
 export class PrintSetupCard extends Control {
-  constructor(host, { thickness, layers }) {
+  constructor(host, { thickness, layers, solids = null }) {
     super(host);
     this.layers = new SliderControl(host, 'print', layers);
+    this.solids = solids ? new SliderControl(host, 'print', solids) : null;
     this.readout = el('span', { class: 'ctl-readout', id: 'layer-thickness-value' });
-    this.note = el('p', { class: 'ctl-help', id: 'layer-thickness-note' });
+    this.thicknessHelp = helpBubble(thickness.label, thickness.help);
     this.grid = el('div', { class: 'patterns layer-choices', id: 'layer-thickness-choices', role: 'group', 'aria-labelledby': 'layer-thickness-label' });
     this.built = '';
     this.fold = null;
     this.node = el('section', { class: 'print-setup', 'aria-labelledby': 'print-setup-title' },
       el('h3', { id: 'print-setup-title', text: 'Layers' }),
       el('div', { class: 'ctl' },
-        el('div', { class: 'ctl-top' }, el('span', { class: 'ctl-label', id: 'layer-thickness-label', text: thickness.label }), this.readout),
-        el('p', { class: 'ctl-help', text: thickness.help }),
-        this.grid,
-        this.note),
-      this.layers.node);
+        el('div', { class: 'ctl-top' }, el('span', { class: 'ctl-heading' },
+          el('span', { class: 'ctl-label', id: 'layer-thickness-label', text: thickness.label }), this.thicknessHelp), this.readout),
+        this.grid),
+      this.layers.node, this.solids?.node);
   }
 
   get binding() {
@@ -829,9 +838,9 @@ export class PrintSetupCard extends Control {
     if (options.join(',') !== this.built) this.build(options);
     for (const btn of this.grid.children) btn.setAttribute('aria-pressed', String(Number(btn.dataset.layerHeight) === binding.get('layerHeight')));
     this.readout.textContent = binding.readout('layerHeight');
-    this.note.textContent = binding.note();
     this.fold?.update();
     this.layers.update();
+    this.solids?.update();
   }
 
   redraw() {
@@ -839,15 +848,63 @@ export class PrintSetupCard extends Control {
   }
 }
 
+/**
+ * The backing mesh: the same card at the end of every flat design's panel. A switch, and while it is on the mesh's three
+ * sliders and a filament-change pause after it. Its settings are kept in the print setup (the host's 'print' binding,
+ * keys backing, backingSpacing, backingDepth, backingWavelength, backingPause), so they are shared by every design.
+ * @param defs { label, help, sliders: slider descriptions, pause: { label, help } }
+ */
+export class BackingCard extends Control {
+  constructor(host, designId, defs) {
+    super(host);
+    const switchRow = (input, { label, help }) => el('label', { class: 'switch-row' }, input, el('span', {}, el('strong', { text: label }), el('small', { text: help })));
+    this.toggle = el('input', { type: 'checkbox', role: 'switch', 'data-switch': `${designId}:backing` });
+    this.toggle.addEventListener('change', () => { this.binding.set('backing', this.toggle.checked); this.host.change(); });
+    this.pause = el('input', { type: 'checkbox', role: 'switch', 'data-switch': `${designId}:backingPause` });
+    this.pause.addEventListener('change', () => { this.binding.set('backingPause', this.pause.checked); this.host.change(); });
+    // the sliders read and write the print setup; their ids carry the design, as one card is in every panel
+    const print = { ...host, binding: () => host.binding('print') };
+    this.sliders = defs.sliders.map((def) => new SliderControl(print, `backing-${designId}`, def));
+    this.body = el('div', { class: 'controls backing-body', hidden: true }, ...this.sliders.map((s) => s.node), switchRow(this.pause, defs.pause));
+    this.node = el('section', { class: 'group untitled backing-card' }, switchRow(this.toggle, defs), this.body);
+  }
+
+  get binding() {
+    return this.host.binding('print');
+  }
+
+  update() {
+    const on = !!this.binding.get('backing');
+    this.toggle.checked = on;
+    this.body.hidden = !on;
+    this.pause.checked = !!this.binding.get('backingPause');
+    if (on) for (const s of this.sliders) s.update();
+  }
+}
+
 /* ---------- the one place a drawing comes in ---------- */
 
-/** The sample drawing on the site (samples/), to try or to open and copy: red fills, a blue hole, yellow guides, green solids, lines. */
+/** The sample drawing on the site (samples/), to try or to open and copy: red fills, a blue hole, yellow and green solids, lines. */
 export const SAMPLE_SVG = 'samples/filafabric-sample.svg';
+
+/**
+ * What each colour of a drawing does, as the guide in the import card says it (the same for every design; a design that
+ * reads a colour its own way adds a line of its own, its `svgNote`). The rules themselves are in engine/drawing.js.
+ */
+export const DRAWING_GUIDE = Object.freeze([
+  { colour: 'red', name: 'Red', text: 'Fill with the selected pattern.' },
+  { colour: 'blue', name: 'Blue', text: 'Cut out: leave empty.' },
+  { colour: 'green', name: 'Green', text: 'Fill solid. Thickness follows Solid layers.' },
+  { colour: 'line', name: 'Other lines', text: 'Print as drawn. Stroke width sets the printed width.' },
+]);
+const GUIDE_FOOT = 'Use pure RGB colours. For nested shapes, the innermost colour wins.';
+// red is filled once the pattern is cut to the shapes, which an import does; a design that draws the drawing itself fills it its own way
+const RED_CUT = 'Fill with the pattern when “Fill its shapes” is on.';
 
 /**
  * The SVG import. A drawing comes in once, here, and does three things everywhere in the studio: its lines print first,
  * the swatch takes its size, and (if you ask) the pattern is cut to its closed shapes. `host.svg()` describes the
- * situation: { vector, summary, usesVector, idleNote, allowsOutline, hasShapes, outlineOn, window }, and the card calls
+ * situation: { vector, summary, usesVector, designNote, allowsOutline, hasShapes, outlineOn, window }, and the card calls
  * host.importSvg(file), host.removeSvg() and host.setShapeOutline(on).
  */
 export class SvgImportCard extends Control {
@@ -868,14 +925,24 @@ export class SvgImportCard extends Control {
     // a drawing to try, for whoever has none: every colour the studio reads, in one file that can be opened to see how
     this.tryButton = el('button', { type: 'button', id: 'svg-sample-try', class: 'link small', text: 'use the sample drawing' });
     const download = el('a', { href: SAMPLE_SVG, download: 'filafabric-sample.svg', class: 'link small svg-sample-download', id: 'svg-sample-download',
-      title: 'A 200 x 200 mm drawing with every colour: red shapes are filled, the blue star is a hole, the yellow shapes bend the pattern, the green ones print solid on top of the pattern, and the lines print as paths. Open it in Inkscape or Illustrator to see how it is set up.' });
+      title: 'Example SVG with pattern areas, cutouts, solid shapes and printed lines.' });
     download.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7M5 7l3 3 3-3M3 12.5h10"/></svg>';
-    download.append('Download the SVG sample with colours');
+    download.append('Download sample SVG');
     this.sample = el('div', { class: 'svg-sample small muted' },
       el('p', {}, 'or ', this.tryButton),
       el('p', {}, download));
+    // the colour guide: what each colour of a drawing prints as, folded under one line
+    const chip = (colour) => el('span', { class: `svg-chip ${colour}`, 'aria-hidden': 'true' });
+    this.designNote = el('p', { class: 'svg-guide-note', hidden: true });
+    this.redText = el('span', { text: DRAWING_GUIDE[0].text });
+    this.guide = el('details', { class: 'svg-guide small', id: 'svg-guide' },
+      el('summary', {}, el('span', { text: 'How a drawing prints' }), el('span', { class: 'svg-guide-chips' }, ...DRAWING_GUIDE.map((g) => chip(g.colour)))),
+      this.designNote,
+      el('ul', { class: 'svg-guide-list' }, ...DRAWING_GUIDE.map((g, i) => el('li', {}, chip(g.colour),
+        el('span', {}, el('strong', { text: g.name }), ' ', i === 0 ? this.redText : g.text)))),
+      el('p', { class: 'muted', text: GUIDE_FOOT }));
     this.node = el('div', { class: 'svg-layer-control', 'aria-label': 'SVG import' },
-      el('div', { class: 'svg-layer-actions' }, this.pick, this.dropHint, this.remove), this.sample, this.info, this.shapeRow, this.note);
+      el('div', { class: 'svg-layer-actions' }, this.pick, this.dropHint, this.remove), this.sample, this.info, this.shapeRow, this.note, this.guide);
     this.tryButton.addEventListener('click', async () => {
       try {
         const res = await fetch(SAMPLE_SVG);
@@ -901,8 +968,12 @@ export class SvgImportCard extends Control {
     const v = s.vector;
     this.info.textContent = v ? `${v.name} · ${fmt(v.width)} × ${fmt(v.height)} mm` : '';
     this.info.hidden = !v;
-    this.pick.dataset.tip = `${v ? `Replace this drawing. Prints: ${s.summary}.` : 'Use the SVG document’s size and print its vector lines first.'} With a standard 0.4 mm nozzle, stroke widths of 0.4 mm print one pass, 0.8 mm two, 1.2 mm three, and so on. Adjacent passes overlap by at least 20%. Black lines print as paths; red contains the pattern; blue blocks it; yellow bends the pattern around its contour; a closed green shape prints solid on top of the pattern (round shapes as a coil, others as a zigzag, passes overlapping by 20%). Lines that meet are printed in as few strokes as they allow.`;
+    // what each colour does is in the guide below the button
+    this.pick.dataset.tip = v ? 'Replace the imported SVG drawing.' : 'Import an SVG drawing at its document size.';
     this.pick.setAttribute('aria-description', this.pick.dataset.tip);
+    this.redText.textContent = s.usesVector ? DRAWING_GUIDE[0].text : RED_CUT;
+    this.designNote.hidden = !s.designNote;
+    this.designNote.textContent = s.designNote ?? '';
     this.remove.hidden = !v;
     this.dropHint.hidden = !!v;
     this.sample.hidden = !!v;
