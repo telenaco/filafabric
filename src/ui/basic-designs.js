@@ -59,8 +59,8 @@ BASIC_DESIGNS.push(layered({
     },
     COLOUR,
   ],
-  build: (s, boundary) => {
-    const base = { spacing: s.spacing, amplitude: s.depth, wavelength: s.wavelength, shape: 'triangle', angle: 0 };
+  build: (s, boundary, { bead = 0.45, perimeters = 0 } = {}) => {
+    const base = { spacing: s.spacing, amplitude: s.depth, wavelength: s.wavelength, shape: 'triangle', angle: 0, clearance: bead / 2 + perimeters * bead * 0.8 + 1e-5 };
     const second = s.mode === 'cross' ? { ...base, angle: 90 } : { ...base, phase: 0.5 };
     return { layers: [waveLines(boundary, base), waveLines(boundary, second)] };
   },

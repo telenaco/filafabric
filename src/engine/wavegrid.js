@@ -1,3 +1,4 @@
+import { clipStrands } from './fabric.js';
 import { PolygonBoundary } from './boundary.js';
 import { clipPolyline, chainPolylines, markRowOrder } from './layers.js';
 import { centredLanes, orderLanePieces, laneStart } from './fill.js';
@@ -72,7 +73,7 @@ const rotate = (p, c, s) => ({ x: p.x * c - p.y * s, y: p.x * s + p.y * c });
  * @returns lines (arrays of { x, y }) clipped to the boundary and joined end to end, lane after lane, wherever the
  *          boundary allows it
  */
-export function waveLines(boundary, { angle = 0, spacing = 3, amplitude = 1, wavelength = 6, shape = 'sine', phase = 0, laneShift = 0, offset = 0, inset = 0.3, whole = true } = {}) {
+export function waveLines(boundary, { angle = 0, spacing = 3, amplitude = 1, wavelength = 6, shape = 'sine', phase = 0, laneShift = 0, offset = 0, inset = 0.3, whole = true, clearance = 0 } = {}) {
   if (!WAVE_SHAPES.includes(shape)) throw new Error(`Unknown wave shape: ${shape}`);
   const a = (angle * Math.PI) / 180;
   const c = Math.cos(a), s = Math.sin(a);
@@ -101,7 +102,12 @@ export function waveLines(boundary, { angle = 0, spacing = 3, amplitude = 1, wav
     // A wave can enter a slanted edge before its centre lane does. Generate its whole X extent, then clip the wave.
     const from = box.minX - wavelength, to = box.maxX + wavelength;
     const start = phase + k * laneShift + (from - box.minX) / wavelength;
-    return clipPolyline(lanePoints(shape, from, to, y, amplitude, wavelength, start), turned, 1).map((pts) => {
+    const raw = lanePoints(shape, from, to, y, amplitude, wavelength, start);
+    // Apply printable bead clearance before chaining. Clipping it afterwards cuts off every edge turnaround.
+    const pieces = clearance > 0
+      ? clipStrands([{ pts: raw.map((p) => ({ ...p, z: 0 })) }], turned, clearance).map((s) => s.pts.map(({ x, y }) => ({ x, y })))
+      : clipPolyline(raw, turned, 1);
+    return pieces.map((pts) => {
       let lo = Infinity, hi = -Infinity;
       for (const p of pts) { lo = Math.min(lo, p.x); hi = Math.max(hi, p.x); }
       return { lo, hi, pts };
@@ -109,6 +115,6 @@ export function waveLines(boundary, { angle = 0, spacing = 3, amplitude = 1, wav
   });
   // row after row from the bottom (left for upright lines), alternating, branch by branch where the outline splits wide
   const list = orderLanePieces(rows, laneStart(angle)).map(({ piece, forward }) => (forward ? piece.pts : [...piece.pts].reverse()));
-  const chains = chainPolylines(list, turned, spacing + 2 * amplitude + 2);
+  const chains = chainPolylines(list, turned, spacing + 2 * amplitude + 2, clearance);
   return chains.map((pts, i) => markRowOrder(pts.map((p) => rotate(p, c, s)), i));
 }

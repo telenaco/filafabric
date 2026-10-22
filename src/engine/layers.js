@@ -155,7 +155,7 @@ export function markRowOrder(pts, order) {
  * Joins polylines (in the order given) into longer strands: a polyline continues the strand before it when its start
  * is within `maxJog` of that strand's end and the connector stays inside the boundary; otherwise it starts a new one.
  */
-export function chainPolylines(list, boundary, maxJog = 6) {
+export function chainPolylines(list, boundary, maxJog = 6, inset = 0) {
   const chains = [];
   let cur = null;
   for (const pts of list) {
@@ -163,7 +163,7 @@ export function chainPolylines(list, boundary, maxJog = 6) {
     if (cur) {
       const end = cur[cur.length - 1];
       const d = Math.hypot(pts[0].x - end.x, pts[0].y - end.y);
-      if (d <= maxJog && segmentInside(end, pts[0], boundary)) {
+      if (d <= maxJog && segmentInside(end, pts[0], boundary, inset)) {
         appendPoints(cur, densify([end, pts[0]]), 1);
         appendPoints(cur, pts, 1);
         continue;
