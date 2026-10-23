@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "73ec8385aea70243c60b6f270649728426de65decec901a0cca2b3ba95f8875a",
+  "archiveSha256": "54185c1b2b6373af4da44668aadd79da46af6f6cd64d9db8d50898ad71d11466",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -186,8 +186,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 35296,
-      "sha256": "186a7ea8a0ed7b63e87a72af0fdbae43857505159df44cad9da4388246413166"
+      "bytes": 35323,
+      "sha256": "49ea8071f29f2c858bba595d5df062c0fc4de5f2cc31b8c56106a38de24685f7"
     },
     {
       "path": "migrations/0001_study_exports.sql",
