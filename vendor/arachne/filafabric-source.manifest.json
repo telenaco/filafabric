@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "e7cb283766410860f0373d489e4f7749105ec7a1461ef575eacb5e975ae71bf0",
+  "archiveSha256": "73ec8385aea70243c60b6f270649728426de65decec901a0cca2b3ba95f8875a",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -186,8 +186,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 34399,
-      "sha256": "f5cfdd596104013a4b6ff31a931e14c606d1c8d68fe2103be4cc50403d279e79"
+      "bytes": 35296,
+      "sha256": "186a7ea8a0ed7b63e87a72af0fdbae43857505159df44cad9da4388246413166"
     },
     {
       "path": "migrations/0001_study_exports.sql",
@@ -206,18 +206,18 @@
     },
     {
       "path": "profiles/MATERIAL_SOURCES.md",
-      "bytes": 3001,
-      "sha256": "34a2409916dfe1779dbb792dbabb769c10ade46d8e37fd2f883f3203966ce15b"
+      "bytes": 5031,
+      "sha256": "e6661cf1a483d3b4ce4ae602e472c5403b7ea809821ae4de31616dafab865f98"
     },
     {
       "path": "profiles/README.md",
-      "bytes": 6304,
-      "sha256": "79307596c93dcc821295106eaa2e5bc9e4dc2fef69e6cffd1917cdfd917fe6d4"
+      "bytes": 7425,
+      "sha256": "1f145beaaab3741be635619231e275ac49a77bfce1cf2849fac32cfb2da61b1d"
     },
     {
       "path": "profiles/index.json",
-      "bytes": 239,
-      "sha256": "7553430a8b5821902599d264278955822856f0bed21d8f9330dce77c4efdb476"
+      "bytes": 366,
+      "sha256": "35e47221d96a4ba2e51d03c88c7101ee602b5c35ab7b0c00870dde737375768e"
     },
     {
       "path": "profiles/library/bambu.json",
@@ -255,14 +255,39 @@
       "sha256": "10692ce9cf53de5c0339a073565a0c75238136706a6fe85eb97bd6f28a77b6fa"
     },
     {
+      "path": "profiles/materials/generic-abs.json",
+      "bytes": 1437,
+      "sha256": "b3c3aacf279685c6fa9ac1b412424c39c87f633b9288c591c57b6b43747fb96e"
+    },
+    {
       "path": "profiles/materials/generic-flex-mk3.json",
-      "bytes": 834,
-      "sha256": "12992cfc5f1dd4428036a297e2f9ffa45ac64306bd0c34061b45c827549eca15"
+      "bytes": 833,
+      "sha256": "f0d6c182ab1111167779c26aa046543ec40572731441170db549893e9e13d37d"
+    },
+    {
+      "path": "profiles/materials/generic-hips.json",
+      "bytes": 1441,
+      "sha256": "d50f97ebd409ceb99753eb575d491554d9e861f004d591ca1f6ab8d93626c7b0"
+    },
+    {
+      "path": "profiles/materials/generic-petg.json",
+      "bytes": 1437,
+      "sha256": "017c7fe52ff781db8e8c81ef4eb0111558732c224f66c923fe4235348df3637b"
+    },
+    {
+      "path": "profiles/materials/generic-pla-silk.json",
+      "bytes": 1503,
+      "sha256": "5c4be658be6122a74a0102bc876ca5bbdaad029471e201921da2f3bb7c092a6b"
     },
     {
       "path": "profiles/materials/generic-pla.json",
       "bytes": 1938,
       "sha256": "c81edfb77fe404b3e6c3508eab7eef6118b85dee6078747bfe1ceca997763a66"
+    },
+    {
+      "path": "profiles/materials/generic-pva.json",
+      "bytes": 1500,
+      "sha256": "83fa7caa4b48024d952d20db4b92038f26acc3afb8d33dcd80014ed97b57c7c1"
     },
     {
       "path": "profiles/materials/generic-tpe.json",
@@ -331,8 +356,8 @@
     },
     {
       "path": "src/boot.js",
-      "bytes": 2861,
-      "sha256": "843520e2e14ab2d8c8ee5e247a2d95d6c015b87d60b00f29a9a6226f207c9301"
+      "bytes": 2864,
+      "sha256": "04cad2892924c13fcab940be1c86423ef2bc68bd05cb8f60364f66be996e555c"
     },
     {
       "path": "src/engine/adaptive-solids.js",
@@ -811,8 +836,8 @@
     },
     {
       "path": "src/ui/main.js",
-      "bytes": 124055,
-      "sha256": "596dac93c93de44adf80c50a4df4213e269583bcc76656dbaf7d8a6a3e0a8c38"
+      "bytes": 122185,
+      "sha256": "f8002de84b8a0e9fbef9e1b50106e2f3638f1a854fd2946cc9f28d0cb100a07f"
     },
     {
       "path": "src/ui/more-designs.js",
@@ -885,6 +910,11 @@
       "sha256": "1a039b2df29dd4628f8dc5c9771b1ee4832266574b32cf501981906d35ed039d"
     },
     {
+      "path": "src/ui/profile-picker.js",
+      "bytes": 4683,
+      "sha256": "7fe9f84af2c82d4fba6d202336a975c6f51e4c26936d39546304ca4a5a2bd6a7"
+    },
+    {
       "path": "src/ui/profile-store.js",
       "bytes": 6359,
       "sha256": "39725483de80b390b9793d24c5c34eb607f0530241f340226cf2389ebd5b0d04"
@@ -916,8 +946,8 @@
     },
     {
       "path": "src/ui/styles.css",
-      "bytes": 50113,
-      "sha256": "b2f80be75db70b91a5985337bb51012684e6b45d15bffdb2c1f823ff0be579be"
+      "bytes": 50555,
+      "sha256": "d1f2015502d7e00575e409941c91b4855113c78f0d5bd9823252b2d15e2b2f44"
     },
     {
       "path": "src/ui/svg-design.js",
@@ -1210,6 +1240,11 @@
       "sha256": "64772772d28849a20d7747aa99439cce85d6f74835dcf4fc0b52e20eeb6dec6b"
     },
     {
+      "path": "tests/generic-filaments.test.js",
+      "bytes": 1618,
+      "sha256": "c32192908504dfbfda894e19bcf97c54fd907f181a591357f34884f5394dd1c2"
+    },
+    {
       "path": "tests/golden.test.js",
       "bytes": 779,
       "sha256": "d61e7651d9156b2dd0c8d16f9c12e4c8cd9c168a711d3d6998efd742b027dfd1"
@@ -1353,6 +1388,11 @@
       "path": "tests/profile-import.test.js",
       "bytes": 11930,
       "sha256": "d5e75ab64c4512741773f6544b2861468b9f2407dbebf0a726f811469530aa77"
+    },
+    {
+      "path": "tests/profile-search.test.js",
+      "bytes": 679,
+      "sha256": "a5d38f4f6e8046f775cd0bffbb4d88635b62ee9b215c4feb94d5315c9fbd71be"
     },
     {
       "path": "tests/profile-store.test.js",
@@ -1653,6 +1693,11 @@
       "path": "tools/export-seam-test.mjs",
       "bytes": 9826,
       "sha256": "5db178022818b2e13a34383cf159fdf0aedd81b2207787f1e42a689e2ecb13f0"
+    },
+    {
+      "path": "tools/import-generic-filaments.mjs",
+      "bytes": 4369,
+      "sha256": "7efd23d9188672d42e06a76eda25821bff182bd2650e54b6e1221a9294fd725b"
     },
     {
       "path": "tools/import-vendor-profiles.mjs",

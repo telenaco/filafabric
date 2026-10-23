@@ -22,7 +22,26 @@ The studio's own `machines/prusa-mk3s.json` stays the MK3S.
 
 The library is generated: `node tools/import-vendor-profiles.mjs` downloads the latest vendor files from GitHub and
 rebuilds it (`--all` adds Creality, Anycubic, Elegoo, Voron and a dozen more, about 500 printers). Only the small
-`index.json` is read when the studio opens; a vendor's file is read when one of its printers is chosen. The picker shows two suggestions until you type; all matching printers remain searchable.
+`index.json` is read when the studio opens; a vendor's file is read when one of its printers is chosen. Printer and
+filament pickers each show the selected profile in one editable box. Click the box or its arrow to browse the names
+alphabetically, or type to filter. Arrow keys and Enter select; Escape or leaving the field restores the selected
+name if no option was chosen. Printer searches also recognise aliases such as `ender3v2`.
+
+## Generic Prusa filaments
+
+The bundled generic materials cover ABS, FLEX/TPU, HIPS, PETG, PLA, PLA Silk and PVA from the installed
+PrusaResearch 2.5.12 bundle. FLEX is Prusa's generic TPU baseline; it is labelled with both terms for searching.
+PLA Silk and PVA keep their upstream printer-specific suffixes. Existing Foamy, NinjaFlex and generic TPE
+profiles remain available. See [material sources](MATERIAL_SOURCES.md) for reference printers and adaptations.
+
+To add missing generic materials from a newer locally installed vendor bundle:
+
+```powershell
+node tools/import-generic-filaments.mjs "$env:APPDATA/PrusaSlicer/vendor/PrusaResearch.ini"
+```
+
+The importer resolves inherited settings and regenerates the public index. It preserves existing files so updating
+the library does not overwrite tuned materials; review existing profiles separately when upgrading a bundle.
 
 ## Import requirements and samples
 

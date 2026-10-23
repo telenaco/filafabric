@@ -243,26 +243,28 @@ h1, h2, h3 { margin: 0; }
 /* the size line that takes the place of the width and height while an SVG sets the size */
 .size-follows { margin: 0; }
 .profile-add { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-/* the printer picker: a search over every printer, the list below it, the one in use marked */
-.machine-picker input[type="search"] {
-  min-height: 44px; padding: 0 12px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--panel); color: var(--ink); font: inherit; width: 100%;
+/* Printer and filament share a single editable box, with a list only while choosing. */
+.profile-input { display: flex; min-width: 0; border: 1px solid var(--line-2); border-radius: 8px; background: var(--panel); }
+.profile-input:focus-within { outline: 3px solid var(--focus); outline-offset: 2px; }
+.profile-input input[type="text"] {
+  flex: 1; min-width: 0; width: 100%; min-height: 44px; padding: 0 12px; border: 0; border-radius: 8px;
+  background: transparent; color: var(--ink); font: inherit; text-overflow: ellipsis;
 }
-.machine-list {
-  max-height: 144px; overflow-y: auto; margin-top: 6px; padding: 4px; border: 1px solid var(--line); border-radius: 10px;
-  background: var(--panel-2); scrollbar-width: thin; scrollbar-color: var(--line-2) transparent;
+.profile-input input[type="text"]:focus { outline: none; }
+.profile-toggle { flex: 0 0 44px; min-height: 44px; border: 0; border-radius: 0 8px 8px 0; background: transparent; color: var(--ink); font-size: 18px; }
+.profile-toggle:hover { background: var(--seg-bg); }
+.profile-options {
+  max-height: 220px; overflow-y: auto; margin-top: 6px; padding: 4px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--panel-2); scrollbar-width: thin; scrollbar-color: var(--line-2) transparent; overscroll-behavior: contain;
 }
-.machine-option {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; min-height: 60px; padding: 8px 10px;
-  border: 0; border-radius: 8px; background: transparent; text-align: left; color: var(--ink);
-}
-.machine-option:hover { background: var(--seg-bg); }
-.machine-option[aria-pressed="true"] { background: var(--accent-soft); }
-.machine-option[aria-pressed="true"] .machine-name { color: var(--accent); }
-.machine-option:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
-.machine-name { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
-.machine-meta { font-size: 12.5px; font-weight: 500; color: var(--muted); }
-.machine-empty { margin: 10px; }
-#machine-count { margin: 6px 0 0; font-weight: 400; }
+.profile-option { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-height: 44px; padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.profile-option:hover, .profile-option.active { background: var(--seg-bg); }
+.profile-option[aria-selected="true"] { background: var(--accent-soft); }
+.profile-option[aria-selected="true"] .profile-name { color: var(--accent); }
+.profile-option.active { outline: 2px solid var(--focus); outline-offset: -2px; }
+.profile-name { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+.profile-meta { font-size: 12.5px; font-weight: 500; color: var(--muted); }
+.profile-status { margin: 6px 0 0; font-weight: 400; }
 .profile-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; width: 100%; }
 .profile-list li { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
 .switch-row.disabled { opacity: 0.55; }

@@ -1,0 +1,48 @@
+{
+  "id": "generic-petg",
+  "name": "Generic PETG",
+  "source": "PrusaResearch 2.5.12: Generic PETG; Original Prusa i3 MK3S & MK3S+ reference",
+  "filament_diameter": 1.75,
+  "density": 1.27,
+  "temperature": {
+    "first_layer": 240,
+    "print": 240
+  },
+  "bed_temperature": 90,
+  "flow": {
+    "multiplier": 1,
+    "reference_line_width": null,
+    "foam_expansion": 1,
+    "max_volumetric_speed_nominal": 8
+  },
+  "retraction": {
+    "length": 1,
+    "speed": 35,
+    "deretract_speed": 35,
+    "lift_on_retract_only": true,
+    "z_hop": 0.2,
+    "min_travel": 1,
+    "restart_extra": 0
+  },
+  "fan": {
+    "default": 30
+  },
+  "travel_speed_hint": 150,
+  "pressure_advance_k": null,
+  "notes": "PrusaSlicer reference settings. Cooling is adapted to path roles; gradual layer cooling, filament startup commands and printer compatibility conditions are not reproduced. Match this reference to your printer and spool.",
+  "print_defaults": {
+    "fan_base": 0,
+    "fan_supported": 30,
+    "fan_nonplanar": 30,
+    "fan_unsupported": 30,
+    "fan_travel": 0
+  },
+  "provenance": {
+    "repository": "https://github.com/prusa3d/PrusaSlicer-settings-prusa-fff",
+    "bundle_version": "2.5.12",
+    "preset": "Generic PETG",
+    "reference_printer": "Original Prusa i3 MK3S & MK3S+",
+    "source_url": "https://github.com/prusa3d/PrusaSlicer-settings-prusa-fff/blob/main/PrusaResearch/2.5.12.ini",
+    "physically_verified": false
+  }
+}
