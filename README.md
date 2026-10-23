@@ -52,8 +52,9 @@ Cloudflare Access (free for small teams) instead of, or as well as, this page. *
 browser again.
 
 **Opening the gate for a while:** `"open": true` in `src/ui/gate-config.json` lets everyone straight into the studio, with no
-password page and no lock in the menu (it is open now, from 21 October 2026). The password stays set: delete the flag, or set a
-new password with `node tools/set-password.mjs` (which writes the file without it), commit and push to close the gate again.
+password page and no lock in the menu. The password stays set: delete the flag, or set a new password with
+`node tools/set-password.mjs` (which writes the file without it), commit and push to close the gate again. The gate is currently
+closed and uses the existing password hash.
 
 ## Feedback
 
