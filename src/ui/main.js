@@ -2347,6 +2347,7 @@ function bindStatic() {
 
   const dialog = $('#printer-dialog');
   $('#btn-printer').addEventListener('click', () => { fillDialogSelects(); dialog.showModal(); });
+  dialog.querySelector('button[value="close"]').addEventListener('click', () => dialog.close('close'));
   bindMachinePicker();
   // a printer or filament profile as the slicers export it: PrusaSlicer .ini or sliced .gcode, Bambu Studio .json
   $('#profile-file').addEventListener('change', async (e) => {

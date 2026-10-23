@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "54185c1b2b6373af4da44668aadd79da46af6f6cd64d9db8d50898ad71d11466",
+  "archiveSha256": "08c06752f1c92320761865b50941af9204cec3e82f5bd16e294e61474ad2ea00",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -21,8 +21,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 36982,
-      "sha256": "06438b074ef46daeec956be008ba5085a9826f677a2a1247570ca9b5410fa28a"
+      "bytes": 37009,
+      "sha256": "70bf65f2642d9e3792096d16b4c5fab2812a951c2c7dff271db7ffaf4bdc69c1"
     },
     {
       "path": "Run Textile Tool.bat",
@@ -186,8 +186,8 @@
     },
     {
       "path": "index.html",
-      "bytes": 35323,
-      "sha256": "49ea8071f29f2c858bba595d5df062c0fc4de5f2cc31b8c56106a38de24685f7"
+      "bytes": 35608,
+      "sha256": "351d15a2572ba5f74d536497725ef83b13bbd7328ff801190313b17aef0de882"
     },
     {
       "path": "migrations/0001_study_exports.sql",
@@ -816,8 +816,8 @@
     },
     {
       "path": "src/ui/gate-config.json",
-      "bytes": 177,
-      "sha256": "36982ddc70552366da74aace886a849b376d0b9899c01f72f9ee621961b9eaa3"
+      "bytes": 161,
+      "sha256": "56c7786fcdfeb064e80bb07a27eaa7625b15ec2e82ac60eeb8e0accc0fe20264"
     },
     {
       "path": "src/ui/gate.js",
@@ -836,8 +836,8 @@
     },
     {
       "path": "src/ui/main.js",
-      "bytes": 122185,
-      "sha256": "f8002de84b8a0e9fbef9e1b50106e2f3638f1a854fd2946cc9f28d0cb100a07f"
+      "bytes": 122289,
+      "sha256": "2bf1ca7ba9a4e7212ef5cd45d74c49c27b070a48c22ea8be21d3a75499251b9c"
     },
     {
       "path": "src/ui/more-designs.js",
@@ -1226,8 +1226,8 @@
     },
     {
       "path": "tests/gate.test.js",
-      "bytes": 5686,
-      "sha256": "3a8c939e9cbfd26ba3e4c118259cedc4fcd6b5f3a54e7ab99a6d180692a100a4"
+      "bytes": 6272,
+      "sha256": "abc6bcb24b418b8cc708c0984b710075f4fb213cdf686f728117723940f0f73d"
     },
     {
       "path": "tests/gcode.test.js",

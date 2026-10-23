@@ -87,6 +87,18 @@ test('the gate tells a visitor without a password where to ask for one', () => {
   assert.match(html, /class="gate-access"[^>]*>[^<]*<a href="mailto:bubakidesign@gmail\.com[^"]*">bubakidesign@gmail\.com<\/a>/);
 });
 
+test('the coming-soon page links to the hub and LinkedIn for updates', () => {
+  const html = fs.readFileSync(path.join(projectRoot, 'index.html'), 'utf8');
+  assert.match(html, /https:\/\/www\.3dpstef\.eu\/hub/);
+  assert.match(html, /https:\/\/www\.linkedin\.com\/in\/jlberna\//);
+});
+
+test('the production gate remains closed while preserving the existing password hash', () => {
+  const config = JSON.parse(fs.readFileSync(path.join(projectRoot, 'src', 'ui', 'gate-config.json'), 'utf8'));
+  assert.equal(config.open, undefined);
+  assert.match(config.hash, /^[0-9a-f]{64}$/);
+});
+
 test('"open": true in the gate config lets the studio open without the password, and takes the lock away', () => {
   const boot = fs.readFileSync(path.join(projectRoot, 'src', 'boot.js'), 'utf8');
   const open = boot.indexOf('if (config.open === true)'), token = boot.indexOf('if (keep.get() === unlockToken(config))');
