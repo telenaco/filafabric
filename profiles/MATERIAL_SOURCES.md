@@ -1,5 +1,33 @@
 # Added filament profiles — 16 October 2026
 
+## Generic library expanded — 23 October 2026
+
+Source: the locally installed `PrusaSlicer/vendor/PrusaResearch.ini`, bundle version **2.5.12**, published in
+[Prusa's official settings repository](https://github.com/prusa3d/PrusaSlicer-settings-prusa-fff/tree/main/PrusaResearch).
+All concrete `Generic …` filament families in that bundle are represented once; hidden inheritance templates and
+duplicate nozzle/printer variants are resolved rather than shown as separate materials.
+
+| Added choice | Upstream preset | Reference printer | Nozzle, first / printing | Bed |
+|---|---|---|---|---|
+| Generic ABS | Generic ABS | MK3S / MK3S+, 0.4 mm | 255 / 255°C | 110°C |
+| Generic HIPS | Generic HIPS | MK3S / MK3S+, 0.4 mm | 230 / 230°C | 110°C |
+| Generic PETG | Generic PETG | MK3S / MK3S+, 0.4 mm | 240 / 240°C | 90°C |
+| Generic PLA Silk @PGIS | Generic PLA Silk @PGIS | MK4 Input Shaper, 0.4 mm | 230 / 225°C | 60°C |
+| Generic PVA @COREONEINDX HF0.4 | Generic PVA @COREONEINDX HF0.4 | CORE One INDX 8T, HF0.4 | 215 / 210°C | 60°C |
+
+Prusa names its generic TPU preset **Generic FLEX**. The existing `generic-flex-mk3` profile now includes `TPU`
+in its display name; its settings and stable ID are preserved. Generic PLA and the previously tuned materials
+also retain their settings. Ten material choices are now available, sorted by display name in the setup picker.
+
+New profiles resolve all filament ancestors and the reference printer's retraction defaults. Fan percentages are
+mapped to this engine's path roles with base/travel cooling off. Gradual cooling, filament startup commands
+(including material-specific motor current and pressure advance), and compatibility expressions are not reproduced.
+Printer-specific suffixes identify reference settings; selecting a different printer does not automatically retune
+these materials. No new profile has been physically qualified. The repeatable importer is
+`tools/import-generic-filaments.mjs`; existing files are preserved on reimport.
+
+## Earlier additions
+
 All three profiles use 1.75 mm filament and non-foaming extrusion. Reference printer: the classic direct-drive
 Original Prusa i3 MK3S & MK3S+ with a 0.4 mm nozzle. They are reference presets, not physically qualified garment
 prints. The existing Filaflex 95A Foamy and Generic FLEX profiles are unchanged.
