@@ -21,7 +21,7 @@ const EPS = 1e-9;
 const dist = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
 
 function plain(s) {
-  if (s.name === 'Structural tie' || (s.layer ?? 0) < 0 || s.pts.length < 2) return false;
+  if (s.role === 'tie' || (s.layer ?? 0) < 0 || s.pts.length < 2) return false;
   const z = s.pts[0].z ?? 0;
   return s.pts.every((p) => p.cls === undefined && p.flow === undefined && Math.abs((p.z ?? 0) - z) < 1e-6);
 }
@@ -266,7 +266,7 @@ export function joinNetwork(strands, { snap = 0.05, within = 0, allow = null, ma
   for (const s of strands) {
     if (!plain(s)) { rest.push(s); continue; }
     // what must not be mixed: another layer, kind or name, or a different standing against the outline
-    const key = `${s.layer ?? 0}|${s.kind}|${s.name ?? ''}|${!!s.onBoundary}|${!!s.shape}|${!!s.fixed}`;
+    const key = JSON.stringify([s.layer ?? 0, s.kind, s.name ?? '', !!s.onBoundary, !!s.shape, !!s.fixed, s.family, s.role, s.source]);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(s);
   }

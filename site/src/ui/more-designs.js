@@ -120,6 +120,8 @@ export function layered(def) {
         width: s.width,
         height: s.height,
         layers: built.layers,
+        families: built.families ?? built.extra?.families,
+        source: def.id,
         colorChange: !!s.colorChange,
         outline: built.outline ?? outline,
         inset: def.usesVector ? 0 : undefined,

@@ -16,6 +16,8 @@ export function finishFabric(result, { boundary = null, flat = false, reinforce 
     ...(result.base ? (result.base.strands ?? [result.base.points]).map((pts, i) => ({ id: `base-${i}`, kind: 'base', pts })) : []),
     ...(result.placements ?? []).map((p) => ({ id: p.id, kind: 'supported', pts: p.points.map((q, i) => ({ ...q, z: cfg.derived.loopBaseZ + q.z, cls: classes.get(p.id)?.[Math.max(0, i - 1)] ?? 'supported' })) })),
   ];
+  // Older and raised generators enter here without layered provenance. Normalize metadata only.
+  strands = strands.map((s) => ({ ...s, family: s.family ?? (s.role === 'tie' ? 'ties' : `L${(s.layer ?? 0) + 1}`), role: s.role ?? 'native' }));
   let ties = 0, backing = 0;
   if (flat) {
     strands = clipStrands(simplifyStrands(strands.map((s) => ({ ...s, pts: s.pts.map(({ cls, ...p }) => ({ ...p, z: layerHeight })) }))), boundary, strandWidth / 2);
@@ -23,7 +25,7 @@ export function finishFabric(result, { boundary = null, flat = false, reinforce 
     const repaired = connectStrands(strands, boundary, { strandWidth }); strands = repaired.strands; ties = repaired.ties;
     const lastLayer = Math.max(0, ...strands.map((s) => s.layer ?? 0)) + 1;
     const beforeMm = travelDistance(strands);
-    strands = orderStrands(strands.map((s) => ({ ...s, layer: s.name === 'Structural tie' ? lastLayer : s.layer })));
+    strands = orderStrands(strands.map((s) => ({ ...s, layer: s.role === 'tie' ? lastLayer : s.layer })));
     result.routing = { beforeMm, afterMm: travelDistance(strands) };
     strands = resolveCrossings(strands, { follow: true, lift: layerHeight, strandWidth }).strands;
     result.moves = emitStrands(strands, { retraction: cfg.derived.retraction });

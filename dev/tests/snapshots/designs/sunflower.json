@@ -9,7 +9,11 @@
     "extrudeMm": 570.3,
     "zMin": 0.2,
     "zMax": 0.4,
-    "families": [],
+    "families": [
+      "L1",
+      "L2",
+      "ties"
+    ],
     "ties": 1
   },
   {
@@ -22,7 +26,11 @@
     "extrudeMm": 570.3,
     "zMin": 0.2,
     "zMax": 0.4,
-    "families": [],
+    "families": [
+      "L1",
+      "L2",
+      "ties"
+    ],
     "ties": 1
   },
   {
@@ -35,7 +43,10 @@
     "extrudeMm": 780.7,
     "zMin": 0.2,
     "zMax": 0.4,
-    "families": [],
+    "families": [
+      "L1",
+      "L2"
+    ],
     "ties": 0
   },
   {
@@ -48,7 +59,10 @@
     "extrudeMm": 299.5,
     "zMin": 0.2,
     "zMax": 0.4,
-    "families": [],
+    "families": [
+      "L1",
+      "L2"
+    ],
     "ties": 0
   }
 ]

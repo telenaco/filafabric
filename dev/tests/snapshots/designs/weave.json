@@ -9,7 +9,9 @@
     "extrudeMm": 621.4,
     "zMin": 0.2,
     "zMax": 0.4,
-    "families": [],
+    "families": [
+      "L1"
+    ],
     "ties": 0
   }
 ]

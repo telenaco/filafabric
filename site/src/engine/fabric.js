@@ -266,7 +266,7 @@ export function connectStrands(strands, boundary, { strandWidth = 0.45, maxTie =
     if (second) pair.push(second);
     for (const q of pair) {
       const n = Math.max(2, Math.ceil(q.d / 0.4));
-      ties.push({ id: `tie-${ties.length + 1}`, kind: 'supported', layer: -1, name: 'Structural tie', pts: Array.from({ length: n + 1 }, (_, i) => ({ ...mix(q.a.p, q.b.p, i / n), flow: 1 })) });
+      ties.push({ id: `tie-${ties.length + 1}`, family: 'ties', role: 'tie', source: strands[q.a.si]?.source, kind: 'supported', layer: -1, name: 'Structural tie', pts: Array.from({ length: n + 1 }, (_, i) => ({ ...mix(q.a.p, q.b.p, i / n), flow: 1 })) });
     }
   }
   return { strands: [...strands, ...ties], ties: ties.length };
@@ -280,7 +280,7 @@ export function gridStrands(boundary, { spacing = 5, layerHeight = 0.2, inset = 
     for (let k = 0; k < count; k++) for (const [a, b] of boundary.intervals(axis, start + k * spacing)) {
       if (b - a <= 2 * inset) continue;
       const from = a + inset, to = b - inset, n = Math.max(1, Math.ceil((to - from) / 0.5));
-      strands.push({ id: `grid-${layer}-${k}-${strands.length}`, kind: layer ? 'supported' : 'base', layer, name: 'Crossed backing', pts: Array.from({ length: n + 1 }, (_, i) => {
+      strands.push({ id: `grid-${layer}-${k}-${strands.length}`, family: `carrier-${layer + 1}`, role: 'carrier', kind: layer ? 'supported' : 'base', layer, name: 'Crossed backing', pts: Array.from({ length: n + 1 }, (_, i) => {
         const u = from + (to - from) * (k % 2 ? 1 - i / n : i / n);
         return axis === 'x' ? { x: start + k * spacing, y: u, z: layerHeight * (layer + 1) } : { x: u, y: start + k * spacing, z: layerHeight * (layer + 1) };
       }) });

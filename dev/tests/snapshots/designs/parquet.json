@@ -9,7 +9,11 @@
     "extrudeMm": 1292.2,
     "zMin": 0.2,
     "zMax": 0.4794277065083395,
-    "families": [],
+    "families": [
+      "L1",
+      "L2",
+      "ties"
+    ],
     "ties": 14
   },
   {
@@ -22,7 +26,11 @@
     "extrudeMm": 1292.2,
     "zMin": 0.2,
     "zMax": 0.4794277065083395,
-    "families": [],
+    "families": [
+      "L1",
+      "L2",
+      "ties"
+    ],
     "ties": 14
   },
   {
@@ -35,7 +43,11 @@
     "extrudeMm": 1499.3,
     "zMin": 0.2,
     "zMax": 0.4299920164947992,
-    "families": [],
+    "families": [
+      "L1",
+      "L2",
+      "ties"
+    ],
     "ties": 38
   },
   {
@@ -48,7 +60,10 @@
     "extrudeMm": 1358.9,
     "zMin": 0.2,
     "zMax": 0.4,
-    "families": [],
+    "families": [
+      "L1",
+      "L2"
+    ],
     "ties": 0
   },
   {
@@ -61,7 +76,10 @@
     "extrudeMm": 1194.3,
     "zMin": 0.2,
     "zMax": 0.4,
-    "families": [],
+    "families": [
+      "L1",
+      "L2"
+    ],
     "ties": 0
   }
 ]

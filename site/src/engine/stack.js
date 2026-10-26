@@ -36,7 +36,7 @@ function nativeGroups(result) {
   const body = (result.strands ?? []).filter((s) => !s.brim && !s.fixed);
   const groups = new Map(), ties = [];
   for (const s of body) {
-    if (s.name === 'Structural tie') { ties.push(s); continue; }
+    if (s.role === 'tie') { ties.push(s); continue; }
     const key = s.layer ?? s.name ?? (s.kind === 'base' ? `base-${Math.round(minimumZ(s) * 1e6)}` : 'pattern');
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(s);
@@ -136,10 +136,10 @@ export function addExtraLayers(result, count = 0, { rotatedResult = null, colorC
       turned = nativeGroups(r)[0];
       if (!turned?.length) throw new ConfigError(['No rotated pattern fits this outline. Use wider spacing or a larger outline.']);
       // The alternate is generated on H × W with an inversely rotated boundary, then turned back to W × H.
-      turned = turned.map((s) => ({ ...s, pts: s.pts.map((p) => ({ ...p, x: width - p.y, y: p.x })) }));
+      turned = turned.map((s) => ({ ...s, family: `${s.family}-r`, pts: s.pts.map((p) => ({ ...p, x: width - p.y, y: p.x })) }));
     } else {
       if (Math.abs(width - height) > 1e-7) throw new ConfigError(['A rectangular single-layer pattern needs a regenerated 90-degree pass to cover its full outline.']);
-      turned = groups[0].map((s) => ({ ...s, pts: s.pts.map((p) => ({ ...p, x: width - p.y, y: p.x })) }));
+      turned = groups[0].map((s) => ({ ...s, family: `${s.family}-r`, pts: s.pts.map((p) => ({ ...p, x: width - p.y, y: p.x })) }));
     }
   }
   let projectedPoints = pointCount;

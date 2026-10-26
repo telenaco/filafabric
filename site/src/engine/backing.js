@@ -44,9 +44,10 @@ export function backingLines(boundary, { style = 'straight', angle = 45, spacing
  * @returns an array of layers, each an array of polylines
  */
 export function backingStack(boundary, options, count = 'one') {
-  const first = backingLines(boundary, { ...options, layer: 1 });
+  const tag = (lines, k) => Object.assign(lines, { family: `carrier-${k}`, role: 'carrier' });
+  const first = tag(backingLines(boundary, { ...options, layer: 1 }), 1);
   if (count !== 'two') return [first];
-  return [first, backingLines(boundary, { ...options, angle: (options.angle ?? 45) + 90, layer: 2 })];
+  return [first, tag(backingLines(boundary, { ...options, angle: (options.angle ?? 45) + 90, layer: 2 }), 2)];
 }
 
 /**
@@ -73,7 +74,7 @@ export function addBackingMesh(result, backing) {
   const boundary = new PolygonBoundary(result.pieceOutline ?? result.outline ?? [[{ x: 0, y: 0 }, { x: W, y: 0 }, { x: W, y: H }, { x: 0, y: H }]]);
   const wave = { spacing, amplitude: depth, wavelength, shape: 'triangle', angle: 0 };
   const mesh = layersToStrands([waveLines(boundary, wave), waveLines(boundary, { ...wave, phase: 0.5 })], { layerHeight: h, strandWidth: bead })
-    .map((s, i) => ({ ...s, id: `backing-${i + 1}`, name: 'Backing mesh', backingMesh: true, pauseBefore: false }));
+    .map((s, i) => ({ ...s, id: `backing-${i + 1}`, family: `carrier-${s.layer + 1}`, role: 'carrier', name: 'Backing mesh', backingMesh: true, pauseBefore: false }));
   if (!mesh.length) throw new ConfigError(['The backing mesh does not fit this outline. Use a smaller line spacing or wave depth.']);
   // the design keeps its own heights, classes and order, two layers up: what lay on the bed now lies on the mesh
   const rise = BACKING_MESH_LAYERS * h;

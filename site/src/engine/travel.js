@@ -25,7 +25,7 @@ const near = (p, q) => dist(p, q) < 1e-6;
 
 /** A strand that is a plain flat line: one height, no per-point move class, so it can be joined to another. */
 function joinable(s) {
-  if (s.name === 'Structural tie' || (s.layer ?? 0) < 0 || s.pts.length < 2 || near(s.pts[0], s.pts.at(-1))) return false;
+  if (s.role === 'tie' || (s.layer ?? 0) < 0 || s.pts.length < 2 || near(s.pts[0], s.pts.at(-1))) return false;
   const z = s.pts[0].z ?? 0;
   return s.pts.every((p) => p.cls === undefined && p.flow === undefined && p.width === undefined && Math.abs((p.z ?? 0) - z) < 1e-6);
 }
@@ -58,7 +58,7 @@ export function mergeTouching(strands, { within = 0.1, allow = null } = {}) {
     const cx = Math.floor(p.x / cell), cy = Math.floor(p.y / cell);
     for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
       for (const e of grid.get(keyOf(layer, cx + dx, cy + dy)) ?? []) {
-        if (e.item.used || e.item === self || e.item.s.kind !== kind) continue;
+        if (e.item.used || e.item === self || e.item.s.kind !== kind || e.item.s.family !== self.s.family || e.item.s.role !== self.s.role || e.item.s.source !== self.s.source) continue;
         const d = dist(p, at(e));
         if (d < bestD && (d < 1e-9 || !allow || allow(p, at(e)))) { bestD = d; best = e; }
       }
