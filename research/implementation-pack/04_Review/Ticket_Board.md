@@ -115,6 +115,13 @@ The single place to see what is ready, who has it and where it stands. The revie
 | T8.2 | Comparison sets | Luis + implementer | Blocked (needs Phase 5) |
 | T8.3 | Calibration for the new capabilities | Luis + implementer | Blocked (needs Phase 4) |
 
+## Small items found along the way
+
+| Item | Found | Size | State |
+|---|---|---|---|
+| The source-offer tool (`dev/tools/source-bundle.mjs`) normalises line endings only for listed text extensions and for files named exactly `LICENSE` or `NOTICE` at the root. A checkout with Windows line endings therefore fails the source-currentness test because of `site/vendor/three/LICENSE`. Treat any file named `LICENSE`/`NOTICE` in any folder as text. Not seen on Linux (GitHub, Cloudflare). | reorganisation, 26 Oct 2026 | S | Ready |
+| Wave net bundles (bond control for the Squiggle generator) | T4.2 | M | Blocked (after T4.2) |
+
 ## Open decisions for Luis
 
 | # | Decision | Default until confirmed | Where |
