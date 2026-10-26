@@ -30,6 +30,8 @@ import { FIELDS, createField } from '../engine/fields.js';
 import { PICTURE } from '../engine/picture.js';
 import { SHAPES } from '../engine/shapes.js';
 import { shapeThumb } from './thumbs.js';
+import { defaultSection, sideProfile } from '../engine/side-profile.js';
+import { drawSideView } from './sideview.js';
 
 const fmt = (n) => String(Math.round(n * 10) / 10);
 
@@ -770,8 +772,10 @@ export class DesignPanel extends Control {
   constructor(host, mod) {
     super(host);
     this.mod = mod;
+    this.side = el('div', { class: 'panel-side-view', 'aria-live': 'polite' });
+    this.joins = mod.joins ? el('p', { class: 'panel-joins', text: mod.joins }) : null;
     this.node = el('div', { id: `panel-${mod.id}`, class: 'panel', hidden: true },
-      el('header', { class: 'panel-head' }, el('h1', { class: 'title', text: mod.name })));
+      el('header', { class: 'panel-head' }, el('h1', { class: 'title', text: mod.name }), this.side, ...(this.joins ? [this.joins] : [])));
     this.sections = [];
     let sliderGroup = 0;
     mod.controls.forEach((spec, index) => {
@@ -784,6 +788,10 @@ export class DesignPanel extends Control {
   }
 
   update() {
+    const result = this.host.previewResult?.(this.mod.id);
+    const section = result && defaultSection(result);
+    const profile = section ? sideProfile(result.strands, section) : [];
+    this.side.innerHTML = drawSideView(profile, { width: 360, height: 60, bead: result?.cfg?.t?.extrusion_width ?? 0.45 });
     for (const section of this.sections) section.update();
   }
 

@@ -27,6 +27,8 @@ import { searchMachines } from './machine-search.js?v=20261019-printer-setup';
 import { createProfilePicker } from './profile-picker.js';
 import { DESIGNS, designById, isReady, baseDesignSettings, galleryGroups } from './designs.js';
 import { THUMBS, shapeThumb, presetThumb } from './thumbs.js';
+import { defaultSection, sideProfile } from '../engine/side-profile.js';
+import { drawSideView } from './sideview.js';
 import { swatchCode } from './swatch.js';
 import { exportFileName, relevantKeys } from './file-name.js';
 import { FIELDS, FIELD_IDS, createField } from '../engine/fields.js';
@@ -475,6 +477,7 @@ const host = {
   binding: (id) => (id === 'print' ? PRINT_BINDING : BINDINGS[id]),
   settings: (id) => settingsOf(id),
   presetPicture: (mod, preset) => presetThumb(mod, preset, { machine: state.machines.get(state.machine), material: printMaterial() }),
+  previewResult: (id) => state.design === id && state.resultKey === snapshotKey() ? state.result : null,
   change: () => afterDesignChange(),
   nudge: () => afterControl(),
   sizeChanged: () => { renderControls(); schedule(); },
@@ -1682,7 +1685,7 @@ function renderTiles() {
     });
     const assessment = ranking.get(d.id);
     tile.title = `${d.blurb}${assessment ? ` · Estimated printability ${assessment.rank} of ${PRINTABILITY.length}. ${assessment.longestUnsupported.toFixed(1)} mm longest free span; ${assessment.maxSlopeDeg.toFixed(1)}° maximum slope. Default 100 × 100 mm geometry; physical testing pending.` : ''}`;
-    tile.innerHTML = `${d.thumb ?? THUMBS[d.id] ?? ''}<span class="design-text"><span class="design-name">${d.name}${planned ? '<span class="soon">Soon</span>' : ''}</span></span>`;
+    tile.innerHTML = `${d.thumb ?? THUMBS[d.id] ?? ''}<span class="design-side-strip" data-side-strip="${ready ? d.id : ''}" aria-hidden="true"></span><span class="design-text"><span class="design-name">${d.name}${planned ? '<span class="soon">Soon</span>' : ''}</span></span>`;
     if (ready) tile.addEventListener('click', () => setDesign(d.id));
     if (d.status === 'preset') tile.addEventListener('click', () => openPresetTile(d));
     return tile;
@@ -1694,6 +1697,22 @@ function renderTiles() {
     ...essentials.map(makeTile),
   );
   $('#experimental-design-list').replaceChildren(...others.map(makeTile));
+  const strips = [...document.querySelectorAll('.design-side-strip[data-side-strip]')];
+  const renderStrip = (strip) => {
+    const mod = designById(strip.dataset.sideStrip);
+    if (!mod || strip.dataset.done) return;
+    strip.dataset.done = 'true';
+    try {
+      const settings = { ...mod.defaults(), width: 36, height: 6 };
+      const result = mod.generate(state.machines.get(state.machine), printMaterial(), settings, {});
+      const section = defaultSection(result);
+      strip.innerHTML = section ? drawSideView(sideProfile(result.strands, section), { width: 140, height: 18, compact: true }) : '';
+    } catch { strip.replaceChildren(); }
+  };
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => entries.forEach((entry) => { if (entry.isIntersecting) { renderStrip(entry.target); observer.unobserve(entry.target); } }));
+    strips.forEach((strip) => observer.observe(strip));
+  } else strips.forEach(renderStrip);
   renderTilePressed();
 }
 
