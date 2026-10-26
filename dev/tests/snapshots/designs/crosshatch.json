@@ -2,7 +2,7 @@
   {
     "card": "crosshatch",
     "preset": "default",
-    "settingsHash": "c9d11eb1e1ca",
+    "settingsHash": "274f8c7e403d",
     "gcodeSha256": "eef51926c71309934ab6a37731829e843de433dca59e56644e5153e9e5dff02d",
     "strands": 2,
     "moves": 241,
@@ -18,7 +18,7 @@
   {
     "card": "crosshatch",
     "preset": "square",
-    "settingsHash": "c9d11eb1e1ca",
+    "settingsHash": "274f8c7e403d",
     "gcodeSha256": "eef51926c71309934ab6a37731829e843de433dca59e56644e5153e9e5dff02d",
     "strands": 2,
     "moves": 241,
@@ -34,7 +34,7 @@
   {
     "card": "crosshatch",
     "preset": "diagonal",
-    "settingsHash": "2b42f0a31921",
+    "settingsHash": "ea7968d0df87",
     "gcodeSha256": "49952f13374656aac0dbac4d67e140222c34fed392f6dbd6d3ff08086cfcaf3c",
     "strands": 2,
     "moves": 273,
@@ -50,7 +50,7 @@
   {
     "card": "crosshatch",
     "preset": "isogrid",
-    "settingsHash": "0f2b0e5d7ff7",
+    "settingsHash": "bf9edb8cae22",
     "gcodeSha256": "89d1bd8b3dff022e6ba6df407ac7fa07e5328be2a2cd57dcc06a699f89e4f234",
     "strands": 3,
     "moves": 374,
@@ -67,7 +67,7 @@
   {
     "card": "crosshatch",
     "preset": "kagome",
-    "settingsHash": "d36c6be44a46",
+    "settingsHash": "50f761e2722f",
     "gcodeSha256": "3c0bebd00f41e4a6ebc7cb83193242bf8349b6eff70d3b25a38ede3e0bdfd68a",
     "strands": 3,
     "moves": 637,

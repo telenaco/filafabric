@@ -2,7 +2,7 @@
   {
     "card": "chainmail",
     "preset": "default",
-    "settingsHash": "debc3151451d",
+    "settingsHash": "d1e95fd508e4",
     "gcodeSha256": "2fb40d227b9a95d33b807e8e1d2e532860fe34bdec35979bc188d5647a4ce088",
     "strands": 2,
     "moves": 4231,
@@ -18,7 +18,7 @@
   {
     "card": "chainmail",
     "preset": "mail",
-    "settingsHash": "debc3151451d",
+    "settingsHash": "d1e95fd508e4",
     "gcodeSha256": "2fb40d227b9a95d33b807e8e1d2e532860fe34bdec35979bc188d5647a4ce088",
     "strands": 2,
     "moves": 4231,
@@ -34,7 +34,7 @@
   {
     "card": "chainmail",
     "preset": "fine",
-    "settingsHash": "d9ed89794bf9",
+    "settingsHash": "7f42a369f56b",
     "gcodeSha256": "e62beac983e499deba989a29e1607200d600ac48756d800f0fcdeafa6af63980",
     "strands": 2,
     "moves": 9180,
@@ -50,7 +50,7 @@
   {
     "card": "chainmail",
     "preset": "loose",
-    "settingsHash": "f7fb13100360",
+    "settingsHash": "ea138fd91d19",
     "gcodeSha256": "73a17d13b43a3437cd56a493c651104553456159a8a478fd1794f21562532ffe",
     "strands": 2,
     "moves": 2271,

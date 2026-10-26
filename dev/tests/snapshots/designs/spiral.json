@@ -2,7 +2,7 @@
   {
     "card": "spiral",
     "preset": "default",
-    "settingsHash": "29d95aeac780",
+    "settingsHash": "5f5bff3a6111",
     "gcodeSha256": "68be3570d48e578d44ea72d84bc344e677d2eda98d6415f210a4860cb325337c",
     "strands": 15,
     "moves": 1313,
@@ -19,7 +19,7 @@
   {
     "card": "spiral",
     "preset": "tight",
-    "settingsHash": "cba0d3353691",
+    "settingsHash": "adef3e6446bc",
     "gcodeSha256": "19d3d09d1beb601da0928ca46eee93d06fb2f6c2ccf04168d79ba0a06649f848",
     "strands": 15,
     "moves": 1419,
@@ -36,7 +36,7 @@
   {
     "card": "spiral",
     "preset": "standard",
-    "settingsHash": "29d95aeac780",
+    "settingsHash": "5f5bff3a6111",
     "gcodeSha256": "68be3570d48e578d44ea72d84bc344e677d2eda98d6415f210a4860cb325337c",
     "strands": 15,
     "moves": 1313,
@@ -53,7 +53,7 @@
   {
     "card": "spiral",
     "preset": "open",
-    "settingsHash": "a1db304f0186",
+    "settingsHash": "a7abeaa912cd",
     "gcodeSha256": "486cd687a3854b31ad8b6229e4fdc2293a538e865ddddb8e91ea11ccca7863ee",
     "strands": 15,
     "moves": 1239,
@@ -70,8 +70,8 @@
   {
     "card": "spiral",
     "preset": "normals",
-    "settingsHash": "58a4698bb10a",
-    "gcodeSha256": "b6d577e9ecc910e40e73592ef1692446a05ac15be682c3f6bb8860876b501a1b",
+    "settingsHash": "fda688f08abe",
+    "gcodeSha256": "4ec3a719692a19fadf09ecf2fd814d8a83cee7ed92e6f7b665f36ae555d9dc5c",
     "strands": 46,
     "moves": 454,
     "extrudeMm": 859.8,

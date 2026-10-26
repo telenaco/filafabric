@@ -18,6 +18,12 @@ const coilRows = [20, 38, 56, 74]
   .map((y, k) => `<path d="${lanePath('looped', 10, y, 140, 22, 11)}" stroke="var(--role-${k % 2 ? 'anchored' : 'base'})"/>`)
   .join('');
 
+/** Full gallery-sized rows, rather than the small single-strand shape-picker icon. */
+export function rowsThumb(shape) {
+  const paths = [20, 38, 56, 74].map((y, k) => `<path d="${lanePath(shape, 10, y, 140, 22, 11)}" stroke="var(--role-${k % 2 ? 'anchored' : 'base'})"/>`).join('');
+  return `<svg class="design-thumb" viewBox="0 0 160 96" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+}
+
 /** A 48 x 28 picture of a weave binding: warp (vertical) and weft (horizontal) with gaps where one is under. */
 export function bindingThumb(over) {
   const X = (i) => 7 + i * 11, Y = (j) => 4 + j * 6.7, gap = 2;

@@ -794,7 +794,12 @@ export class ColourSection extends Section {
     this.buttons = this.modes.map((mode) => {
       const option = COLOUR_MODES[mode];
       const button = el('button', { type: 'button', class: 'pattern', 'aria-pressed': 'false', 'data-colour-mode': mode, title: option?.hint ?? '' }, el('span', { text: option?.label ?? mode }));
-      button.addEventListener('click', () => { this.settings.colourMode = mode; this.host.change(); });
+      button.addEventListener('click', () => {
+        this.settings.colourMode = mode;
+        this.settings.colorChange = mode === 'face' || mode === 'halftone2';
+        if (mode === 'halftone2') this.settings.patternEffect = 'thickness';
+        this.host.change();
+      });
       return { mode, button };
     });
     this.grid = el('div', { class: 'patterns colour-modes', role: 'group', 'aria-label': 'Colour mode' }, ...this.buttons.map((entry) => entry.button));
@@ -806,16 +811,16 @@ export class ColourSection extends Section {
     const mode = this.settings.colourMode ?? 'one';
     for (const { mode: option, button } of this.buttons) button.setAttribute('aria-pressed', String(mode === option));
     this.colours.replaceChildren();
-    if (mode !== 'per-layer') return;
-    const count = Math.max(1, Number(this.spec.layerCount?.(this.settings) ?? this.host.layerCount?.(this.mod.id) ?? this.settings.layerColours?.length ?? 1));
+    if (mode === 'one') return;
+    const count = mode === 'per-layer' ? Math.min(256, Math.max(1, Number(this.spec.layerCount?.(this.settings) ?? this.host.layerCount?.(this.mod.id) ?? this.settings.layerColours?.length ?? 2))) : 2;
     const colours = Array.isArray(this.settings.layerColours) ? [...this.settings.layerColours] : [];
-    while (colours.length < count) colours.push('#8ea5ff');
-    this.settings.layerColours = colours.slice(0, count);
+    while (colours.length < count) colours.push(colours.length % 2 ? '#222222' : '#f2e6d8');
+    this.settings.layerColours = colours;
     for (let i = 0; i < count; i++) {
       const input = el('input', { type: 'color', value: colours[i], 'aria-label': `Layer ${i + 1} colour` });
       input.value = /^#[\da-f]{6}$/i.test(colours[i]) ? colours[i] : '#8ea5ff';
-      input.addEventListener('input', () => { this.settings.layerColours[i] = input.value; this.host.nudge?.(); });
-      input.addEventListener('change', () => this.host.commit?.());
+      input.addEventListener('input', () => { this.settings.layerColours[i] = input.value; });
+      input.addEventListener('change', () => { this.settings.layerColours[i] = input.value; this.host.change(); });
       this.colours.append(el('label', { class: 'layer-colour' }, el('span', { text: `Layer ${i + 1}` }), input));
     }
   }

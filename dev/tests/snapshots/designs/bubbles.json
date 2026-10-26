@@ -2,7 +2,7 @@
   {
     "card": "bubbles",
     "preset": "default",
-    "settingsHash": "a2b98e014440",
+    "settingsHash": "b58fc5cacc67",
     "gcodeSha256": "6371e2182116438b0f161fe4ff38d750eeeca8d6a2b074a4d50b6a88e250eff6",
     "strands": 3,
     "moves": 4429,
@@ -18,7 +18,7 @@
   {
     "card": "bubbles",
     "preset": "foam",
-    "settingsHash": "a2b98e014440",
+    "settingsHash": "b58fc5cacc67",
     "gcodeSha256": "6371e2182116438b0f161fe4ff38d750eeeca8d6a2b074a4d50b6a88e250eff6",
     "strands": 3,
     "moves": 4429,
@@ -34,7 +34,7 @@
   {
     "card": "bubbles",
     "preset": "froth",
-    "settingsHash": "821b063f9d54",
+    "settingsHash": "9c61b83bb9c4",
     "gcodeSha256": "a53df32d3a022da4147cd42b2e94637606bf2f6b0176460f7abb987c9faab1fc",
     "strands": 4,
     "moves": 4147,
@@ -50,7 +50,7 @@
   {
     "card": "bubbles",
     "preset": "big",
-    "settingsHash": "5382b892e4a7",
+    "settingsHash": "2c7655965548",
     "gcodeSha256": "3f0774d4b9fe87fbab1f525e6ca1c1491716b58ef053abc7dcae67aff943a536",
     "strands": 5,
     "moves": 2515,
@@ -66,7 +66,7 @@
   {
     "card": "bubbles",
     "preset": "graded",
-    "settingsHash": "2a876e0104a8",
+    "settingsHash": "0e159bd6e636",
     "gcodeSha256": "4a8892289e1df03d83b5c7b24e287f15e9550576c1a348133171fb91164b2a49",
     "strands": 3,
     "moves": 2575,

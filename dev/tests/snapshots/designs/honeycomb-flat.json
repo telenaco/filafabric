@@ -2,7 +2,7 @@
   {
     "card": "honeycomb-flat",
     "preset": "default",
-    "settingsHash": "834b90325c10",
+    "settingsHash": "7c9596a96472",
     "gcodeSha256": "9d6998189fd9e29688c9f015406d8e98b453c9cb63b0ae3e72b2d0dd3e1f8723",
     "strands": 10,
     "moves": 403,
@@ -18,7 +18,7 @@
   {
     "card": "honeycomb-flat",
     "preset": "honeycomb",
-    "settingsHash": "165423839073",
+    "settingsHash": "fbdebebd5a89",
     "gcodeSha256": "6f3df8b9512ca2ad148fa2506f8710ba347a20a273785c85abee87dd8776454f",
     "strands": 10,
     "moves": 403,
@@ -34,7 +34,7 @@
   {
     "card": "honeycomb-flat",
     "preset": "re-entrant",
-    "settingsHash": "834b90325c10",
+    "settingsHash": "7c9596a96472",
     "gcodeSha256": "9d6998189fd9e29688c9f015406d8e98b453c9cb63b0ae3e72b2d0dd3e1f8723",
     "strands": 10,
     "moves": 403,
@@ -50,7 +50,7 @@
   {
     "card": "honeycomb-flat",
     "preset": "deep-auxetic",
-    "settingsHash": "ea9c61d56790",
+    "settingsHash": "60f3f80e0274",
     "gcodeSha256": "30a2efec74a11da9232ad256b390b4b8b423255b01db2c830fe84b3c0d2706fc",
     "strands": 9,
     "moves": 373,

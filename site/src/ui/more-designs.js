@@ -211,7 +211,7 @@ export const MORE_DESIGNS = [
       const built = crosshatchLayers(boundary, { directions: s.directions, spacing: s.spacing, shape: s.shape, size: s.size, pitch: s.pitch });
       const field = patternField(s.pattern, { scale: s.patternScale, picture: ctx?.picture });
       if (!field) return built;
-      return { ...built, layers: built.layers.map((layer, index) => layer.map((line) => thicknessAlong(line, field, { thin: s.thin, thick: s.thick, layer: index }))) };
+      return { ...built, layers: built.layers.map((layer, index) => layer.map((line) => thicknessAlong(line, field, { thin: s.thin, thick: s.thick, layer: index, complement: s.colourMode === 'halftone2' }))) };
     },
     summary: (result) => `a crosshatch of ${result.layerCount} layers with ${result.report.crossings} crossings`,
   }),

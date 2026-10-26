@@ -85,7 +85,7 @@ BASIC_DESIGNS.push(layered({
     const field = patternField(s.pattern, { scale: s.patternScale, picture });
     const depthAt = s.patternEffect === 'depth' ? field : null;
     const layers = [waveLines(boundary, { ...base, depthAt }), waveLines(boundary, { ...second, depthAt })];
-    if (field && s.patternEffect === 'thickness') return { layers: layers.map((layer, index) => layer.map((line) => thicknessAlong(line, field, { thin: s.thin, thick: s.thick, layer: index }))) };
+    if (field && s.patternEffect === 'thickness') return { layers: layers.map((layer, index) => layer.map((line) => thicknessAlong(line, field, { thin: s.thin, thick: s.thick, layer: index, complement: s.colourMode === 'halftone2' }))) };
     return { layers };
   },
   summary: (result) => `a zigzag mesh with ${result.report.crossings} crossings`,

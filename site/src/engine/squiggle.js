@@ -215,6 +215,7 @@ export function generateSquiggleTextile({
   sampler = SAMPLERS.centerSpot,
   colorChange = false,
   patternEffect = 'depth',
+  thicknessComplement = false,
   thin = 0.6,
   thick = 1.8,
   boundary = null,
@@ -355,7 +356,7 @@ export function generateSquiggleTextile({
 
   if (patternEffect === 'thickness') {
     for (const strand of strands) strand.pts = thicknessAlong(strand.pts,
-      (x, y) => sampler(x, y, width, height), { thin, thick, layer: strand.layer, overNet: 0.85, bead: strandWidth });
+      (x, y) => sampler(x, y, width, height), { thin, thick, layer: strand.layer, overNet: 0.85, bead: strandWidth, complement: thicknessComplement });
   }
   return { layer1: layer1.flat(), layer2: layer2.flat(), strands };
 }
@@ -391,6 +392,7 @@ export function generateSquiggle(machine, material, squiggleParams = {}) {
     sampler: squiggleParams.sampler ?? SAMPLERS.centerSpot,
     colorChange: squiggleParams.colorChange ?? false,
     patternEffect: squiggleParams.patternEffect ?? 'depth',
+    thicknessComplement: squiggleParams.thicknessComplement ?? squiggleParams.colourMode === 'halftone2',
     thin: squiggleParams.thin ?? 0.6,
     thick: squiggleParams.thick ?? 1.8,
   });

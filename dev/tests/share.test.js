@@ -105,7 +105,7 @@ test('a version 2 link (squiggle key, no designs) opens identically', () => {
   defaults.wave = { ...defaults.wave, mode: 'parallel', spacing: 4 };
   assert.deepEqual(s.designs, defaults);
   assert.equal(s.designs.wave.spacing, 4);
-  assert.deepEqual(s.designs.coil, COIL_DEFAULTS);
+  assert.deepEqual(s.designs.coil, { ...COIL_DEFAULTS, colorChange: false, colourMode: 'one', layerColours: [] });
 });
 
 test('v3 settings and colour choice migrate into v4 card records', () => {

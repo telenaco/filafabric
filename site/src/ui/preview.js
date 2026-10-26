@@ -133,7 +133,7 @@ export function createPreview(container) {
         const flat = b.cls === 'base' || b.cls === 'supported';
         const flow = flat && b.width > 0 ? Math.round(b.width * 100) / 100 / cfg.t.extrusion_width
           : b.flow !== undefined && Math.abs(b.flow - 1) >= 0.1 ? Math.max(0.25, Math.round(b.flow * 4) / 4) : 1;
-        const key = flow === 1 ? ROLE_OF[b.cls] : `${ROLE_OF[b.cls]}@${flow}`;
+        const key = b.previewColour ? `${ROLE_OF[b.cls]}@${flow}|${b.previewColour}` : flow === 1 ? ROLE_OF[b.cls] : `${ROLE_OF[b.cls]}@${flow}`;
         const bk = (buckets[key] ??= { pos: [], idx: [] });
         bk.pos.push(a.x, a.y, a.z, b.x, b.y, b.z);
         bk.idx.push(i);
@@ -159,7 +159,8 @@ export function createPreview(container) {
     const centreline = state.layers.strand;
     const widths = strandWidths(cfg);
     for (const key of Object.keys(buckets)) {
-      const [role, flowText] = key.split('@');
+      const [pathKey, previewColour] = key.split('|');
+      const [role, flowText] = pathKey.split('@');
       const flow = flowText ? Number(flowText) : 1;
       // flat strands widen with flow; strands in the air grow as the square root of the volume
       const width = widths[role] * (role === 'base' || role === 'anchored' ? flow : Math.sqrt(flow));
@@ -167,12 +168,12 @@ export function createPreview(container) {
       // thin path line (the exact nozzle route)
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      const thin = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: centreline ? pal.centreline : pal[role] }));
+      const thin = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: centreline ? pal.centreline : previewColour ?? pal[role] }));
       state.thin[key] = add(thin);
       // strand at true width, in millimetres
       const sg = new LineSegmentsGeometry();
       if (pos.length) sg.setPositions(pos);
-      const sm = new LineMaterial({ color: pal[role], linewidth: width, worldUnits: true });
+      const sm = new LineMaterial({ color: previewColour ?? pal[role], linewidth: width, worldUnits: true });
       materials.push(sm);
       state.fat[key] = add(new LineSegments2(sg, sm));
     }

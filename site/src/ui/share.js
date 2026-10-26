@@ -126,6 +126,10 @@ export function sanitizeState(raw, known) {
   const machine = known.machines.includes(r.machine) ? r.machine : known.machines[0];
   const material = known.materials.includes(r.material) ? r.material : known.materials[0];
   const primary = sanitizePrimary(r.primary);
+  if (r.primary?.colourMode !== undefined || r.primary?.layerColours !== undefined) {
+    const clean = DESIGNS.find(d => d.id === 'loop-pile').sanitize(r.primary);
+    Object.assign(primary, { colourMode: clean.colourMode, layerColours: clean.layerColours });
+  }
   const advanced = {};
   if (r.advanced && typeof r.advanced === 'object' && !Array.isArray(r.advanced)) {
     for (const [key, value] of Object.entries(r.advanced)) {
@@ -144,7 +148,6 @@ export function sanitizeState(raw, known) {
       const source = saved[key] ?? saved[d.id] ?? (d.id === 'loop-pile' ? r.primary : d.id === 'squiggle' ? r.squiggle : undefined);
       const clean = d.sanitize(source);
       if (source?.support !== undefined) clean.support = sanitizeBacking(source.support);
-      if (source?.colourMode !== undefined) clean.colourMode = source.colourMode;
       designs[key] = clean;
     }
   }

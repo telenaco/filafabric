@@ -33,7 +33,7 @@ import { generateRelief } from '../engine/relief.js';
 import { generateFringe } from '../engine/fringe.js';
 import { generateSpiral } from '../engine/spiral.js';
 import { generateWeave, WEAVE_BINDINGS, WEAVE_BINDING_IDS } from '../engine/weave.js';
-import { bindingThumb, thumbFromLayers, shapeThumb } from './thumbs.js';
+import { bindingThumb, thumbFromLayers, rowsThumb } from './thumbs.js';
 import { OPTION_ICONS } from './option-thumbs.js';
 import { MORE_DESIGNS } from './more-designs.js';
 import { LINE_DESIGNS } from './line-designs.js';
@@ -41,8 +41,9 @@ import { SVG_DESIGNS } from './svg-design.js';
 import { PUBLICATION_DESIGNS } from './pub-designs.js';
 import { BASIC_DESIGNS } from './basic-designs.js';
 import {
-  RELIEF_CONTROLS, FRINGE_CONTROLS, BOUCLE_CONTROLS, SPIRAL_CONTROLS, WEAVE_CONTROLS,
+  RELIEF_CONTROLS, FRINGE_CONTROLS, BOUCLE_CONTROLS, SPIRAL_CONTROLS, WEAVE_CONTROLS, withColour,
 } from './structure-controls.js';
+import { colourMode, colourResult } from '../engine/colour-plan.js';
 
 const WEAVE = WEAVE_CONTROLS(WEAVE_BINDING_IDS);
 // a design's pattern as a field: a built-in one or the uploaded picture (picture.js), dark parts reading as more
@@ -91,7 +92,7 @@ function squiggleCard(def) {
     const sampler = image ?? SAMPLERS[settings.pattern] ?? SAMPLERS.centerSpot;
     return generateSquiggle(machine, material, { width: settings.width, height: settings.height, mode: settings.mode, shape: def.shape,
       spacing: settings.spacing, amplitude: settings.amplitude, wavelength: settings.wavelength, sampler,
-      colorChange: settings.colorChange, outline, patternEffect: settings.patternEffect, thin: settings.thin, thick: settings.thick });
+      colorChange: settings.colorChange, outline, patternEffect: settings.patternEffect, thin: settings.thin, thick: settings.thick, colourMode: settings.colourMode });
   };
   const thumbSettings = { ...defaults(), width: 36, height: 22 };
   const thumbGeometry = generateSquiggleTextile({ ...thumbSettings, strandWidth: 0.4, layerHeight: 0.2 });
@@ -377,7 +378,7 @@ const coilShapeCard = {
 const figure8Rows = {
   ...coil,
   id: 'figure8-rows', name: 'Figure-8 rows', settingsKey: 'figure8-rows',
-  thumb: shapeThumb('figure8'),
+  thumb: rowsThumb('figure8'),
   joins: 'One strand in rows of figure-8s; each touches the next row.',
   blurb: 'One continuous strand in rows of figure-8s',
   about: 'Flat rows of one continuous strand formed from figure-8 loops, with each row touching the next.',
@@ -386,6 +387,28 @@ const figure8Rows = {
   presets: coilPresets.map((preset) => ({ ...preset, patch: { ...preset.patch, shape: 'figure8' } })),
 };
 DESIGNS.splice(DESIGNS.indexOf(coil) + 1, 0, figure8Rows, coilShapeCard);
+
+// Common colour state and panel for every card; old boolean links remain accepted.
+for (const mod of DESIGNS.filter(card => card.status === 'ready')) {
+  const c = withColour({ defaults: mod.defaults(), sanitize: mod.sanitize });
+  mod.defaults = () => ({ ...c.defaults, layerColours: [] });
+  mod.sanitize = c.sanitize;
+  mod.presets = mod.presets?.map(p => ({ ...p, patch: { ...p.patch, ...(typeof p.patch.colorChange === 'boolean' ? { colourMode: p.patch.colorChange ? 'face' : 'one' } : {}) } }));
+  mod.colourModes = mod.patternEffects?.includes('thickness') ? ['one', 'face', 'per-layer', 'halftone2'] : ['one', 'face', 'per-layer'];
+  if (mod.controls) {
+    const controls = mod.controls.filter(section => !(section.kind === 'switch' && section.key === 'colorChange') && section.kind !== 'colour');
+    const supportAt = controls.findIndex(section => section.kind === 'support');
+    controls.splice(supportAt < 0 ? controls.length : supportAt, 0, { kind: 'colour', title: 'Colour' });
+    mod.controls = controls;
+  }
+  if (mod.generate) {
+    const generate = mod.generate;
+    mod.generate = (machine, material, s, options) => {
+      const mode = colourMode(s);
+      return colourResult(generate(machine, material, { ...s, colorChange: mode === 'face' || mode === 'halftone2' }, options), s);
+    };
+  }
+}
 
 /**
  * The essentials: the structures to start from, listed first and in this order. Every other card is a variation, an

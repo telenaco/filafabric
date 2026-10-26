@@ -15,7 +15,7 @@ import { stateToHash, hashToState, sanitizeState, PRINT_DEFAULTS } from './share
 import { FILAMENT_FIELDS, filamentValue, withFilamentSettings, setFilamentSetting, withoutFilamentSettings } from './filament-settings.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
 import { $, $$, el, icon, ICONS, helpBubble } from './dom.js';
-import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, SectionFold, BackingCard } from './panels.js';
+import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, SectionFold, BackingCard, ColourSection } from './panels.js';
 import { addBackingMesh, BACKING_MESH, BACKING_MESH_LAYERS } from '../engine/backing.js';
 import { layerHeightOptions, defaultLayerHeight, resolveConfig } from '../engine/params.js';
 import { TooltipLayer } from './tooltip.js';
@@ -39,6 +39,7 @@ import { applySvgSolids, solidOnly, withoutPattern } from '../engine/svg-solids.
 import { prepareAdaptiveSolids } from '../engine/adaptive-solids.js';
 import { summariseDrawing, describeDrawing, interpretDrawing } from '../engine/drawing.js';
 import { addExtraLayers, nativeLayerInfo } from '../engine/stack.js';
+import { colourResult, strandLayer } from '../engine/colour-plan.js';
 import { generateDesignBase, compactDesignExport } from '../engine/design-export.js';
 import { rotateDesignInput } from '../engine/rotate-design.js';
 import { applyBrim } from '../engine/brim.js';
@@ -162,7 +163,7 @@ function bindingFor(mod) {
     readout: (key) => {
       const def = sliders.find((d) => d.key === key);
       const d = mod.describe(own());
-      return def.readout ? def.readout(d) : d[key];
+       return def?.readout ? def.readout(d) : d[key] ?? `${own()[key]}${['thin', 'thick'].includes(key) ? '×' : ''}`;
     },
     size: {
       host: `#${mod.id}-size`,
@@ -447,6 +448,7 @@ const host = {
   settings: (id) => settingsOf(id),
   presetPicture: (mod, preset) => presetThumb(mod, preset, { machine: state.machines.get(state.machine), material: printMaterial() }),
   previewResult: (id) => state.design === id && state.resultKey === snapshotKey() ? state.result : null,
+  layerCount: (id) => id === state.design && state.result?.strands?.length ? Math.max(...state.result.strands.map(strandLayer)) + 1 : 2,
   switchDesign: (id) => setDesign(id, { fromVariant: true }),
   change: () => afterDesignChange(),
   nudge: () => afterControl(),
@@ -497,6 +499,9 @@ function buildPanels() {
   controls.push(picker);
   const pilePatterns = new SectionFold(host, $('#lp-pattern').closest('section'), { id: 'lp-pattern-section' });
   controls.push(pilePatterns);
+  const pileColour = new ColourSection(host, designById('loop-pile'), { kind: 'colour', title: 'Colour' }, { index: 'colour' });
+  $('#panel-loop-pile').append(pileColour.node);
+  controls.push(pileColour);
   // the layers every design shares live in the printer setup
   const layersCard = new PrintSetupCard(host, { thickness: PRINT_THICKNESS, layers: PRINT_LAYERS, solids: PRINT_SOLIDS });
   $('#print-setup').replaceChildren(layersCard.node);
@@ -873,7 +878,7 @@ async function regenerate() {
     }
     result = applyBrim(result, { count: allSolid && !backingFor() ? 0 : state.print.meshPerimeters, outline: brimOutline, fullWidth, fullHeight, label: 'Perimeters', requestedCount: state.print.brim });
     if (state.vector && result.cfg.t.sample_width === selectedWidth && result.cfg.t.sample_height === selectedHeight) result.documentSize = [state.vector.width, state.vector.height];
-    showGenerated(refreshConstruction(result), snapshotKey());
+    showGenerated(refreshConstruction(colourResult(result, settingsOf(state.design))), snapshotKey());
   } catch (e) {
     if (previewChoice === 'auto' && canSimplifyPreview(e)) {
       try { showWholeOverview(exportOptions()); return; } catch { /* invalid document dimensions still report normally */ }

@@ -2,7 +2,7 @@
   {
     "card": "relief",
     "preset": "default",
-    "settingsHash": "e4671b81a783",
+    "settingsHash": "e51d09a2a854",
     "gcodeSha256": "815dd4f7f3cf4df5a919ebbe56c2369ac9970a095b215d6d9bfdafb9ace5e7ee",
     "strands": 3,
     "moves": 994,
@@ -18,7 +18,7 @@
   {
     "card": "relief",
     "preset": "seersucker",
-    "settingsHash": "525b1e983b49",
+    "settingsHash": "30a8a01bb6ba",
     "gcodeSha256": "41894cd8e332f034c0454e8a04e51c654c0d152f1b430c47e889f25ccaa9d950",
     "strands": 3,
     "moves": 1176,
@@ -34,7 +34,7 @@
   {
     "card": "relief",
     "preset": "bobbles",
-    "settingsHash": "4a088478f823",
+    "settingsHash": "26342b6d37c1",
     "gcodeSha256": "349b6f06920ab2ba9741b1aefcd13725704024eeb25a87b732eacf1fe66c3445",
     "strands": 3,
     "moves": 994,
@@ -50,7 +50,7 @@
   {
     "card": "relief",
     "preset": "pleats",
-    "settingsHash": "a5cb59bfce3e",
+    "settingsHash": "1ffe2f07d11c",
     "gcodeSha256": "24ea413b2abf32d85e509f1a40e91b45dcf4800beda9a0f66e494a5b01c79eb5",
     "strands": 3,
     "moves": 994,

@@ -33,7 +33,7 @@ test('each Squiggle card forces its shape and preserves legacy G-code in both st
     }
     if (!card.hidden && id !== 'looped-net') {
       assert.ok(card.controls.some((section) => section.kind === 'pattern'));
-      assert.ok(card.controls.some((section) => section.kind === 'switch' && section.key === 'colorChange'));
+      assert.ok(card.controls.some((section) => section.kind === 'colour'));
     }
   }
 });

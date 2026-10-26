@@ -34,6 +34,11 @@ export function relevantKeys(mod, s) {
       if (s.patternEffect === 'thickness' && s.pattern !== 'none') keys.push('thin', 'thick');
     }
     else if (c.kind === 'switch' && s[c.key]) keys.push(c.key);
+    else if (c.kind === 'colour') {
+      if (s.colourMode === 'face' || !s.colourMode && s.colorChange) keys.push('colorChange');
+      else if (s.colourMode && s.colourMode !== 'one') keys.push('colourMode');
+      if (s.colourMode !== 'one' && s.layerColours?.length) keys.push('layerColours');
+    }
   }
   return [...new Set(keys)];
 }
@@ -120,7 +125,7 @@ export function untouched(keys, s, defaults) {
  * @param print   { layerHeight, extraLayers, brim } (legacy layers is also accepted), material: the filament id, docName: the swatch's name, panel: a full panel
  */
 export function exportFileName(design, s, keys, { size, print, material, docName = '', panel = false }) {
-  if (panel) s = { ...s, colorChange: false };
+  if (panel) s = { ...s, colorChange: false, colourMode: 'one', layerColours: [] };
   const preset = (design.presetMatch ? design.presetMatch(s) : null) ?? (untouched(keys, s, design.defaults()) ? 'default' : 'custom');
   const mm = (n) => String(n);
   const head = [design.file, preset, `${mm(size[0])}x${mm(size[1])}mm`, panel ? 'panel' : ''].filter(Boolean);

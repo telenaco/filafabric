@@ -2,7 +2,7 @@
   {
     "card": "auxetic",
     "preset": "default",
-    "settingsHash": "5d16381d2275",
+    "settingsHash": "3a3973dfe9ab",
     "gcodeSha256": "d390842c5d166901d5dca26735f1bba14147c30c74ef8b03a5357dc9d850ff1a",
     "strands": 13,
     "moves": 447,
@@ -18,7 +18,7 @@
   {
     "card": "auxetic",
     "preset": "re-entrant",
-    "settingsHash": "5d16381d2275",
+    "settingsHash": "3a3973dfe9ab",
     "gcodeSha256": "d390842c5d166901d5dca26735f1bba14147c30c74ef8b03a5357dc9d850ff1a",
     "strands": 13,
     "moves": 447,
@@ -34,7 +34,7 @@
   {
     "card": "auxetic",
     "preset": "deep-auxetic",
-    "settingsHash": "46242859752a",
+    "settingsHash": "b343edc2a6d7",
     "gcodeSha256": "d5dc7e91a7b73c2d18d05359e4c73c8901a3da8cbe2c33e1a499f43553c1770d",
     "strands": 12,
     "moves": 427,

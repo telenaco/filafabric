@@ -82,7 +82,7 @@ test('crossing angles are reported as the acute angle', () => {
 test('layers are stacked one layer height apart; the first strand of a later layer can pause', () => {
   const strands = layersToStrands([[[P(0, 0), P(10, 0)]], [[P(0, 5), P(10, 5)]], [[P(5, 0), P(5, 10)]]], { layerHeight: 0.2, colorChange: true });
   assert.deepEqual(strands.map((s) => Number(s.pts[0].z.toFixed(3))), [0.2, 0.4, 0.6]);
-  assert.deepEqual(strands.map((s) => !!s.pauseBefore), [false, true, true]);
+  assert.deepEqual(strands.map((s) => !!s.pauseBefore), [false, true, false]);
   assert.deepEqual(strands.map((s) => s.kind), ['base', 'supported', 'supported']);
 });
 

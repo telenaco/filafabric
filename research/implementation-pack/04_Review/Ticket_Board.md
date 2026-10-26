@@ -27,7 +27,7 @@ The single place to see what is ready, who has it and where it stands. The revie
 | T1.4 | Coil: Looped rows and Figure-8 rows | T1.1 | S | ∥ | In review (local) | Codex | `t1-4-coil-cards`, no push |
 | T1.5 | Cells and grids | T1.1 | M | ∥ | In review (local) | Codex | `t1-5-cells-grids`, no push |
 | T1.6 | Pattern section; halftone as Line thickness | T1.2, T1.5 | L | | In review (local) | Codex | `t1-6-pattern-effects`, no push |
-| T1.7 | Colour section and colour plan | T1.1 | M | ∥ | Blocked | | |
+| T1.7 | Colour section and colour plan | T1.1 | M | ∥ | In review (local) | Codex | `t1-7-colour-plan`; [handoff](T1_7_Local_Review.md), no push |
 | T1.8 | Support section and one carrier | T1.1 | L | ∥ | Blocked | | |
 | T1.9 | Look and feel labels and help text | T1.2–T1.5 | S | | Blocked | | |
 | T1.10 | Move the remaining cards | T1.1 | M | ∥ | Blocked | | |

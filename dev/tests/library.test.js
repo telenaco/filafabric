@@ -6,7 +6,7 @@ import { SHELVES, FAMILIES, validateCard, libraryGroups, variantsOf, variantDefa
 import { layered } from '../../site/src/ui/more-designs.js';
 import { panelOrderErrors } from '../../site/src/ui/panels.js';
 
-const ALLOWED_LEGACY = new Set(['squiggle', 'square-net', 'honeycomb-layered', 'figure8-net', 'looped-net', 'spiral', 'zigzag', 'auxetic', 'web', 'chainmail', 'meander', 'harmonograph', 'truchet', 'voronoi', 'turing', 'conformal', 'sunflower', 'rosette', 'flowlines', 'bubbles', 'parquet', 'spirograph', 'starlattice', 'halftone']);
+const ALLOWED_LEGACY = new Set(['meander', 'harmonograph', 'turing']);
 
 test('all 39 ready cards have the exact ticket metadata', () => {
   const brief = [

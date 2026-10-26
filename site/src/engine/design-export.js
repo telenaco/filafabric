@@ -15,6 +15,7 @@ import { applyBrim } from './brim.js';
 import { addBackingMesh } from './backing.js';
 import { rotateDesignInput } from './rotate-design.js';
 import { prepareAdaptiveSolids } from './adaptive-solids.js';
+import { colourResult } from './colour-plan.js';
 
 /** Generate the selected design once at its complete size, independently of the preview window. */
 export function generateDesignBase(input) {
@@ -61,7 +62,7 @@ export function generateDesignBase(input) {
     result = composeSvgLines(result, vector, { fullWidth, fullHeight, offsetX, offsetY, clipLines: !input.shapeOutline && !result.guideCount, perimeters: input.perimeters ?? 0, meshPerimeters: input.meshPerimeters });
     result.documentSize = [vector.width, vector.height];
   }
-  return result;
+  return colourResult(result, settings);
 }
 
 /** The drawing's green shapes, printed solid on top of everything the design and its extra layers have laid down. */
@@ -93,7 +94,7 @@ export function generateDesignExport(input) {
   result = addBackingMesh(withSolids(result, input), input.backing);
   // a solid already prints its own edge pass: an all-solid piece takes no brim over it
   result = applyBrim(result, { count: solidOnly(input.vector) && !input.backing ? 0 : input.meshPerimeters ?? input.perimeters ?? input.brim ?? 2, label: input.perimeters !== undefined ? 'Perimeters' : 'Brim', requestedCount: input.perimeters });
-  return assertConstructionExportable(refreshConstruction(result));
+  return assertConstructionExportable(refreshConstruction(colourResult(result, input.settings, { record: true })));
 }
 
 /** The UI only needs printable output and summary data; geometry remains inside the worker. */

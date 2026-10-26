@@ -9,6 +9,7 @@ import { defaultProfiles } from './helpers.js';
 import { YELLOW_PRINTS_SOLID } from '../../site/src/engine/drawing.js';
 
 const profiles = defaultProfiles();
+const withoutColourRecord = gcode => gcode.replace(/^; colour plan:.*\r?\n/gm, '');
 
 test('all-solid SVG export intentionally removes pattern families without a lost-layer error', () => {
   const ring = [{x:2,y:2},{x:18,y:2},{x:18,y:18},{x:2,y:18},{x:2,y:2}];
@@ -31,7 +32,7 @@ test('Bubbles export generates one full-size seeded design beyond the bounded pr
   const preview = generateDesignExport({ ...input, width: 100, height: 100 });
   assert.equal(result.cfg.t.sample_width, 200);
   assert.equal(result.cfg.t.sample_height, 200);
-  assert.equal(result.gcode, direct.gcode, 'the selected generator runs at full size without tiling or extra backing');
+  assert.equal(withoutColourRecord(result.gcode), withoutColourRecord(direct.gcode), 'the selected generator runs at full size without tiling or extra backing');
   assert.ok(result.moves.some((m) => m.extrude && m.x > 150 && m.y > 150));
   assert.ok(result.moves.length > preview.moves.length * 2);
   assert.ok(!result.strands.some((s) => /section-|backing-/.test(s.id)));
@@ -79,7 +80,8 @@ test('two native fabric passes gain only pass A with one extra, while SVG paths 
   assert.equal(added.strands.filter((s) => s.fixed).length, native.strands.filter((s) => s.fixed).length);
   assert.ok(added.strands.filter((s) => s.extraLayer).every((s) => s.sourceLayer === 0));
   assert.ok(added.gcode.includes('SVG first layer: line.svg'));
-  assert.ok((added.gcode.match(/M600/g) ?? []).length > (native.gcode.match(/M600/g) ?? []).length);
+  assert.equal((native.gcode.match(/^M600\b/gm) ?? []).length, 1);
+  assert.equal((added.gcode.match(/^M600\b/gm) ?? []).length, 1, 'face colour changes once, not on every reinforcing pass');
 });
 
 test('extra-layer rotation respects an asymmetric SVG outline and a blue hole', () => {
@@ -145,11 +147,11 @@ test('legacy image sampler and pile fields use full selected dimensions and keep
   const settings = { pattern: 'image', spacing: 3, amplitude: 1, wavelength: 8 };
   const squiggle = generateDesignExport({ ...profiles, design: 'squiggle', settings, image, width: 25, height: 20, brim: 0 });
   const directSquiggle = generateSquiggle(profiles.machine, profiles.material, { ...settings, width: 25, height: 20, sampler: createImageSampler(image, 25, 20, { yUp: true }) });
-  assert.equal(squiggle.gcode, directSquiggle.gcode);
+  assert.equal(withoutColourRecord(squiggle.gcode), withoutColourRecord(directSquiggle.gcode));
   const field = createField('bumps', { scale: 2 });
   const pile = generateDesignExport({ ...profiles, design: 'loop-pile', width: 25, height: 20, pilePattern: 'bumps', pilePatternScale: 2, brim: 0 });
   const directPile = generate(profiles.machine, profiles.material, { sample_width: 25, sample_height: 20 }, { liftAt: (x, y) => 0.3 + 0.7 * field(x, y) });
-  assert.equal(pile.gcode, directPile.gcode);
+  assert.equal(withoutColourRecord(pile.gcode), withoutColourRecord(directPile.gcode));
   assert.ok(pile.moves.some((m) => m.extrude && m.cls === 'rising'));
 });
 

@@ -2,7 +2,7 @@
   {
     "card": "svgdesign",
     "preset": "default",
-    "settingsHash": "33877a143eb7",
+    "settingsHash": "96e066299cd5",
     "gcodeSha256": "abe82a01df210808218927e93ab78f7aaf8f3e9b0609219a359206699c42b2a5",
     "strands": 14,
     "moves": 682,
@@ -19,7 +19,7 @@
   {
     "card": "svgdesign",
     "preset": "line-art",
-    "settingsHash": "a0200fbfb7e8",
+    "settingsHash": "7bcdb6ce6c04",
     "gcodeSha256": "9f83e6d48c3ab8360284d6fb9701ddf5682e203d00837faa9574321e708cfb00",
     "strands": 1,
     "moves": 145,
@@ -34,7 +34,7 @@
   {
     "card": "svgdesign",
     "preset": "filled",
-    "settingsHash": "779fee01f76d",
+    "settingsHash": "0c357f19e1d4",
     "gcodeSha256": "0320aa97a8b45dbbb67fc955bdd7d85fdedc74219389193cc1412323a00c7bed",
     "strands": 13,
     "moves": 137,
@@ -50,7 +50,7 @@
   {
     "card": "svgdesign",
     "preset": "outline-gyroid",
-    "settingsHash": "eb76f0636a93",
+    "settingsHash": "bff263eaeac7",
     "gcodeSha256": "4d97c32b72e0d328de70b0e7719fa6f995a017b69cc069f573b21d453c75784e",
     "strands": 11,
     "moves": 588,
@@ -67,7 +67,7 @@
   {
     "card": "svgdesign",
     "preset": "filled-backed",
-    "settingsHash": "33877a143eb7",
+    "settingsHash": "96e066299cd5",
     "gcodeSha256": "abe82a01df210808218927e93ab78f7aaf8f3e9b0609219a359206699c42b2a5",
     "strands": 14,
     "moves": 682,
@@ -84,7 +84,7 @@
   {
     "card": "svgdesign",
     "preset": "two-layer",
-    "settingsHash": "8cba549720a4",
+    "settingsHash": "8dc994c16fcd",
     "gcodeSha256": "d84fe79701a30878dae25f8ae534511feb582c36097d5cb9c20267960094a68d",
     "strands": 17,
     "moves": 1091,
@@ -102,7 +102,7 @@
   {
     "card": "svgdesign",
     "preset": "lightning-badge",
-    "settingsHash": "5cd16f266a30",
+    "settingsHash": "e8427da8d14b",
     "gcodeSha256": "492c16afd87366827202e447a53d4a51e56a2f881edb69b29a3384f0e1d917c5",
     "strands": 19,
     "moves": 268,

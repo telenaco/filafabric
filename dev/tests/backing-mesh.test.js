@@ -13,7 +13,8 @@ import { defaultProfiles, siteRoot } from './helpers.js';
 const { machine, material } = defaultProfiles();
 const zMin = (s) => Math.min(...s.pts.map((p) => p.z));
 const length = (list) => list.reduce((n, s) => n + s.pts.slice(1).reduce((m, p, i) => m + Math.hypot(p.x - s.pts[i].x, p.y - s.pts[i].y), 0), 0);
-const coil = (backing, mat = material) => generateDesignExport({ machine, material: mat, design: 'coil', settings: designById('coil').defaults(), width: 60, height: 50, extraLayers: 0, brim: 0, backing });
+// Exercise the retained compatibility helper directly; current card exports own their Colour plan.
+const coil = (backing, mat = material) => addBackingMesh(generateDesignExport({ machine, material: mat, design: 'coil', settings: designById('coil').defaults(), width: 60, height: 50, extraLayers: 0, brim: 0 }), backing);
 
 test('the standard backing is the zigzag mesh the studio was tuned with: 3.7 mm apart, 2 mm deep, 6 mm waves', () => {
   assert.deepEqual({ ...BACKING_MESH }, { spacing: 3.7, depth: 2, wavelength: 6, pause: false });

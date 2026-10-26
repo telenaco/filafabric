@@ -2,7 +2,7 @@
   {
     "card": "pillarweave",
     "preset": "default",
-    "settingsHash": "7f314f40120a",
+    "settingsHash": "9e1e31c9c8a8",
     "gcodeSha256": "8485efe4abd016165e90597c2524a20d05ab500a17be6a73ca424e6bedf2233b",
     "strands": 245,
     "moves": 5509,
@@ -18,7 +18,7 @@
   {
     "card": "pillarweave",
     "preset": "close",
-    "settingsHash": "ee1e4a3b9d8a",
+    "settingsHash": "3aaf26a9bace",
     "gcodeSha256": "c695701f2d6c65c8d5d1cfa69fccca9f3d7392b4df6000a2a6d1d2fb2ec92a43",
     "strands": 405,
     "moves": 8214,
@@ -34,7 +34,7 @@
   {
     "card": "pillarweave",
     "preset": "standard",
-    "settingsHash": "7f314f40120a",
+    "settingsHash": "9e1e31c9c8a8",
     "gcodeSha256": "8485efe4abd016165e90597c2524a20d05ab500a17be6a73ca424e6bedf2233b",
     "strands": 245,
     "moves": 5509,
@@ -50,7 +50,7 @@
   {
     "card": "pillarweave",
     "preset": "open",
-    "settingsHash": "ee55bd5695f2",
+    "settingsHash": "d6ceaa32f0fb",
     "gcodeSha256": "63a3e2e62f602e4e09761568845908ba784d4d53130585ccf69a7bbaa2168532",
     "strands": 248,
     "moves": 6951,

@@ -2,7 +2,7 @@
   {
     "card": "sunflower",
     "preset": "default",
-    "settingsHash": "7b73b4028c98",
+    "settingsHash": "4313f36fb40e",
     "gcodeSha256": "97a22ba0d95db919254ca07a49014ccc1d54028dc7b1ff9e82b2430af6590cdc",
     "strands": 43,
     "moves": 714,
@@ -19,7 +19,7 @@
   {
     "card": "sunflower",
     "preset": "sunflower",
-    "settingsHash": "7b73b4028c98",
+    "settingsHash": "4313f36fb40e",
     "gcodeSha256": "97a22ba0d95db919254ca07a49014ccc1d54028dc7b1ff9e82b2430af6590cdc",
     "strands": 43,
     "moves": 714,
@@ -36,7 +36,7 @@
   {
     "card": "sunflower",
     "preset": "fine",
-    "settingsHash": "dce93e594b24",
+    "settingsHash": "191348be0f41",
     "gcodeSha256": "7d7ec876da280bdd3b60c9a43b2510691e2efca269f05ac624bafd489791bd9b",
     "strands": 51,
     "moves": 815,
@@ -52,7 +52,7 @@
   {
     "card": "sunflower",
     "preset": "open",
-    "settingsHash": "868f2fb5ed0e",
+    "settingsHash": "09c969cd37d7",
     "gcodeSha256": "2058aa911ffb2d6448f482e3fb84d16fe77fddc2490563d86b74725850449aec",
     "strands": 24,
     "moves": 480,

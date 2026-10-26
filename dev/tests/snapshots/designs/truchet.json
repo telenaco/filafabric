@@ -2,7 +2,7 @@
   {
     "card": "truchet",
     "preset": "default",
-    "settingsHash": "7ead07ce05f8",
+    "settingsHash": "9b3e4506e737",
     "gcodeSha256": "917ce653ac4d88cbddd69e305031a8dd27aa93538f126d6e1841684d9fe19de2",
     "strands": 35,
     "moves": 1209,
@@ -19,7 +19,7 @@
   {
     "card": "truchet",
     "preset": "arcs",
-    "settingsHash": "7ead07ce05f8",
+    "settingsHash": "9b3e4506e737",
     "gcodeSha256": "917ce653ac4d88cbddd69e305031a8dd27aa93538f126d6e1841684d9fe19de2",
     "strands": 35,
     "moves": 1209,
@@ -36,7 +36,7 @@
   {
     "card": "truchet",
     "preset": "diagonals",
-    "settingsHash": "bb2ca2de5b11",
+    "settingsHash": "d7e9b8f5c11c",
     "gcodeSha256": "f76d7f9df87480df37b8162569153415bf538c4b94a6794aaf9e4a4826576b35",
     "strands": 29,
     "moves": 1693,
@@ -52,7 +52,7 @@
   {
     "card": "truchet",
     "preset": "big-arcs",
-    "settingsHash": "448fcfbc0038",
+    "settingsHash": "03bd0e75429e",
     "gcodeSha256": "d7003e196e24fce7668191a33dcba5044f42a5c1095bb9ba5b06ba235a93085c",
     "strands": 25,
     "moves": 577,

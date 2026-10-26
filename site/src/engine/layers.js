@@ -11,6 +11,7 @@ import { MAX_MOVES } from './tiler.js';
 import { contactGraph, clipStrands, connectStrands, orderStrands, travelDistance, simplifyStrands, safePoint, segmentInside } from './fabric.js';
 import { finishFabric } from './fabric-result.js';
 import { joinStrokes } from './travel.js';
+import { applyColourPlan } from './colour-plan.js';
 
 /**
  * Helpers shared by every design that is a few layers of plotted lines: ordered layers of polylines in mm in, moves,
@@ -278,7 +279,7 @@ export function crossingReport(items, areaMm2, strandWidth = 0.45) {
 export function layersToStrands(layers, { families, source, layerHeight = 0.2, strandWidth = 0.45, colorChange = false, ramp = 1.6, boundary = null, coherent = false, inset = strandWidth / 2, optimizeTravel = false } = {}) {
   const provenance = (p, k) => ({ family: p.family ?? layers[k].family ?? families?.[k] ?? `L${k + 1}`, role: p.role ?? layers[k].role ?? 'native', source: p.source ?? layers[k].source ?? source });
   if (coherent) {
-    let flat = layers.flatMap((list, k) => list.filter((p) => p.length >= 2).map((p, i) => ({ ...provenance(p, k), id: `l${k + 1}-${i + 1}`, layer: k, kind: k ? 'supported' : 'base', name: `Layer ${k + 1}`, pauseBefore: colorChange && k > 0 && i === 0, ...(Number.isFinite(p.rowOrder) ? { rowOrder: p.rowOrder } : {}), pts: p.map((q) => ({ x: q.x, y: q.y, z: layerHeight, ...(q.flow !== undefined ? { flow: q.flow } : {}) })) })));
+    let flat = layers.flatMap((list, k) => list.filter((p) => p.length >= 2).map((p, i) => ({ ...provenance(p, k), id: `l${k + 1}-${i + 1}`, layer: k, kind: k ? 'supported' : 'base', name: `Layer ${k + 1}`, ...(Number.isFinite(p.rowOrder) ? { rowOrder: p.rowOrder } : {}), pts: p.map((q) => ({ x: q.x, y: q.y, z: layerHeight, ...(q.flow !== undefined ? { flow: q.flow } : {}) })) })));
     flat = simplifyStrands(flat);
     if (boundary) flat = clipStrands(flat, boundary, inset);
     if (boundary) flat = connectStrands(flat, boundary, { strandWidth }).strands;
@@ -291,7 +292,7 @@ export function layersToStrands(layers, { families, source, layerHeight = 0.2, s
       flat = [...rowed, ...joinStrokes(flat.filter((s) => !Number.isFinite(s.rowOrder)), { within: strandWidth * 1.1, allow: boundary ? (p, q) => segmentInside(p, q, boundary) : null })];
     }
     flat = orderStrands(flat, { improve: optimizeTravel });
-    const out = resolveCrossings(flat, { follow: true, lift: layerHeight, strandWidth, ramp }).strands;
+    const out = applyColourPlan(resolveCrossings(flat, { follow: true, lift: layerHeight, strandWidth, ramp }).strands, { mode: colorChange ? 'face' : 'one' });
     out.routing = { beforeMm, afterMm: travelDistance(out) };
     return out;
   }
@@ -304,11 +305,10 @@ export function layersToStrands(layers, { families, source, layerHeight = 0.2, s
     const settled = resolveCrossings(flat, { lift: layerHeight * 1.25, strandWidth, ramp }).strands;
     settled.forEach((s, i) => {
       s.pts = s.pts.map(({ cls, ...p }) => p); // the layer keeps its own colour role
-      if (colorChange && k > 0 && i === 0) s.pauseBefore = true;
     });
     appendPoints(strands, settled);
   });
-  return strands;
+  return applyColourPlan(strands, { mode: colorChange ? 'face' : 'one' });
 }
 
 /**

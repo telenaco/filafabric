@@ -2,7 +2,7 @@
   {
     "card": "spirograph",
     "preset": "default",
-    "settingsHash": "25fe53776642",
+    "settingsHash": "5f53f27acd98",
     "gcodeSha256": "955ba316728e22bdf5e7a436468e6df14e044ee3d395cd3fc69ea5c3e111ae07",
     "strands": 29,
     "moves": 2582,
@@ -18,7 +18,7 @@
   {
     "card": "spirograph",
     "preset": "loops",
-    "settingsHash": "25fe53776642",
+    "settingsHash": "5f53f27acd98",
     "gcodeSha256": "955ba316728e22bdf5e7a436468e6df14e044ee3d395cd3fc69ea5c3e111ae07",
     "strands": 29,
     "moves": 2582,
@@ -34,7 +34,7 @@
   {
     "card": "spirograph",
     "preset": "scales",
-    "settingsHash": "55a09eae5024",
+    "settingsHash": "64479c9922b5",
     "gcodeSha256": "185e7e286f8c98549d3d032230fa317b53395644476a9befaf7a0cdf4840da13",
     "strands": 45,
     "moves": 2763,
@@ -51,7 +51,7 @@
   {
     "card": "spirograph",
     "preset": "web",
-    "settingsHash": "4314f69e4cef",
+    "settingsHash": "cb98d63b026e",
     "gcodeSha256": "35423e619aee3961feef431600778dd6790375e89bcf7cd3c47c4623d51a10e2",
     "strands": 37,
     "moves": 1341,
@@ -68,7 +68,7 @@
   {
     "card": "spirograph",
     "preset": "fine",
-    "settingsHash": "e3afea611f33",
+    "settingsHash": "eeadb379da3c",
     "gcodeSha256": "3c4eb0e774f1d62c97d5757895cd996514c80ea6fab4cb4d84e2d77b65d50dc4",
     "strands": 27,
     "moves": 3991,

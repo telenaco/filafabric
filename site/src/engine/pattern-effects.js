@@ -15,11 +15,12 @@ export const THICKNESS_RANGES = Object.freeze({
 });
 
 /** Attach a tone-driven extrusion flow to a line, limiting changes along the path to `maxChangePerMm`. */
-export function thicknessAlong(polyline, field, { thin = 0.6, thick = 1.8, overNet = 0.85, layer = 0, maxChangePerMm = 0.25, bead = 0.45, quantise = 0.05 } = {}) {
+export function thicknessAlong(polyline, field, { thin = 0.6, thick = 1.8, overNet = 0.85, layer = 0, maxChangePerMm = 0.25, bead = 0.45, quantise = 0.05, complement = false } = {}) {
   if (!Array.isArray(polyline)) return [];
   let previous = null;
   return polyline.map((point) => {
-    const tone = field ? Math.max(0, Math.min(1, field(point.x, point.y))) : 0.5;
+    const sampled = field ? Math.max(0, Math.min(1, field(point.x, point.y))) : 0.5;
+    const tone = complement && layer > 0 ? 1 - sampled : sampled;
     let flow = thin + (thick - thin) * tone;
     if (quantise > 0) flow = Math.round(flow / quantise) * quantise;
     if (previous) {

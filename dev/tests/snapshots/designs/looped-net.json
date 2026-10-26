@@ -2,7 +2,7 @@
   {
     "card": "looped-net",
     "preset": "default",
-    "settingsHash": "67b655b84163",
+    "settingsHash": "f738b8f410ed",
     "gcodeSha256": "24ca7eee6e10ed3d01174ea5adec1553bb3b59f81071b726eb94e9fc65e54f35",
     "strands": 50,
     "moves": 5167,

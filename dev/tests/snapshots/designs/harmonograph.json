@@ -2,7 +2,7 @@
   {
     "card": "harmonograph",
     "preset": "default",
-    "settingsHash": "fd22e38e0f03",
+    "settingsHash": "86af64176dbc",
     "gcodeSha256": "2836fa38bc21268e1a032a365d0b042e6a3ebce7f88260295cb30c1f3b9147d1",
     "strands": 2,
     "moves": 1590,
@@ -18,7 +18,7 @@
   {
     "card": "harmonograph",
     "preset": "fine",
-    "settingsHash": "fd22e38e0f03",
+    "settingsHash": "86af64176dbc",
     "gcodeSha256": "2836fa38bc21268e1a032a365d0b042e6a3ebce7f88260295cb30c1f3b9147d1",
     "strands": 2,
     "moves": 1590,
@@ -34,7 +34,7 @@
   {
     "card": "harmonograph",
     "preset": "coarse",
-    "settingsHash": "a06500df3875",
+    "settingsHash": "4a2e1d328a51",
     "gcodeSha256": "04aca07f1b116be59738748fb3c1e73741333051f19646f265e4068a8eff20ab",
     "strands": 2,
     "moves": 920,
@@ -50,7 +50,7 @@
   {
     "card": "harmonograph",
     "preset": "lens",
-    "settingsHash": "fd498f88ef01",
+    "settingsHash": "b55f55f3f60e",
     "gcodeSha256": "537d6d7ecb1ad32d1fbde4c95e5020dd8949f6540b581397f15f65efb7c4c0c8",
     "strands": 2,
     "moves": 683,

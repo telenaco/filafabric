@@ -8,6 +8,7 @@ import { PolygonBoundary } from './boundary.js';
 import { MAX_MOVES } from './tiler.js';
 import { plan } from './planner.js';
 import { segmentContact } from './fabric.js';
+import { applyColourPlan } from './colour-plan.js';
 
 const minimumZ = (s) => s.pts.reduce((z, p) => Math.min(z, p.z), Infinity);
 const maximumZ = (s) => s.pts.reduce((z, p) => Math.max(z, p.z), -Infinity);
@@ -148,7 +149,7 @@ export function addExtraLayers(result, count = 0, { rotatedResult = null, colorC
     projectedPoints += source.reduce((n, s) => n + s.pts.length + 4, 0);
   }
   if (projectedPoints > MAX_MOVES) throw new ConfigError(['These extra layers would exceed the move limit. Use fewer extra layers, wider spacing or a smaller sample.']);
-  const all = [...original], pause = colorChange || original.some((s) => s.pauseBefore);
+  const all = [...original];
   for (let k = 0; k < count; k++) {
     const index = k % groups.length, rotation = groups.length === 1 && k % 2 === 0 ? 90 : 0;
     const source = rotation ? turned : groups[index];
@@ -158,14 +159,15 @@ export function addExtraLayers(result, count = 0, { rotatedResult = null, colorC
     for (let i = 0; i < source.length; i++) {
       const s = source[i];
       all.push({ ...s, id: `${s.id}~extra-${k + 1}`, extraLayer: k + 1, sourceLayer: index, rotation,
-        layer: info.nativeLayers + k, kind: 'supported', name: `Extra layer ${k + 1}`, pauseBefore: pause && i === 0,
+        layer: info.nativeLayers + k, kind: 'supported', name: `Extra layer ${k + 1}`, pauseBefore: false,
         pts: s.pts.map((p) => ({ ...p, z: p.z + rise, cls: 'supported' })) });
     }
     layerPlan.sequence.push(index); layerPlan.rotations.push(rotation);
   }
   if (all.reduce((n, s) => n + s.pts.length + 4, 0) > MAX_MOVES) throw new ConfigError(['These extra layers exceed the move limit. Use fewer extra layers or wider spacing.']);
   const settled = resolveCrossings(all, { follow: true, preserve: true, lift: h, strandWidth: bead });
-  const strands = settled.strands, moves = emitStrands(strands, { retraction: cfg.derived.retraction });
+  const strands = applyColourPlan(settled.strands, { mode: colorChange ? 'face' : result.colourPlan?.mode ?? (original.some(s => s.pauseBefore) ? 'face' : 'one'), layerColours: result.colourPlan?.layerColours });
+  const moves = emitStrands(strands, { retraction: cfg.derived.retraction });
   if (moves.length > MAX_MOVES) throw new ConfigError(['The extra-layer crossing paths exceed the move limit. Use fewer extra layers or wider spacing.']);
   const stats = { ...result.stats, ...computeStats(moves, cfg, []), loops: result.stats.loops, crossings: settled.crossings };
   const boundary = new PolygonBoundary(result.outline ?? [[{ x: 0, y: 0 }, { x: width, y: 0 }, { x: width, y: height }, { x: 0, y: height }]]);
