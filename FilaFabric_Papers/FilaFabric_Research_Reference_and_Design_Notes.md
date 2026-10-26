@@ -35,14 +35,20 @@ Page locators count physical pages including covers; the Word source uses sectio
   - Cui & Sun (7) and Sun (59): describe no edge band.
   - Kalman, Nakajima, Gispan, Diak, Martínez and the process-settings table: re-checked and unchanged.
 
-The highest-priority primary sources to retrieve next are **Pattinson et al. 2019** (bond-modulated sliding strands, regionally auxetic meshes and conformal meshes printed onto a template, via 56), **Li et al.** (arched sliding crossings, via 52), **Lu et al. 2022** (TPU mesh parameter regression, via 5), **Spahiu et al. 2020** (FilaFlex auxetic dress; arrowhead per 23 and 43) and **Bastian's mesostructure prototypes** (Thingiverse thing:289650, Sitotaw ref. 98), to settle their height.
+**Primary sources retrieved, 26 October 2026.** All four priority primaries are now held locally and reviewed as **Papers 66–69**. Published versions of Pattinson and Li are also held; their key numbers match the manuscripts reviewed. What they change:
+- *Pattinson et al. 2019 (66):* bond modulation is confirmed. Two separate controls are demonstrated: a nozzle lift at crossings, so the strand cools before contact (drape shown, with no lift height given), and a lateral gap between parallel strands (stiffness measured). The **ankle brace** with a non-linear response is this paper's, so Sitotaw's attribution of it to ref. 17 is a citation error. Strain stiffening comes from waves that straighten.
+- *Li et al. 2022, "Programmable Digital Weaves" (67):* a sliding crossing is **not** one arched strand, as Sapkota (52) describes it. The crossing strand is laid raised, then a separate printed **channel** fused to the lower strand holds it captive. The authors' G-code gives the heights and speeds. The flat-to-parabolic deployment uses one sliding strand in an otherwise fused structure.
+- *Spahiu et al. 2020 (68):* the dress was joined with a 3D pen; the needle stitching was a mannequin trial and the belts are dressing aids. The panel is 1.8 mm thick, and there is no mechanical test.
+- *Lu et al. 2022 (69):* a 30-configuration NinjaFlex mesh sweep. Strength and modulus fall about linearly as the strand gap widens; thicker layers stretched furthest; rotation angle mattered little. The specimens are 1.8 mm thick, and the paper's regression text and tables disagree in places.
+
+Still to retrieve: **Bastian's mesostructure prototypes** (Thingiverse thing:289650, Sitotaw ref. 98), to settle their height.
 
 The two legacy generator scripts in this folder are disabled: their keyword-based summaries could overwrite this reviewed document and misattribute equations. Maintain the authored Markdown directly. Source PDFs, the Word source and `.review-cache/` stay local under the project ignore rules; the reports can be tracked without redistributing the papers.
 
 ---
 
 ## Executive Summary & Architectural Mapping
-This reference indexes 65 collected works relevant to or adjacent to **FilaFabric**, a browser-based textile G-code generator. The original summaries have three dimensions, followed by the dated review:
+This reference indexes 69 collected works (65 reviewed on 23–24 October, plus four primaries added on 26 October as Papers 66–69) relevant to or adjacent to **FilaFabric**, a browser-based textile G-code generator. The original summaries have three dimensions, followed by the dated review:
 1. **Core Focus & Abstract Findings:** Empirical and theoretical contributions to digital textiles, additive manufacturing, metamaterials, and computational design.
 2. **Mathematical & Structural Formulations:** Governing equations, homogenization models, auxetic kinematics, under-extrusion mechanics, and yarn interlooping geometries.
 3. **Relevance & Design Takeaways for FilaFabric:** Mapping to FilaFabric's 32 registry entries (31 design IDs plus one preset alias), whole-repeat edge alignment, the geometry check and *Fix it*, picture-driven mapping (*Your picture*) and process settings. The reference machine is the Prusa MK3S; flexible material profiles now include Recreus Filaflex 95A Foamy, NinjaTek NinjaFlex 85A, Generic FLEX and Generic TPE. NinjaFlex 85A is also the material used by Schumacher 2018 (54), Martínez 2019 (46) and FlexScale (47). Those are the closest material matches in the collection, but none uses FilaFabric's printer, settings or geometries.
@@ -200,6 +206,8 @@ This overview compares FDM, SLA and SLS materials and summarizes other authors�
 - **Jayswal et al. (2023)**, PLA weft knit (12–15 mm displacement, ~250 N peak) and braids. The primary work is in Paper 22.
 
 **Pattern implications.** Fig. 2c, hexagonal PLA elements printed on nylon fabric from downloaded models, is a print-on-fabric tile example, not a free-standing net. The conclusion's claim that open fabrics such as tulle give the best adhesion is unsourced in this paper; use Loh and Pei (41) and Firicel (13) for evidence. No new FilaFabric pattern follows directly.
+
+**Primaries checked, 26 October 2026.** Spahiu et al. is now Paper 68. Its Fig. 9 shows a needle-stitched mannequin trial, the dress joined by 3D pen, and belts added for dressing, so both descriptions above are partly right. Lu et al. 2022 (IEEE BioRob, DOI 10.1109/BioRob52689.2022.9925405) is now Paper 69. Brad's summary is accurate, but the regression covers only the 90° meshes and is weak for elongation and modulus.
 
 ---
 
@@ -1827,6 +1835,8 @@ The most useful lead is the cited **sliding-crossing** method of Li et al., an a
 
 **Pattern implications.** Add a **sliding-crossing option** to N1, with the primary paper to be retrieved first: a local lift over each crossing, sized from bead height plus clearance, so the upper strand bridges the lower one without fusing. It could be mixed with fused crossings in a chosen proportion (all-fused, alternating, or sliding only in a hinge zone) to tune flexibility. This is the only cited bed-flat route to non-fused crossings. Each lift adds sag, stringing and snag risk, and it is unverified for Foamy TPU.
 
+**Primary checked, 26 October 2026 (Paper 67).** The Li et al. description above is incomplete. The crossing strand is laid raised with little adhesion, and a **separate printed channel**, fused to the lower strand, then encloses it, so the strands slide without separating. A lift alone is not the method. The flat-to-parabolic deployment uses one sliding actuation strand in an otherwise fused structure. Sapkota's Spahiu summary is checked in Paper 68.
+
 ---
 
 ## Paper 53: Schumacher-2015 — Microstructures to Control Elasticity in 3D Printing
@@ -1966,6 +1976,8 @@ Useful mainly for its taxonomy and for pointing to Pattinson et al. (2019): bond
 - **Other examples:** multi-layer lace inspired by Plauen lace (Melnikova, ref. 55, Fig. 15); PLA strips with warp-knitted fishing net and sunscreen net as inlays (Fig. 7); decorative forms printed on cotton, wool, viscose and polyester net (Fig. 8); printed connectors and buttons.
 
 **Pattern implications.** Pattinson et al. is the most important primary source to retrieve next. As summarized here, it is printed flexible-mesh work that (1) switches crossing bonds off locally through toolpath timing and cooling, a second route alongside Li et al.'s arched sliding crossings (52), and (2) patterns auxetic cells regionally in a mesh. Both map onto FilaFabric's net constructions as bond-mask zones and regional cell swaps. The ankle brace's controlled non-linear response would map onto a strain-limit control, but its source is uncertain (see above). Treat all of these as leads until the primaries are read.
+
+**Primary checked, 26 October 2026 (Paper 66).** Pattinson et al. confirms (1) and (2) and settles the ankle brace: it is Pattinson's §2.2, so the attribution to ref. 17 above is Sitotaw's citation error. Bonding is controlled two ways, by a nozzle lift at crossings and by a lateral gap between parallel strands, and only the second is quantified. The non-linear response comes from waves that straighten.
 
 ---
 
@@ -2228,7 +2240,7 @@ Transfer **layer-stack representations, path dependencies and fabrication-aware 
 **Pattern implications.**
 1. **Stack notation as a construction report.** For every crossing in a FilaFabric net, record the ordered stack (which family is on top, and fused or separated). That gives an exact, checkable description of an M/N construction, separate from the top-view picture, which the audit's construction-report proposal needs.
 2. **Stenciling for regional constructions.** An index image could select the construction per region (for example plain-weave cells here, twill cells there, open net elsewhere). Blocks are compatible only when their repeats are commensurate, so FilaFabric would have to snap region pitches to common multiples, consistent with its whole-repeat rule.
-3. **Ordering for N lifts.** For 3-axis bed printing the same graph idea applies with one orientation: any raised crossing path must be printed before a nearby lower path whose nozzle-body clearance it would block. Cycles mean splitting a path.
+3. **Ordering for N lifts.** For 3-axis bed printing the same graph idea applies with one orientation: a lower path must be printed **before** a nearby raised path that would otherwise block the nozzle body when the lower one is printed (Wu draws an arc A→B when printing A after B would hit B). *Corrected 26 October 2026: the earlier wording had the order reversed.* Cycles mean splitting a path.
 
 ---
 
@@ -2253,6 +2265,269 @@ Indirect: the paper argues that state changes during processing (here wet to dry
 **Added details (PDF pp. 6–10).** Of 53 cases first identified, 14 external cases were analysed alongside the two author experiments. E2 extruded a bacterial cellulose/alginate blend into a 10% w/v calcium chloride bath. Both experiments showed that drying, not forming, decides whether continuity survives: stiffening, curling, cracking, delamination and shrinkage appeared only on drying.
 
 **Pattern implications.** None. A reminder that FilaFabric swatch records should include post-release changes such as shrinkage, curl and stiffening after conditioning, not just the as-printed state.
+
+---
+
+## Paper 66: Pattinson-2019 — Biomechanically Tailored Meshes for Compliant Wearable and Implantable Devices
+**File Name:** `Pattinson-2019_Biomechanically-Tailored-Meshes-for-Compliant-Wearable-and-Implantable-Devices.pdf`
+
+Retrieved 26 October 2026: the authors' accepted manuscript with its Supporting Information text (36 pages), from the University of Cambridge repository (handle 1810/292316). Published version: *Adv. Funct. Mater.* 2019, 29(32), 1901815, DOI 10.1002/adfm.201901815. Page locators refer to this manuscript, not the journal pagination. The repository's two supporting videos were downloaded but are kept outside this folder.
+
+The published version is also held, as `Pattinson-2019_Biomechanically-Tailored-Meshes-for-Compliant-Wearable-and-Implantable-Devices_Published.pdf` (10 pages, without the Supporting Information; obtained by the user through institutional access). Every number used below matches it. Journal page equivalents ("n of 10"):
+
+| Content | Manuscript | Published |
+|---|---|---|
+| raster order | p. 5 | p. 3 |
+| bonding of parallel elements | p. 7 | p. 4 |
+| cycling | pp. 7–8 | p. 4 |
+| muscle match | p. 8 | p. 5 |
+| ankle brace | pp. 8–10 | pp. 5–6 |
+| steel reinforcement | pp. 10–12 | pp. 5–7 |
+| lifted crossings | p. 13 | p. 7 |
+| Experimental Section | pp. 14–15 | p. 9 |
+| Fig. 2 | p. 22 | p. 3 |
+| Fig. 4 | p. 24 | p. 6 |
+| Fig. 6 | p. 27 | p. 8 |
+
+### 1. Summary & Core Focus
+Pattinson et al. (MIT) print flexible meshes by extruding thermoplastic polyurethane (NinjaFlex) along explicitly programmed, continuous toolpaths, one or a few layers thick, to make wearable and implantable supports whose tensile response mimics soft tissue. A mesh is an array of cells built from orthogonal elements. Each element carries waves that straighten under load, so it starts soft and stiffens sharply once taut. Low-strain stiffness is tuned by printing neighbouring parallel elements touching (welded) or with a small gap. A printed unit cell matched rat-muscle tensile data in two directions, and a mesh strip in an ankle brace raised inversion stiffness by 78.69% on average in four subjects while barely changing other directions. Stainless-steel thread sandwiched between two elastomer layers adds a stiff high-strain regime. A closing section demonstrates, with one cantilever comparison as its only measurement, crossings left unbonded by lifting the nozzle, a region of negative-Poisson cells, and a mesh printed over a taped 3D template and sewn into a glove.
+
+### 2. Mathematical & Structural Formulations
+**Single wavy element** (pp. 5–7, Eqs. 1–4; SI pp. 29–31, Eqs. S1–S8; checked against the typeset pages). An element of projected length $l_e$ contains two waves of height $h_w$ and width $l_w$. Its extension is the sum of fibre stretching and wave straightening:
+- stretching, Mooney–Rivlin: $F_e/(A_e C_1) = \left(1 + \frac{\mu_2}{\mu_1}\frac{1}{\lambda_{e,s}}\right)\left(\lambda_{e,s} - \lambda_{e,s}^{-2}\right)$, with $\delta_{e,s} = l_e(\lambda_{e,s}-1)$;
+- straightening: $\delta_{e,b} = 4\sqrt{h_w^2 + (l_w/2)^2}\,\left[\cos\theta - \cos\left(\operatorname{atan}(2h_w/l_w)\right)\right]$, where $dF_e\sqrt{h_w^2+(l_w/2)^2}\,\sin\theta \cong -K'\,d\theta$ for a constant wave bending stiffness $K'$.
+
+The typeset Eq. 1 writes the prefactor as $C_1$, while the text and Table S1 name the constants $\mu_1$ and $\mu_2$. Table S1 model inputs (p. 31): μ1 = 0.1 MPa, μ2 = 0.54 MPa, K′ = 0.1 N·mm, $l_e$ = 24 mm, $A_e$ = 0.79 mm² (a 1.0 mm round fibre), $l_w$ = 2.5 mm. These are inputs to the single-element model, not the printed mesh dimensions. Mesh-level responses are measured, not derived. Bending gives way to stretching at a stiffness peak, whose strain moves with wave height (Fig. 2B–F, p. 22).
+
+### 3. Relevance & Design Takeaways for FilaFabric
+The most directly relevant primary in the collection for **M9 bond masks** and for **strain-limiting nets**: flat, bed-printed TPU meshes on continuous toolpaths, wave-controlled stiffening, and two demonstrated bond controls (a lateral gap between parallel strands, and a nozzle lift at crossings). It does not report the lift height, speed, layer height or nozzle size used, and its printer (Printrbot Simple Metal) and NinjaFlex grade differ from FilaFabric's MK3S profiles. All values describe the authors' specimens.
+
+### 4. Flat-sheet source review — 26 October 2026
+
+**Evidence:** pp. 2–16 (text and Experimental Section), Figs. 1–6 (pp. 21–27), SI pp. 29–35. **Status:** S/M, direct flat FDM TPU meshes. The crossing lift is a local N move. The glove mesh printed over a 3D support is outside the shallow-sheet brief.
+
+**Toolpaths.** Custom Python turns an array of unit cells plus rate and temperature into G-code, sent through Repetier-Host (p. 15). Uniform-thickness meshes are printed as a raster, all horizontal lines and then all vertical lines (p. 5). Locally thicker fibres use the Dreifus et al. graph-based planner, which passes the extruder over a section a programmed number of times with few discontinuities. The authors keep toolpaths continuous because interruptions create defects (p. 5).
+
+| Result (authors' specimens) | Value | Locator |
+|---|---|---|
+| Wavy element, transition strain | tuned by wave height to above 40% | p. 7, Fig. 2E–F |
+| 5 parallel wavy elements, all gapped | 20 N/m up to 10% strain, maximum 207 N/m at 40% | p. 7, Fig. 2G–H |
+| 3 central elements bonded | 53 N/m at 10%, rising to 150 N/m at 40% | p. 7 |
+| all 5 bonded | about 110 N/m, roughly constant | p. 7 |
+| Cyclic loading | no perceptible change over 1800 cycles to 32% (Fig. S1 caption: 1835) | pp. 7, 32 |
+| Muscle-matched cell | across: 685 kPa constant; along: 111 kPa to 10%, 453 kPa beyond 20%; 0.05%/min | p. 8, Fig. 3A–B |
+| Unit-cell stiffness range | 0.5 N/m to 20 kN/m, steel-reinforced cells included | p. 8, Fig. 3C |
+| Ankle brace, 4 subjects | inversion +78.69%, eversion +14.27%, dorsiflexion −1.59%, plantarflexion −1.40%; similar torque to about 1.5°, about 50% higher at 15° | p. 10, Fig. 4, Fig. S4 |
+| Steel-reinforced cell | 180 N/m at small strain, 7.3 kN/m once the thread is taut | p. 12, Fig. 5E |
+| All-elastomer unit cell | broke at 2.4 N | p. 10, Fig. S2a |
+| Lifted (unbonded) crossings | about 230% more cantilever deflection than the bonded twin; drapes over a golf ball, the bonded one does not | p. 13, Fig. 6a |
+
+Testing used an Instron 1125 with a 100 N load cell at 5 mm/min; flexure was measured by hanging a mass and recording deflection (p. 15). **Proposed translation:** a wave-segment option for straight nets (S2), an in-plane bond mask by strand spacing (M9), and lifted crossings (M9/N1). Each needs FilaFabric's own calibration because the paper does not give the process values.
+
+### 5. Full-text pass — 26 October 2026
+
+**What the primary changes in the second-hand leads.**
+- **Bond modulation (via Sitotaw, 56):** confirmed, but there are **two** controls. At crossings (p. 13, Fig. 6a) the nozzle is lifted "as it passes over filament in the mesh", so the new filament cools before it touches the earlier, orthogonal one. The authors treat this slip as undesirable where in-plane stress must be controlled, and useful locally for conformability. Between parallel elements (p. 7, Fig. 2G–H), printing in contact welds them into one thicker element, and a small lateral gap keeps them apart. Only the parallel-element control is quantified.
+- The Fig. 6a swatches look like closely spaced parallel lines (a dense sheet) rather than an open mesh, and the cantilever result is one pair of specimens. No lift height, speed or temperature is given for it.
+- **Ankle brace:** the brace with a controlled non-linear response **is this paper's** (§2.2, pp. 8–10). Sitotaw's citation of it to ref. 17 (Uysal & Stubbs) is therefore a citation error, unless that paper has a brace of its own. The MIT News item cited by Kabir 2025 (27) reports this paper.
+- **Strain limiting:** produced by waves that straighten, inspired by collagen. The paper calls the response non-linear and does not use the word "strain-limiting".
+- **Auxetic region** (Fig. 6b, p. 27): a mesh with a patch of negative-Poisson cells, shown on a knee and bulging out of plane when stretched by hand (video). No cell geometry or measurement is reported.
+- **Layer-level release:** the brace's wavy component is layered without bonding, so it buckles in compression and does not stiffen eversion (p. 9).
+- **Template release:** the glove's knuckle templates were covered with tape so the mesh would not stick (p. 13).
+
+**Process facts given:** Printrbot Simple Metal; NinjaFlex; thermoplastic extrusion at about 210 °C (stated in the steel-thread paragraph, p. 11). For reinforcement, 0.4 mm three-ply 316L stainless-steel thread runs through a second, unheated tapered Nordson nozzle. Double-sided tape on the bed holds it, and it is sandwiched between an elastomer layer printed with gaps and an identical second layer (pp. 11, 14–15). **Not given:** nozzle diameter, layer height, speeds, cooling, the printed meshes' wave dimensions, or the crossing lift height.
+
+**Pattern implications.** Proposals, untested on Foamy or NinjaFlex 85A:
+1. **Wave segments for strain limiting (S2):** replace each straight segment between crossings with one or two trapezoidal waves. Wave height sets the strain at which the strand goes taut. Report low- and high-strain stiffness separately.
+2. **Lateral bond mask (M9, no Z move):** the cheapest bond control. Space neighbouring parallel strands at contact where they should weld and with a gap elsewhere. Pattinson's gapped five-strand unit was about five times softer at low strain than the bonded one.
+3. **Lifted crossing (M9/N1):** a per-crossing nozzle lift so the upper strand lands after cooling. FilaFabric must find the height and speed; soft TPU may still stick, so verify that the crossings actually move.
+4. **Unbonded layer for one-sided stiffening:** a layer left unbonded from the one below buckles instead of resisting compression.
+
+---
+
+## Paper 67: Li-2022 — Programmable Digital Weaves
+**File Name:** `Li-2022_Programmable-Digital-Weaves.pdf`
+
+Retrieved 26 October 2026: the authors' accepted version (6 pages) from the ETH Zurich Computational Robotics Lab website. Published version: Li, Montes, Thomaszewski and Coros, *IEEE Robotics and Automation Letters* 7(2):2891–2896, 2022, DOI 10.1109/LRA.2022.3145948 (Sapkota's ref. 196). The folder `Li-2022_Programmable-Digital-Weaves_GCode/` holds four G-code files from the authors' MIT-licensed repository (github.com/liyuesolo/ProgrammableDigitalWeaves, last updated November 2023): FusedGrid, SlidingGrid, CircleFused and CircleSliding. They are git-ignored like other G-code.
+
+The published IEEE version is also held, as `Li-2022_Programmable-Digital-Weaves_Published.pdf` (pp. 2891–2896; obtained by the user through institutional access). Its print settings and results match the preprint. The layout shifts slightly: the print settings fall on p. 3 (2893), and Figs. 6–8 and the actuation section on p. 5 (2895). Locators below follow the preprint.
+
+### 1. Summary & Core Focus
+Li et al. (ETH Zurich) print planar PLA grids in which chosen crossings **slide** instead of fusing. A sliding connection is made in three steps: print one strand flat, print the crossing strand with the head lifted so the two barely adhere, then print a small arc-shaped **channel** fused to the lower strand that encloses the crossing strand without bonding to it. The channel lets that strand slide along its own length while stopping the two from separating. All prototypes were printed in PLA on a Prusa i3 MK3S, the printer model FilaFabric targets. Assigning fused or sliding connections in small unit cells gives responses from quasi-isotropic to highly anisotropic and strongly non-linear, and one sliding strand embedded in a fused structure deploys it from flat to parabolic. A rod simulation with sliding nodes predicts the behaviour. Physical prototypes are compared with simulations only qualitatively; no measured stiffness values are reported.
+
+### 2. Mathematical & Structural Formulations
+**Simulation** (p. 3, §III-B): discrete elastic rods (stretch, bend, twist). Each crossing is one node $x_i$ with an Eulerian degree of freedom $u_i^j$ for every strand $j$ that slides through it; fused crossings carry extra rigid rotational degrees of freedom $\omega_k$. Energy $E_{rods} = E_{stretch} + E_{bend} + E_{twist} + E_{rigid} + E_{contact} + E_{reg}$, where $E_{reg}$ is a small $l^2$ penalty that stands in for friction. Equilibrium solves $\min_q E_{rod}(q)$ subject to $Dq = q^*$ (Eq. 1) by Newton's method. Curved rest shapes are $C^2$ interpolating splines.
+
+**Homogenization** (p. 4, Eq. 2): directional modulus $E = d^\top\sigma_{macro}d \,/\, d^\top\epsilon_{macro}d$ and Poisson's ratio $\nu = n^\top\epsilon_{macro}n \,/\, d^\top\epsilon_{macro}d$, sampled over 200 directions from 0 to 180° on periodic unit cells. As typeset, ν has no leading minus sign. Checked against the typeset page.
+
+### 3. Relevance & Design Takeaways for FilaFabric
+The only primary in the collection that demonstrates **mobile crossings in a bed-printed planar grid**. It is printed on FilaFabric's target printer model, but in PLA at a deliberately low 180 °C with the part fan off. It corrects the second-hand lead (see §5): the sliding crossing needs a captive channel as well as a lifted strand. Its directional, non-linear responses come from simulation and qualitative tests, and nothing here validates TPU.
+
+### 4. Flat-sheet source review — 26 October 2026
+
+**Evidence:** p. 2 §III-A and Fig. 1; p. 3 Fig. 2; pp. 4–6 §IV and Figs. 3–9; repository G-code. **Status:** M with an N crossing treatment; direct bed-flat fabrication in PLA; untested in TPU.
+
+**Manufacturing as stated in the text** (p. 2): Prusa i3 MK3S, PLA, nozzle 180 °C, bed 60 °C, 0.4 mm nozzle, 1.75 mm filament (printed as "filament radius"), strand width 0.5 mm. Speed 600 mm/min by default and 300 mm/min for channels. A channel is a triangle path whose base is centred on the crossing node; its second half is 20% longer than the first, so sag does not touch the sliding strand. Channel height is twice the strand width, 1.0 mm. A 20 × 20-strand, 8 × 8 cm patch takes about 40 minutes, with all channels oriented the same way so the other direction is free to slide (Fig. 1).
+
+**Results.**
+- **Regular grid** (Fig. 3, p. 4): under diagonal shear the all-fused grid buckles out of plane, while the all-sliding grid shears in-plane by rotation and sliding. Along the strand directions, stiffness is the same whether crossings are fused or sliding.
+- **2 × 2 regular cell** (Fig. 4, p. 4): simulated diagonal stiffness falls 20.17 → 7.29 → 5.37 → 2.79 → 0 as more crossings slide (units printed as N²/m²).
+- **Interlacing squares** (Figs. 5–7, pp. 4–5): Type 1, all fused, is quasi-isotropic and relatively stiff. Type 2, all channels sliding horizontally, has zero horizontal stiffness until the squares reach their sliding limit, then finite stiffness (compared at 10% and 30% strain). Type 3 alternates channel directions and is orthotropic. Type 4 is Type 3 with two crossings fused, and is highly anisotropic.
+- **Interlacing circles** (Fig. 8, p. 5): each circle overlaps its four neighbours "by 10% of its radius (0.8 cm)", which leaves unclear whether 0.8 cm is the radius or the overlap; eight crossings per circle. All-fused is orthotropic, all-sliding highly anisotropic, and the sliding circles distort into ellipses.
+- **Actuation** (Fig. 9, p. 6): one actuation strand fused at its tip to the outer circle and sliding at every other crossing, with all other connections fused, gives a planar-to-parabolic deployment. The text says the force is compressive; the caption says pulling.
+- **Limitations** (p. 6): crossings of more than two strands are not handled, friction is not modelled accurately, and the extra channel material biases stiffness upward. Bending stiffness with sliding connections was not studied systematically. The authors note that sliding connections let a flat patch deploy to non-zero Gaussian curvature with little resistance, while all-fused ones oppose it, and leave this to future work.
+
+### 5. Full-text pass and G-code — 26 October 2026
+
+**Corrections to Sapkota (52).**
+- The arc-shaped channel is a **third printed element**, fused to the lower strand and enclosing the crossing strand. The crossing strand itself is laid with the head raised so that it barely adheres. Sapkota merges these into one arched strand, which would leave the crossing free to separate.
+- Sliding is **one-directional**: the captive strand slides along its own length, in the direction set by the channel's orientation.
+- "All-sliding grids deployed easily from flat to parabolic": the parabolic deployment (Fig. 9) is a mostly fused structure with one sliding actuation strand. Easy deployment to doubly curved shapes appears in the conclusion as an observation for future study.
+- "All-fused grids were quasi-isotropic": true of the interlacing-squares Type 1. The all-fused circles were orthotropic.
+
+**Repository G-code.** It may not match the printed prototypes exactly. Both grids print 20 strands per family at 4 mm pitch, 128 mm long (24 mm ends, 80 mm field):
+
+| | FusedGrid | SlidingGrid |
+|---|---|---|
+| First family (along X) | nozzle Z 0.5 mm; ends at 600 mm/min, centre at 1200 mm/min | same |
+| Second family (along Y) | as first, also at Z 0.5: the nozzle crosses the first family at the same height | 12 mm bed anchor at Z 0.2 (200 mm/min), 12 mm ramp up to Z 1.5 (400), **one 80 mm span at Z 1.5 over the whole field** (600), mirrored ramp down |
+| Crossing treatment | none | one channel per crossing (400): plunge to Z 0.5 on the lower strand 1.20 mm before the crossing, rise to Z 2.5 directly above it (100 mm/min), descend to Z 0.5 1.68 mm after it (200 mm/min) |
+| Final frame | 80 × 80 mm rectangle at Z 0.5, 1500 mm/min | same rectangle at Z 0.75 |
+| Temperature, fan | 180 / 60 °C; fan never switched on | same |
+
+Extrusion per millimetre of path is 0.0775 mm of filament for the lower strands (about 0.19 mm², a roughly 0.5 mm round bead), about 0.042 mm for the raised span (55%) and about 0.036 mm for the channels (47%). **Differences from the paper text:** the channel's second leg is 40% longer (1.68 versus 1.20 mm), not 20%; channel speeds are 100/200 mm/min, not 300; and the field strands run at 1200 mm/min, not 600. The channel apex at nozzle Z 2.5 is 1.0 mm above the sliding span's nozzle Z 1.5, which matches the stated 1.0 mm channel height if that is measured from the sliding strand. The paper does not mention the final frame, and its role is not stated. The circle files begin with solid grip tabs of lines 0.5 mm apart.
+
+**Pattern implications.** Proposals; PLA results do not transfer to TPU without tests.
+1. **A sliding crossing has two parts:** a raised second family, here one span about 1.0 mm above the lower family's nozzle height with bed anchors at both ends, and a **captive channel** at each crossing. A lift alone, without the channel, leaves the families joined only at their ends and the frame.
+2. **A three-state crossing mask:** each crossing is fused, channel-X or channel-Y. The channel direction chooses which strand slides, which is how Types 1–4 program anisotropy and non-linearity. This maps onto an M9 mask image with three values.
+3. **Matched control:** FusedGrid, with both families at the same nozzle height, is the fused twin. Compare the two in shear and drape, not only along the strands, where the paper found no difference.
+4. **TPU risks:** the low 180 °C and absent fan cooling reduce PLA adhesion, but TPU bonds and strings far more readily. The channel apex at nozzle Z 2.5 mm also makes the relief roughly 2–2.5 mm tall, more than a shallow N texture. Start with a few large crossings at the paper's 4 mm pitch before shrinking anything.
+
+---
+
+## Paper 68: Spahiu-2020 — 3D Printing for Clothing Production
+**File Name:** `Spahiu-2020_3D-Printing-for-Clothing-Production.pdf`
+
+Retrieved 26 October 2026: the publisher's open-access PDF (CC BY 4.0, 8 pages). Spahiu, Canaj and Shehi, *Journal of Engineered Fibers and Fabrics* 15, 2020, DOI 10.1177/1558925020948216. Cited in Brad (5, ref. 4), Jayswal-Adanur (23, ref. 127), Manaia (43) and Sapkota (52, ref. 197).
+
+### 1. Summary & Core Focus
+Spahiu, Canaj and Shehi design several open geometries in Tinkercad, print them on an Orcabot XXL FDM printer in rigid to flexible filaments, and choose a re-entrant **arrowhead** auxetic panel in FilaFlex (Shore A82) for a dress. The dress, size 36 and patterned in CLO 3D, needed 33 panels of 130 × 130 mm and about 75 h of printing. The panels were joined with a 3D pen, and belts were added at both sides for dressing. An online survey of 100 respondents, mostly aged 18–35, found that 79 would wear a 3D-printed garment. The panel's auxetic behaviour is shown only by hand stretching in clamps. There is no tensile, drape or Poisson measurement.
+
+### 2. Mathematical & Structural Formulations
+None. The geometry is a single arrowhead (negative Poisson's ratio, citing Larsen et al. 1997) duplicated in rows and columns in Tinkercad (pp. 3–4). The CAD screenshot shows **4 columns × 8 rows** of hollow arrowheads filling the 130 × 130 mm panel (Fig. 4, p. 4, counted from the figure). The text gives no cell, strut or hinge dimensions. Table 1 (p. 2, checked on the typeset page) lists the process parameters below.
+
+### 3. Relevance & Design Takeaways for FilaFabric
+Same material family as FilaFabric's Foamy profile (Recreus FilaFlex, but the 82A grade, not the foaming one) and a precedent for the Auxetic Mesh at garment scale. It is a design case study with no mechanical data. Its panel is a 1.8 mm-thick, nine-layer solid-wall lattice, far thicker than FilaFabric's thin nets, and its settings were for an Orcabot XXL, not an MK3S.
+
+### 4. Flat-sheet source review — 26 October 2026
+
+**Evidence:** pp. 2–6, Table 1, Figs. 3–9. **Status:** S4-related flat lattice, printed lying on the bed; a design and assembly precedent, not a mechanical one.
+
+**Table 1, "parameters used for main geometry production"** (p. 2): nozzle 0.4 mm, nozzle 245 °C, bed 65 °C, speed 50 mm/s, layer 0.2 mm, 9 layers, geometry height 1.8 mm, 2 h 16 min per 130 × 130 mm structure, filament 1.75 mm. The table does not name the material. The text says parameters were chosen per material and that FilaFlex was used for most prints (p. 3). Slicing was in Repetier-Host V1.0.6.
+
+**Materials compared** (p. 3): PLA (Filament World), soft PLA (German RepRap), nylon (Taulman), FilaFlex (Recreus) and NinjaFlex (NinjaTek). The arrowhead in FilaFlex was chosen after weighing appearance, flexibility, and failures caused by material viscosity during printing (p. 3). The nude colour was chosen visually from four (Fig. 5, p. 4). Fig. 3 (p. 4) shows the other trial geometries, including triangulated grids, interlocking curved cells, circles and ring chains.
+
+**Assembly** (pp. 4–6): joining was hard "due to the small contacting areas between the single structures" (p. 4). A Dikale 07A 3D pen joined the panels (Fig. 7, p. 5). Fig. 9 (p. 6) shows (a) the parts needle-stitched onto a mannequin, (b) the whole dress joined by 3D pen, and (c) the finished dress with belts at both sides for dressing and undressing.
+
+**Survey** (pp. 3, 5–6): 100 respondents, seven closed questions, 30 August to 5 September 2019. 89 had heard of 3D printing, 63 knew of its use in fashion, 79 would wear a 3D-printed garment and 88 thought it would benefit garment production. The 21 who would not cited materials less flexible and comfortable than conventional textiles.
+
+**Proposed translation:** an arrowhead panel preset with whole-cell edges and joining tabs, compared with the existing Auxetic Mesh at FilaFabric's thinner strand heights. The paper offers no settings or mechanics to transfer.
+
+### 5. Full-text pass — 26 October 2026
+
+**Settling the secondary descriptions.**
+- **Joining:** Brad (5) captions stitches and belts, while Jayswal-Adanur (23) and Sapkota (52) say 3D pen. Both are partly right. The dress was joined by 3D pen, the needle-stitched version is a mannequin trial assembly, and the belts are dressing aids.
+- **Materials:** five filaments were tried (above). Sapkota's "PLA, nylon, TPU and FilaFlex" folds soft PLA and NinjaFlex into general labels.
+- **Shape and grade:** arrowhead, FilaFlex Shore A82 and 130 × 130 mm are confirmed (23, 43).
+- **Process:** Table 1's 245 °C and 50 mm/s are hotter and faster than the TPU settings collected elsewhere in this review. Because the table does not name the material, treat them as the authors' main-geometry settings, not a confirmed FilaFlex recipe.
+
+**Pattern implications.** (1) Small contact areas between panel edges made joining difficult. Panel presets meant for assembly need wider edge rails or overlap tabs (compare Ariel & Sterman, 1). (2) The panel stays a fixed 130 × 130 mm tile, and the garment is tiled from 33 of them. A tile-and-join workflow suits FilaFabric's bed-sized swatches, but panel seams then fall wherever the tile grid does, not where the pattern pieces want them.
+
+---
+
+## Paper 69: Lu-2022 — Modeling and Characterization of 3D Printed Flexible Mesh Structure for Wearable Interface
+**File Name:** `Lu-2022_Modeling-and-Characterization-of-3D-Printed-Flexible-Mesh-Structure-for-Wearable-Interface.pdf`
+
+Retrieved 26 October 2026 by the user through institutional IEEE Xplore access (publisher version, 8 pages). Lu, Fu, Hosseini and Park, *2022 9th IEEE RAS/EMBS International Conference for Biomedical Robotics and Biomechatronics (BioRob)*, DOI 10.1109/BioRob52689.2022.9925405. Cited in Brad (5, ref. 10).
+
+### 1. Summary & Core Focus
+Lu et al. (University of Connecticut and University of Central Florida) print NinjaFlex TPU meshes as stacks of parallel-strand layers, each rotated by a fixed angle from the one below, and tensile-test them. Four parameters are varied: strand thickness T (0.4–0.6 mm), the gap between neighbouring strands D (0.2–1.2 mm), the layer-to-layer rotation θ (30–90°) and the layer height H (0.1–0.3 mm). The outputs are strength, elongation at break and Young's modulus. Thirty configurations, five specimens each, were printed as 1.8 mm-thick ASTM D412 dog-bones and pulled to break at 500 mm/min. Wider strands and smaller gaps made the mesh stronger, stiffer and more extensible. Thicker layers (fewer of them at the same total thickness) stretched furthest, and rotation angle changed strength by only about 11%. Linear regressions on H, T and D are fitted for the 90° meshes. A wearable mesh in the most extensible configuration is shown bending and twisting, qualitatively.
+
+### 2. Mathematical & Structural Formulations
+**Linear regression** (p. 6, typeset equations and Table V), fitted to the 90° meshes only, with H, T and D in mm. Rotation angle is not a term.
+- Tensile strength (MPa) = 4.38 H + 7.56 T − 3.58 D + 1.147
+- Elongation at break (%) = 743.20 H + 592.38 T − 73.20 D + 35.74
+- Young's modulus (MPa) = 1.85 H + 4.52 T − 3.59 D + 2.68
+
+Table VI reports R² of 82.11, 59.26 and 60.30 (%), RMSE of 0.464 MPa, 49.874 (labelled "mm"; elongation is in %) and 0.766 MPa, and relative errors of 11.99, 11.01 and 29.72.
+
+**Internal inconsistencies, checked on the typeset pages:**
+- Table V gives the layer-height coefficient for modulus as **−1.854** (p = 0.120, not significant). The printed equation has +1.85 H, and the text says H correlates positively with all three properties.
+- The text says all p-values are below 0.001; Table V shows 0.120 (modulus, H) and 0.319 (elongation constant).
+- One paragraph says both linear and polynomial regressions gave a marginal fit, 0.2 < R² < 0.5; the next column reports R² of 0.82, 0.59 and 0.60.
+- The text gives the 45° elongation minimum for 0.5 mm strands as 351%; Table III has 353.00%.
+
+Rely on the tabulated measurements. Use the regressions only as trends inside the tested ranges.
+
+### 3. Relevance & Design Takeaways for FilaFabric
+The only systematic parameter sweep on a NinjaFlex mesh in the collection, and the closest data to FilaFabric's Crosshatch & Isogrid nets: measured directions of effect for strand width, gap, layer height and layer rotation. Its specimens are 1.8 mm thick (6–18 layers), several times thicker than FilaFabric's nets. The strands were modelled in SolidWorks and sliced in ideaMaker rather than written as G-code, and no nozzle, temperature or speed is reported. Its values are trends, not settings.
+
+### 4. Flat-sheet source review — 26 October 2026
+
+**Evidence:** pp. 2–7, Tables I–VI, Figs. 2–9. **Status:** M, a multi-layer flat net printed on the bed, much thicker than the target sheets.
+
+**Geometry and testing** (pp. 2–3, Table I, Figs. 2–4):
+- Each layer is a set of parallel strands, and each layer is rotated by θ from the one below; at 60°, every third layer is back in the starting direction.
+- T is the strand thickness and D the gap between adjacent strands in a layer (Fig. 2a), so the pitch is T + D. D was set to 0.5, 1, 1.5 and 2 × T.
+- Total thickness was held at 1.8 mm: 18, 12 or 6 layers at H = 0.1, 0.15 or 0.3 mm.
+- Strands were laid symmetric about the specimen axis. In the 90° specimens the openings appear as diamonds, so the strands ran at about ±45° to the pull (read from Figs. 3d and 4b).
+- Printed on a Raise3D Pro 2. The NinjaFlex datasheet values quoted are 26 MPa ultimate strength, 12 MPa modulus and 660% elongation (p. 2).
+- Tested on an MTS Insight 5 with a 5 kN load cell at 500 mm/min to break, five specimens per condition, mean ± SD (p. 3). Stresses are reported in MPa, but the cross-section used is not stated.
+
+**Measured results** (strength MPa / elongation % / modulus MPa):
+
+| Table II, p. 4: 0.15 mm layers, 90° | D = 0.5 T | D = T | D = 1.5 T | D = 2 T |
+|---|---|---|---|---|
+| T 0.4 mm | 4.64 / 403.69 / 3.99 | 3.15 / 358.88 / 2.41 | 2.56 / 369.91 / 1.61 | 2.13 / 364.90 / 1.28 |
+| T 0.5 mm | 4.45 / 438.16 / 3.68 | 3.27 / 412.03 / 2.25 | 2.65 / 409.55 / 1.56 | 2.15 / 386.57 / 1.35 |
+| T 0.6 mm | 5.21 / 461.73 / 4.22 | 3.95 / 438.64 / 2.51 | 3.24 / 433.57 / 1.84 | 2.61 / 429.21 / 1.54 |
+
+| Table III, p. 5: 0.15 mm layers, D = T | 30° | 45° | 60° | 90° |
+|---|---|---|---|---|
+| T 0.4 mm | 3.56 / 361.02 / 2.46 | 3.52 / 364.04 / 2.55 | 3.47 / 340.36 / 2.94 | 3.15 / 358.88 / 2.41 |
+| T 0.5 mm | 3.57 / 368.05 / 2.80 | 3.56 / 353.00 / 2.82 | 3.52 / 361.63 / 3.04 | 3.27 / 412.03 / 2.25 |
+| T 0.6 mm | 4.58 / 390.69 / 3.14 | 4.32 / 375.81 / 3.34 | 4.26 / 379.96 / 3.60 | 3.95 / 438.64 / 2.51 |
+
+| Table IV, p. 5: T 0.4 mm, 90° | D 0.2 | D 0.4 | D 0.6 | D 0.8 |
+|---|---|---|---|---|
+| H 0.1 mm (18 layers) | 4.67 / 332.78 / 4.91 | 2.76 / 264.07 / 2.68 | 1.98 / 247.59 / 1.69 | 1.88 / 295.99 / 1.34 |
+| H 0.15 mm (12 layers) | 4.64 / 403.69 / 3.99 | 3.15 / 358.88 / 2.41 | 2.56 / 369.91 / 1.61 | 2.13 / 364.90 / 1.28 |
+| H 0.3 mm (6 layers) | 5.29 / 507.65 / 3.25 | 3.95 / 477.11 / 2.15 | 3.02 / 433.86 / 1.79 | 2.47 / 383.85 / 1.54 |
+
+**Authors' findings** (pp. 4–7):
+- Strength and modulus fall about linearly as the gap widens (strength R² > 0.9, modulus R² 0.893). Elongation follows the gap only weakly (R² 0.4–0.8).
+- From 30° to 90° rotation, strength falls by at most 0.41 MPa (11%). For the 0.5 and 0.6 mm strands, 90° gave the lowest modulus and the highest elongation. The authors suggest the elongation dip at 45° comes from less interlayer contact area.
+- Thicker layers raised strength and elongation. 0.1 mm layers gave the least elongation (248–333%).
+- The conclusion recommends thicker strands and thicker layers and reports no significant difference between rotation angles, although the results section favours 90° for wearables.
+- The wearable demonstration (p. 7, Fig. 9) uses T 0.4, D 0.2, 90°, H 0.3, the most extensible configuration in Table IV.
+
+**Proposed translation:** use Lu's tables as the starting matrix for FilaFabric swatches (strand width, gap as a multiple of width, layer height and per-layer rotation), but at FilaFabric's thickness of one to three layers, in Foamy or NinjaFlex 85A on the MK3S. Pull on the strand axes as well as on the bias: a 0/90 net is tetragonal (54), and Lu pulled only on the bias.
+
+### 5. Full-text pass — 26 October 2026
+
+**What the primary adds to Brad's summary (5).** Brad's one-line description is accurate. The primary adds that:
+- the regression covers only the 90° meshes, with H, T and D as terms and no θ;
+- the fit is moderate for strength (R² 0.82) and weak for elongation and modulus (about 0.6);
+- the paper's text and tables disagree on the sign and significance of the layer-height term for modulus;
+- the "rotation angle" is a cumulative layer-to-layer rotation, not the strands' angle to the load.
+
+**Not given:** nozzle diameter, temperatures, speeds, cooling, slicer overlap or extrusion settings, specimen die or width, and the cross-section used for stress.
+
+**Pattern implications.** Proposals, untested in FilaFabric:
+1. **Gap as a multiple of strand width is the main stiffness control.** Widening the gap from 1× to 2× the strand width cut modulus by 39–47% and strength by 32–34% across all three widths (Table II).
+2. **Fewer, thicker layers stretched further** at the same total thickness: 384–508% with 0.3 mm layers against 248–333% with 0.1 mm layers (T 0.4 mm, 90°). For a given sheet thickness, test the thickest reliable layer first.
+3. **Rotated stacks** (30°, 45°, 60° per layer) are a further net family, a "rotate each layer" option for Crosshatch. Lu found strength nearly unchanged and modulus highest around 60°.
+4. **Compare Lu's chosen wearable mesh** (T 0.4, D 0.2, H 0.3, 90°: 5.29 MPa, 508%, 3.25 MPa) against a thin FilaFabric equivalent, to see how much of its stretch survives at one to three layers.
 
 ---
 

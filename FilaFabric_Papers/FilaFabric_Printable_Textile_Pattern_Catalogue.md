@@ -44,6 +44,18 @@ These are development records, not newly implemented presets. Existing-card mapp
 - **Same-layer crossings:** Diak & Diak (9) warn that printing both directions in one layer breaks strand continuity at each crossing. Compare a true two-pass version against the settled single-height version.
 - **Wavy instead of straight:** for stretch, prefer wave or zigzag lines. Steinmetz & Ehrmann (57) built their patterns on elastic fabric (waves and a Fibonacci spiral) without linear parts, so the fabric could extend without stretching the polymer.
 
+*Added 26 October 2026 from the primaries (66, 67).*
+- **Wave segments as a strain limit** (Pattinson, 66, pp. 5–7, Fig. 2): put one or two trapezoidal waves (height $h_w$, width $l_w$) into each straight segment. The strand is soft while the waves straighten and stiff once taut. Wave height moved the stiffness peak to above 40% strain in printed NinjaFlex elements. Controls: wave height, width and number of waves per segment. A per-direction choice gives anisotropic cells; Pattinson matched rat muscle at 685 kPa across and 111 → 453 kPa along. Elements showed no perceptible change over 1800 cycles to 32%.
+- **Strand spacing as a bond control** (66, p. 7): parallel strands printed touching weld into one, while a small gap keeps them apart and about five times softer at low strain. See M9.
+- **Print order and continuity** (66, p. 5): print all lines of one direction, then the other, as one continuous path where possible; interruptions caused defects. Thicker local strands came from extra passes over the same path.
+- **Same-height fused control** (Li, 67, FusedGrid G-code): both families at the same nozzle Z (0.5 mm, 0.5 mm strands, 4 mm pitch), so the second family is pressed through the first. It is the fused twin for any sliding version (N1, M9).
+- **Measured parameter effects** (Lu et al. 2022, 69). NinjaFlex stacks of parallel-strand layers, 1.8 mm thick, pulled with the strands at about ±45° to the load:
+  - **Gap is the main stiffness control.** With the gap set as a multiple of strand width, going from 1× to 2× cut modulus by 39–47% and strength by 32–34% (0.4–0.6 mm strands, 0.15 mm layers, 90°).
+  - **Fewer, thicker layers stretch further** at the same thickness: 384–508% elongation with 0.3 mm layers against 248–333% with 0.1 mm layers.
+  - **Per-layer rotation** (30°, 45°, 60°, 90°) changed strength by at most 11%. 90° gave the lowest modulus and, for 0.5–0.6 mm strands, the highest elongation. A "rotate each layer" option for Crosshatch is a cheap extra family.
+  - **Use the tables, not the regression.** The regression covers 90° only, fits elongation and modulus weakly (R² about 0.6), and the paper's text and tables disagree on the layer-height term.
+  - **The values do not transfer as they stand.** FilaFabric's nets are one to three layers, so treat these as directions of effect, and pull on the strand axes as well as on the bias.
+
 ### S3 — Meanders and loops with sparse ties
 
 **Construction proposal:** connect planar serpentine, looped or space-filling paths using selected in-plane ties instead of a full second hatch. **Evidence:** Kabir (25), Schumacher (54) and Sterman (58) offer loop/network or flat-toolpath context, not this exact route. Kabir's knit courses require assembly; they are not tall pile. **Existing home:** Meander and Coil; Meander currently uses backing. **Controls:** bend radius, loop aspect ratio, tie location/interval and gap. **Gate:** attached regions after release, open apertures, extension and cyclic set. A long continuous path alone need not hold its two-dimensional shape.
@@ -57,7 +69,7 @@ These are development records, not newly implemented presets. Existing-card mapp
 - **Rotating-triangle hexagon** (Chen 6, Konaković 34): inclination θ within ±π/6, thickness ratio t/l, hinge width. Fully open, the linkage *is* the kagome lattice, a good pairing with S2. Edge vertices add freedom, so add a border band.
 - **Rotating squares and triangles** (Shajoo 55): Shajoo printed ABS squares or triangles over a PLA first layer on slit, pre-stretched knit, with the fabric as the hinge. Proposed single-material FilaFabric version: polygons joined only at corners by short TPU necks. Fillet the corners, where Shajoo's 3 × 3 square version delaminated under repeated loading.
 - **Nodule-and-fibril net** (named in Kabir 2025's review, primaries not held): thick nodes joined by thin angled fibrils.
-- **Arrowhead band with side rails** (Ariel 1): band width, cell size, hinge angle, rail width. Related precedent: Spahiu et al. 2020's arrowhead-shaped auxetic dress in FilaFlex (Shore A82, 130 × 130 mm per Jayswal-Adanur, 23; arrowhead and Filaflex also per Manaia, 43). Brad (5) cites the same dress without naming the shape.
+- **Arrowhead band with side rails** (Ariel 1): band width, cell size, hinge angle, rail width. Related precedent: Spahiu et al. 2020's arrowhead auxetic dress in FilaFlex Shore A82, now held as Paper 68. It used 33 panels of 130 × 130 mm, each 4 columns × 8 rows of hollow arrowheads, 1.8 mm and 9 layers thick, joined by 3D pen. The paper gives no cell dimensions or mechanics, and its authors found joining hard because the panel edges had small contact areas, an argument for side rails or joining tabs.
 - **Kirigami slit sheet** (Nakajima 48): minimum printable slit about 1 mm at a 0.4 mm nozzle. Best h/i was about 0.2–0.32 depending on layup, and alternating 90/0 passes gave the most robust result.
 - **Drape by geometry** (Kabir 2022, 24): in this review's visual reading of the paper's Fig. 1, convoluted, long-ligament cells (floral, curly) draped most, and geometries with continuous straight or gently curved lines spanning many cells draped least. The authors give only sample numbers, so this is an interpretation to test.
 
@@ -142,23 +154,33 @@ Line/Step and Line/Hexagon are explicit cases of *a second pass chosen to tie do
 
 ### M9 — Bond masks and release zones (new, 24 October 2026)
 
-**Construction:** chosen regions or crossings deliberately left **unbonded**, so stacked passes or crossing strands can slide or separate there. **Evidence and leads:**
-- Pattinson et al. 2019, cited in Sitotaw (56) and not held: printed meshes where the toolpath lets the strand cool before it touches the earlier strand in chosen areas, so those strands are not connected, slide, and give noticeably more drape.
-- Li et al., cited in Sapkota (52), not held: one strand printed flat and the other laid over it with the print head slightly raised, forming an arc-shaped channel that lets the strands move without direct attachment. All-sliding grids were very flexible; all-fused grids were stiffer and quasi-isotropic.
-- Takahashi & Kim (61): fibre-to-pillar adhesion varied with print speed and wave amplitude (an upright pillar build).
-- Release layers: Loh & Pei used tape on the polymer before an inserted layer (41); a Sterman student placed a separator during a pause (58); Wang's stacked chain-mail layers were deliberately unlinked to stay flexible (63).
+**Construction:** chosen regions or crossings deliberately left **unbonded**, so stacked passes or crossing strands can slide or separate there. *Revised 26 October 2026 from the primaries (66, 67).* Three bond controls are now demonstrated, from cheapest to hardest:
 
-**Existing home:** a crossing-treatment option on two-family nets and Weave. **Controls:** bond pattern (all fused, alternate, zone-only), lift height or cool-down delay, mask image. **Gate:** confirm that masked crossings actually move after printing; inspect sag, stringing and snagging; compare drape and stretch against an all-fused control. Retrieve Pattinson et al. and Li et al. before choosing settings.
+1. **Lateral gap between parallel strands (no Z move).** Pattinson (66, p. 7, Fig. 2G–H): parallel wavy TPU elements printed touching weld into one thicker element, and a small lateral gap keeps them apart. In five-strand units, all gapped gave 20 N/m to 10% strain (207 N/m at 40%), the three central ones bonded gave 53 → 150 N/m, and all bonded gave about 110 N/m. **Measured**; the gap size is not stated.
+2. **Lifted crossing, cooled before contact.** Pattinson (66, p. 13, Fig. 6a): the nozzle lifts as it passes over an earlier orthogonal strand, so the new strand cools before it lands. The unbonded swatch deflected about 230% more as a cantilever and draped over a golf ball. **Demonstrated once**, on what looks like a dense parallel-line swatch, with no lift height, speed or temperature given.
+3. **Captive channel.** Li et al. (67): the crossing family is laid as one raised span, then a printed arch fused to the lower strand encloses each crossing so the strands slide without separating. This was demonstrated in PLA at 180 °C with the fan off on a Prusa i3 MK3S; see N1 for the G-code geometry. The channel's orientation decides which strand slides. Fused, channel-X and channel-Y crossings mixed in a 2 × 2 or square-loop cell gave quasi-isotropic, orthotropic or highly anisotropic responses, and zero stiffness until a sliding limit (**simulated**; prototypes compared qualitatively). An all-fused grid buckles out of plane under diagonal shear, while an all-sliding grid shears in plane. Along the strand directions, fused and sliding grids behave the same.
+
+Other release routes: a layer left unbonded so it buckles in compression (Pattinson's brace, 66, p. 9); tape over a printed template (66, p. 13); tape on the polymer before an inserted layer (Loh & Pei, 41); a separator placed during a pause (a Sterman student, 58); stacked chain-mail layers deliberately unlinked (Wang, 63). Takahashi & Kim (61) found fibre-to-pillar adhesion varied with speed and wave amplitude in an upright pillar build.
+
+**Corrections to the 24 October leads.** Li's method is not a single arched upper strand (Sapkota's description, 52); without the channel a lifted family is held only at its ends. The flat-to-parabolic deployment in Li used one sliding strand in an otherwise fused structure, not an all-sliding grid.
+
+**Existing home:** a crossing-treatment option on two-family nets and Weave, plus a strand-spacing option on parallel-strand bundles. **Controls:** bond mask with three crossing states (fused, slide along X, slide along Y), or two for lifted crossings; lateral gap; lift height and cool-down; channel height and leg lengths; mask image. **Gate:** confirm that masked crossings actually move after printing; test shear and drape, not just stretch along the strands; inspect sag, stringing, snagging and channels fused to the sliding strand; compare with an all-fused twin. **Order of trials (proposal):** lateral gap first (no Z, measurable), then lifted crossings, then captive channels. TPU bonds far more readily than Li's cool PLA, so none of these settings transfers unverified.
 
 ### N1 — Low crossing bridges and dipped strands
 
 **Construction:** strands rise locally over earlier paths and return to the sheet envelope. **Existing home:** Dip Weave and Weave's ramps. **Method transfer:** Takahashi & Kim (61) contributes sequencing/clearance lessons; its upright pillar-and-drawn-fibre architecture is excluded. **Controls:** rise, ramp length, span, crossing angle and support position. **Gate:** inspect touchdown and snagging; check support/bed clearance and the whole nozzle body around previously deposited paths. A weft deposited after all warps crosses over all of them even if it dips between: it does not become alternating independent yarn interlace.
 
 *Added 24 October 2026.*
-- **Sliding crossing:** a local arch over each crossing, sized from bead height plus clearance, so the upper strand bridges without fusing (Li et al., via 52). This is the bed-flat route to non-fused crossings; see M9.
+- **Sliding crossing** (*revised 26 October 2026 from the primary, Li et al., 67; see M9*). The earlier description, "a local arch over each crossing so the upper strand bridges" (via Sapkota, 52), was incomplete. The authors' SlidingGrid G-code (PLA, Prusa i3 MK3S, 0.5 mm strands at 4 mm pitch) does this:
+  - **Lower family** at nozzle Z 0.5 mm.
+  - **Upper family** as one continuous span at nozzle Z 1.5 mm across the whole 80 mm field: a 12 mm bed anchor at Z 0.2, a 12 mm ramp up, the span, and a mirrored ramp down. It is not a lift at each crossing, and it is extruded at about 55% of the lower strands' flow.
+  - **A captive channel** at every crossing: from the lower strand at Z 0.5, 1.20 mm before the crossing, up to Z 2.5 directly above it at 100 mm/min, then down to Z 0.5 1.68 mm after it at 200 mm/min, at about 47% flow.
+  - The paper's text gives a 1.0 mm channel height (twice the strand width), a second leg 20% longer and 300 mm/min. The repository file uses a 40% longer leg and the slower speeds.
+- **Per-crossing lift:** Pattinson (66) lifts the nozzle locally over each crossing strand so it cools before landing, the closest primary to a per-crossing N lift. No height is reported.
+- **Envelope:** Li's channel apex at nozzle Z 2.5 mm gives roughly 2–2.5 mm of relief. Record it as the sheet's actual Z envelope and check it against the shallow-texture brief.
 - **Filleted up/down strand:** Kim & Lee (31) modelled each crossing strand as a filleted zigzag whose crossing height is line thickness plus half its radius.
 - **Bridges may be stiff:** Laput (36) found strands made by bridging between two supports fairly rigid, "more bristle-like than hair-like", compared with its own drawn hairs. A raised FilaFabric span may likewise be stiffer than expected; measure it.
-- **Print-order graph for lifts:** any raised path must be printed before a nearby lower path whose nozzle-body clearance it would block. Wu (64, chapter 3) orders edges with a collision graph that must be acyclic. For a cycle, Wu suggests splitting edges into smaller pieces but did not implement it.
+- **Print-order graph for lifts:** a lower path must be printed **before** a nearby raised path that would otherwise block the nozzle body (corrected 26 October 2026; the earlier wording had the order reversed). Wu (64, chapter 3) orders edges with a collision graph that must be acyclic. For a cycle, Wu suggests splitting edges into smaller pieces but did not implement it.
 - **Crossing quality metric:** report mean and maximum crossing-angle deviation from 90° for field-aligned nets (Guo, 18).
 
 ### N2 — Shallow corrugation and tactile relief
@@ -198,7 +220,7 @@ Separate optical colour-area halftoning, flow/speed texture, XY wave/phase textu
 |---|---|---|
 | 1 | S1/S2 flat controls, M1 lace/backing, M2 halftone calibration, M7 moiré (cheap, uses existing two-family nets). Reuse existing cards. | Connected releasable sheets; measured width/height; bed and over-net calibration. |
 | 2 | S3–S7 cells/ties and new cell families, M3 bindings, M4 loops, M5 gradients, M6 tie-down constructions. | Correct repeats/order, bonded/mobile crossing status, float limits, directional extension and peeling; symmetry class confirmed by 0°/45°/90° tests. |
-| 3 | M8 scales, M9 bond masks (after retrieving Pattinson and Li), N1 crossing lifts, N2 texture, then N3 colour-exposure trials. | Printed support, clearance, actual Z envelope, ramp continuity, verified sliding where claimed, and comparison with flat controls. |
+| 3 | M8 scales, M9 bond masks (primaries read 26 October: start with Pattinson's lateral gap, then lifted crossings, then Li's channels), N1 crossing lifts, N2 texture, then N3 colour-exposure trials. | Printed support, clearance, actual Z envelope, ramp continuity, verified sliding where claimed, and comparison with flat controls. |
 
 Each candidate should retain: stable ID, class and crossing treatment, source/page locators, evidence type, existing-card mapping, repeat, path order/connectivity, colours/tools, material/profile, nominal layers, measured thickness, local rise/slope/span, width/pitch limits, edge treatment and validation state. These are proposed documentation fields, not an existing engine schema.
 
@@ -266,8 +288,12 @@ Added 24 October 2026. These are the authors' own machines and materials, listed
 | DefeXtiles (14) | Prusa i3 MK3S, 0.4 | TPU | 220 / 50 °C | 1,250 mm/min | 0.2 | extrusion multiplier 0.30; upright, excluded |
 | Diak 2024 (9) | — | TPU (advice) | ±5 °C window | <15 mm/s | — | direct drive, low jerk |
 | Loh & Pei (41) | Prusa i3 MK3, 0.4 | PLA | 215 / 60 °C | 20 mm/s first layer | 0.2 / 0.1 | Live-Z only +0.005 mm with mesh inserted |
+| Pattinson (66) | Printrbot Simple Metal | NinjaFlex | about 210 °C / — | — | one or a few layers | custom Python G-code; no nozzle, layer or lift values given |
+| Li et al. (67) | Prusa i3 MK3S, 0.4 | PLA | 180 / 60 °C, fan off | text: 600 mm/min, 300 for channels; G-code: 1200 / 600 / 100–200 | nozzle Z 0.5 / 1.5 / 2.5 | 0.5 mm strands; sliding channels |
+| Spahiu (68) | Orcabot XXL, 0.4 | main geometry; FilaFlex A82 for most prints | 245 / 65 °C | 50 mm/s | 0.2 × 9 = 1.8 mm | Table 1 names no material |
+| Lu et al. (69) | Raise3D Pro 2 | NinjaFlex | — | — | 0.1 / 0.15 / 0.3 (18 / 12 / 6 layers, 1.8 mm) | strands 0.4–0.6 mm, gaps 0.2–1.2 mm; CAD strands sliced in ideaMaker |
 
-Patterns across the TPU rows: about 220–240 °C, slow speeds (5–30 mm/s), direct drive, and 0.1–0.25 mm layers. Faster speeds jammed or under-melted, and the slowest dripped (48).
+Patterns across the TPU rows: about 220–240 °C, slow speeds (5–30 mm/s), direct drive, and 0.1–0.25 mm layers. Faster speeds jammed or under-melted, and the slowest dripped (48). Added 26 October: Spahiu's main-geometry settings (68) were hotter and faster; Li's PLA (67) was printed at a low 180 °C with no fan, and the authors credit their speed, extrusion and temperature settings with keeping the lifted strands from adhering.
 
 ## Scope and how to use this catalogue
 
