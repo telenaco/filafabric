@@ -10,13 +10,13 @@
     }
   ],
   "scripts": {
-    "test": "node --test",
-    "serve": "node tools/serve.mjs --open",
-    "vendor": "node tools/vendor-three.mjs",
-    "golden": "node tools/update-golden.mjs",
-    "profiles": "node tools/profiles-index.mjs",
-    "source:snapshot": "node tools/source-snapshot.mjs",
-    "source:verify": "node tools/source-verify.mjs"
+    "test": "node --test \"dev/tests/**/*.test.js\"",
+    "serve": "node dev/tools/serve.mjs --open",
+    "vendor": "node dev/tools/vendor-three.mjs",
+    "golden": "node dev/tools/update-golden.mjs",
+    "profiles": "node dev/tools/profiles-index.mjs",
+    "source:snapshot": "node dev/tools/source-snapshot.mjs",
+    "source:verify": "node dev/tools/source-verify.mjs"
   },
   "devDependencies": {
     "three": "^0.169.0"

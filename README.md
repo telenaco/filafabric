@@ -16,14 +16,14 @@ The first physical print has not been done yet, so start with a small test swatc
 ## Whole repeats at the edge
 
 A swatch is sewn or welded to the next piece, so a pattern meets the edge at the end of a repeat, never part-way
-through one (`src/engine/repeats.js`). The wave length, line spacing, tile or cell size you set is a target: the
+through one (`site/src/engine/repeats.js`). The wave length, line spacing, tile or cell size you set is a target: the
 pattern uses the nearest size that fits a whole number of times (9.6 zigzags in 100 mm become 10 of 10 mm), its lanes
 run from one edge to the other, and cells are whole: bubbles and chainmail rings
 sit inside the edge, Voronoi cells are closed by a wall along it, Truchet and basket blocks fill the swatch, star
 lattices meet the edge on a line of symmetry. A pattern that meets a straight edge at a slant (a 45° hatch, a
 herringbone, a radial web or rosette) cannot end on a whole repeat, and is cut there as before.
 
-Wavy lanes (the Zigzag mesh, the backing mesh, the wavy backings; `src/engine/wavegrid.js`) lie half a spacing in from
+Wavy lanes (the Zigzag mesh, the backing mesh, the wavy backings; `site/src/engine/wavegrid.js`) lie half a spacing in from
 the edges they run along, as if the swatch were cut from a larger piece: a piece above or below carries them on at the
 same spacing, and a wave that swings past the edge is cut by it, so the top and bottom meet the pattern the way the
 sides do. (Until 21 October 2026 the outermost lines were kept a full swing in, which left a row of open notches
@@ -31,7 +31,7 @@ along the top and bottom deeper than the cells inside.)
 
 ## Demo prints
 
-`node tools/export-demo-prints.mjs` writes twenty small swatches (60 × 60 mm, or `--size=80`) to `DemoTestingPrints/`, easiest
+`node dev/tools/export-demo-prints.mjs` writes twenty small swatches (60 × 60 mm, or `--size=80`) to `local/demo-prints/`, easiest
 to hardest, numbered 01 to 20 so they can be laid out in order. Each file name is the number, the design, the preset it
 started from, the size and the values of its settings; the first lines of the file repeat them, and `INDEX.md` lists what to
 look at in each. The folder is git-ignored: the files are made on your machine.
@@ -39,38 +39,38 @@ look at in each. The folder is git-ignored: the files are made on your machine.
 ## The password gate
 
 The studio opens on a "Coming soon" page that says what it is and asks for one password (no username). Only a salted hash of the
-password is in the repository (`src/ui/gate-config.json`); the studio itself is loaded only after the password is right.
+password is in the repository (`site/src/ui/gate-config.json`); the studio itself is loaded only after the password is right.
 
 ```bash
-node tools/set-password.mjs                  # a new random password, printed once
-node tools/set-password.mjs "a longer phrase"  # or choose your own (8 characters or more)
+node dev/tools/set-password.mjs                  # a new random password, printed once
+node dev/tools/set-password.mjs "a longer phrase"  # or choose your own (8 characters or more)
 ```
 
-Then commit `src/ui/gate-config.json` and push. **This is a soft gate**: the site is static, so anyone who knows the file
+Then commit `site/src/ui/gate-config.json` and push. **This is a soft gate**: the site is static, so anyone who knows the file
 names can still download the studio's code. It keeps casual visitors out; for real access control put the site behind
 Cloudflare Access (free for small teams) instead of, or as well as, this page. *Lock the studio* in the ⋯ menu locks this
 browser again.
 
-**Opening the gate for a while:** `"open": true` in `src/ui/gate-config.json` lets everyone straight into the studio, with no
+**Opening the gate for a while:** `"open": true` in `site/src/ui/gate-config.json` lets everyone straight into the studio, with no
 password page and no lock in the menu. The password stays set: delete the flag, or set a new password with
-`node tools/set-password.mjs` (which writes the file without it), commit and push to close the gate again. The gate is currently
+`node dev/tools/set-password.mjs` (which writes the file without it), commit and push to close the gate again. The gate is currently
 closed and uses the existing password hash.
 
 ## Feedback
 
 *Feedback* in the top bar opens a short form with three choices: what works and what doesn't, a pattern request, or a
-problem report. Messages go to the Formspree form `https://formspree.io/f/xeaevvbn` (set in `src/ui/feedback.js`), which
+problem report. Messages go to the Formspree form `https://formspree.io/f/xeaevvbn` (set in `site/src/ui/feedback.js`), which
 emails them; a reply address is optional, and Formspree makes it the reply-to. The form sends text only (no file uploads,
 which Formspree charges for), so a pattern request offers *Email it with your picture* instead: a mailto to bubakidesign@gmail.com with the description
 filled in. A problem report (also opened by *Report this problem* when a design can't build) carries the recent error
 history and the current settings, shown in full before sending; never the drawing. These messages are separate from the
-anonymous export statistics in `STUDY_SETUP.md`.
+anonymous export statistics in `docs/STUDY_SETUP.md`.
 
 ## Privacy notice
 
 The site sets no cookies and loads nothing from other sites (its font, Instrument Sans, is served from
-`vendor/fonts/instrument-sans/` under the SIL Open Font License). A first visit shows a short *Cookies and privacy* notice
-(`src/ui/privacy.js`): it says what stays in the browser and that exports are counted anonymously, links to `study.html`
+`site/vendor/fonts/instrument-sans/` under the SIL Open Font License). A first visit shows a short *Cookies and privacy* notice
+(`site/src/ui/privacy.js`): it says what stays in the browser and that exports are counted anonymously, links to `site/study.html`
 and to the feedback form, and *Don't count my exports* turns the statistics off for that browser. ⋯ › *Privacy and
 cookies* brings it back. Bump `PRIVACY_VERSION` there to show the notice again to everyone after changing what is counted.
 
@@ -78,7 +78,7 @@ cookies* brings it back. Bump `PRIVACY_VERSION` there to show the notice again t
 
 When the fabric check finds a problem (pieces that don't touch, strands steeper than 25°, strands leaving the outline,
 or crossings under a strand already printed), the summary says so in plain words and offers *Fix it*
-(`src/ui/fix-geometry.js`). It builds up to 14 variants in the background worker, each moving one of the design's own
+(`site/src/ui/fix-geometry.js`). It builds up to 14 variants in the background worker, each moving one of the design's own
 sliders a little, then more, then several together, and applies the first one after which the check passes, as one step
 that Undo takes back. Changing any setting, or *Stop looking*, ends the search.
 
@@ -88,7 +88,7 @@ Every design with a pattern (Squiggle & Gyroid, Loop pile, Coil, Bouclé, Relief
 Bubbles, Halftone net and Star lattice) offers **Your picture** next to its built-in patterns. One picture is shared by all
 of them: load it once (choose it, or drop it on the pattern picker) and any of those designs can use it with one click.
 It is laid over the whole piece, a preview corner or an export takes its part of it, and its tones are stretched to its
-own darkest and lightest (`src/engine/picture.js`), so a flat photo still uses the whole range. The design's own sliders
+own darkest and lightest (`site/src/engine/picture.js`), so a flat photo still uses the whole range. The design's own sliders
 set the range (loop size, line thickness, cell size); the picture says where in it each place falls.
 
 Each design reads it one way, set by `picture: 'positive'` or `'negative'` on its pattern control. They are all positive
@@ -103,7 +103,7 @@ The repeating garment panel does not use the picture yet. Designs whose geometry
 Lines laid in lanes (the squiggle, coil, zigzag, crosshatch and the other hatched designs) print the way a person would lay
 them: each layer from its bottom-left corner (vertical lines from the left), row after row, each row the opposite way to
 the one before, and every piece of a row before the next row. Where the outline cuts a row with a gap narrower than
-**60 mm** (`BRANCH_GAP` in `src/engine/fill.js`) the nozzle jumps the gap and carries on along the row, so both sides grow
+**60 mm** (`BRANCH_GAP` in `site/src/engine/fill.js`) the nozzle jumps the gap and carries on along the row, so both sides grow
 together; a wider gap splits the piece into branches, and the branch being printed is finished before the next one starts
 (where branches join again, the joined part comes after all of them). The strand ordering keeps that order instead of
 reordering lines for less travel, because the order is what keeps the texture even; an imported drawing's own lines are
@@ -117,7 +117,7 @@ http://localhost:5173/ in your browser. Close the window to stop it. From a term
 ```bash
 npm run serve     # server + browser
 npm test          # engine and UI-logic regression tests
-node tools/audit-printability.mjs # regenerate the default-swatch gallery ranking
+node dev/tools/audit-printability.mjs # regenerate the default-swatch gallery ranking
 npm run golden    # re-record the 20 x 20 golden summary after an intended engine change
 ```
 
@@ -146,7 +146,7 @@ height and the red tight-spot marks (the clearance model's moves that come too c
 where" in the check turns them on too). For the loop pile, everything else lives under Advanced settings (38
 settings in groups that show what you changed). The page always opens on the Zigzag mesh (what was set in the other
 designs is kept for when you choose them; a shared link opens the design it was made from). The printer chip in the
-header opens the printer setup: printer, filament, the **layer thickness** (suggested buttons plus an imported print preset's exact height) and **Extra layers**. Printer search starts with two suggestions and includes the Ender-3 family; typing searches all profiles. Imported print defaults follow the selected printer/nozzle. Sample `.ini` and `.json` downloads and [import requirements](profiles/README.md) are linked in Printer setup. Settings sections start folded under a title
+header opens the printer setup: printer, filament, the **layer thickness** (suggested buttons plus an imported print preset's exact height) and **Extra layers**. Printer search starts with two suggestions and includes the Ender-3 family; typing searches all profiles. Imported print defaults follow the selected printer/nozzle. Sample `.ini` and `.json` downloads and [import requirements](site/profiles/README.md) are linked in Printer setup. Settings sections start folded under a title
 and a summary of their current values. Open a section to see its cards or sliders; choosing a card keeps the section
 open. Option and preset pictures use the same line colours as the preview. The **···** menu has Getting started,
 Save/Open settings file, Download error log and Reset this design. Undo/redo and **Share** (a link that
@@ -155,7 +155,7 @@ and seed in comment lines.
 
 ## Printers and filaments
 
-The printer and filament lists are the files in `profiles/machines/` and `profiles/materials/`, read the way a slicer reads its own folders. Each file can be this tool's JSON or what a slicer exports as it is:
+The printer and filament lists are the files in `site/profiles/machines/` and `site/profiles/materials/`, read the way a slicer reads its own folders. Each file can be this tool's JSON or what a slicer exports as it is:
 
 | Export | What it gives |
 |---|---|
@@ -163,24 +163,24 @@ The printer and filament lists are the files in `profiles/machines/` and `profil
 | A `.gcode` PrusaSlicer sliced | The config it carries at the end of the file |
 | Bambu Studio / OrcaSlicer preset (`.json`) | A printer or a filament |
 
-Bed size, nozzle and filament diameter, temperatures, flow, retraction, machine limits and start/end G-code are read; the slicer's own start and end G-code is kept where its placeholders can be filled and the rest is left out, with a note saying so. Run `node tools/profiles-index.mjs` (or `npm run profiles`) after adding or removing a file to refresh `profiles/index.json`; the local server does it on the fly. In the printer setup dialog **Add a printer or filament file…** keeps a file in this browser only, with a **Remove** button; to share it, put the file in the folder.
+Bed size, nozzle and filament diameter, temperatures, flow, retraction, machine limits and start/end G-code are read; the slicer's own start and end G-code is kept where its placeholders can be filled and the rest is left out, with a note saying so. Run `node dev/tools/profiles-index.mjs` (or `npm run profiles`) after adding or removing a file to refresh `site/profiles/index.json`; the local server does it on the fly. In the printer setup dialog **Add a printer or filament file…** keeps a file in this browser only, with a **Remove** button; to share it, put the file in the folder.
 
 The bundled filament choices include **NinjaTek NinjaFlex 85A (Midnight Black)**, **Generic TPE Flexible**, and
 **Generic PLA**, alongside the existing Filaflex and Generic FLEX profiles. These use PrusaResearch 2.5.12's
 classic MK3 / 0.4 mm reference settings. Generic TPE is a labelled Generic FLEX starting point for an unspecified
-spool; PLA is rigid. [Material sources and adaptations](profiles/MATERIAL_SOURCES.md) record the pinned upstream
+spool; PLA is rigid. [Material sources and adaptations](site/profiles/MATERIAL_SOURCES.md) record the pinned upstream
 revision and how cooling is mapped to this tool's path roles. First-layer heat is retained through bed extrusion;
 the printing temperature is sent once extrusion rises above the bed layer, including streamed exports.
 
 **Temperatures and retraction** in the printer setup show the chosen filament's nozzle temperature (first layer and
 the rest), bed temperature, retraction length and speed, the extra push after a travel, the seam gap and the lift on a
-travel, and can be changed there (`src/ui/filament-settings.js`). A change is kept with the print setup (undo, links,
+travel, and can be changed there (`site/src/ui/filament-settings.js`). A change is kept with the print setup (undo, links,
 saved files) and only for that filament: choosing another starts from its own values, and *Use the filament's values*
 undoes it. Retraction applies before every travel the filament's `min_travel` allows; after it, the filament is pushed
 back the same length plus its `restart_extra` (PrusaSlicer's *extra length on restart*, read from imported slicer
 files). A travel lifts the filament's `z_hop` over the highest thing printed so far (3 mm when it sets none), at its
 `travel_speed_hint` (150 mm/s when it sets none; a design's own travel speed wins), and a closed loop stops its
-`seam_gap` short of its own start before a travel (`src/engine/emit.js`).
+`seam_gap` short of its own start before a travel (`site/src/engine/emit.js`).
 
 **Filaflex 95A Foamy prints at 238 °C, retracts 1 mm at 40 mm/s before every travel, however short, pushes the same
 1 mm back at 20 mm/s, lifts 0.2 mm on a travel at 180 mm/s, and stops each loop 0.2 mm short of its start** (from 21
@@ -191,15 +191,15 @@ the cleanest retraction, 75 mm/s lost circles, and a 0.2 mm seam gap looked good
 6 cm after a travel, and 6 out and 7 back left a blob. 238 °C is below Recreus's 248 °C, so the foam rises a little less:
 check a swatch's width and weight. Circles at the very edges of that bed (it ran from 5 to 245 mm) printed dashed
 whatever their settings: keep test prints in the middle of the bed.
-`node tools/export-retraction-test.mjs` writes six 50 × 30 mm Zigzag mesh swatches, A to F (3, 4 and 5 mm, each with
-no extra and with 0.2 mm), to `DemoTestingPrints/retraction-test/` with an `INDEX.md`: one print with all six on the
+`node dev/tools/export-retraction-test.mjs` writes six 50 × 30 mm Zigzag mesh swatches, A to F (3, 4 and 5 mm, each with
+no extra and with 0.2 mm), to `local/demo-prints/retraction-test/` with an `INDEX.md`: one print with all six on the
 bed (A B C in front, D E F behind, each printed whole with its own retraction and marked by one to six short bars at
 its left), and each on its own. A move may carry its own retraction for this (`m.retraction`, read by the G-code writer
 and the statistics); the move between two swatches retracts and primes with the settings of the one it leaves
-(`tools/plate.mjs`). The swatches look much alike, as the difference is only where a strand starts and stops, so
-`node tools/export-seam-test.mjs` writes one print where that is all there is: circles of 20 mm, each a two-line brim
+(`dev/tools/plate.mjs`). The swatches look much alike, as the difference is only where a strand starts and stops, so
+`node dev/tools/export-seam-test.mjs` writes one print where that is all there is: circles of 20 mm, each a two-line brim
 as the studio prints one (two loops overlapping 20%, first layer only, each starting and closing on one spot), to
-`DemoTestingPrints/seam-test/` with an `INDEX.md`. A first version (nine blocks: 0.1–0.3 mm extra push, 15–40 mm/s
+`local/demo-prints/seam-test/` with an `INDEX.md`. A first version (nine blocks: 0.1–0.3 mm extra push, 15–40 mm/s
 push-back) showed the same knot and strings at every seam whatever the push, a little worse at 40 mm/s; so it is now
 twelve pairs, each changing one thing from the filament's own settings: the lift on a travel (0.2 mm, Recreus's z-hop,
 and 1 mm against the usual 3), the retraction (2.5 and 5 mm), its speed (40 and 90 mm/s), no extra push, the two loops
@@ -207,22 +207,22 @@ joined into one strand, and the temperature (243 and 238 °C, waited for with `M
 
 ## Printable SVG and garment panels
 
-**Import SVG** sits above the pattern settings. No drawing to hand? `samples/filafabric-sample.svg` is a 200 × 200 mm
+**Import SVG** sits above the pattern settings. No drawing to hand? `site/samples/filafabric-sample.svg` is a 200 × 200 mm
 sample with the main colours in it (red shapes to fill, a blue star cut out of one, green solids, wide red lines), and
-`samples/lace-sample.svg` is a 170 × 110 mm lace medallion drawn with the lace rules below: the import
+`site/samples/lace-sample.svg` is a 170 × 110 mm lace medallion drawn with the lace rules below: the import
 card offers to try it in one click or to download it and open it in Inkscape or Illustrator to see how it is set up.
 Every design takes a drawing and fills its red shapes with its own pattern; **Drawing & infill** is the one for a
 drawing on its own, its red shapes filled with a slicer infill pattern (gyroid, honeycomb…) instead, or only outlined.
 It is out of the gallery for now (`hidden: true` on its card, from 21 October 2026); links and saved files still open it.
 Colour and stroke width say what each part of the drawing does, and the import card says it too, under **How a drawing
-prints** (`DRAWING_GUIDE` in `src/ui/panels.js`, in every design):
+prints** (`DRAWING_GUIDE` in `site/src/ui/panels.js`, in every design):
 
 | In the drawing | What it prints |
 |---|---|
 | A closed shape in pure **red** (`#ff0000`) | Filled with the pattern |
 | A closed shape in pure **blue** (`#0000ff`) | Left empty: a hole |
 | A closed shape in pure **green** (`#00ff00`) | Printed solid: a coil if it is round, a zigzag otherwise, two layers, 20% overlap |
-| A closed shape in pure **yellow** (`#ffff00`) | For now printed solid, exactly like green. (Yellow will later carry the conformal mesh guides that bend the pattern; that machinery is kept, switched off by `YELLOW_PRINTS_SOLID` in `src/engine/drawing.js`.) |
+| A closed shape in pure **yellow** (`#ffff00`) | For now printed solid, exactly like green. (Yellow will later carry the conformal mesh guides that bend the pattern; that machinery is kept, switched off by `YELLOW_PRINTS_SOLID` in `site/src/engine/drawing.js`.) |
 | Shapes inside shapes | **The innermost shape decides** what prints in each place: red the pattern, blue nothing, green solid. Blue inside red cuts a hole in the pattern; red inside that blue is pattern again; green inside red is a solid on top of the pattern (a button) |
 | A lace | A green outline is the solid lace body; draw its openings inside it in blue and its patterned parts in red. The body lies on the bed round them and prints layer by layer with a flat pattern, as a slicer would: the body's first layer, the pattern's first, the body's second, the pattern's second; the pattern fills the red windows; a green shape inside a window is solid again, on top, last. With no red at all, the piece is the solid alone (no pattern, no brim) |
 | A shape that is not closed (a red line, for example) | Never filled; it is a line, printed as drawn at its stroke width |
@@ -231,7 +231,7 @@ prints** (`DRAWING_GUIDE` in `src/ui/panels.js`, in every design):
 
 The drawing's lines print first, on the first layer. A flat pattern keeps its own layers with a drawing: its first lies on the bed beside the lines (lifting over a line where it crosses one, and finishing on the edges it meets), its second one layer up; a raised design stands on the lines' layer. (Before 21 October 2026 every layer of a flat pattern was put at one height, a layer above the lines.)
 
-Colour comes from the fill, or from the stroke when the fill is `none`; the stroke width of a red or blue shape is only a marker. Physical document dimensions, margins and transforms are retained; resizing the design scales the drawing (and its line widths) too. A drawing that carries no colours at all (an older saved file) keeps the previous rule: closed paths are shapes and shapes inside shapes alternate fill, hole. **Fill its shapes with this pattern** cuts the pattern to the red area, less the blue holes in it. Save/Open settings includes the imported paths and their colours; share links omit them to keep links small. `tests/fixtures/red-blue-lines.svg` is a small example of all of this.
+Colour comes from the fill, or from the stroke when the fill is `none`; the stroke width of a red or blue shape is only a marker. Physical document dimensions, margins and transforms are retained; resizing the design scales the drawing (and its line widths) too. A drawing that carries no colours at all (an older saved file) keeps the previous rule: closed paths are shapes and shapes inside shapes alternate fill, hole. **Fill its shapes with this pattern** cuts the pattern to the red area, less the blue holes in it. Save/Open settings includes the imported paths and their colours; share links omit them to keep links small. `dev/tests/fixtures/red-blue-lines.svg` is a small example of all of this.
 
 **3D** tries the complete selected piece at its actual print settings in a cancellable worker, including pieces larger than 250 mm when the selected printer can fit them. There is no automatic 100 mm crop, 250 mm cutoff or 400,000-move ceiling in this mode. The shared full-toolpath move, loop/hair and default crossing-count ceilings are removed rather than raised to another arbitrary number. Available browser memory and JavaScript's actual array capacity still apply; independent algorithm-specific validity and input-format guards remain. **Cancel preview** stops it and opens the lightweight view. Choosing 3D explicitly keeps any failure visible rather than silently reducing settings.
 
@@ -256,16 +256,16 @@ include texture repeat and backing spacing, and describe their single-filament o
 To count designs and settings in a folder of automatically named exports, run:
 
 ```bash
-node tools/tally-exports.mjs "C:/Users/me/Downloads"
-node tools/tally-exports.mjs "C:/Users/me/Downloads" --json
+node dev/tools/tally-exports.mjs "C:/Users/me/Downloads"
+node dev/tools/tally-exports.mjs "C:/Users/me/Downloads" --json
 ```
 
 This local tally reads filenames and sends nothing to a server. Renamed files may not be recognizable. For online
-anonymous export and build-failure statistics, see [STUDY_SETUP.md](STUDY_SETUP.md). Collection stays off until the
+anonymous export and build-failure statistics, see [STUDY_SETUP.md](docs/STUDY_SETUP.md). Collection stays off until the
 Cloudflare database and enable flag are configured; visitors then see a notice above Export. Download error log saves
 recent failures and the current design locally, including any drawing, so share that file deliberately.
 
-The original printer samples now live in ignored `reference/local-samples/`. They are retained as profile provenance, outside the deployable source. There were no STL files in this project. Engine modules, tests, vendored preview code and reference documentation remain in use.
+The original printer samples now live in ignored `local/printer-samples/`. They are retained as profile provenance, outside the deployable source. There were no STL files in this project. Engine modules, tests, vendored preview code and reference documentation remain in use.
 
 ## First prints (spec section 9)
 
@@ -284,6 +284,17 @@ at the same height (normal at 50 % overlap, and not removed by more room). `leg_
 `clearance` 0 the crossings alone still flag about 1,600 moves (3 %).
 Use the count to compare layouts, not as pass or fail.
 
+## Project layout
+
+| Folder | What it holds | In git | Served by the website |
+|---|---|---|---|
+| `site/` | The website: pages, `src/` (engine and UI), `profiles/`, `vendor/`, `samples/`, `functions/` (study API) | yes | yes: Cloudflare serves this folder |
+| `dev/` | `tests/`, `tools/` (local server, snapshot and export scripts), `migrations/` (study database), `templates/` | yes | no |
+| `docs/` | Project documents, specs and plans, reference notes, study setup | yes | no |
+| `research/` | `reports/` (pattern research and the library plan), `implementation-pack/` (handbook, tickets, review), `papers/` (source PDFs) | reports and pack yes; papers no | no |
+| `local/` | Demo prints, printer samples, personal test files | no | no |
+| `_to-delete/` | Leftovers waiting to be checked and deleted | no | no |
+
 ## Where things are
 
 | Path | What |
@@ -296,21 +307,21 @@ Use the count to compare layouts, not as pass or fail.
 | `docs/ux-round-2-2026-10-14.md` | Second UX review: what was still in the way, the reference tools, and what changed |
 | `docs/superpowers/specs/2026-10-14-textile-gcode-generator-design.md` | The v1 design spec (architecture, data model, engine behaviour, tests, first-print plan) |
 | `docs/superpowers/plans/2026-10-14-textile-gcode-generator.md` | The v1 implementation plan (13 tasks, test-first) |
-| `reference/research-notes-2026-10-14.md` | MK3S limits, PrusaSlicer Generic FLEX values, Recreus Foamy parameters, sources |
-| `reference/line-algorithms-for-fabric-2026-10-14.md` | Research: which plotter line styles can become two-layer printed fabric, with a recipe for layer 2 and the next three designs to build |
-| `reference/g-code-analysis-2026-10-14.md` | What the user's own MK3S G-code and Bambu A1 mini 3MF contain (verified values, start/end blocks, Bambu notes) |
-| `reference/local-samples/Shape-Box_0.2mm_FLEX_MK3S_5m.gcode` | The user's sliced MK3S sample (PrusaSlicer 2.9.6, Generic FLEX): ground truth for the MK3S profile. **Local only, not published** |
-| `reference/local-samples/bambu lab a1 mini.gcode.3mf` | The user's Bambu Studio sample for the A1 mini (future sub-project 5). **Local only, not published** |
+| `docs/reference/research-notes-2026-10-14.md` | MK3S limits, PrusaSlicer Generic FLEX values, Recreus Foamy parameters, sources |
+| `docs/reference/line-algorithms-for-fabric-2026-10-14.md` | Research: which plotter line styles can become two-layer printed fabric, with a recipe for layer 2 and the next three designs to build |
+| `docs/reference/g-code-analysis-2026-10-14.md` | What the user's own MK3S G-code and Bambu A1 mini 3MF contain (verified values, start/end blocks, Bambu notes) |
+| `local/printer-samples/Shape-Box_0.2mm_FLEX_MK3S_5m.gcode` | The user's sliced MK3S sample (PrusaSlicer 2.9.6, Generic FLEX): ground truth for the MK3S profile. **Local only, not published** |
+| `local/printer-samples/bambu lab a1 mini.gcode.3mf` | The user's Bambu Studio sample for the A1 mini (future sub-project 5). **Local only, not published** |
 
 Code:
 
 | Path | What |
 |---|---|
-| `index.html`, `src/engine/`, `src/ui/` | The site and the pure-JS engine |
-| `profiles/machines/`, `profiles/materials/` | Printers and filaments: this tool's JSON, or a PrusaSlicer / Bambu Studio export dropped in as it is (see `profiles/README.md`) |
-| `vendor/three/` | Vendored three.js for the preview |
-| `tests/` | `node --test` engine tests, including a golden summary for a 20 x 20 sample |
-| `tools/` | Local server, three.js vendoring, golden-file updater |
+| `site/index.html`, `site/src/engine/`, `site/src/ui/` | The site and the pure-JS engine |
+| `site/profiles/machines/`, `site/profiles/materials/` | Printers and filaments: this tool's JSON, or a PrusaSlicer / Bambu Studio export dropped in as it is (see `site/profiles/README.md`) |
+| `site/vendor/three/` | Vendored three.js for the preview |
+| `dev/tests/` | `node --test` engine tests, including a golden summary for a 20 x 20 sample |
+| `dev/tools/` | Local server, three.js vendoring, golden-file updater |
 | `Run Textile Tool.bat` | Double-click launcher |
 
 ## Roadmap
@@ -355,7 +366,7 @@ and the drawing then print as they would on their own, two layers higher; the br
 sliders show while it is on, and *Change colour after the backing* pauses (M600) once the mesh is down, so the design
 can be another filament. The setting is shared by every design, like the brim, and travels in links and saved files.
 Raised designs (loop pile, relief, fringe, spacer, pillar weave) stand on their own base and do not offer it: use
-**Extra layers** there. `src/engine/backing.js` `addBackingMesh()`.
+**Extra layers** there. `site/src/engine/backing.js` `addBackingMesh()`.
 
 ## Open requests
 

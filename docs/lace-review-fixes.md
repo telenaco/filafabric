@@ -31,7 +31,7 @@ The updated no-extra-ring file is `FilaFabric_drawing-2_review-fixed_perimeters2
 
 ## Source and remaining physical decisions
 
-Source offers now include only intended tracked/staged allowlisted paths, with deterministic archive contents, an external checksum manifest and a default-suite currentness test. See [source-offer.md](source-offer.md). A whole-app licence decision before any public Arachne release remains the owner's decision; no licence was chosen or publication performed here.
+Source offers now include only intended tracked/staged allowlisted paths, with deterministic archive contents, an external checksum manifest and a default-suite currentness test. See [source-offer.md](../site/source-offer.md). A whole-app licence decision before any public Arachne release remains the owner's decision; no licence was chosen or publication performed here.
 
 No physical print has been performed. Compare the updated mesh-outline-0 file against the Prusa print on the same spool, nozzle and bed conditions. Check window-edge ridges, joined-core coverage, mesh/body attachment and strings across long travels. Retraction remains off by default as requested. If a print demonstrates long-travel strings, the existing filament controls allow a separate trial with retraction length 1 mm and minimum travel 20 mm; do not treat that untested recipe as an established improvement. The slow prime line is intentionally bounded by the selected raw filament-volume ceiling.
 ## Verification
