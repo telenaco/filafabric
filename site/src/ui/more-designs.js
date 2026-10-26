@@ -21,6 +21,7 @@ import { voronoiLayers } from '../engine/voronoi.js';
 import { turingLayers } from '../engine/turing.js';
 import { FIELD_IDS, createField } from '../engine/fields.js';
 import { BACKING_STYLES, BACKING_LAYER_COUNTS } from '../engine/backing.js';
+import { thicknessAlong, THICKNESS_RANGES } from '../engine/pattern-effects.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const WAVY = ['looped', 'figure8', 'zigzag', 'honeycomb', 'wave', 'square'];
@@ -92,7 +93,7 @@ export function layered(def) {
     roles: def.roles ?? { base: 'Layer 1', anchored: 'Later layers' },
     defaults: def.defaults ?? (() => ({ ...c.defaults })),
     sanitize: def.sanitize ?? c.sanitize,
-    ranges: c.ranges,
+    ranges: def.ranges ?? c.ranges,
     presets: c.presets,
     presetMatch: c.presetMatch,
     presetPicture: (preset) => picture(preset.patch)(),
@@ -166,6 +167,7 @@ export const MORE_DESIGNS = [
     optimizeTravel: true,
     hidden: false,
     settingsKey: 'grid',
+    patternEffects: ['thickness'],
     name: 'Crosshatch & isogrid',
     blurb: 'Straight lines at the angles you choose, layer on layer',
     about: 'The angle is the design here: straight layers of parallel lines, each layer at its own angle, so every pair of layers crosses. Square drapes like woven cloth on the bias; three directions 60° apart are close to the same in every direction.',
@@ -189,10 +191,28 @@ export const MORE_DESIGNS = [
           { key: 'spacing', label: 'Line spacing', help: 'Distance between neighbouring lines in a layer.', lo: 'Dense', hi: 'Airy', unit: 'mm', edit: true },
         ],
       },
+      { kind: 'pattern', key: 'pattern', title: 'Pattern', hint: 'Line thickness carries the dark and light parts of the pattern.', picture: 'positive', pictureHint: 'Dark parts of the picture make the strands thicker.', scale: { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false } },
     ],
-    defaults: () => ({ ...CROSSHATCH.defaults, shape: 'looped', size: 0 }),
-    sanitize: (raw) => ({ ...CROSSHATCH.sanitize(raw), shape: 'looped', size: 0 }),
-    build: (s, boundary) => crosshatchLayers(boundary, { directions: s.directions, spacing: s.spacing, shape: s.shape, size: s.size, pitch: s.pitch }),
+    defaults: () => ({ ...CROSSHATCH.defaults, shape: 'looped', size: 0, pattern: 'none', patternScale: 1, patternEffect: 'thickness', thin: 0.6, thick: 1.8 }),
+    sanitize: (raw) => {
+      const out = { ...CROSSHATCH.sanitize(raw), shape: 'looped', size: 0,
+        pattern: ['none', ...FIELD_IDS, 'image'].includes(raw?.pattern) ? raw.pattern : 'none',
+        patternScale: Number.isFinite(Number(raw?.patternScale)) ? Math.max(0.5, Math.min(2, Number(raw.patternScale))) : 1,
+        patternEffect: 'thickness' };
+      for (const [key, range] of Object.entries(THICKNESS_RANGES)) {
+        const value = Number(raw?.[key]);
+        out[key] = Number.isFinite(value) && value >= range.min && value <= range.max ? value : key === 'thin' ? 0.6 : 1.8;
+      }
+      return out;
+    },
+    ranges: { ...CROSSHATCH.ranges, patternScale: { min: 0.5, max: 2, step: 0.25 }, ...THICKNESS_RANGES },
+    patterns: withPicture(['none', ...FIELD_IDS]),
+    build: (s, boundary, ctx) => {
+      const built = crosshatchLayers(boundary, { directions: s.directions, spacing: s.spacing, shape: s.shape, size: s.size, pitch: s.pitch });
+      const field = patternField(s.pattern, { scale: s.patternScale, picture: ctx?.picture });
+      if (!field) return built;
+      return { ...built, layers: built.layers.map((layer, index) => layer.map((line) => thicknessAlong(line, field, { thin: s.thin, thick: s.thick, layer: index }))) };
+    },
     summary: (result) => `a crosshatch of ${result.layerCount} layers with ${result.report.crossings} crossings`,
   }),
 ];
@@ -244,6 +264,7 @@ const crosshatch = MORE_DESIGNS[0];
 crosshatch.presets = CROSSHATCH.presets.filter((preset) => preset.id !== 'wavy-diagonal');
 MORE_DESIGNS.push({
   ...crosshatch, id: 'crosshatch-wavy', name: 'Grid & isogrid · legacy waves', hidden: true, settingsKey: 'crosshatch-wavy',
+  patternEffects: [],
   defaults: () => ({ ...CROSSHATCH.defaults }), sanitize: CROSSHATCH.sanitize,
   controls: [
     { kind: 'presets', title: 'Start from' }, { kind: 'size', title: 'Size and shape' },
@@ -257,6 +278,7 @@ MORE_DESIGNS.push({
   ],
 });
 MORE_DESIGNS.at(-1).presets = CROSSHATCH.presets;
+MORE_DESIGNS.at(-1).controls = MORE_DESIGNS.at(-1).controls.filter((section) => section.kind !== 'pattern');
 
 const honeycombFlat = layered({
   id: 'honeycomb-flat', shelf: 'flat', family: 'cells', support: 'self', state: 'untested',
@@ -433,7 +455,7 @@ const MEANDER = defineControls({
 });
 
 MORE_DESIGNS.push(layered({
-  id: 'meander',
+  id: 'meander', patternEffects: ['size'],
   shelf: 'layered', family: 'motif', support: 'auto', state: 'untested',
   joins: "A space-filling curve held by a backing.", sources: {},
   optimizeTravel: true,
@@ -586,7 +608,7 @@ const VORONOI = defineControls({
 });
 
 MORE_DESIGNS.push(layered({
-  id: 'voronoi',
+  id: 'voronoi', patternEffects: ['size'],
   shelf: 'layered', family: 'cells', support: 'self', state: 'untested',
   joins: "Triangle edges print first, then the cells over them.", sources: {},
   optimizeTravel: true,

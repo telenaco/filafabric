@@ -28,6 +28,7 @@ import { el, helpBubble } from './dom.js';
 import { validNumber } from './numeric.js';
 import { FIELDS, createField } from '../engine/fields.js';
 import { PICTURE } from '../engine/picture.js';
+import { PATTERN_EFFECTS } from '../engine/pattern-effects.js';
 import { SHAPES } from '../engine/shapes.js';
 import { shapeThumb } from './thumbs.js';
 import { defaultSection, sideProfile } from '../engine/side-profile.js';
@@ -749,11 +750,29 @@ export class SlidersSection extends Section {
 export class PatternSection extends Section {
   buildBody() {
     this.picker = new PatternPicker(this.host, this.mod.id, this.spec.key, this.mod.patterns, this.titleId, { scale: this.spec.scale ?? null, pictureHint: this.spec.pictureHint ?? '' });
-    return [this.hint(), this.picker.node];
+    this.effects = this.mod.patternEffects ?? [];
+    this.effectPicker = this.effects.length > 1 ? el('div', { class: 'patterns pattern-effects', role: 'group', 'aria-label': 'Pattern effect' },
+      ...this.effects.map((effect) => {
+        const def = PATTERN_EFFECTS[effect];
+        const button = el('button', { type: 'button', class: 'pattern', 'data-pattern-effect': effect, title: def?.hint ?? '' }, el('span', { text: def?.label ?? effect }));
+        button.addEventListener('click', () => { this.settings.patternEffect = effect; this.host.change(); });
+        return button;
+      })) : null;
+    this.effectButtons = [...(this.effectPicker?.querySelectorAll('[data-pattern-effect]') ?? [])];
+    this.thickness = this.effects.includes('thickness') ? ['thin', 'thick'].map((key) => new SliderControl(this.host, this.mod.id, {
+      key, label: key === 'thin' ? 'Thinnest' : 'Thickest', help: 'Extrusion flow multiplier at the light and dark ends of the pattern.',
+      lo: key === 'thin' ? 'Lighter' : 'Thinner', hi: key === 'thin' ? 'Heavier' : 'Thicker', unit: '×', edit: true,
+    })) : [];
+    this.thicknessNode = el('div', { class: 'controls pattern-thickness' }, ...this.thickness.map((control) => control.node));
+    return [this.hint(), this.picker.node, this.effectPicker, this.thicknessNode];
   }
 
   refresh() {
     this.picker.update();
+    const effect = this.settings.patternEffect ?? this.effects[0];
+    for (const button of this.effectButtons) button.setAttribute('aria-pressed', String(button.dataset.patternEffect === effect));
+    this.thicknessNode.hidden = effect !== 'thickness';
+    if (!this.thicknessNode.hidden) for (const control of this.thickness) control.update();
   }
 
   redraw() {

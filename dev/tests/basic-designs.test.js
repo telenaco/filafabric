@@ -86,7 +86,7 @@ test('Zigzag mesh: two layers that cross each other, side by side or crossed', (
   const card = designById('zigzag');
   const { machine, material } = defaultProfiles();
   assert.ok(card && card.status === 'ready');
-  assert.equal(card.controls.some((c) => c.kind === 'pattern'), false, 'no patterns');
+  assert.equal(card.controls.some((c) => c.kind === 'pattern'), true, 'pattern controls live on the card');
   assert.equal(card.controls.some((c) => c.kind === 'shape'), false, 'no strand shapes');
   assert.equal(card.controls.some((c) => c.key === 'direction'), false, 'which way it lies on the plate is not a choice');
   for (const mode of ['parallel', 'cross']) {
@@ -146,15 +146,14 @@ test('a single layer of zigzag rows that meet is the Coil with a zigzag shape: n
   }
   const card = designById('coil');
   const preset = card.presets.find((p) => p.id === 'zigzag-cells');
-  assert.ok(preset, 'the Coil offers it as a preset');
-  assert.equal(preset.patch.shape, 'zigzag');
+  assert.equal(preset, undefined, 'the Coil no longer offers zigzag cells');
   assert.equal(designById('zigzag-single'), undefined, 'no separate single-layer card');
 });
 
 test('the essentials are real, ready cards and come first', () => {
   assert.deepEqual([...ESSENTIALS], ['zigzag', 'squiggle', 'coil', 'starlattice', 'dipweave', 'halftone', 'meander', 'turing', 'svgdesign', 'bubbles', 'voronoi']);
-  // Crosshatch & isogrid is kept in the code and left out of the list
-  assert.equal(designById('crosshatch').hidden, true);
+  // Crosshatch & isogrid is now in the library; the old Halftone entry remains a hidden compatibility card.
+  assert.equal(designById('crosshatch').hidden, false);
   assert.equal(designById('crosshatch').status, 'ready');
   assert.equal(ESSENTIALS.includes('crosshatch'), false);
   for (const id of ESSENTIALS) assert.equal(designById(id)?.status, 'ready', id);
@@ -166,14 +165,15 @@ test('a hidden card leaves the gallery but still opens: Drawing & infill, for no
   assert.equal(designById('svgdesign').hidden, true);
   assert.equal(designById('svgdesign').status, 'ready', 'a link or a saved file still opens it');
   assert.equal(shown.includes('svgdesign'), false);
-  assert.equal(shown.includes('crosshatch'), false);
-  assert.deepEqual(essentials.map((d) => d.id), ESSENTIALS.filter((id) => id !== 'svgdesign'), 'the other essentials keep their order');
+  assert.equal(shown.includes('crosshatch'), true);
+  assert.equal(designById('halftone').hidden, true);
+  assert.deepEqual(essentials.map((d) => d.id), ESSENTIALS.filter((id) => !['svgdesign', 'halftone'].includes(id)), 'the visible essentials keep their order');
   assert.ok(others.length > 10 && others.every((d) => !ESSENTIALS.includes(d.id)));
   assert.equal(designById('zigzag-mesh'), undefined);
 });
 
 test('where a Start-from row only repeated a choice, the choice carries the companions and the row is gone', () => {
-  for (const id of ['meander', 'starlattice', 'conformal', 'truchet', 'parquet', 'flowlines', 'crosshatch', 'auxetic']) {
+  for (const id of ['meander', 'starlattice', 'conformal', 'truchet', 'parquet', 'flowlines', 'crosshatch']) {
     const card = designById(id);
     assert.equal(card.controls.some((c) => c.kind === 'presets'), false, `${id} still has a Start-from row`);
     assert.ok(card.presets.length > 0, `${id} keeps its presets for tests and saved settings`);
@@ -185,7 +185,7 @@ test('where a Start-from row only repeated a choice, the choice carries the comp
   assert.equal(meander.options.find((o) => o.id === 'tsp').patch.pattern, 'noise');
   assert.equal(meander.options.find((o) => o.id === 'gosper').patch.angle, 60);
   // the cards that kept their recipes still have the row
-  for (const id of ['coil', 'halftone', 'svgdesign', 'spacer']) assert.equal(designById(id).controls.some((c) => c.kind === 'presets'), true, id);
+  for (const id of ['coil', 'halftone', 'svgdesign', 'spacer', 'auxetic']) assert.equal(designById(id).controls.some((c) => c.kind === 'presets'), true, id);
 });
 
 test('the meander and Turing stripes are held by a gyroid backing unless straight lines are asked for', () => {

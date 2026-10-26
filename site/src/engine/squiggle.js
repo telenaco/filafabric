@@ -9,6 +9,7 @@ import { createField, FIELD_IDS } from './fields.js';
 import { shapeAt, shapeStep } from './shapes.js';
 import { resolveCrossings } from './crossings.js';
 import { finishFabric } from './fabric-result.js';
+import { thicknessAlong } from './pattern-effects.js';
 
 /**
  * Squiggle Textile Generator
@@ -213,6 +214,9 @@ export function generateSquiggleTextile({
   strandWidth = 0.45,
   sampler = SAMPLERS.centerSpot,
   colorChange = false,
+  patternEffect = 'depth',
+  thin = 0.6,
+  thick = 1.8,
   boundary = null,
   whole = true,
   planCrossings = true,
@@ -222,7 +226,7 @@ export function generateSquiggleTextile({
   const minAmp = 0.15 * amplitude;
   const ampRange = 0.85 * amplitude;
   const baseFreq = 1 / Math.max(0.5, wavelength);
-  const tone = (x, y) => clamp(sampler(x, y, width, height), 0, 1);
+  const tone = (x, y) => patternEffect === 'thickness' ? 0.5 : clamp(sampler(x, y, width, height), 0, 1);
   // whole repeats (repeats.js): a wave of frequency f over a lane `span` long is made a whole number of waves long
   const wholeFreq = (f, span) => (whole && span > 0 ? Math.max(1, Math.round(f * span)) / span : f);
 
@@ -349,6 +353,10 @@ export function generateSquiggleTextile({
     })),
   ];
 
+  if (patternEffect === 'thickness') {
+    for (const strand of strands) strand.pts = thicknessAlong(strand.pts,
+      (x, y) => sampler(x, y, width, height), { thin, thick, layer: strand.layer, overNet: 0.85, bead: strandWidth });
+  }
   return { layer1: layer1.flat(), layer2: layer2.flat(), strands };
 }
 
@@ -382,6 +390,9 @@ export function generateSquiggle(machine, material, squiggleParams = {}) {
     layerHeight: cfg.t.layer_height,
     sampler: squiggleParams.sampler ?? SAMPLERS.centerSpot,
     colorChange: squiggleParams.colorChange ?? false,
+    patternEffect: squiggleParams.patternEffect ?? 'depth',
+    thin: squiggleParams.thin ?? 0.6,
+    thick: squiggleParams.thick ?? 1.8,
   });
 
   const moves = emitStrands(res.strands);

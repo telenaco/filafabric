@@ -173,7 +173,7 @@ const FLOW = defineControls({
 });
 
 LINE_DESIGNS.push(layered({
-  id: 'flowlines',
+  id: 'flowlines', patternEffects: ['direction'],
   shelf: 'layered', family: 'fields', support: 'self', state: 'untested',
   joins: "Lines along a flow, crossed at 90 degrees.", sources: {},
   optimizeTravel: true,
@@ -219,7 +219,7 @@ const BUBBLES = defineControls({
 });
 
 LINE_DESIGNS.push(layered({
-  id: 'bubbles',
+  id: 'bubbles', patternEffects: ['size'],
   shelf: 'layered', family: 'rings', support: 'self', state: 'untested',
   joins: "Packed rings held by a ring in every gap.", sources: {},
   optimizeTravel: true,
@@ -351,7 +351,7 @@ const STAR = defineControls({
 });
 
 LINE_DESIGNS.push(layered({
-  id: 'starlattice',
+  id: 'starlattice', patternEffects: ['size'],
   shelf: 'flat', family: 'lattices', support: 'self', state: 'untested',
   joins: "Star straps in non-crossing families meet at the tile edges.", sources: { catalogue: ['S3'], papers: [30, 31] },
   optimizeTravel: true,

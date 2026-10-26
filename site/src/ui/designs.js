@@ -15,6 +15,7 @@
 //   describe(state), generate(machine, material, state, { outline }), verdict(result, state),
 //   figure(result) → { value, unit, label }, summary(result) → text for the preview's accessible name.
 import { patternField, withPicture } from '../engine/picture.js';
+import { THICKNESS_RANGES } from '../engine/pattern-effects.js';
 import { PRIMARY_DEFAULTS, sanitizePrimary } from './controls.js';
 import { SQUIGGLE, SQ_PATTERNS } from './squiggle-controls.js';
 import {
@@ -62,8 +63,15 @@ const squiggleShapeCards = [
 
 function squiggleCard(def) {
   const c = SQUIGGLE;
-  const defaults = () => ({ ...c.defaults, shape: def.shape });
-  const sanitize = (raw) => ({ ...c.sanitize(raw), shape: def.shape });
+  const defaults = () => ({ ...c.defaults, shape: def.shape, patternEffect: 'depth', thin: 0.6, thick: 1.8 });
+  const sanitize = (raw) => {
+    const out = { ...c.sanitize(raw), shape: def.shape, patternEffect: raw?.patternEffect === 'thickness' ? 'thickness' : 'depth' };
+    for (const [key, range] of Object.entries(THICKNESS_RANGES)) {
+      const value = Number(raw?.[key]);
+      out[key] = Number.isFinite(value) && value >= range.min && value <= range.max ? value : defaults()[key];
+    }
+    return out;
+  };
   const controls = [
     { kind: 'size', title: 'Size and shape' },
     { kind: 'choice', key: 'mode', title: 'Structure', options: [
@@ -83,7 +91,7 @@ function squiggleCard(def) {
     const sampler = image ?? SAMPLERS[settings.pattern] ?? SAMPLERS.centerSpot;
     return generateSquiggle(machine, material, { width: settings.width, height: settings.height, mode: settings.mode, shape: def.shape,
       spacing: settings.spacing, amplitude: settings.amplitude, wavelength: settings.wavelength, sampler,
-      colorChange: settings.colorChange, outline });
+      colorChange: settings.colorChange, outline, patternEffect: settings.patternEffect, thin: settings.thin, thick: settings.thick });
   };
   const thumbSettings = { ...defaults(), width: 36, height: 22 };
   const thumbGeometry = generateSquiggleTextile({ ...thumbSettings, strandWidth: 0.4, layerHeight: 0.2 });
@@ -92,7 +100,7 @@ function squiggleCard(def) {
     id: def.id, name: def.name, blurb: 'A two-family textile net made from shaped strands', about: 'Two families of continuous shaped strands meet in a flat mesh. The selected card fixes the strand shape; Structure controls whether the families cross or run in parallel.', file: 'squiggle', status: 'ready',
     shelf: def.shelf ?? 'layered', family: def.family, support: def.support ?? 'self', state: 'untested', joins: def.joins, sources: {},
     settingsKey: def.settingsKey, shape: def.shape, hidden: !!def.hidden, roles: { base: 'First family', anchored: 'Second family' },
-    defaults, sanitize, ranges: c.ranges, size: sizeOf, setSize: setSizeOf, controls, patterns: [...SQ_PATTERNS],
+    defaults, sanitize, ranges: { ...c.ranges, ...THICKNESS_RANGES }, size: sizeOf, setSize: setSizeOf, controls, patterns: [...SQ_PATTERNS], patternEffects: ['depth', 'thickness'],
     thumb: thumbFromLayers(thumbLayers, thumbSettings.width, thumbSettings.height), generate,
     figure: () => ({ value: '2', unit: '', label: 'Layers' }),
     describe: (s) => ({ ...c.describe(s), mode: s.mode === 'cross' ? 'Crossed' : 'Parallel' }),
@@ -116,7 +124,7 @@ const fromControls = (c) => ({
 
 export const DESIGNS = [
   {
-    id: 'loop-pile',
+    id: 'loop-pile', patternEffects: ['height'],
     shelf: 'raised', family: 'pile', support: 'built-in', state: 'untested',
     joins: "Raised loops are anchored to an open base mesh.", sources: {},
     name: 'Loop pile',
@@ -273,7 +281,7 @@ export const DESIGNS = [
   },
   {
     ...fromControls(RELIEF_CONTROLS),
-    id: 'relief',
+    id: 'relief', patternEffects: ['height'],
     shelf: 'raised', family: 'textures', support: 'built-in', state: 'untested',
     joins: "Rows rise and fall over a crossed base.", sources: {},
     name: 'Relief',

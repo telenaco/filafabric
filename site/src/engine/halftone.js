@@ -1,4 +1,5 @@
 import { hatch } from './layers.js';
+import { thicknessAlong } from './pattern-effects.js';
 
 /**
  * Halftone net (Gispan, Ariel & Sterman, "Halftoning for 3D printed textile nets"): a net whose line thickness, not
@@ -41,10 +42,9 @@ export function halftoneLayers(boundary, { spacing = 3, angle = 0, crossing = 90
   // the centre, since a slanted line meets the edge part-way whatever its spacing
   const square = (deg) => Math.abs(Math.sin((2 * deg * Math.PI) / 180)) < 1e-9;
   const lines = (deg, offset) => hatch(boundary, { angle: deg, spacing, offset, anchor: square(deg) ? null : centre, shape: wavy ? shape : null, size, pitch, maxJog: Infinity, keepInside: clearance });
-  const withFlow = (list, invert) => list.map((pts) => pts.map((p) => {
-    const t = toneAt(p.x, p.y);
-    return { ...p, flow: quantise(thin + (thick - thin) * (invert ? 1 - t : t)) };
-  }));
+  const withFlow = (list, invert) => list.map((pts) => thicknessAlong(pts,
+    (x, y) => invert ? 1 - toneAt(x, y) : toneAt(x, y),
+    { thin, thick, overNet: 1, maxChangePerMm: Infinity, quantise: FLOW_STEP, bead }));
   const first = withFlow(lines(angle, 0), false);
   const secondLayer = withFlow(lines(angle + crossing, 0.5), second === 'complement');
   // the range of flow actually used (a loop, not a spread: a dense net has more points than a call can take)
