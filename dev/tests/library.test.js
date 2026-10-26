@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DESIGNS } from '../../site/src/ui/designs.js';
-import { SHELVES, FAMILIES, validateCard, libraryGroups, variantsOf } from '../../site/src/ui/library.js';
+import { SHELVES, FAMILIES, validateCard, libraryGroups, variantsOf, variantDefaultErrors } from '../../site/src/ui/library.js';
 import { layered } from '../../site/src/ui/more-designs.js';
 
 test('all 31 ready cards have the exact ticket metadata', () => {
@@ -79,12 +79,22 @@ test('validation rejects malformed metadata and skips preset tiles', () => {
 });
 
 test('variants default to each card id; unknown ids have no variants', () => {
-  for (const card of DESIGNS.filter(d => d.status === 'ready')) assert.deepEqual(variantsOf(card.id), [card]);
+  for (const card of DESIGNS.filter(d => d.status === 'ready' && !d.hidden)) assert.deepEqual(variantsOf(card.id), [card]);
+  for (const card of DESIGNS.filter(d => d.status === 'ready' && d.hidden)) assert.deepEqual(variantsOf(card.id), []);
   assert.deepEqual(variantsOf('missing'), []);
   const cards = ['raised', 'flat', 'layered'].map(shelf => ({ ...DESIGNS[0], id: `test-${shelf}`, shelf, settingsKey: 'test' }));
   DESIGNS.push(...cards);
   try { assert.deepEqual(variantsOf('test-flat').map(d => d.shelf), ['flat', 'layered', 'raised']); }
   finally { DESIGNS.splice(-cards.length); }
+});
+
+test('variant fixtures share settings keys and order links by shelf', () => {
+  const fixture = ['raised', 'flat', 'layered'].map((shelf) => ({ ...DESIGNS[0], id: `variant-${shelf}`, shelf,
+    settingsKey: 'fixture', defaults: () => ({ width: 100, height: 100, spacing: 4 }) }));
+  assert.deepEqual(variantsOf('variant-layered', fixture).map((card) => card.shelf), ['flat', 'layered', 'raised']);
+  assert.deepEqual(variantDefaultErrors(fixture), []);
+  fixture[2].defaults = () => ({ width: 100, height: 100, spacing: 4, lift: 0.2 });
+  assert.match(variantDefaultErrors(fixture)[0], /defaults differ/);
 });
 
 test('layered preserves every optional metadata field including migration arrays', () => {

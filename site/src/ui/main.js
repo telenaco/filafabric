@@ -259,7 +259,7 @@ function known() {
 
 function snapshot() {
   return {
-    v: 3,
+    v: 4,
     sampleDefaults: 100,
     design: state.design,
     machine: state.machine,
@@ -479,6 +479,7 @@ const host = {
   settings: (id) => settingsOf(id),
   presetPicture: (mod, preset) => presetThumb(mod, preset, { machine: state.machines.get(state.machine), material: printMaterial() }),
   previewResult: (id) => state.design === id && state.resultKey === snapshotKey() ? state.result : null,
+  switchDesign: (id) => setDesign(id),
   change: () => afterDesignChange(),
   nudge: () => afterControl(),
   sizeChanged: () => { renderControls(); schedule(); },
@@ -1724,7 +1725,8 @@ function renderTiles() {
 function settingsOf(id) {
   if (id === 'loop-pile') return state.primary;
   if (id === 'squiggle') return state.squiggle;
-  return state.designs[id];
+  const mod = designById(id);
+  return state.designs[mod?.settingsKey ?? id];
 }
 
 /** A preset tile opens another design with some settings changed, for example the zigzag mesh on Squiggle & Gyroid. */

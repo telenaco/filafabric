@@ -54,6 +54,40 @@
  */
 import { DESIGNS } from './designs.js';
 
+/** Old IDs and setting variants that can be routed to a currently implemented card. */
+export const MIGRATIONS = Object.freeze([
+  ...DESIGNS.filter((card) => card.status === 'ready').flatMap((card) => (card.legacy ?? []).map((rule) => Object.freeze({ from: rule.id, to: card.id, patch: rule.patch ?? null }))),
+  { from: 'zigzag-mesh', to: 'squiggle', patch: { shape: 'zigzag', mode: 'parallel' } },
+]);
+
+/** Converts an older persisted state to schema v4 before its values are sanitised. */
+export function migrateState(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  if (raw.v === 4) return raw;
+  const migrated = { ...raw, designs: { ...(raw.designs && typeof raw.designs === 'object' && !Array.isArray(raw.designs) ? raw.designs : {}) } };
+  if (raw.primary && typeof raw.primary === 'object' && !migrated.designs['loop-pile']) migrated.designs['loop-pile'] = { ...raw.primary };
+  if (raw.squiggle && typeof raw.squiggle === 'object' && !migrated.designs.squiggle) migrated.designs.squiggle = { ...raw.squiggle };
+  if (raw.v === 3) {
+    const convertColour = (settings) => settings && typeof settings === 'object' && settings.colorChange === true
+      ? { ...settings, colourMode: 'face', colorChange: false } : settings;
+    migrated.primary = convertColour(raw.primary);
+    migrated.squiggle = convertColour(raw.squiggle);
+    for (const [id, settings] of Object.entries(migrated.designs)) migrated.designs[id] = convertColour(settings);
+    const backing = raw.print?.backing;
+    if (backing) for (const card of DESIGNS.filter((d) => d.status === 'ready' && d.support === 'auto')) {
+      migrated.designs[card.id] = { ...(migrated.designs[card.id] ?? {}), support: backing };
+    }
+    migrated.v = 4;
+  }
+  const rule = MIGRATIONS.find((entry) => entry.from === migrated.design);
+  if (rule) {
+    const current = migrated.designs[rule.from] ?? migrated.designs[rule.to] ?? {};
+    migrated.design = rule.to;
+    migrated.designs[rule.to] = { ...current, ...(rule.patch ?? {}) };
+  }
+  return migrated;
+}
+
 // Registry modules keep their metadata inline and never import this module.
 // DESIGNS is read only when these functions run, after registry initialization.
 export const SHELVES = Object.freeze({
@@ -146,9 +180,22 @@ export function libraryGroups(designs = DESIGNS) {
 }
 
 /** Ready variants sharing the explicit settings key, or their own permanent id. */
-export function variantsOf(id) {
-  const card = DESIGNS.find(card => card.id === id && card.status === 'ready');
+export function variantsOf(id, designs = DESIGNS) {
+  const card = designs.find(card => card.id === id && card.status === 'ready' && !card.hidden);
   if (!card) return [];
-  const key = card.settingsKey ?? card.id;
-  return Object.keys(SHELVES).flatMap(shelf => DESIGNS.filter(other => other.status === 'ready' && other.shelf === shelf && (other.settingsKey ?? other.id) === key));
+  if (!card.settingsKey) return [card];
+  return Object.keys(SHELVES).flatMap(shelf => designs.filter(other => other.status === 'ready' && !other.hidden && other.shelf === shelf && other.settingsKey === card.settingsKey));
+}
+
+/** Reports variant groups whose cards do not expose the same shared settings keys. */
+export function variantDefaultErrors(designs = DESIGNS) {
+  const groups = new Map();
+  for (const card of designs.filter((entry) => entry.status === 'ready' && !entry.hidden && entry.settingsKey)) {
+    const keys = Object.keys(card.defaults()).sort().join('|');
+    const prior = groups.get(card.settingsKey);
+    if (prior && prior.keys !== keys) prior.errors.push(`${card.id}: defaults differ from ${prior.ids[0]}.`);
+    else if (prior) prior.ids.push(card.id);
+    else groups.set(card.settingsKey, { keys, ids: [card.id], errors: [] });
+  }
+  return [...groups.values()].flatMap((group) => group.errors);
 }

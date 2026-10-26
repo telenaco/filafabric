@@ -32,6 +32,7 @@ import { SHAPES } from '../engine/shapes.js';
 import { shapeThumb } from './thumbs.js';
 import { defaultSection, sideProfile } from '../engine/side-profile.js';
 import { drawSideView } from './sideview.js';
+import { SHELVES, variantsOf } from './library.js';
 
 const fmt = (n) => String(Math.round(n * 10) / 10);
 
@@ -774,8 +775,15 @@ export class DesignPanel extends Control {
     this.mod = mod;
     this.side = el('div', { class: 'panel-side-view', 'aria-live': 'polite' });
     this.joins = mod.joins ? el('p', { class: 'panel-joins', text: mod.joins }) : null;
+    const variants = variantsOf(mod.id).filter((card) => card.id !== mod.id);
+    this.alsoOn = variants.length ? el('nav', { class: 'variant-links', 'aria-label': 'Also on' },
+      el('span', { class: 'small muted', text: 'Also on:' }), ...variants.map((card) => {
+        const button = el('button', { type: 'button', class: 'link small', text: SHELVES[card.shelf].label });
+        button.addEventListener('click', () => this.host.switchDesign?.(card.id));
+        return button;
+      })) : null;
     this.node = el('div', { id: `panel-${mod.id}`, class: 'panel', hidden: true },
-      el('header', { class: 'panel-head' }, el('h1', { class: 'title', text: mod.name }), this.side, ...(this.joins ? [this.joins] : [])));
+      el('header', { class: 'panel-head' }, el('h1', { class: 'title', text: mod.name }), this.side, ...(this.joins ? [this.joins] : []), ...(this.alsoOn ? [this.alsoOn] : [])));
     this.sections = [];
     let sliderGroup = 0;
     mod.controls.forEach((spec, index) => {

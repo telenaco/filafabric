@@ -6,6 +6,7 @@ import { DESIGNS, READY_IDS } from './designs.js';
 import { sanitizeSvgLines } from '../engine/svg-lines.js';
 import { sanitizeFilamentSettings } from './filament-settings.js';
 import { BACKING_MESH } from '../engine/backing.js';
+import { migrateState } from './library.js';
 
 /** The designs a link can open, in gallery order (planned placeholders are not loadable). The first opens by default. */
 export const DESIGN_IDS = READY_IDS;
@@ -120,7 +121,7 @@ export function sanitizeOutline(raw) {
  * known advanced keys. Version 1 links (before designs were saved) open as the loop pile.
  */
 export function sanitizeState(raw, known) {
-  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const r = migrateState(raw);
   const design = DESIGN_IDS.includes(r.design) ? r.design : DESIGN_IDS[0];
   const machine = known.machines.includes(r.machine) ? r.machine : known.machines[0];
   const material = known.materials.includes(r.material) ? r.material : known.materials[0];
@@ -135,11 +136,17 @@ export function sanitizeState(raw, known) {
       if (ok) advanced[key] = value;
     }
   }
-  // the loop pile and squiggle keep their own keys; every newer design keeps its settings under `designs[id]`
   const saved = r.designs && typeof r.designs === 'object' && !Array.isArray(r.designs) ? r.designs : {};
   const designs = {};
   for (const d of DESIGNS) {
-    if (d.status === 'ready' && !d.legacyPanel) designs[d.id] = d.sanitize(saved[d.id]);
+    if (d.status === 'ready') {
+      const key = d.settingsKey ?? d.id;
+      const source = saved[key] ?? saved[d.id] ?? (d.id === 'loop-pile' ? r.primary : d.id === 'squiggle' ? r.squiggle : undefined);
+      const clean = d.sanitize(source);
+      if (source?.support !== undefined) clean.support = sanitizeBacking(source.support);
+      if (source?.colourMode !== undefined) clean.colourMode = source.colourMode;
+      designs[key] = clean;
+    }
   }
-  return { v: 3, design, machine, material, primary, advanced, squiggle: sanitizeSquiggle(r.squiggle), designs, outline: sanitizeOutline(r.outline), vector: sanitizeSvgLines(r.vector), print: sanitizePrint(r.print) };
+  return { v: 4, design, machine, material, primary, advanced, squiggle: sanitizeSquiggle(r.squiggle ?? designs.squiggle), designs, outline: sanitizeOutline(r.outline), vector: sanitizeSvgLines(r.vector), print: sanitizePrint(r.print) };
 }

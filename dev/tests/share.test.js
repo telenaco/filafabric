@@ -5,7 +5,7 @@ import { SQUIGGLE_DEFAULTS } from '../../site/src/ui/squiggle-controls.js';
 import { COIL_DEFAULTS } from '../../site/src/ui/coil-controls.js';
 import { DESIGNS } from '../../site/src/ui/designs.js';
 
-const newerDefaults = () => Object.fromEntries(DESIGNS.filter((d) => d.status === 'ready' && !d.legacyPanel).map((d) => [d.id, d.defaults()]));
+const newerDefaults = () => Object.fromEntries(DESIGNS.filter((d) => d.status === 'ready').map((d) => [d.id, d.defaults()]));
 import { PRIMARY_DEFAULTS } from '../../site/src/ui/controls.js';
 
 const known = { machines: ['prusa-mk3s'], materials: ['filaflex-95-foamy', 'generic-flex-mk3'] };
@@ -88,11 +88,11 @@ test('an outline survives a link, and anything malformed or oversized is refused
   assert.equal(sanitizeOutline({ rings: [[0, 0, 1, 0, 0.5, 0.8]], name: 42 }).name, 'Outline');
 });
 
-test('v3 states carry per-design settings; unknown or planned designs fall back to the loop pile', () => {
+test('v3 states migrate to v4; unknown or planned designs fall back to the loop pile', () => {
   const s = sanitizeState({ v: 3, design: 'nope', designs: { nope: { a: 1 } } }, known);
   assert.equal(s.design, 'loop-pile');
-  assert.equal(s.v, 3);
-  assert.deepEqual(s.designs, newerDefaults(), 'an unknown design id adds nothing; every newer design still has its defaults');
+  assert.equal(s.v, 4);
+  assert.deepEqual(s.designs, newerDefaults(), 'an unknown design id adds nothing; every card still has its defaults');
 });
 
 test('a version 2 link (squiggle key, no designs) opens identically', () => {
@@ -100,8 +100,29 @@ test('a version 2 link (squiggle key, no designs) opens identically', () => {
   assert.equal(s.design, 'squiggle');
   assert.equal(s.squiggle.mode, 'parallel');
   assert.equal(s.squiggle.spacing, 4);
-  assert.deepEqual(s.designs, newerDefaults());
+  const defaults = newerDefaults();
+  delete defaults.squiggle;
+  delete defaults['loop-pile'];
+  assert.deepEqual(Object.fromEntries(Object.entries(s.designs).filter(([id]) => id !== 'squiggle' && id !== 'loop-pile')), defaults);
+  assert.equal(s.designs.squiggle.spacing, 4);
   assert.deepEqual(s.designs.coil, COIL_DEFAULTS);
+});
+
+test('v3 settings and colour choice migrate into v4 card records', () => {
+  const s = sanitizeState({ v: 3, design: 'squiggle', primary: { ...PRIMARY_DEFAULTS, pileHeight: 4 },
+    squiggle: { ...SQUIGGLE_DEFAULTS, colorChange: true }, print: { backing: true } }, known);
+  assert.equal(s.v, 4);
+  assert.equal(s.designs['loop-pile'].pileHeight, 4);
+  assert.equal(s.designs.squiggle.colourMode, 'face');
+  assert.equal(s.designs.meander.support.spacing, 3.7);
+  assert.equal(s.squiggle.colorChange, false);
+});
+
+test('legacy preset ids migrate through the map while preserving the selected card', () => {
+  const s = sanitizeState({ v: 3, design: 'zigzag-mesh' }, known);
+  assert.equal(s.design, 'squiggle');
+  assert.equal(s.squiggle.shape, 'zigzag');
+  assert.equal(s.squiggle.mode, 'parallel');
 });
 
 test('coil settings travel in a link and are sanitised', () => {
