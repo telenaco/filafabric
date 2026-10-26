@@ -295,6 +295,27 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "coil-shapes",
+    "score": 24.350342466077045,
+    "components": 1,
+    "joints": 85,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 2.7281236999999976,
+    "maxSlopeDeg": 14.64409506607705,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 85,
+    "moves": 18297,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 476.0451049255094,
+      "afterMm": 424.4891769391937
+    }
+  },
+  {
     "id": "looped-net",
     "score": 24.481349251082282,
     "components": 1,
@@ -313,6 +334,27 @@ export const PRINTABILITY = [
     "routing": {
       "beforeMm": 339.4925694935497,
       "afterMm": 339.4925694935497
+    }
+  },
+  {
+    "id": "figure8-rows",
+    "score": 24.839869383358078,
+    "components": 1,
+    "joints": 107,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 3.076513105694335,
+    "maxSlopeDeg": 13.336843171969406,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 107,
+    "moves": 24710,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 446.15097862461073,
+      "afterMm": 407.8829703834373
     }
   },
   {
@@ -418,27 +460,6 @@ export const PRINTABILITY = [
     "routing": {
       "beforeMm": 8.828464150775005,
       "afterMm": 1.2374149339253253
-    }
-  },
-  {
-    "id": "zigzag-mesh",
-    "score": 37.21349323064509,
-    "components": 1,
-    "joints": 156,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 2.206746615322544,
-    "maxSlopeDeg": 25.000000000000007,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 156,
-    "moves": 18985,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 8030.619493384736,
-      "afterMm": 507.2290324438344
     }
   },
   {

@@ -338,6 +338,35 @@ export const DESIGNS = [
 // the Drawing & infill card (svgdesign) comes first after the original structures, then the line-algorithm library and the newer line designs
 DESIGNS.push(...BASIC_DESIGNS, ...SVG_DESIGNS, ...MORE_DESIGNS, ...LINE_DESIGNS, ...PUBLICATION_DESIGNS);
 
+// Coil's visible cards fix the strand shape; retain the old shape picker only for saved links that used it.
+const coil = DESIGNS.find((card) => card.id === 'coil');
+const legacyCoil = { ...coil, controls: coil.controls, presets: COIL_PRESETS };
+const coilPresets = COIL_PRESETS.filter((preset) => preset.id !== 'zigzag-cells');
+coil.name = 'Looped rows';
+coil.blurb = 'One continuous strand in rows of loops';
+coil.about = 'Flat rows of one continuous strand: loops circle over themselves, lifting over earlier passes where they cross.';
+coil.joins = 'One strand in rows of loops; each touches the next row.';
+coil.presets = coilPresets;
+coil.sanitize = (raw) => sanitizeCoil({ ...raw, shape: 'looped' });
+coil.controls = coil.controls.filter((section) => section.kind !== 'shape');
+const coilShapeCard = {
+  ...legacyCoil,
+  id: 'coil-shapes', name: 'Coil · legacy shapes', blurb: 'Older Coil settings with selectable strand shapes',
+  settingsKey: 'coil-shapes', hidden: true,
+  about: 'Compatibility card for saved Coil designs that use a strand shape other than loops.',
+};
+const figure8Rows = {
+  ...coil,
+  id: 'figure8-rows', name: 'Figure-8 rows', settingsKey: 'figure8-rows',
+  joins: 'One strand in rows of figure-8s; each touches the next row.',
+  blurb: 'One continuous strand in rows of figure-8s',
+  about: 'Flat rows of one continuous strand formed from figure-8 loops, with each row touching the next.',
+  defaults: () => ({ ...COIL_DEFAULTS, shape: 'figure8' }),
+  sanitize: (raw) => sanitizeCoil({ ...raw, shape: 'figure8' }),
+  presets: coilPresets.map((preset) => ({ ...preset, patch: { ...preset.patch, shape: 'figure8' } })),
+};
+DESIGNS.splice(DESIGNS.indexOf(coil) + 1, 0, figure8Rows, coilShapeCard);
+
 /**
  * The essentials: the structures to start from, listed first and in this order. Every other card is a variation, an
  * experiment or a structure that needs more care.

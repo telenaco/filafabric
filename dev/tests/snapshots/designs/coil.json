@@ -62,21 +62,5 @@
       "ties"
     ],
     "ties": 4
-  },
-  {
-    "card": "coil",
-    "preset": "zigzag-cells",
-    "settingsHash": "dbe1e0c81b00",
-    "gcodeSha256": "cb0fc150f5bf4686005ea785fccd3ad0e455b1971ff62cf1c09ae40eaa6e12d0",
-    "strands": 29,
-    "moves": 1223,
-    "extrudeMm": 637.4,
-    "zMin": 0.2,
-    "zMax": 0.4,
-    "families": [
-      "L1",
-      "ties"
-    ],
-    "ties": 4
   }
 ]

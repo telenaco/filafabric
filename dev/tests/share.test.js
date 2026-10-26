@@ -127,18 +127,18 @@ test('legacy preset ids migrate through the map while preserving the selected ca
 
 test('coil settings travel in a link and are sanitised', () => {
   const s = sanitizeState({ v: 3, design: 'coil', designs: { coil: { size: 4, rowOverlap: -5, shape: 'figure8', evil: 1 } } }, known);
-  assert.equal(s.design, 'coil');
-  assert.equal(s.designs.coil.size, 4);
-  assert.equal(s.designs.coil.rowOverlap, COIL_DEFAULTS.rowOverlap, 'a negative overlap is nonsense');
+  assert.equal(s.design, 'figure8-rows');
+  assert.equal(s.designs['figure8-rows'].size, 4);
+  assert.equal(s.designs['figure8-rows'].rowOverlap, COIL_DEFAULTS.rowOverlap, 'a negative overlap is nonsense');
   // a number outside the slider's range is used as typed: the panel warns, it does not refuse
   const wide = sanitizeState({ v: 3, design: 'coil', designs: { coil: { size: 40, rowOverlap: 150, pitch: 90 } } }, known);
   assert.equal(wide.designs.coil.size, 40);
   assert.equal(wide.designs.coil.rowOverlap, 150);
   assert.equal(wide.designs.coil.pitch, 90);
-  assert.equal(s.designs.coil.shape, 'figure8');
-  assert.equal('evil' in s.designs.coil, false);
-  const round = decodeState(encodeState({ v: 3, design: 'coil', designs: { coil: s.designs.coil } }));
-  assert.deepEqual(sanitizeState(round, known).designs.coil, s.designs.coil);
+  assert.equal(s.designs['figure8-rows'].shape, 'figure8');
+  assert.equal('evil' in s.designs['figure8-rows'], false);
+  const round = decodeState(encodeState({ v: 4, design: 'figure8-rows', designs: { 'figure8-rows': s.designs['figure8-rows'] } }));
+  assert.deepEqual(sanitizeState(round, known).designs['figure8-rows'], s.designs['figure8-rows']);
 });
 
 test('layer thickness and additional layers use defaults when absent or invalid', () => {

@@ -24,7 +24,7 @@ The single place to see what is ready, who has it and where it stands. The revie
 | T1.1 | Panel template, Colour and Support kinds, card header | Phase 0 | M | | In review (local) | Codex | `t1-1-panel-template`, no push |
 | T1.2 | Split Squiggle & Gyroid into seven cards | T1.1 | L | ∥ T1.4, T1.5, T1.7, T1.8, T1.10 | In review (local) | Codex | `t1-2-squiggle-cards`, no push |
 | T1.3 | Zigzag net and the preset alias | T1.2 | S | | In review (local) | Codex | `t1-3-zigzag-alias`, no push |
-| T1.4 | Coil: Looped rows and Figure-8 rows | T1.1 | S | ∥ | Blocked | | |
+| T1.4 | Coil: Looped rows and Figure-8 rows | T1.1 | S | ∥ | In review (local) | Codex | `t1-4-coil-cards`, no push |
 | T1.5 | Cells and grids | T1.1 | M | ∥ | Blocked | | |
 | T1.6 | Pattern section; halftone as Line thickness | T1.2, T1.5 | L | | Blocked | | |
 | T1.7 | Colour section and colour plan | T1.1 | M | ∥ | Blocked | | |

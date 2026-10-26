@@ -87,6 +87,13 @@ export function migrateState(raw) {
     migrated.design = target;
     migrated.designs[key] = { ...source, shape: card?.shape ?? 'wave' };
   }
+  if (migrated.design === 'coil') {
+    const source = migrated.designs.coil ?? {};
+    const target = source.shape === 'figure8' ? 'figure8-rows'
+      : ['wave', 'zigzag', 'square', 'honeycomb', 'ring'].includes(source.shape) ? 'coil-shapes' : 'coil';
+    migrated.design = target;
+    migrated.designs[target] = { ...source, shape: target === 'coil' ? 'looped' : source.shape };
+  }
   const rule = MIGRATIONS.find((entry) => entry.from === migrated.design);
   if (rule) {
     const current = migrated.designs[rule.from] ?? migrated.designs[rule.to] ?? {};

@@ -6,9 +6,9 @@ import { SHELVES, FAMILIES, validateCard, libraryGroups, variantsOf, variantDefa
 import { layered } from '../../site/src/ui/more-designs.js';
 import { panelOrderErrors } from '../../site/src/ui/panels.js';
 
-const ALLOWED_LEGACY = new Set(['squiggle', 'square-net', 'honeycomb-layered', 'figure8-net', 'looped-net', 'coil', 'spiral', 'zigzag', 'auxetic', 'web', 'chainmail', 'meander', 'harmonograph', 'truchet', 'voronoi', 'turing', 'conformal', 'sunflower', 'rosette', 'flowlines', 'bubbles', 'parquet', 'spirograph', 'starlattice', 'halftone']);
+const ALLOWED_LEGACY = new Set(['squiggle', 'square-net', 'honeycomb-layered', 'figure8-net', 'looped-net', 'spiral', 'zigzag', 'auxetic', 'web', 'chainmail', 'meander', 'harmonograph', 'truchet', 'voronoi', 'turing', 'conformal', 'sunflower', 'rosette', 'flowlines', 'bubbles', 'parquet', 'spirograph', 'starlattice', 'halftone']);
 
-test('all 31 ready cards have the exact ticket metadata', () => {
+test('all 39 ready cards have the exact ticket metadata', () => {
   const brief = [
     "   | `loop-pile` | raised | pile | built-in | untested | Raised loops are anchored to an open base mesh. |",
     "   | `squiggle` | layered | waves | self | untested | Two wavy families cross and fuse where they meet. |",
@@ -18,7 +18,9 @@ test('all 31 ready cards have the exact ticket metadata', () => {
     "   | `looped-net` | raised | loops | built-in | untested | Loops circle over themselves and lift over the earlier pass. |",
     "   | `squiggle-rings` | layered | rings | self | untested | Wavy ring families cross. |",
     "   | `squiggle-zigzag` | layered | waves | self | untested | Two zigzag families cross and fuse. |",
-    "   | `coil` | flat | loops | self | untested | One strand in rows; each loop touches the next row. |",
+    "   | `coil` | flat | loops | self | untested | One strand in rows of loops; each touches the next row. |",
+    "   | `figure8-rows` | flat | loops | self | untested | One strand in rows of figure-8s; each touches the next row. |",
+    "   | `coil-shapes` | flat | loops | self | untested | One strand in rows; each loop touches the next row. |",
     "   | `weave` | layered | woven | self | untested | Lower and upper pieces at two levels, joined by ramps; crossings fuse. |",
     "   | `spiral` | layered | radial | built-in | untested | Nested rings held by a crossing carrier. |",
     "   | `boucle` | layered | rings | built-in | untested | Rings sit on a carrier line, for edges. |",
@@ -49,8 +51,8 @@ test('all 31 ready cards have the exact ticket metadata', () => {
     "   | `pillarweave` | raised | spacers | self | untested | Fibre locked round upright pillars. |",
   ].join("\n");
   const rows = [...brief.matchAll(/\| `([^`]+)` \| (flat|layered|raised) \| (\w+) \| (self|auto|built-in) \| (untested|needs-repair) \| ([^|]+) \|/g)];
-  assert.equal(rows.length, 37);
-  assert.equal(DESIGNS.filter(d => d.status === 'ready').length, 37);
+  assert.equal(rows.length, 39);
+  assert.equal(DESIGNS.filter(d => d.status === 'ready').length, 39);
   for (const [, id, shelf, family, support, state, joins] of rows) {
     const card = DESIGNS.find(d => d.id === id);
     assert.deepEqual(validateCard(card), [], id);
