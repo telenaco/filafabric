@@ -43,7 +43,49 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "honeycomb-flat",
+    "score": 13.064217028316488,
+    "components": 1,
+    "joints": 29,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 3.5154936058801383,
+    "maxSlopeDeg": 4.583229816556211,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 29,
+    "moves": 7085,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 1348.8147151851392,
+      "afterMm": 198.01004242194062
+    }
+  },
+  {
     "id": "crosshatch",
+    "score": 16.132735537483622,
+    "components": 1,
+    "joints": 1,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 3.9357142857147664,
+    "maxSlopeDeg": 8.211306966054089,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 1,
+    "moves": 1744,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 139.0455409631488,
+      "afterMm": 139.0455409631488
+    }
+  },
+  {
+    "id": "crosshatch-wavy",
     "score": 16.132735537483622,
     "components": 1,
     "joints": 1,

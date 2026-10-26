@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { depthAlong, thicknessAlong, PATTERN_EFFECTS } from '../../site/src/engine/pattern-effects.js';
+import { thicknessAlong, PATTERN_EFFECTS } from '../../site/src/engine/pattern-effects.js';
+import { waveLines } from '../../site/src/engine/wavegrid.js';
+import { boundaryFor } from '../../site/src/engine/layers.js';
 import { defaultProfiles } from './helpers.js';
 import { designById } from '../../site/src/ui/designs.js';
 import { migrateState } from '../../site/src/ui/library.js';
@@ -22,14 +24,19 @@ test('flow over the second net is scaled to 0.85 of its bed value', () => {
   assert.ok(Math.abs(over[0].flow - bed[0].flow * 0.85) <= 0.025, 'the 0.05 flow quantisation is within half a step of the 0.85 over-net scale');
 });
 
-test('wave depth follows the source tone while keeping the lane centre fixed', () => {
-  const line = [{ x: 0, y: -1 }, { x: 1, y: 0 }, { x: 2, y: 1 }];
-  const unchanged = depthAlong(line, null);
-  assert.deepEqual(unchanged, line);
-  const shaped = depthAlong(line, (x) => x === 1 ? 1 : 0, { angle: 0 });
-  assert.equal(shaped[1].y, 0);
-  assert.ok(Math.abs(shaped[0].y) < 1);
-  assert.ok(Math.abs(shaped[2].y) < 1);
+test('depth is applied per lane before clipping and chaining, not to the whole joined fabric', () => {
+  const boundary = boundaryFor(40, 30);
+  for (const angle of [0, 90]) {
+    const options = { angle, spacing: 4, amplitude: 2, shape: 'triangle', clearance: 0.225 };
+    const plain = waveLines(boundary, options);
+    assert.deepEqual(waveLines(boundary, { ...options, depthAt: () => 1 }), plain);
+    const shallow = waveLines(boundary, { ...options, depthAt: () => 0 });
+    assert.notDeepEqual(shallow, plain);
+    const points = shallow.flat();
+    assert.ok(points.every((p) => boundary.contains(p.x, p.y)));
+    const span = angle === 0 ? 'y' : 'x';
+    assert.ok(Math.max(...points.map(p => p[span])) - Math.min(...points.map(p => p[span])) > 20, 'rows still cover the full swatch');
+  }
 });
 
 test('thickness is a selectable effect for the wave and grid cards and sends flow to extrusion', () => {

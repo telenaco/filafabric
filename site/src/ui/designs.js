@@ -33,7 +33,7 @@ import { generateRelief } from '../engine/relief.js';
 import { generateFringe } from '../engine/fringe.js';
 import { generateSpiral } from '../engine/spiral.js';
 import { generateWeave, WEAVE_BINDINGS, WEAVE_BINDING_IDS } from '../engine/weave.js';
-import { bindingThumb, thumbFromLayers } from './thumbs.js';
+import { bindingThumb, thumbFromLayers, shapeThumb } from './thumbs.js';
 import { OPTION_ICONS } from './option-thumbs.js';
 import { MORE_DESIGNS } from './more-designs.js';
 import { LINE_DESIGNS } from './line-designs.js';
@@ -377,6 +377,7 @@ const coilShapeCard = {
 const figure8Rows = {
   ...coil,
   id: 'figure8-rows', name: 'Figure-8 rows', settingsKey: 'figure8-rows',
+  thumb: shapeThumb('figure8'),
   joins: 'One strand in rows of figure-8s; each touches the next row.',
   blurb: 'One continuous strand in rows of figure-8s',
   about: 'Flat rows of one continuous strand formed from figure-8 loops, with each row touching the next.',

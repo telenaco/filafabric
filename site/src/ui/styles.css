@@ -372,7 +372,7 @@ input[type="range"] { width: 100%; height: 28px; margin: 0; accent-color: var(--
 .shelf-heading { margin: 12px 0 8px; padding-bottom: 5px; border-bottom: 1px solid var(--line); }
 .shelf-heading h2 { margin: 0; font-size: 1rem; }
 .shelf-heading p { margin: 2px 0 0; color: var(--muted); font-size: .78rem; }
-.family-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 0 0 11px; }
+.shelf-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .family-heading { grid-column: 1 / -1; margin: 2px 0 0; color: var(--muted); font-size: .72rem; font-weight: 600; letter-spacing: .04em; }
 .design-badges { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
 .design-badge { color: var(--muted); font-size: .64rem; line-height: 1.3; }

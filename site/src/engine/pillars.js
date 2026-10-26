@@ -253,7 +253,8 @@ function finish(machine, material, params, build, extraKey) {
   const warnings = [];
   if (built.pillars === 0) warnings.push('No pillar fits: the swatch is smaller than one pitch');
   const gcode = writeGcode(moves, cfg, { stats });
-  return finishFabric({ cfg, strands: built.strands, moves, stats, warnings, gcode, outline, report, layerCount: Math.round(params.layers ?? 1) + 2, [extraKey]: { pillars: built.pillars, rings: built.rings, layers: Math.max(1, Math.round(params.layers ?? 1)) } }, { boundary });
+  const intendedFamilies = extraKey === 'spacer' ? ['bottom', 'pillars', 'top'] : ['pillars', 'fibre'];
+  return finishFabric({ cfg, strands: built.strands, intendedFamilies, moves, stats, warnings, gcode, outline, report, layerCount: Math.round(params.layers ?? 1) + 2, [extraKey]: { pillars: built.pillars, rings: built.rings, layers: Math.max(1, Math.round(params.layers ?? 1)) } }, { boundary });
 }
 
 /** End to end: machine, material and spacer-net settings in, moves, stats, G-code and report out. */

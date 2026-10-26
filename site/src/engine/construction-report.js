@@ -242,6 +242,7 @@ export const SHELF_EXCEPTIONS = Object.freeze({
   spiral: 'Declared layered for its carrier construction, but the measured 0.687 mm envelope exceeds the one-native-family 0.450 mm layered ceiling.',
   boucle: 'Declared layered for its carrier construction, but the measured 0.594 mm envelope exceeds the one-native-family 0.450 mm layered ceiling.',
   auxetic: 'Declared flat as a planar lattice, but two native families cross at 0.400 mm and the measured rule selects layered.',
+  'honeycomb-flat': 'Declared flat as a planar cell lattice, but the inherited Auxetic generator uses two native families at 0.400 mm and the measured rule selects layered; physical validation pending.',
   dipweave: 'Declared raised for the dipping technique, but its default warp and weft families measure only 0.400 mm and satisfy layered.',
   harmonograph: 'Declared flat as drawn curves, but its two crossing native families at 0.400 mm satisfy layered.',
   voronoi: 'Declared layered as a cellular mesh, but the measured 0.800 mm envelope exceeds the two-native-family 0.650 mm layered ceiling.',

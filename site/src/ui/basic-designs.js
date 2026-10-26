@@ -8,7 +8,7 @@ import { layered } from './more-designs.js';
 import { waveLines } from '../engine/wavegrid.js';
 import { patternField, withPicture } from '../engine/picture.js';
 import { FIELD_IDS } from '../engine/fields.js';
-import { depthAlong, thicknessAlong, THICKNESS_RANGES } from '../engine/pattern-effects.js';
+import { thicknessAlong, THICKNESS_RANGES } from '../engine/pattern-effects.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const COLOUR = { kind: 'switch', key: 'colorChange', label: 'Two colours', help: 'Pause after the first layer so you can load a second filament (M600).' };
@@ -82,10 +82,10 @@ BASIC_DESIGNS.push(layered({
     const pitch = bead * 0.8;
     const base = { spacing: s.spacing, amplitude: s.depth, wavelength: s.wavelength, shape: 'triangle', angle: 0, clearance: (printedBoundary && perimeters > 0 ? pitch : bead / 2) + perimeters * pitch + 1e-5 };
     const second = s.mode === 'cross' ? { ...base, angle: 90 } : { ...base, phase: 0.5 };
-    const layers = [waveLines(boundary, base), waveLines(boundary, second)];
     const field = patternField(s.pattern, { scale: s.patternScale, picture });
+    const depthAt = s.patternEffect === 'depth' ? field : null;
+    const layers = [waveLines(boundary, { ...base, depthAt }), waveLines(boundary, { ...second, depthAt })];
     if (field && s.patternEffect === 'thickness') return { layers: layers.map((layer, index) => layer.map((line) => thicknessAlong(line, field, { thin: s.thin, thick: s.thick, layer: index }))) };
-    if (field && s.patternEffect === 'depth') return { layers: layers.map((layer, index) => layer.map((line) => depthAlong(line, field, { angle: index === 0 ? 0 : second.angle }))) };
     return { layers };
   },
   summary: (result) => `a zigzag mesh with ${result.report.crossings} crossings`,

@@ -27,7 +27,7 @@ import { DESIGNS, designById, isReady, baseDesignSettings } from './designs.js';
 import { THUMBS, shapeThumb, presetThumb } from './thumbs.js';
 import { defaultSection, sideProfile } from '../engine/side-profile.js';
 import { drawSideView } from './sideview.js';
-import { FAMILIES, SHELVES, libraryGroups, initialDesignSettings, selectVariant } from './library.js';
+import { SHELVES, libraryGroups, initialDesignSettings, selectVariant } from './library.js';
 import { swatchCode } from './swatch.js';
 import { exportFileName, relevantKeys } from './file-name.js';
 import { FIELDS, FIELD_IDS, createField } from '../engine/fields.js';
@@ -1536,8 +1536,7 @@ function renderTiles() {
   };
   const shelfNode = (shelf, groups) => el('section', { class: `library-shelf shelf-${shelf}`, 'aria-labelledby': `shelf-${shelf}-title` },
     el('header', { class: 'shelf-heading' }, el('h2', { id: `shelf-${shelf}-title`, text: SHELVES[shelf].label }), el('p', { text: SHELVES[shelf].hint })),
-    ...groups.map(({ family, cards }) => el('section', { class: 'family-group', 'aria-label': FAMILIES[family].label },
-      el('h3', { class: 'family-heading', text: FAMILIES[family].label }), ...cards.map(makeTile))));
+    el('div', { class: 'shelf-cards' }, ...groups.flatMap(({ cards }) => cards.map(makeTile))));
   const groups = libraryGroups();
   $('#design-list').replaceChildren(...['flat', 'layered', 'raised'].map((shelf) => shelfNode(shelf, groups[shelf])));
   $('#experimental-design-list').replaceChildren(...(presets.length ? [el('section', { class: 'library-shelf quick-starts', 'aria-label': 'Quick starts' },

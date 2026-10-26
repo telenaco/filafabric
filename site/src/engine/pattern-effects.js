@@ -14,21 +14,6 @@ export const THICKNESS_RANGES = Object.freeze({
   thick: { min: 0.8, max: 2.5, step: 0.05 },
 });
 
-/** Modulate a strand's normal displacement without moving its lane centre or changing its topology. */
-export function depthAlong(polyline, field, { angle = 0, minimumFraction = 0.15 } = {}) {
-  if (!Array.isArray(polyline) || !polyline.length || !field) return polyline ?? [];
-  const radians = (angle * Math.PI) / 180;
-  const nx = -Math.sin(radians), ny = Math.cos(radians);
-  const centre = polyline.reduce((sum, point) => sum + point.x * nx + point.y * ny, 0) / polyline.length;
-  return polyline.map((point) => {
-    const tone = Math.max(0, Math.min(1, field(point.x, point.y)));
-    const offset = point.x * nx + point.y * ny - centre;
-    const scale = minimumFraction + (1 - minimumFraction) * tone;
-    const adjustment = offset * (scale - 1);
-    return { ...point, x: point.x + nx * adjustment, y: point.y + ny * adjustment };
-  });
-}
-
 /** Attach a tone-driven extrusion flow to a line, limiting changes along the path to `maxChangePerMm`. */
 export function thicknessAlong(polyline, field, { thin = 0.6, thick = 1.8, overNet = 0.85, layer = 0, maxChangePerMm = 0.25, bead = 0.45, quantise = 0.05 } = {}) {
   if (!Array.isArray(polyline)) return [];

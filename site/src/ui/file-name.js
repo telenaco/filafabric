@@ -27,7 +27,12 @@ export function relevantKeys(mod, s) {
     if (typeof c.when === 'function' && !c.when(s)) continue;
     if (c.kind === 'choice' || c.kind === 'shape') keys.push(c.key);
     else if (c.kind === 'sliders') for (const item of c.items) keys.push(item.key);
-    else if (c.kind === 'pattern') { keys.push(c.key); if (c.scale) keys.push(c.scale.key); }
+    else if (c.kind === 'pattern') {
+      keys.push(c.key);
+      if (c.scale) keys.push(c.scale.key);
+      if (s.patternEffect && s.patternEffect !== mod.patternEffects?.[0]) keys.push('patternEffect');
+      if (s.patternEffect === 'thickness' && s.pattern !== 'none') keys.push('thin', 'thick');
+    }
     else if (c.kind === 'switch' && s[c.key]) keys.push(c.key);
   }
   return [...new Set(keys)];
