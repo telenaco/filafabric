@@ -10,6 +10,17 @@ import { YELLOW_PRINTS_SOLID } from '../../site/src/engine/drawing.js';
 
 const profiles = defaultProfiles();
 
+test('all-solid SVG export intentionally removes pattern families without a lost-layer error', () => {
+  const ring = [{x:2,y:2},{x:18,y:2},{x:18,y:18},{x:2,y:18},{x:2,y:2}];
+  const vector = {name:'all-solid.svg',width:20,height:20,paths:[ring],styles:[{color:'green',width:0.5}]};
+  const result = generateDesignExport({...profiles,design:'crosshatch',vector,width:20,height:20,brim:0});
+  assert.deepEqual(result.intendedFamilies,[]);
+  assert.deepEqual(result.construction.lostFamilies,[]);
+  assert.deepEqual(result.construction.errors,[]);
+  assert.ok(result.strands.some((strand)=>strand.name==='Solid shape'));
+  assert.ok(result.moves.some((move)=>move.extrude));
+});
+
 test('Bubbles export generates one full-size seeded design beyond the bounded preview', () => {
   const settings = { size: 5, seed: 7, link: true };
   const input = { ...profiles, design: 'bubbles', settings, width: 200, height: 200, brim: 0 };

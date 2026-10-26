@@ -170,7 +170,9 @@ export function solidOnly(vector) {
 
 /** The result with its pattern taken out; the drawing's lines and solids are added to it as usual. */
 export function withoutPattern(result) {
-  return { ...result, strands: [], moves: [], placements: [], warnings: [] };
+  // Removing a pattern intentionally also removes the obligation to retain its
+  // native families. The final solids are still measured by the export report.
+  return { ...result, intendedFamilies: [], strands: [], moves: [], placements: [], warnings: [] };
 }
 
 const ringInside = (a, b) => inside(a[0].x, a[0].y, b) && inside(a[Math.floor(a.length / 2)].x, a[Math.floor(a.length / 2)].y, b);

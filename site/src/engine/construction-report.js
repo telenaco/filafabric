@@ -212,7 +212,7 @@ export function refreshConstruction(result) {
   const t = result.cfg.t;
   const rectangle = [{ x: 0, y: 0 }, { x: t.sample_width, y: 0 },
     { x: t.sample_width, y: t.sample_height }, { x: 0, y: t.sample_height }];
-  const boundary = new PolygonBoundary(result.outline ?? [rectangle]);
+  const boundary = new PolygonBoundary(result.pieceOutline ?? result.outline ?? [rectangle]);
   result.construction = buildConstructionReport(result, {
     boundary, strandWidth: t.extrusion_width, layerHeight: t.layer_height,
   });

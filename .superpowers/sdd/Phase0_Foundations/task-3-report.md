@@ -100,3 +100,9 @@ These representative dense cases satisfy the 200 ms report-added target. A stand
 ## Remaining review concerns
 
 Nine shelf exceptions await human approval; exact current geometry and metadata are recorded above. Cache reuse is intentionally one-shot, rather than persistent under mutable public geometry. Reports are geometric diagnostics and do not claim physical material verification. The parent will perform independent review and the final broader suite.
+
+## Review follow-up: intentional all-solid SVG pattern removal
+
+The independent reviewer found that `withoutPattern` removed native geometry for a valid green-only SVG but retained the discarded pattern's intended families. The final construction guard therefore incorrectly blocked all-solid exports with lost L1/L2 errors. The new regression reproduced that failure before the fix. `withoutPattern` now clears intended families when intentionally removing the pattern; the final solids still receive the ordinary construction report and export guard. This changes no print geometry. Focused regression and SVG solids tests are recorded in the follow-up commit.
+
+The reviewer also found that final report refresh ignored `pieceOutline`, so solids extending beyond pattern windows used the smaller pattern boundary for density and loose ends. A composed SVG regression reproduced a wrong 10.9375 crossings/cm² instead of 2.1604938272. Refresh now follows `pieceOutline ?? outline ?? rectangle`, matching the final composed piece. Both reviewer regressions passed after the fixes, along with all six SVG solids tests. No printing geometry changed.

@@ -104,3 +104,22 @@ test('final brim report includes added geometry while preserving the legacy repo
   buildConstructionReport(result);
   assert.equal(result.report,previous);
 });
+
+test('composed SVG report measures the final piece outside its pattern window', () => {
+  const square = (a,b) => [{x:a,y:a},{x:b,y:a},{x:b,y:b},{x:a,y:b},{x:a,y:a}];
+  const outline = [square(6,14)];
+  const vector = {
+    name:'solid-around-window.svg',width:20,height:20,
+    paths:[square(1,19),square(6,14)],
+    styles:[{color:'green',width:0.5},{color:'red',width:0.5}],
+  };
+  const result = generateDesignExport({...profiles,design:'crosshatch',outline,vector,width:20,height:20,brim:0});
+  assert.ok(result.pieceOutline);
+  assert.notDeepEqual(result.pieceOutline,result.outline);
+  const expected = buildConstructionReport(result,{
+    boundary:new PolygonBoundary(result.pieceOutline),
+    strandWidth:result.cfg.t.extrusion_width,layerHeight:result.cfg.t.layer_height,
+  });
+  assert.equal(result.construction.crossings.perCm2,expected.crossings.perCm2);
+  assert.equal(result.construction.danglingEnds,expected.danglingEnds);
+});
