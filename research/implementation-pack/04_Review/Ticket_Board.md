@@ -9,13 +9,13 @@ The single place to see what is ready, who has it and where it stands. The revie
 | Ticket | Title | Depends on | Size | ∥ | State | Owner | PR |
 |---|---|---|---|---|---|---|---|
 | T0.0 | Output snapshots of every card | — | S | | In review (local; known baseline test exception) | Codex | [Local handoff](T0_0_Local_Review.md); `t0-0-output-snapshots`, no push |
-| T0.1 | Card IDs, metadata and `library.js` | T0.0 | M | ∥ T0.2 | Blocked | | |
-| T0.2 | Strand provenance tags | T0.0 | M | ∥ T0.1 | Blocked | | |
-| T0.3 | Construction report + shelf check | T0.2 | M | ∥ T0.4 | Blocked | | |
-| T0.4 | Side profile and side view | T0.2 | M | ∥ T0.3 | Blocked | | |
-| T0.5 | Shelves in the gallery | T0.1, T0.4 | M | ∥ T0.6 | Blocked | | |
-| T0.6 | State schema v4 and migration map | T0.1 | L | ∥ T0.5 | Blocked | | |
-| T0.7 | Variant groups | T0.5, T0.6 | M | | Blocked | | |
+| T0.1 | Card IDs, metadata and `library.js` | T0.0 | M | ∥ T0.2 | In review (local) | Codex | `t0-1-card-metadata`, no push |
+| T0.2 | Strand provenance tags | T0.0 | M | ∥ T0.1 | In review (local) | Codex | `t0-2-strand-provenance`, no push |
+| T0.3 | Construction report + shelf check | T0.2 | M | ∥ T0.4 | In review (local) | Codex | `t0-3-construction-report`, no push |
+| T0.4 | Side profile and side view | T0.2 | M | ∥ T0.3 | In review (local) | Codex | `t0-4-side-profile`, no push |
+| T0.5 | Shelves in the gallery | T0.1, T0.4 | M | ∥ T0.6 | In review (local) | Codex | `t0-5-gallery-shelves`, no push |
+| T0.6 | State schema v4 and migration map | T0.1 | L | ∥ T0.5 | In review (local) | Codex | `t0-6-state-migrations`, no push |
+| T0.7 | Variant groups | T0.5, T0.6 | M | | In review (local) | Codex | `t0-7-variant-groups`, no push |
 
 ## Phase 1: Move the existing designs
 

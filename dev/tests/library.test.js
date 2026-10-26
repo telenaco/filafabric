@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DESIGNS } from '../../site/src/ui/designs.js';
-import { SHELVES, FAMILIES, validateCard, libraryGroups, variantsOf, variantDefaultErrors } from '../../site/src/ui/library.js';
+import { SHELVES, FAMILIES, validateCard, libraryGroups, variantsOf, variantDefaultErrors, selectVariant, initialDesignSettings } from '../../site/src/ui/library.js';
 import { layered } from '../../site/src/ui/more-designs.js';
 
 test('all 31 ready cards have the exact ticket metadata', () => {
@@ -93,6 +93,14 @@ test('variant fixtures share settings keys and order links by shelf', () => {
     settingsKey: 'fixture', defaults: () => ({ width: 100, height: 100, spacing: 4 }) }));
   assert.deepEqual(variantsOf('variant-layered', fixture).map((card) => card.shelf), ['flat', 'layered', 'raised']);
   assert.deepEqual(variantDefaultErrors(fixture), []);
+  assert.deepEqual(variantDefaultErrors(DESIGNS), []);
+  const settings = initialDesignSettings(fixture);
+  const state = { design: 'variant-flat', designs: settings };
+  const shared = state.designs.fixture;
+  assert.equal(selectVariant(state, 'variant-raised', fixture), true);
+  assert.equal(state.design, 'variant-raised');
+  assert.equal(state.designs.fixture, shared);
+  assert.equal(selectVariant(state, 'missing', fixture), false);
   fixture[2].defaults = () => ({ width: 100, height: 100, spacing: 4, lift: 0.2 });
   assert.match(variantDefaultErrors(fixture)[0], /defaults differ/);
 });

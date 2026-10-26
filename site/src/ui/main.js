@@ -25,11 +25,11 @@ import { TooltipLayer } from './tooltip.js';
 import { ProfileStore } from './profile-store.js?v=20261019-printer-setup';
 import { searchMachines } from './machine-search.js?v=20261019-printer-setup';
 import { createProfilePicker } from './profile-picker.js';
-import { DESIGNS, designById, isReady, baseDesignSettings, galleryGroups } from './designs.js';
+import { DESIGNS, designById, isReady, baseDesignSettings } from './designs.js';
 import { THUMBS, shapeThumb, presetThumb } from './thumbs.js';
 import { defaultSection, sideProfile } from '../engine/side-profile.js';
 import { drawSideView } from './sideview.js';
-import { FAMILIES, SHELVES, libraryGroups } from './library.js';
+import { FAMILIES, SHELVES, libraryGroups, initialDesignSettings, selectVariant } from './library.js';
 import { swatchCode } from './swatch.js';
 import { exportFileName, relevantKeys } from './file-name.js';
 import { FIELDS, FIELD_IDS, createField } from '../engine/fields.js';
@@ -151,7 +151,7 @@ const state = {
   advanced: {},
   squiggle: { ...SQUIGGLE_DEFAULTS },
   // settings of every design newer than the loop pile and squiggle, by design id
-  designs: Object.fromEntries(DESIGNS.filter((d) => d.status === 'ready' && !d.legacyPanel).map((d) => [d.id, d.defaults()])),
+  designs: initialDesignSettings(DESIGNS),
   image: null, // { data: ImageData, name, px: [w, h], thumb: canvas }: stays on this computer, never in a link
   imageBoxOpen: false,
   outline: null, // { name, rings (flat, unit box), rotation }: shared by every design, travels in links
@@ -479,7 +479,7 @@ const host = {
   settings: (id) => settingsOf(id),
   presetPicture: (mod, preset) => presetThumb(mod, preset, { machine: state.machines.get(state.machine), material: printMaterial() }),
   previewResult: (id) => state.design === id && state.resultKey === snapshotKey() ? state.result : null,
-  switchDesign: (id) => setDesign(id),
+  switchDesign: (id) => setDesign(id, { fromVariant: true }),
   change: () => afterDesignChange(),
   nudge: () => afterControl(),
   sizeChanged: () => { renderControls(); schedule(); },
@@ -1668,9 +1668,7 @@ function renderProfileList() {
 /** One tile per registry module; planned designs are visible placeholders that cannot be selected. */
 function renderTiles() {
   const ranking = new Map(PRINTABILITY.map((p, i) => [p.id, { ...p, rank: i + 1 }]));
-  const byRank = (a, b) => (ranking.get(a.id)?.rank ?? 1000) - (ranking.get(b.id)?.rank ?? 1000);
-  const { essentials, others: rest } = galleryGroups();
-  const others = rest.sort(byRank);
+  const presets = DESIGNS.filter((design) => design.status === 'preset');
   const makeTile = (d) => {
     const ready = d.status === 'ready';
     const planned = d.status === 'planned';
@@ -1700,8 +1698,9 @@ function renderTiles() {
     ...groups.map(({ family, cards }) => el('section', { class: 'family-group', 'aria-label': FAMILIES[family].label },
       el('h3', { class: 'family-heading', text: FAMILIES[family].label }), ...cards.map(makeTile))));
   const groups = libraryGroups();
-  $('#design-list').replaceChildren(...['flat', 'layered'].map((shelf) => shelfNode(shelf, groups[shelf])));
-  $('#experimental-design-list').replaceChildren(shelfNode('raised', groups.raised));
+  $('#design-list').replaceChildren(...['flat', 'layered', 'raised'].map((shelf) => shelfNode(shelf, groups[shelf])));
+  $('#experimental-design-list').replaceChildren(...(presets.length ? [el('section', { class: 'library-shelf quick-starts', 'aria-label': 'Quick starts' },
+    el('h2', { class: 'family-heading', text: 'Quick starts' }), ...presets.map(makeTile))] : []));
   const strips = [...document.querySelectorAll('.design-side-strip[data-side-strip]')];
   const renderStrip = (strip) => {
     const mod = designById(strip.dataset.sideStrip);
@@ -1802,17 +1801,17 @@ function showDesign() {
   if (state.design !== 'loop-pile' && state.showTight) setShowTight(false);
 }
 
-function setDesign(id, { fromPreset = false } = {}) {
+function setDesign(id, { fromPreset = false, fromVariant = false } = {}) {
   if (!isReady(id)) return;
   let variantChanged = false;
-  if (!fromPreset) {
+  if (!fromPreset && !fromVariant) {
     const own = settingsOf(id), next = baseDesignSettings(id, own);
     variantChanged = Object.keys(next).some((key) => next[key] !== own[key]);
     Object.assign(own, next);
   }
   if (state.design === id && !variantChanged) return;
   stopPlay();
-  state.design = id;
+  if (!selectVariant(state, id)) return;
   state.fraction = 1;
   state.checkOpen = null;
   state.why = false;

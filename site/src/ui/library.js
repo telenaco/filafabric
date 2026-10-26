@@ -199,3 +199,20 @@ export function variantDefaultErrors(designs = DESIGNS) {
   }
   return [...groups.values()].flatMap((group) => group.errors);
 }
+
+/** Sets the active card without touching its shared settings object. */
+export function selectVariant(state, id, designs = DESIGNS) {
+  if (!variantsOf(id, designs).length) return false;
+  state.design = id;
+  return true;
+}
+
+/** Creates one defaults object per settings group for the application state. */
+export function initialDesignSettings(designs = DESIGNS) {
+  const settings = {};
+  for (const card of designs) if (card.status === 'ready') {
+    const key = card.settingsKey ?? card.id;
+    if (!Object.hasOwn(settings, key)) settings[key] = card.defaults();
+  }
+  return settings;
+}
