@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { waveLines, waveValue, WAVE_SHAPES } from '../../site/src/engine/wavegrid.js';
 import { generateCoilTextile } from '../../site/src/engine/coil.js';
 import { backingLines, backingStack } from '../../site/src/engine/backing.js';
@@ -9,9 +10,26 @@ import { findCrossings } from '../../site/src/engine/crossings.js';
 import { fitCells } from '../../site/src/engine/repeats.js';
 import { DESIGNS, ESSENTIALS, designById, galleryGroups } from '../../site/src/ui/designs.js';
 import { defaultProfiles } from './helpers.js';
+import { generateDesignExport } from '../../site/src/engine/design-export.js';
 
 const box = boundaryFor(60, 60);
 const flat = (lines) => lines.flatMap((pts) => pts);
+
+test('plain Zigzag differs from the legacy Squiggle zigzag in both structures', () => {
+  const profiles = defaultProfiles();
+  const hash = (result) => createHash('sha256').update(result.gcode).digest('hex');
+  const hashes = {};
+  for (const mode of ['parallel', 'cross']) {
+    const plain = { ...designById('zigzag').defaults(), width: 60, height: 50, mode };
+    const legacy = { ...designById('squiggle-zigzag').defaults(), width: 60, height: 50, mode,
+      spacing: plain.spacing, amplitude: plain.depth, wavelength: plain.wavelength, pattern: 'uniform' };
+    hashes[mode] = [
+      hash(generateDesignExport({ ...profiles, design: 'zigzag', settings: plain, width: 60, height: 50, brim: 0 })),
+      hash(generateDesignExport({ ...profiles, design: 'squiggle-zigzag', settings: legacy, width: 60, height: 50, brim: 0 })),
+    ];
+    assert.notEqual(...hashes[mode], `${mode} G-code unexpectedly matches`);
+  }
+});
 
 test('the three waves swing between -1 and 1 and a half-wave on is the mirror of the wave', () => {
   for (const shape of WAVE_SHAPES) {
@@ -151,8 +169,7 @@ test('a hidden card leaves the gallery but still opens: Drawing & infill, for no
   assert.equal(shown.includes('crosshatch'), false);
   assert.deepEqual(essentials.map((d) => d.id), ESSENTIALS.filter((id) => id !== 'svgdesign'), 'the other essentials keep their order');
   assert.ok(others.length > 10 && others.every((d) => !ESSENTIALS.includes(d.id)));
-  assert.equal(designById('zigzag-mesh').name, 'Advanced zigzag mesh');
-  assert.equal(designById('zigzag-mesh').status, 'preset');
+  assert.equal(designById('zigzag-mesh'), undefined);
 });
 
 test('where a Start-from row only repeated a choice, the choice carries the companions and the row is gone', () => {
@@ -203,7 +220,7 @@ test('the meander and Turing stripes are held by a gyroid backing unless straigh
 test('every tile has a card or a preset target, and the list can be built from the registry', () => {
   const ids = new Set(DESIGNS.map((d) => d.id));
   for (const id of ESSENTIALS) assert.ok(ids.has(id));
-  assert.ok(DESIGNS.some((d) => d.id === 'zigzag-mesh' && d.opens.design === 'squiggle-zigzag'));
+  assert.equal(DESIGNS.some((d) => d.id === 'zigzag-mesh'), false);
 });
 
 test('the backing wave has a depth and a length you set, and a second backing is a third layer', () => {

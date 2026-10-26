@@ -129,14 +129,6 @@ export const DESIGNS = [
     sanitize: sanitizePrimary,
   },
   squiggleCard(squiggleShapeCards[0]),
-  {
-    id: 'zigzag-mesh',
-    name: 'Advanced zigzag mesh',
-    blurb: 'Parallel zigzag strands with adjustable spacing and pattern.',
-    file: 'squiggle',
-    status: 'preset',
-    opens: { design: 'squiggle-zigzag', patch: { mode: 'parallel' } },
-  },
   ...squiggleShapeCards.slice(1).map(squiggleCard),
   {
     id: 'coil',
