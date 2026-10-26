@@ -29,6 +29,7 @@ import { DESIGNS, designById, isReady, baseDesignSettings, galleryGroups } from 
 import { THUMBS, shapeThumb, presetThumb } from './thumbs.js';
 import { defaultSection, sideProfile } from '../engine/side-profile.js';
 import { drawSideView } from './sideview.js';
+import { FAMILIES, SHELVES, libraryGroups } from './library.js';
 import { swatchCode } from './swatch.js';
 import { exportFileName, relevantKeys } from './file-name.js';
 import { FIELDS, FIELD_IDS, createField } from '../engine/fields.js';
@@ -1685,18 +1686,21 @@ function renderTiles() {
     });
     const assessment = ranking.get(d.id);
     tile.title = `${d.blurb}${assessment ? ` · Estimated printability ${assessment.rank} of ${PRINTABILITY.length}. ${assessment.longestUnsupported.toFixed(1)} mm longest free span; ${assessment.maxSlopeDeg.toFixed(1)}° maximum slope. Default 100 × 100 mm geometry; physical testing pending.` : ''}`;
-    tile.innerHTML = `${d.thumb ?? THUMBS[d.id] ?? ''}<span class="design-side-strip" data-side-strip="${ready ? d.id : ''}" aria-hidden="true"></span><span class="design-text"><span class="design-name">${d.name}${planned ? '<span class="soon">Soon</span>' : ''}</span></span>`;
+    const supportLabel = { self: 'Holds itself', auto: '+ backing', 'built-in': 'Built-in carrier' }[d.support];
+    const stateLabel = d.state === 'needs-repair' ? 'Needs repair' : d.state === 'untested' ? 'Untested' : '';
+    const badges = [supportLabel, stateLabel].filter(Boolean).map((text) => `<span class="design-badge" aria-label="${text}">${text}</span>`).join('');
+    tile.innerHTML = `${d.thumb ?? THUMBS[d.id] ?? ''}<span class="design-side-strip" data-side-strip="${ready ? d.id : ''}" aria-hidden="true"></span><span class="design-text"><span class="design-name">${d.name}${planned ? '<span class="soon">Soon</span>' : ''}</span><span class="design-badges">${badges}</span></span>`;
     if (ready) tile.addEventListener('click', () => setDesign(d.id));
     if (d.status === 'preset') tile.addEventListener('click', () => openPresetTile(d));
     return tile;
   };
-  // the headings are one word or two; what they mean is a tooltip, so the first tile is the first thing in the list
-  const heading = (text, sub) => el('h3', { class: 'design-group', title: sub }, text);
-  $('#design-list').replaceChildren(
-    heading('Essentials', 'Flat lines in one or two layers, with only a few controls'),
-    ...essentials.map(makeTile),
-  );
-  $('#experimental-design-list').replaceChildren(...others.map(makeTile));
+  const shelfNode = (shelf, groups) => el('section', { class: `library-shelf shelf-${shelf}`, 'aria-labelledby': `shelf-${shelf}-title` },
+    el('header', { class: 'shelf-heading' }, el('h2', { id: `shelf-${shelf}-title`, text: SHELVES[shelf].label }), el('p', { text: SHELVES[shelf].hint })),
+    ...groups.map(({ family, cards }) => el('section', { class: 'family-group', 'aria-label': FAMILIES[family].label },
+      el('h3', { class: 'family-heading', text: FAMILIES[family].label }), ...cards.map(makeTile))));
+  const groups = libraryGroups();
+  $('#design-list').replaceChildren(...['flat', 'layered'].map((shelf) => shelfNode(shelf, groups[shelf])));
+  $('#experimental-design-list').replaceChildren(shelfNode('raised', groups.raised));
   const strips = [...document.querySelectorAll('.design-side-strip[data-side-strip]')];
   const renderStrip = (strip) => {
     const mod = designById(strip.dataset.sideStrip);

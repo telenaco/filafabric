@@ -136,10 +136,12 @@ export function validateCard(mod) {
   return problems;
 }
 
-/** Visible ready cards in shelf order, then family declaration order, then registry order. */
+/** Visible ready cards grouped and sorted by shelf, family, test state and name. */
 export function libraryGroups(designs = DESIGNS) {
+  const stateOrder = { tested: 0, untested: 1, 'needs-repair': 2 };
   return Object.fromEntries(Object.keys(SHELVES).map(shelf => [shelf,
-    Object.keys(FAMILIES).map(family => ({ family, cards: designs.filter(card => card.status === 'ready' && !card.hidden && card.shelf === shelf && card.family === family) })).filter(group => group.cards.length),
+    Object.keys(FAMILIES).map(family => ({ family, cards: designs.filter(card => card.status === 'ready' && !card.hidden && card.shelf === shelf && card.family === family)
+      .sort((a, b) => stateOrder[a.state] - stateOrder[b.state] || a.name.localeCompare(b.name)) })).filter(group => group.cards.length),
   ]));
 }
 

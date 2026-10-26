@@ -62,6 +62,13 @@ test('visible ready cards occur once on their shelf, grouped by family', () => {
   assert.deepEqual(libraryGroups([{ status: 'preset' }, { status: 'planned' }]), { flat: [], layered: [], raised: [] });
 });
 
+test('library groups order cards by print state and then name', () => {
+  const fixture = ['Zulu', 'Beta', 'Alpha'].map((name, i) => ({ ...DESIGNS.find((d) => d.id === 'coil'), id: `fixture-${i}`, name,
+    family: 'loops', state: ['untested', 'tested', 'needs-repair'][i] }));
+  const cards = Object.values(libraryGroups(fixture)).flatMap((groups) => groups.flatMap((group) => group.cards));
+  assert.deepEqual(cards.map((card) => card.name), ['Beta', 'Zulu', 'Alpha']);
+});
+
 test('validation rejects malformed metadata and skips preset tiles', () => {
   const base = { ...DESIGNS[0] };
   for (const [key, values] of Object.entries({ shelf: ['missing', 'toString'], family: ['missing', 'toString'], joins: ['', 'No stop', 'x'.repeat(120) + '.'], support: ['missing'], state: ['missing'], sources: [null, [], 'text'], settingsKey: [12, null], legacy: [true, {}, [{ id: 12 }], [{ id: 'old', patch: [] }]] })) {
