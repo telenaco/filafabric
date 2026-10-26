@@ -15,7 +15,7 @@ const circle = Array.from({ length: 49 }, (_, k) => ({ x: 20 + 5 * Math.cos(k * 
 const vector = { name: 'yellow.svg', width: 40, height: 40, paths: [circle], styles: [{ color: 'yellow', width: 1.2 }] };
 
 test('yellow affects every ready nonlegacy design while original SVG wall passes remain undeformed', { skip: YELLOW_PRINTS_SOLID && 'yellow prints solid for now: guides are parked (YELLOW_PRINTS_SOLID in drawing.js)' }, () => {
-  for (const d of DESIGNS.filter((d) => d.status === 'ready' && !d.legacy)) {
+  for (const d of DESIGNS.filter((d) => d.status === 'ready' && !d.legacyPanel)) {
     const raw = d.generate(machine, material, { ...d.defaults(), width: 40, height: 40 }, { vector: d.usesVector || d.vectorGuides ? vector : null, vectorSize: [40, 40], includeLines: false });
     const repelled = applySvgGuides(raw, vector);
     assert.equal(repelled.guideCount, 1, d.id);

@@ -1,10 +1,11 @@
 // The design registry: one entry per card in the left column. Pure data and functions (no DOM), so it is tested
 // in Node and shared by the studio, the share-link sanitiser and the exporter.
 //
-// A module is { id, name, blurb, file, status: 'ready' | 'planned', roles, defaults(), sanitize(raw), legacy? }.
+// A module is { id, name, blurb, file, status: 'ready' | 'planned', roles, defaults(), sanitize(raw), legacyPanel? }.
+// Card metadata includes shelf, family, joins, support, state, sources and optional legacy migration records.
 //   file      prefix of the exported G-code file name
 //   roles     what each preview role is called in this design's legend (base, anchored, lifting, free)
-//   legacy    the loop pile and squiggle keep their hand-written panels and their own state keys
+//   legacyPanel the loop pile and squiggle keep their hand-written panels and their own state keys
 //             (`primary`, `squiggle`); newer designs keep their state under `designs[id]`
 //   planned   a placeholder tile: visible, not selectable
 //   preset    a tile that opens another design with some settings changed (`opens: { design, patch }`)
@@ -63,22 +64,26 @@ const fromControls = (c) => ({
 export const DESIGNS = [
   {
     id: 'loop-pile',
+    shelf: 'raised', family: 'pile', support: 'built-in', state: 'untested',
+    joins: "Raised loops are anchored to an open base mesh.", sources: {},
     name: 'Loop pile',
     blurb: 'Soft raised loops on an open base',
     file: 'looppile',
     status: 'ready',
-    legacy: true,
+    legacyPanel: true,
     roles: { base: 'Base', anchored: 'Anchored feet', lifting: 'Rising and falling', free: 'Free-hanging' },
     defaults: () => ({ ...PRIMARY_DEFAULTS }),
     sanitize: sanitizePrimary,
   },
   {
     id: 'squiggle',
+    shelf: 'layered', family: 'waves', support: 'self', state: 'untested',
+    joins: "Two wavy layers cross and fuse where they meet.", sources: {},
     name: 'Squiggle & Gyroid',
     blurb: 'Two wavy layers that lock together',
     file: 'squiggle',
     status: 'ready',
-    legacy: true,
+    legacyPanel: true,
     roles: { base: 'Layer 1', anchored: 'Layer 2' },
     defaults: () => ({ ...SQUIGGLE_DEFAULTS }),
     sanitize: sanitizeSquiggle,
@@ -93,6 +98,8 @@ export const DESIGNS = [
   },
   {
     id: 'coil',
+    shelf: 'flat', family: 'loops', support: 'self', state: 'untested',
+    joins: "One strand in rows; each loop touches the next row.", sources: {},
     name: 'Coil',
     blurb: 'One strand in rows: loops, zigzags or waves that meet',
     about: 'Flat rows of one continuous strand, one layer thick: loops that circle over themselves, or zigzag, wave and square rows whose peaks meet the next row (neighbouring rows run opposite ways, so they sit half a wave apart). Where the strand crosses itself or the row before, it lifts over by a layer, so there is no second layer to print.',
@@ -141,6 +148,8 @@ export const DESIGNS = [
   {
     ...fromControls(WEAVE),
     id: 'weave',
+    shelf: 'layered', family: 'woven', support: 'self', state: 'untested',
+    joins: "Lower and upper pieces at two levels, joined by ramps; crossings fuse.", sources: {},
     name: 'Weave',
     blurb: 'Over and under, plain to satin',
     about: 'Warp and weft lines that pass over and under each other, printed in two passes by level (a nozzle cannot go under a printed strand). Experimental: it needs a lift for every piece, and the strands fuse where they cross.',
@@ -166,6 +175,8 @@ export const DESIGNS = [
   {
     ...fromControls(SPIRAL_CONTROLS),
     id: 'spiral',
+    shelf: 'layered', family: 'radial', support: 'built-in', state: 'untested',
+    joins: "Nested rings held by a crossing carrier.", sources: {},
     name: 'Spiral panel',
     blurb: 'Nested rings held by crossing strands',
     about: 'Nested rings follow the outline. Crossed backing or normal strands hold the panel together.',
@@ -195,6 +206,8 @@ export const DESIGNS = [
   {
     ...fromControls(BOUCLE_CONTROLS),
     id: 'boucle',
+    shelf: 'layered', family: 'rings', support: 'built-in', state: 'untested',
+    joins: "Rings sit on a carrier line, for edges.", sources: {},
     name: 'Bouclé & picots',
     blurb: 'Flat rings on a line, for edges',
     about: 'Rows of line with a round ring standing on it, alternately above and below, printed as one strand. Rings that touch the next row lie over it, one layer thick.',
@@ -227,6 +240,8 @@ export const DESIGNS = [
   {
     ...fromControls(RELIEF_CONTROLS),
     id: 'relief',
+    shelf: 'raised', family: 'textures', support: 'built-in', state: 'untested',
+    joins: "Rows rise and fall over a crossed base.", sources: {},
     name: 'Relief',
     blurb: 'Bobbles, seersucker and pleats',
     about: 'Rows rise and fall over crossed backing to form bobbles, puckered stripes or pleats.',
@@ -256,6 +271,8 @@ export const DESIGNS = [
   {
     ...fromControls(FRINGE_CONTROLS),
     id: 'fringe',
+    shelf: 'raised', family: 'pile', support: 'built-in', state: 'untested',
+    joins: "Hanging loops with free ends, anchored to base rows.", sources: {},
     name: 'Fringe',
     blurb: 'Hanging loops with a free end',
     about: 'A base of lines with hairs standing off them: each rises in the first half of its length and hangs free to its end. Printed from the far rows to the near rows so the nozzle never dives under a hair.',

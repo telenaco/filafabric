@@ -88,6 +88,8 @@ const PATTERNS = patternOptions;
 export const SVG_DESIGNS = [
   layered({
     id: 'svgdesign',
+    shelf: 'layered', family: 'motif', support: 'auto', state: 'untested',
+    joins: "Your drawing, held by a backing printed with it.", sources: {},
     hidden: true, // out of the gallery for now (every design takes a drawing); links and saved files still open it
     name: 'Drawing & infill',
     blurb: 'Your drawing, its shapes filled with slicer infill',

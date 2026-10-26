@@ -72,7 +72,7 @@ test('loop pile has interior cross-row backing connections', () => {
 
 test('every default design exposes a final 3D fabric report', () => {
   const { machine, material } = defaultProfiles();
-  for (const d of DESIGNS.filter((d) => d.status === 'ready' && !d.legacy)) {
+  for (const d of DESIGNS.filter((d) => d.status === 'ready' && !d.legacyPanel)) {
     const r = d.generate(machine, material, d.defaults());
     assert.ok(r.fabric, `${d.id}: missing report`);
     assert.equal(r.fabric.components, 1, `${d.id}: separate regions`);

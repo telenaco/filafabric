@@ -21,8 +21,8 @@ import { defaultProfiles } from './helpers.js';
 
 test('loop pile and squiggle come first and are ready', () => {
   assert.deepEqual(READY_IDS.slice(0, 2), ['loop-pile', 'squiggle']);
-  assert.equal(designById('loop-pile').legacy, true);
-  assert.equal(designById('squiggle').legacy, true);
+  assert.equal(designById('loop-pile').legacyPanel, true);
+  assert.equal(designById('squiggle').legacyPanel, true);
 });
 
 test('every module is complete', () => {
@@ -66,7 +66,7 @@ test('the library holds every structure of the catalogue, all of them ready', ()
 });
 
 test('every newer design describes itself completely, so the studio needs no per-design code', () => {
-  for (const d of DESIGNS.filter((x) => x.status === 'ready' && !x.legacy)) {
+  for (const d of DESIGNS.filter((x) => x.status === 'ready' && !x.legacyPanel)) {
     for (const k of ['about', 'ranges', 'size', 'setSize', 'describe', 'controls', 'generate', 'verdict', 'figure', 'summary']) assert.ok(d[k], `${d.id}.${k}`);
     const s = d.defaults();
     const [w, h] = d.size(s);
@@ -83,7 +83,7 @@ test('every newer design describes itself completely, so the studio needs no per
 
 test('every newer design prints its defaults (at the full default size), and again from every preset, with a verdict and a figure', () => {
   const { machine, material } = defaultProfiles();
-  for (const d of DESIGNS.filter((x) => x.status === 'ready' && !x.legacy)) {
+  for (const d of DESIGNS.filter((x) => x.status === 'ready' && !x.legacyPanel)) {
     // presets on a smaller swatch, to keep the suite quick; the defaults as the studio opens them
     const presets = (d.presets ?? []).map((p) => {
       const s = d.sanitize({ ...d.defaults(), ...p.patch });

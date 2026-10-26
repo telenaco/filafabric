@@ -60,7 +60,7 @@ test('a full panel says so after its size', () => {
 
 test('every design gives a short, safe name that reads back to the same design and settings', () => {
   for (const mod of DESIGNS) {
-    if (mod.status !== 'ready' || mod.legacy) continue;
+    if (mod.status !== 'ready' || mod.legacyPanel) continue;
     const s = mod.defaults();
     const keys = relevantKeys(mod, s);
     const name = exportFileName(mod, s, keys, { size: mod.size(s), print: PRINT, material: MATERIAL, docName: 'A long swatch name that somebody typed in full' });

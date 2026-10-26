@@ -147,7 +147,7 @@ const state = {
   advanced: {},
   squiggle: { ...SQUIGGLE_DEFAULTS },
   // settings of every design newer than the loop pile and squiggle, by design id
-  designs: Object.fromEntries(DESIGNS.filter((d) => d.status === 'ready' && !d.legacy).map((d) => [d.id, d.defaults()])),
+  designs: Object.fromEntries(DESIGNS.filter((d) => d.status === 'ready' && !d.legacyPanel).map((d) => [d.id, d.defaults()])),
   image: null, // { data: ImageData, name, px: [w, h], thumb: canvas }: stays on this computer, never in a link
   imageBoxOpen: false,
   outline: null, // { name, rings (flat, unit box), rotation }: shared by every design, travels in links
@@ -199,7 +199,7 @@ function bindingFor(mod) {
     },
   };
 }
-for (const mod of DESIGNS) if (mod.status === 'ready' && !mod.legacy) BINDINGS[mod.id] = bindingFor(mod);
+for (const mod of DESIGNS) if (mod.status === 'ready' && !mod.legacyPanel) BINDINGS[mod.id] = bindingFor(mod);
 
 let preview = null;
 let overview = null;
@@ -496,7 +496,7 @@ function renderControls() {
 /** The panels of every design, and the sliders and size of the two older ones, mounted into their own markup. */
 function buildPanels() {
   for (const mod of DESIGNS) {
-    if (mod.status !== 'ready' || mod.legacy) continue;
+    if (mod.status !== 'ready' || mod.legacyPanel) continue;
     const panel = new DesignPanel(host, mod);
     $('#settings-body').append(panel.node);
     controls.push(panel);
@@ -871,7 +871,7 @@ async function regenerate() {
     // 3D sample is a bounded corner of a large piece. 2D is the default for pieces larger than the bed (above).
     // Imported drawings keep their full scale within the explicitly labelled sample.
     const cap = state.vector && Math.max(state.vector.width, state.vector.height) <= 250 && state.vector.width <= machine.bed.width && state.vector.height <= machine.bed.depth ? 250 : 100;
-    if (!mod.legacy) {
+    if (!mod.legacyPanel) {
       const own = state.designs[mod.id];
       const [w, h] = mod.size(own);
       const previewState = { ...own, width: Math.min(w, cap), height: Math.min(h, cap) };
@@ -1015,7 +1015,7 @@ const FIXES = [
 
 /** The setting to change, named as the panel names it, for the first warning text it matches. */
 function adviceFor(mod, text) {
-  if (!mod || mod.legacy) return '';
+  if (!mod || mod.legacyPanel) return '';
   const labels = new Map();
   for (const c of mod.controls ?? []) if (c.kind === 'sliders') for (const item of c.items) labels.set(item.key, item.label);
   for (const fix of FIXES) {
@@ -1040,7 +1040,7 @@ function currentVerdict() {
       action: null,
     };
   }
-  const verdict = !mod.legacy ? mod.verdict(state.result, state.designs[mod.id]) : state.design === 'squiggle'
+  const verdict = !mod.legacyPanel ? mod.verdict(state.result, state.designs[mod.id]) : state.design === 'squiggle'
     ? buildSquiggleVerdict(state.result.stats, { colorChange: state.squiggle.colorChange })
     : buildVerdict(state.result.stats, { roomy: state.primary.roomy });
   if (verdict.level === 'ready' || verdict.level === 'ok') return null;
@@ -1177,7 +1177,7 @@ function renderFigures() {
   host.replaceChildren(
     fig(minutes(stats), 'min', sampled ? 'Preview motion estimate' : 'Motion estimate'),
     fig(grams(stats.filamentGrams), 'g', sampled ? 'Preview filament' : 'Filament'),
-    !mod.legacy
+    !mod.legacyPanel
       ? (() => { const f = mod.figure(state.result); return fig(f.value, f.unit, f.label); })()
       : isSq ? fig('2', '', 'Layers') : fig(stats.loops.toLocaleString('en'), '', 'Loops'),
   );
@@ -1204,7 +1204,7 @@ function renderFigures() {
       el('p', { class: 'note', text: 'Motion time uses acceleration, axis limits and classic jerk with bounded lookahead. Print-order playback keeps the commanded-motion clock. Short print runs and long travels can contribute to blobs and strings.' })
     );
   }
-  const what = !mod.legacy ? mod.summary(state.result) : isSq ? 'a two-layer squiggle mesh' : `${stats.loops} loops`;
+  const what = !mod.legacyPanel ? mod.summary(state.result) : isSq ? 'a two-layer squiggle mesh' : `${stats.loops} loops`;
   $('#preview').setAttribute('aria-label', `3D preview: ${what} on a ${t.sample_width} by ${t.sample_height} millimetre swatch, ${printTimeSeconds(stats)===null ? 'motion estimate unavailable' : `about ${minutes(stats)} minutes of modeled motion`}.`);
 }
 
@@ -1739,7 +1739,7 @@ function matchesPreset(d) {
 function currentSwatch() {
   const mod = designById(state.design);
   let settings, size, preset = null;
-  if (!mod.legacy) {
+  if (!mod.legacyPanel) {
     settings = state.designs[mod.id];
     size = mod.size(settings);
     preset = mod.presetMatch ? mod.presetMatch(settings) : null;
@@ -2111,7 +2111,7 @@ function reportStudyExport(exportType, options = {}, stats = state.result?.stats
 /** The settings an exported file is named after: what a registry design's panel shows, the controls of the two older ones. */
 function namedKeys(id) {
   const mod = designById(id), s = settingsOf(id);
-  if (!mod.legacy) return relevantKeys(mod, s);
+  if (!mod.legacyPanel) return relevantKeys(mod, s);
   if (id === 'squiggle') return ['mode', 'shape', ...SQ_SLIDERS.map((d) => d.key), 'pattern', 'colorChange'];
   return [...LOOP_SLIDERS.map((d) => d.key), 'edgeLoops', 'roomy', 'pattern', ...(s.pattern && s.pattern !== 'none' ? ['patternScale'] : [])];
 }
@@ -2209,7 +2209,7 @@ async function openFile(file) {
 
 function resetDesign() {
   const mod = designById(state.design);
-  if (!mod.legacy) {
+  if (!mod.legacyPanel) {
     state.designs[mod.id] = mod.defaults();
   } else if (state.design === 'squiggle') {
     state.squiggle = { ...SQUIGGLE_DEFAULTS };

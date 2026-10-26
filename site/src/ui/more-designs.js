@@ -72,6 +72,16 @@ export function layered(def) {
     thumb = thumbFromLayers(def.build(s, boundaryFor(tw, th)).layers, tw, th);
   } catch { /* a tile without a picture still works */ }
   return {
+    shelf: def.shelf,
+    family: def.family,
+    joins: def.joins,
+    support: def.support,
+    state: def.state,
+    settingsKey: def.settingsKey,
+    sources: def.sources,
+    patternEffects: def.patternEffects,
+    colourModes: def.colourModes,
+    legacy: def.legacy,
     id: def.id,
     name: def.name,
     blurb: def.blurb,
@@ -150,6 +160,8 @@ const BACKING_LABELS = {
 export const MORE_DESIGNS = [
   layered({
     id: 'crosshatch',
+    shelf: 'layered', family: 'grids', support: 'self', state: 'untested',
+    joins: "Straight lines in two or three directions fuse where they cross.", sources: {},
     optimizeTravel: true,
     hidden: true, // out of the list for now; the design and its tests stay
     name: 'Crosshatch & isogrid',
@@ -200,6 +212,8 @@ const AUXETIC = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'auxetic',
+  shelf: 'flat', family: 'cells', support: 'self', state: 'untested',
+  joins: "Zigzag rows joined by struts into cells.", sources: {},
   optimizeTravel: true,
   name: 'Auxetic mesh',
   blurb: 'Honeycomb and re-entrant (bow-tie) cells',
@@ -245,6 +259,8 @@ const DIPWEAVE = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'dipweave',
+  shelf: 'raised', family: 'woven', support: 'self', state: 'untested',
+  joins: "Wefts rise over the warps and dip between them.", sources: {},
   optimizeTravel: true,
   name: 'Dip weave',
   blurb: 'A straight warp with a weft that dips between: over and under in one layer',
@@ -294,6 +310,8 @@ const WEB = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'web',
+  shelf: 'layered', family: 'radial', support: 'self', state: 'untested',
+  joins: "A spiral crossed by a radial zigzag.", sources: {},
   optimizeTravel: true,
   name: 'Spiderweb',
   blurb: 'A spiral crossed by a radial zigzag',
@@ -334,6 +352,8 @@ const CHAINMAIL = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'chainmail',
+  shelf: 'layered', family: 'rings', support: 'self', state: 'untested',
+  joins: "Rings on two layers overlap and fuse.", sources: {},
   optimizeTravel: true,
   name: 'Ring mail',
   blurb: 'Overlapping rings, two layers, a chainmail look',
@@ -377,6 +397,8 @@ const MEANDER = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'meander',
+  shelf: 'layered', family: 'motif', support: 'auto', state: 'untested',
+  joins: "A space-filling curve held by a backing.", sources: {},
   optimizeTravel: true,
   name: 'Meander',
   blurb: 'A space-filling curve held by a wavy backing',
@@ -435,6 +457,8 @@ const HARMONOGRAPH = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'harmonograph',
+  shelf: 'flat', family: 'curves', support: 'self', state: 'untested',
+  joins: "One closed curve crosses itself in diamonds.", sources: {},
   optimizeTravel: true,
   name: 'Harmonograph',
   blurb: 'One closed curve that crosses itself in diamonds',
@@ -475,6 +499,8 @@ const TRUCHET = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'truchet',
+  shelf: 'layered', family: 'tiles', support: 'self', state: 'needs-repair',
+  joins: "Tile curves meet at tile edges; a shifted second layer crosses them.", sources: {},
   optimizeTravel: true,
   name: 'Truchet tiles',
   blurb: 'Random tiles that flow into curves',
@@ -521,6 +547,8 @@ const VORONOI = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'voronoi',
+  shelf: 'layered', family: 'cells', support: 'self', state: 'untested',
+  joins: "Triangle edges print first, then the cells over them.", sources: {},
   optimizeTravel: true,
   name: 'Voronoi lace',
   blurb: 'Even cells with their triangulation across',
@@ -562,6 +590,8 @@ const TURING = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'turing',
+  shelf: 'layered', family: 'motif', support: 'auto', state: 'untested',
+  joins: "Grown stripes held by a backing.", sources: {},
   optimizeTravel: true,
   name: 'Turing stripes',
   blurb: 'Grown stripes held by a wavy backing',

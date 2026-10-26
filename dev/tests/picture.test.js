@@ -50,7 +50,7 @@ test('a pattern is a built-in field or the picture; positive reads dark as more,
   assert.deepEqual(withPicture(['none', PICTURE]), ['none', PICTURE]);
 });
 
-const patterned = DESIGNS.filter((d) => d.status === 'ready' && !d.legacy && d.controls?.some((c) => c.kind === 'pattern'));
+const patterned = DESIGNS.filter((d) => d.status === 'ready' && !d.legacyPanel && d.controls?.some((c) => c.kind === 'pattern'));
 
 test('every design with a pattern offers the picture, keeps it when settings are reopened, and says how it reads it', () => {
   assert.ok(patterned.length >= 9, patterned.map((d) => d.id).join(', '));

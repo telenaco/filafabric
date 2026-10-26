@@ -1,0 +1,148 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { DESIGNS } from '../../site/src/ui/designs.js';
+import { SHELVES, FAMILIES, validateCard, libraryGroups, variantsOf } from '../../site/src/ui/library.js';
+import { layered } from '../../site/src/ui/more-designs.js';
+
+test('all 31 ready cards have the exact ticket metadata', () => {
+  const brief = [
+    "   | `loop-pile` | raised | pile | built-in | untested | Raised loops are anchored to an open base mesh. |",
+    "   | `squiggle` | layered | waves | self | untested | Two wavy layers cross and fuse where they meet. |",
+    "   | `coil` | flat | loops | self | untested | One strand in rows; each loop touches the next row. |",
+    "   | `weave` | layered | woven | self | untested | Lower and upper pieces at two levels, joined by ramps; crossings fuse. |",
+    "   | `spiral` | layered | radial | built-in | untested | Nested rings held by a crossing carrier. |",
+    "   | `boucle` | layered | rings | built-in | untested | Rings sit on a carrier line, for edges. |",
+    "   | `relief` | raised | textures | built-in | untested | Rows rise and fall over a crossed base. |",
+    "   | `fringe` | raised | pile | built-in | untested | Hanging loops with free ends, anchored to base rows. |",
+    "   | `zigzag` | layered | waves | self | untested | Two zigzag layers fuse where they meet. |",
+    "   | `svgdesign` | layered | motif | auto | untested | Your drawing, held by a backing printed with it. |",
+    "   | `crosshatch` | layered | grids | self | untested | Straight lines in two or three directions fuse where they cross. |",
+    "   | `auxetic` | flat | cells | self | untested | Zigzag rows joined by struts into cells. |",
+    "   | `dipweave` | raised | woven | self | untested | Wefts rise over the warps and dip between them. |",
+    "   | `web` | layered | radial | self | untested | A spiral crossed by a radial zigzag. |",
+    "   | `chainmail` | layered | rings | self | untested | Rings on two layers overlap and fuse. |",
+    "   | `meander` | layered | motif | auto | untested | A space-filling curve held by a backing. |",
+    "   | `harmonograph` | flat | curves | self | untested | One closed curve crosses itself in diamonds. |",
+    "   | `truchet` | layered | tiles | self | needs-repair | Tile curves meet at tile edges; a shifted second layer crosses them. |",
+    "   | `voronoi` | layered | cells | self | untested | Triangle edges print first, then the cells over them. |",
+    "   | `turing` | layered | motif | auto | untested | Grown stripes held by a backing. |",
+    "   | `conformal` | layered | fields | self | untested | A square grid bent round holes; its two directions cross. |",
+    "   | `sunflower` | layered | radial | self | untested | Two seed spirals wind opposite ways and meet at the seeds. |",
+    "   | `rosette` | layered | radial | self | untested | Two wavy spirals in opposite phase cross. |",
+    "   | `flowlines` | layered | fields | self | untested | Lines along a flow, crossed at 90 degrees. |",
+    "   | `bubbles` | layered | rings | self | untested | Packed rings held by a ring in every gap. |",
+    "   | `parquet` | layered | tiles | self | needs-repair | Blocks of crossed lines; the seams between blocks rely on ties. |",
+    "   | `spirograph` | layered | radial | self | untested | Two rings of curls, half a ring apart, cross. |",
+    "   | `starlattice` | flat | lattices | self | untested | Star straps in non-crossing families meet at the tile edges. |",
+    "   | `halftone` | layered | waves | self | untested | A crossed net whose line thickness carries a picture. |",
+    "   | `spacer` | raised | spacers | built-in | untested | Two nets held apart by small pillars. |",
+    "   | `pillarweave` | raised | spacers | self | untested | Fibre locked round upright pillars. |",
+  ].join("\n");
+  const rows = [...brief.matchAll(/\| `([^`]+)` \| (flat|layered|raised) \| (\w+) \| (self|auto|built-in) \| (untested|needs-repair) \| ([^|]+) \|/g)];
+  assert.equal(rows.length, 31);
+  assert.equal(DESIGNS.filter(d => d.status === 'ready').length, 31);
+  for (const [, id, shelf, family, support, state, joins] of rows) {
+    const card = DESIGNS.find(d => d.id === id);
+    assert.deepEqual(validateCard(card), [], id);
+    assert.deepEqual([card.shelf, card.family, card.support, card.state, card.joins], [shelf, family, support, state, joins.trim()]);
+    assert.deepEqual(card.sources, {});
+    assert.ok(Object.hasOwn(FAMILIES, family));
+  }
+});
+
+test('visible ready cards occur once on their shelf, grouped by family', () => {
+  const groups = libraryGroups();
+  assert.deepEqual(Object.keys(groups), Object.keys(SHELVES));
+  const cards = Object.entries(groups).flatMap(([shelf, families]) => families.flatMap(({ family, cards }) => {
+    for (const card of cards) { assert.equal(card.shelf, shelf); assert.equal(card.family, family); }
+    return cards;
+  }));
+  assert.deepEqual(cards.map(d => d.id).sort(), DESIGNS.filter(d => d.status === 'ready' && !d.hidden).map(d => d.id).sort());
+  assert.deepEqual(libraryGroups([{ status: 'preset' }, { status: 'planned' }]), { flat: [], layered: [], raised: [] });
+});
+
+test('validation rejects malformed metadata and skips preset tiles', () => {
+  const base = { ...DESIGNS[0] };
+  for (const [key, values] of Object.entries({ shelf: ['missing', 'toString'], family: ['missing', 'toString'], joins: ['', 'No stop', 'x'.repeat(120) + '.'], support: ['missing'], state: ['missing'], sources: [null, [], 'text'], settingsKey: [12, null], legacy: [true, {}, [{ id: 12 }], [{ id: 'old', patch: [] }]] })) {
+    for (const value of values) assert.ok(validateCard({ ...base, [key]: value }).length, `${key}: ${value}`);
+  }
+  assert.deepEqual(validateCard({ status: 'preset' }), []);
+  assert.deepEqual(validateCard({ ...base, legacy: [{ id: 'old', patch: { shape: 'ring' } }] }), []);
+});
+
+test('variants default to each card id; unknown ids have no variants', () => {
+  for (const card of DESIGNS.filter(d => d.status === 'ready')) assert.deepEqual(variantsOf(card.id), [card]);
+  assert.deepEqual(variantsOf('missing'), []);
+  const cards = ['raised', 'flat', 'layered'].map(shelf => ({ ...DESIGNS[0], id: `test-${shelf}`, shelf, settingsKey: 'test' }));
+  DESIGNS.push(...cards);
+  try { assert.deepEqual(variantsOf('test-flat').map(d => d.shelf), ['flat', 'layered', 'raised']); }
+  finally { DESIGNS.splice(-cards.length); }
+});
+
+test('layered preserves every optional metadata field including migration arrays', () => {
+  const meta = { shelf: 'flat', family: 'waves', joins: 'Lines join.', support: 'self', state: 'untested', settingsKey: 'wave', sources: {}, patternEffects: ['depth'], colourModes: ['one'], legacy: [{ id: 'old' }] };
+  const card = layered({ ...meta, id: 'test', c: { defaults: {} }, controls: [], build: () => ({ layers: [] }) });
+  for (const [key, value] of Object.entries(meta)) assert.equal(card[key], value, key);
+  assert.equal(card.legacyPanel, undefined);
+});
+
+test('reserved permanent IDs are documented, without creating future cards', () => {
+  const library = readFileSync(new URL('../../site/src/ui/library.js', import.meta.url), 'utf8');
+  const table = [
+    "| Plan ID | Card ID | Name | Notes |",
+    "   |---|---|---|---|",
+    "   | F-01 | `rings-flat` | Rings \u00b7 flat | new; settingsKey `rings` |",
+    "   | F-02 | `honeycomb-flat` | Honeycomb \u00b7 flat | from `auxetic` with `cell: 'hexagon'`; settingsKey `honeycomb` |",
+    "   | F-03 | `auxetic` | Re-entrant (bow-tie) | existing ID |",
+    "   | F-04 | `starlattice` | Star lattice | existing |",
+    "   | F-05 | \u2014 | *withdrawn* | the same as L-08 (see the plan's \u00a75.1); do not use the ID `isogrid-flat` |",
+    "   | F-06 | `rotating-squares` | Rotating squares | new |",
+    "   | F-07 | `rotating-triangles` | Rotating triangles | new |",
+    "   | F-08 | `arrowhead-band` | Arrowhead band | new |",
+    "   | F-09 | `spiral-cells` | Spiral cells | new |",
+    "   | F-10 | `stochastic-net` | Stochastic net | new |",
+    "   | F-11 | `star-metric` | Star-metric cells | new |",
+    "   | F-12 | `isohedral-tiles` | Isohedral tiles | new |",
+    "   | F-13 | `connected-lace` | Connected lace | new |",
+    "   | F-14 | `meander-ties` | Meander with ties | new |",
+    "   | F-15 | `voronoi-cells` | Voronoi cells | new |",
+    "   | F-16 | `coil` | Looped rows | existing ID |",
+    "   | F-17 | `figure8-rows` | Figure-8 rows | new ID, Coil generator |",
+    "   | F-18 | `harmonograph` | Harmonograph | existing |",
+    "   | F-19 | `kirigami` | Kirigami sheet | new |",
+    "   | L-01 | `squiggle` | Wave net | existing ID; settingsKey `wave` |",
+    "   | L-02 | `zigzag` | Zigzag net | existing ID |",
+    "   | L-03 | `square-net` | Square-wave net | new ID, Squiggle generator |",
+    "   | L-04 | `honeycomb-layered` | Honeycomb \u00b7 layered | new ID, Squiggle generator; settingsKey `honeycomb` |",
+    "   | L-05 | `figure8-net` | Figure-8 net | new ID, Squiggle generator |",
+    "   | L-06 | `chainmail` | Rings \u00b7 layered | existing ID; settingsKey `rings` |",
+    "   | L-07 | `bubbles` | Bubbles | existing |",
+    "   | L-08 | `crosshatch` | Grid & isogrid \u00b7 layered | existing ID; settingsKey `grid` |",
+    "   | L-09 | `rotated-stack` | Rotated stack | new |",
+    "   | L-10 | `moire-net` | Moir\u00e9 net | new |",
+    "   | L-11 \u2026 L-18 | `voronoi`, `web`, `sunflower`, `rosette`, `spirograph`, `conformal`, `flowlines`, `spiral` | unchanged names | existing |",
+    "   | L-19 | `weave` | Woven draft | existing ID |",
+    "   | L-20, L-21 | `truchet`, `parquet` | unchanged | existing |",
+    "   | L-22, L-23 | `meander`, `turing` | unchanged | existing |",
+    "   | L-24 | `svgdesign` | Your drawing | existing ID |",
+    "   | L-25 | `lace-backing` | Lace + backing | new |",
+    "   | L-26 | `step-lace` | Step, ripple and petal lace | new |",
+    "   | L-27 | `paired-loops` | Paired loops | new |",
+    "   | L-28 | `scales` | Scales on a carrier | new |",
+    "   | L-29 | `boucle` | Boucl\u00e9 & picots | existing |",
+    "   | R-01 | `rings-raised` | Rings \u00b7 raised | new; settingsKey `rings` |",
+    "   | R-02 \u2026 R-04 | `loop-pile`, `relief`, `dipweave` | unchanged | existing |",
+    "   | R-05 | `looped-net` | Looped net | new ID, Squiggle generator |",
+    "   | R-06 \u2026 R-08 | `fringe`, `spacer`, `pillarweave` | unchanged | existing |",
+    "   | R-09 | `grid-lifted` | Grid \u00b7 lifted crossings | new; settingsKey `grid` |",
+    "   | R-10 | `grid-sliding` | Grid \u00b7 sliding channels | new; settingsKey `grid` |",
+    "   | R-11 | `wave-bridged` | Wave net \u00b7 bridged crossings | new; settingsKey `wave` |",
+    "   | R-12 | `corrugation` | Corrugation | new |",
+    "   | R-13 | `colour-exposure` | Colour exposure texture | new |",
+    "   | (hidden) | `squiggle-rings`, `squiggle-zigzag`, `coil-shapes`, `halftone` | legacy only | open old links exactly (T1.2, T1.3, T1.4, T1.5) |",
+  ].join("\n");
+  for (const line of table.trim().split('\n')) assert.ok(library.includes(line.trim()), line);
+  assert.equal(new Set(DESIGNS.map(d => d.id)).size, DESIGNS.length);
+  assert.ok(!DESIGNS.some(d => d.id === 'isogrid-flat'));
+});

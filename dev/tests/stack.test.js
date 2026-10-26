@@ -166,7 +166,7 @@ test('the layer thickness chosen reaches every design through the material', () 
   const { machine, material } = defaultProfiles();
   for (const height of [0.1, 0.3]) {
     const thick = { ...material, print_defaults: { layer_height: height } };
-    for (const d of DESIGNS.filter((x) => x.status === 'ready' && !x.legacy)) {
+    for (const d of DESIGNS.filter((x) => x.status === 'ready' && !x.legacyPanel)) {
       const s = { ...d.defaults() };
       d.setSize(s, 40, 40);
       const r = d.generate(machine, thick, s);

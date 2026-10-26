@@ -38,6 +38,8 @@ const CONFORMAL = defineControls({
 
 LINE_DESIGNS.push(layered({
   id: 'conformal',
+  shelf: 'layered', family: 'fields', support: 'self', state: 'untested',
+  joins: "A square grid bent round holes; its two directions cross.", sources: {},
   optimizeTravel: true,
   name: 'Conformal mesh',
   blurb: 'A square grid that bends round holes and poles',
@@ -88,6 +90,8 @@ const SUNFLOWER = defineControls({
 
 LINE_DESIGNS.push(layered({
   id: 'sunflower',
+  shelf: 'layered', family: 'radial', support: 'self', state: 'untested',
+  joins: "Two seed spirals wind opposite ways and meet at the seeds.", sources: {},
   optimizeTravel: true,
   name: 'Sunflower',
   blurb: 'Two families of seed spirals, one each way',
@@ -127,6 +131,8 @@ const ROSETTE = defineControls({
 
 LINE_DESIGNS.push(layered({
   id: 'rosette',
+  shelf: 'layered', family: 'radial', support: 'self', state: 'untested',
+  joins: "Two wavy spirals in opposite phase cross.", sources: {},
   name: 'Rosette',
   blurb: 'Guilloché: two wavy spirals in opposite phase',
   about: 'The parallel squiggle mesh wrapped round a centre, like guilloché engraving. Each layer is one continuous spiral that swings in and out a whole number of times per turn, so every turn stays in step with the next; the second spiral runs half a turn further out and swings the opposite way, so it crosses the turns on both sides. The swing never drops below the depth that guarantees those crossings. For round pieces: hats, cups, yokes.',
@@ -168,6 +174,8 @@ const FLOW = defineControls({
 
 LINE_DESIGNS.push(layered({
   id: 'flowlines',
+  shelf: 'layered', family: 'fields', support: 'self', state: 'untested',
+  joins: "Lines along a flow, crossed at 90 degrees.", sources: {},
   optimizeTravel: true,
   name: 'Flow lines',
   blurb: 'Evenly spaced lines along a flow, crossed at 90°',
@@ -212,6 +220,8 @@ const BUBBLES = defineControls({
 
 LINE_DESIGNS.push(layered({
   id: 'bubbles',
+  shelf: 'layered', family: 'rings', support: 'self', state: 'untested',
+  joins: "Packed rings held by a ring in every gap.", sources: {},
   optimizeTravel: true,
   name: 'Bubbles',
   blurb: 'Packed rings, held by a ring in every gap',
@@ -254,6 +264,8 @@ const PARQUET = defineControls({
 
 LINE_DESIGNS.push(layered({
   id: 'parquet',
+  shelf: 'layered', family: 'tiles', support: 'self', state: 'needs-repair',
+  joins: "Blocks of crossed lines; the seams between blocks rely on ties.", sources: {},
   optimizeTravel: true,
   name: 'Parquet',
   blurb: 'Blocks of 90° mesh, each turned from the next',
@@ -297,6 +309,8 @@ const SPIRO = defineControls({
 
 LINE_DESIGNS.push(layered({
   id: 'spirograph',
+  shelf: 'layered', family: 'radial', support: 'self', state: 'untested',
+  joins: "Two rings of curls, half a ring apart, cross.", sources: {},
   optimizeTravel: true,
   name: 'Spirograph',
   blurb: 'Rings of curls, the next layer half a ring out',
@@ -338,6 +352,8 @@ const STAR = defineControls({
 
 LINE_DESIGNS.push(layered({
   id: 'starlattice',
+  shelf: 'flat', family: 'lattices', support: 'self', state: 'untested',
+  joins: "Star straps in non-crossing families meet at the tile edges.", sources: {},
   optimizeTravel: true,
   name: 'Star lattice',
   blurb: 'Islamic star patterns, one family of straps per layer',

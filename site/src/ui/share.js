@@ -139,7 +139,7 @@ export function sanitizeState(raw, known) {
   const saved = r.designs && typeof r.designs === 'object' && !Array.isArray(r.designs) ? r.designs : {};
   const designs = {};
   for (const d of DESIGNS) {
-    if (d.status === 'ready' && !d.legacy) designs[d.id] = d.sanitize(saved[d.id]);
+    if (d.status === 'ready' && !d.legacyPanel) designs[d.id] = d.sanitize(saved[d.id]);
   }
   return { v: 3, design, machine, material, primary, advanced, squiggle: sanitizeSquiggle(r.squiggle), designs, outline: sanitizeOutline(r.outline), vector: sanitizeSvgLines(r.vector), print: sanitizePrint(r.print) };
 }

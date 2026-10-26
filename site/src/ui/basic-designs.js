@@ -31,6 +31,8 @@ const ZIGZAG = defineControls({
 
 BASIC_DESIGNS.push(layered({
   id: 'zigzag',
+  shelf: 'layered', family: 'waves', support: 'self', state: 'untested',
+  joins: "Two zigzag layers fuse where they meet.", sources: {},
   name: 'Zigzag mesh',
   blurb: 'Two zigzag layers, side by side or crossed',
   about: 'The plain version: two layers of zigzag lines. Side by side, the second layer is the first turned half a wave, so the lines cross each other all along and open into diamonds. Crossed, one layer runs across the other. Only the wave, its depth and the line spacing to choose. The depth does not need to match the spacing, because the two layers overlap. For strand shapes, patterns and the rest, see Advanced zigzag mesh.',

@@ -5,7 +5,7 @@ import { SQUIGGLE_DEFAULTS } from '../../site/src/ui/squiggle-controls.js';
 import { COIL_DEFAULTS } from '../../site/src/ui/coil-controls.js';
 import { DESIGNS } from '../../site/src/ui/designs.js';
 
-const newerDefaults = () => Object.fromEntries(DESIGNS.filter((d) => d.status === 'ready' && !d.legacy).map((d) => [d.id, d.defaults()]));
+const newerDefaults = () => Object.fromEntries(DESIGNS.filter((d) => d.status === 'ready' && !d.legacyPanel).map((d) => [d.id, d.defaults()]));
 import { PRIMARY_DEFAULTS } from '../../site/src/ui/controls.js';
 
 const known = { machines: ['prusa-mk3s'], materials: ['filaflex-95-foamy', 'generic-flex-mk3'] };

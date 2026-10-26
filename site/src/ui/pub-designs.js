@@ -61,6 +61,8 @@ const HALFTONE = defineControls({
 export const PUBLICATION_DESIGNS = [
   layered({
     id: 'halftone',
+    shelf: 'layered', family: 'waves', support: 'self', state: 'untested',
+    joins: "A crossed net whose line thickness carries a picture.", sources: {},
     optimizeTravel: true,
     name: 'Halftone net',
     blurb: 'The same crossed net, with line thickness carrying a pattern',
@@ -124,6 +126,16 @@ function structure(def) {
   let thumb = '';
   try { thumb = thumbFromLayers(def.thumbLayers(36, 22), 36, 22); } catch { /* a tile without a picture still works */ }
   return {
+    shelf: def.shelf,
+    family: def.family,
+    joins: def.joins,
+    support: def.support,
+    state: def.state,
+    settingsKey: def.settingsKey,
+    sources: def.sources,
+    patternEffects: def.patternEffects,
+    colourModes: def.colourModes,
+    legacy: def.legacy,
     id: def.id,
     name: def.name,
     blurb: def.blurb,
@@ -185,6 +197,8 @@ const PILLAR_WEAVE = defineControls({
 PUBLICATION_DESIGNS.push(
   structure({
     id: 'spacer',
+    shelf: 'raised', family: 'spacers', support: 'built-in', state: 'untested',
+    joins: "Two nets held apart by small pillars.", sources: {},
     name: 'Spacer net',
     blurb: 'Two nets held apart by small pillars',
     about: 'A net on the bed, a pillar of stacked rings on its nodes, and a second net on the pillars\' tops: the shape of a spacer fabric, which is thick, springy and breathable. The pillars print layer by layer with the nets, so the nozzle is never below something it has to pass. The top net only runs along lines of pillars. This is a geometry study: print a small swatch first and see whether the foam holds the top net.',
@@ -211,6 +225,8 @@ PUBLICATION_DESIGNS.push(
   }),
   structure({
     id: 'pillarweave',
+    shelf: 'raised', family: 'spacers', support: 'self', state: 'untested',
+    joins: "Fibre locked round upright pillars.", sources: {},
     name: 'Pillar weave',
     blurb: 'Fibre locked round pillars, layer by layer',
     about: 'Short pillars stand on a grid and one continuous fibre runs between them, passing a pillar on one side on one layer and on the other side on the next, so the fibre layers lock round the pillars the way a weft locks round warps. Neighbouring rows and neighbouring layers all alternate, which makes it a plain weave in three dimensions. The pillars print as stacks of small rings, layer by layer with the fibre.',
