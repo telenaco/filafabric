@@ -57,6 +57,7 @@ function exportHost({ size = 200, previewSize = 100, pending = null, timer = nul
     snapshotKey: () => 'current', currentSwatch: () => 'test', swatchFileName: () => 'short.gcode',
     renderBusy() {}, renderExport() {}, render() {}, toast() {}, printEstimates: { put() {} },
     async buildSwatch(input) { host.built = input; if (fail) throw new Error('Too large'); return result(input.width); },
+    assertConstructionExportable() {},
     download(name, blob) { host.saved = { name, blob }; },
     reportStudyExport(type, input, stats) { host.recorded = { type, input, stats }; },
     recordBuildFailure(error, input) { host.failure = { error, input }; },

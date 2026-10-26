@@ -6,6 +6,54 @@ import { defaultProfiles } from './helpers.js';
 import { exportPanel } from '../../site/src/engine/panel.js';
 import { DESIGNS } from '../../site/src/ui/designs.js';
 import { toTextile } from '../../site/src/ui/controls.js';
+import { ColourSection, SupportSection } from '../../site/src/ui/panels.js';
+
+class TestNode {
+  constructor(tag) { this.tagName = tag.toUpperCase(); this.children = []; this.attributes = {}; this.dataset = {}; this.listeners = {}; this.hidden = false; this.classList = { add() {} }; }
+  append(...nodes) { this.children.push(...nodes); }
+  replaceChildren(...nodes) { this.children = nodes; }
+  setAttribute(key, value) { this.attributes[key] = String(value); if (key.startsWith('data-')) this.dataset[key.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = String(value); }
+  addEventListener(type, fn) { (this.listeners[type] ??= []).push(fn); }
+  dispatch(type) { for (const fn of this.listeners[type] ?? []) fn({ target: this }); }
+}
+
+function panelFixture(t) {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  globalThis.document = { createElement: (tag) => new TestNode(tag) };
+  t.after(() => { if (previous) Object.defineProperty(globalThis, 'document', previous); else delete globalThis.document; });
+  const settings = {};
+  const host = { settings: () => settings, change() {}, nudge() {}, commit() {} };
+  const mod = { id: 'fixture', support: 'auto' };
+  return { settings, host, mod };
+}
+
+test('ColourSection changes colour mode and stores accessible per-layer swatches', (t) => {
+  const { settings, host, mod } = panelFixture(t);
+  const section = new ColourSection(host, mod, { kind: 'colour', layerCount: () => 2 }, { index: 0 });
+  section.buttons.find(({ mode }) => mode === 'per-layer').button.dispatch('click');
+  section.update();
+  assert.equal(settings.colourMode, 'per-layer');
+  assert.equal(section.colours.children.length, 2);
+  const swatch = section.colours.children[0].children[1];
+  assert.equal(swatch.attributes['aria-label'], 'Layer 1 colour');
+  swatch.value = '#123456';
+  swatch.dispatch('input');
+  assert.equal(settings.layerColours[0], '#123456');
+});
+
+test('SupportSection writes nested carrier style and parameters; built-in is read-only', (t) => {
+  const { settings, host, mod } = panelFixture(t);
+  const section = new SupportSection(host, mod, { kind: 'support' }, { index: 0 });
+  section.styleButtons.find((button) => button.dataset.supportStyle === 'zigzag').dispatch('click');
+  const openness = section.fields.openness.input;
+  openness.value = '4.2';
+  openness.dispatch('input');
+  assert.equal(settings.support.style, 'zigzag');
+  assert.equal(settings.support.openness, 4.2);
+  const builtin = new SupportSection(host, { ...mod, support: 'built-in' }, { kind: 'support' }, { index: 0 });
+  assert.match(builtin.node.children[0].textContent, /prints its own carrier/);
+  assert.equal(builtin.fields, undefined);
+});
 
 test('streaming prints a single full-outline brim before backing, and records its setting', async () => {
   const { machine, material } = defaultProfiles();

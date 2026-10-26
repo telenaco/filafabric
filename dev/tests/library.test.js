@@ -4,6 +4,9 @@ import { readFileSync } from 'node:fs';
 import { DESIGNS } from '../../site/src/ui/designs.js';
 import { SHELVES, FAMILIES, validateCard, libraryGroups, variantsOf, variantDefaultErrors, selectVariant, initialDesignSettings } from '../../site/src/ui/library.js';
 import { layered } from '../../site/src/ui/more-designs.js';
+import { panelOrderErrors } from '../../site/src/ui/panels.js';
+
+const ALLOWED_LEGACY = new Set(['coil', 'spiral', 'zigzag', 'auxetic', 'web', 'chainmail', 'meander', 'harmonograph', 'truchet', 'voronoi', 'turing', 'conformal', 'sunflower', 'rosette', 'flowlines', 'bubbles', 'parquet', 'spirograph', 'starlattice', 'halftone']);
 
 test('all 31 ready cards have the exact ticket metadata', () => {
   const brief = [
@@ -67,6 +70,24 @@ test('library groups order cards by print state and then name', () => {
     family: 'loops', state: ['untested', 'tested', 'needs-repair'][i] }));
   const cards = Object.values(libraryGroups(fixture)).flatMap((groups) => groups.flatMap((group) => group.cards));
   assert.deepEqual(cards.map((card) => card.name), ['Beta', 'Zulu', 'Alpha']);
+});
+
+test('panel order accepts the six-section order and rejects legacy or repeated groups', () => {
+  assert.deepEqual(panelOrderErrors([{ kind: 'presets' }, { kind: 'size' }, { kind: 'choice' }, { kind: 'choice' },
+    { kind: 'sliders' }, { kind: 'switch', key: 'link' }, { kind: 'pattern' }, { kind: 'colour' }, { kind: 'support' }]), []);
+  assert.ok(panelOrderErrors([{ kind: 'shape' }]).some((error) => error.includes('shape')));
+  assert.ok(panelOrderErrors([{ kind: 'switch', key: 'colorChange' }]).some((error) => error.includes('colorChange')));
+  assert.ok(panelOrderErrors([{ kind: 'pattern' }, { kind: 'sliders' }]).length);
+  assert.ok(panelOrderErrors([{ kind: 'size' }, { kind: 'size' }]).length);
+  assert.ok(panelOrderErrors([{ kind: 'switch' }]).length);
+});
+
+test('every visible card follows the panel contract or is explicitly on the Phase 1 legacy list', () => {
+  for (const card of DESIGNS.filter((entry) => entry.status === 'ready' && !entry.hidden)) {
+    const errors = panelOrderErrors(card.controls);
+    if (!ALLOWED_LEGACY.has(card.id)) assert.deepEqual(errors, [], `${card.id}: ${errors.join('; ')}`);
+    else assert.ok(errors.length, `${card.id} no longer needs the temporary legacy allowance`);
+  }
 });
 
 test('validation rejects malformed metadata and skips preset tiles', () => {
