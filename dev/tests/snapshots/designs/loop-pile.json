@@ -10,7 +10,8 @@
     "zMin": 0.2,
     "zMax": 3.6,
     "families": [
-      "L1"
+      "carrier-base",
+      "motif"
     ],
     "ties": 0
   }

@@ -1,4 +1,5 @@
 import { validatePerimeters } from './solid-perimeters.js';
+import { refreshConstruction, assertConstructionExportable } from './construction-report.js';
 import { designById } from '../ui/designs.js';
 import { generate } from './generate.js';
 import { generateSquiggle, SAMPLERS, createImageSampler } from './squiggle.js';
@@ -91,11 +92,12 @@ export function generateDesignExport(input) {
   // a backing mesh goes under everything the design and the drawing lay down; the brim goes round it on the bed
   result = addBackingMesh(withSolids(result, input), input.backing);
   // a solid already prints its own edge pass: an all-solid piece takes no brim over it
-  return applyBrim(result, { count: solidOnly(input.vector) && !input.backing ? 0 : input.meshPerimeters ?? input.perimeters ?? input.brim ?? 2, label: input.perimeters !== undefined ? 'Perimeters' : 'Brim', requestedCount: input.perimeters });
+  result = applyBrim(result, { count: solidOnly(input.vector) && !input.backing ? 0 : input.meshPerimeters ?? input.perimeters ?? input.brim ?? 2, label: input.perimeters !== undefined ? 'Perimeters' : 'Brim', requestedCount: input.perimeters });
+  return assertConstructionExportable(refreshConstruction(result));
 }
 
 /** The UI only needs printable output and summary data; geometry remains inside the worker. */
 export function compactDesignExport(result) {
   const { moveStartSec, ...stats } = result.stats;
-  return { gcode: result.gcode, cfg: result.cfg, stats, moveCount: result.moves.length, fabric: result.fabric, warnings: result.warnings ?? [], layerPlan: result.layerPlan };
+  return { gcode: result.gcode, cfg: result.cfg, stats, moveCount: result.moves.length, fabric: result.fabric, construction: result.construction, warnings: result.warnings ?? [], layerPlan: result.layerPlan };
 }

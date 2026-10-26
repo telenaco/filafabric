@@ -10,7 +10,8 @@
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
-      "L1"
+      "L1",
+      "L2"
     ],
     "ties": 0
   }

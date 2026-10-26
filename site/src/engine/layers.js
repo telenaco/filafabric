@@ -335,5 +335,10 @@ export function layeredResult(machine, material, { width, height, layers, famili
   const gcode = writeGcode(moves, cfg, { stats });
   const warnings = [];
   if (moves.length === 0) warnings.push('Nothing to print: the outline is too small for these settings');
-  return finishFabric({ cfg, strands, moves, stats, warnings, gcode, outline, report, routing: strands.routing, ...extra });
+  const intendedFamilies = [...new Set(layers.flatMap((list, k) => {
+    if (list.role === 'carrier') return [];
+    const native = list.filter((p) => !['carrier', 'tie'].includes(p.role));
+    return native.length ? native.map((p) => p.family ?? list.family ?? families?.[k] ?? extra.families?.[k] ?? `L${k + 1}`) : !list.length ? [list.family ?? families?.[k] ?? extra.families?.[k] ?? `L${k + 1}`] : [];
+  }))];
+  return finishFabric({ cfg, strands, moves, stats, warnings, gcode, outline, report, routing: strands.routing, ...extra, intendedFamilies });
 }

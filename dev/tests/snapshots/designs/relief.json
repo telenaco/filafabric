@@ -10,7 +10,8 @@
     "zMin": 0.2,
     "zMax": 2.5903670487215322,
     "families": [
-      "L1"
+      "carrier-base",
+      "motif"
     ],
     "ties": 0
   },
@@ -25,7 +26,8 @@
     "zMin": 0.2,
     "zMax": 1.264558387017977,
     "families": [
-      "L1"
+      "carrier-base",
+      "motif"
     ],
     "ties": 0
   },
@@ -40,7 +42,8 @@
     "zMin": 0.2,
     "zMax": 2.63791860248078,
     "families": [
-      "L1"
+      "carrier-base",
+      "motif"
     ],
     "ties": 0
   },
@@ -55,7 +58,8 @@
     "zMin": 0.2,
     "zMax": 2.4894732805337116,
     "families": [
-      "L1"
+      "carrier-base",
+      "motif"
     ],
     "ties": 0
   }

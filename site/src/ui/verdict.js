@@ -212,6 +212,7 @@ export function buildWeaveVerdict(stats) {
  * @param result  { report, layerCount, stats }
  */
 export function buildLayeredVerdict(result) {
+  if (result.construction?.errors.length) return constructionVerdict(result.construction);
   const r = result.report;
   if (!r || r.strands === 0) {
     return { ...NONE, level: 'info', title: 'Nothing to print', body: 'These settings leave nothing inside the swatch or outline. Use a larger swatch or finer settings.' };
@@ -237,4 +238,10 @@ export function buildLayeredVerdict(result) {
 
 function capitalise(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+export function constructionVerdict(report, fallback = null) {
+  if (report?.errors.length) return { ...NONE, level: 'heads-up', title: 'Cannot export this piece', body: report.errors.join(' '), blocked: true };
+  if (report?.warnings.length) return { ...(fallback ?? { ...NONE, title: 'Construction notes', body: '' }), level: 'heads-up', body: [fallback?.body, ...report.warnings].filter(Boolean).join(' ') };
+  return fallback;
 }

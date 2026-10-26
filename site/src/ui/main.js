@@ -11,7 +11,8 @@ import { PrintEstimates, printTimeSeconds } from './print-estimates.js';
 import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airStrandMm, fitAspect, pileLiftFactor } from './controls.js';
 import { SQ_RANGES, SQUIGGLE_DEFAULTS, describeSquiggle, sizeForAspect } from './squiggle-controls.js';
 import { PICTURE, withPicture, pictureDarkness } from '../engine/picture.js';
-import { buildVerdict, buildSquiggleVerdict, formatMinutes } from './verdict.js';
+import { buildVerdict, buildSquiggleVerdict, formatMinutes, constructionVerdict } from './verdict.js';
+import { refreshConstruction, assertConstructionExportable } from '../engine/construction-report.js';
 import { stateToHash, hashToState, sanitizeState, PRINT_DEFAULTS } from './share.js';
 import { FILAMENT_FIELDS, filamentValue, withFilamentSettings, setFilamentSetting, withoutFilamentSettings } from './filament-settings.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
@@ -931,7 +932,7 @@ async function regenerate() {
     }
     result = applyBrim(result, { count: allSolid && !backingFor() ? 0 : state.print.meshPerimeters, outline: brimOutline, fullWidth, fullHeight, label: 'Perimeters', requestedCount: state.print.brim });
     if (state.vector && result.cfg.t.sample_width === selectedWidth && result.cfg.t.sample_height === selectedHeight) result.documentSize = [state.vector.width, state.vector.height];
-    showGenerated(result, snapshotKey());
+    showGenerated(refreshConstruction(result), snapshotKey());
   } catch (e) {
     if (previewChoice === 'auto' && canSimplifyPreview(e)) {
       try { showWholeOverview(exportOptions()); return; } catch { /* invalid document dimensions still report normally */ }
@@ -1029,20 +1030,23 @@ function adviceFor(mod, text) {
 /** The geometry check, or null when there is nothing to say: it only speaks up for a problem, and says what to change. */
 function currentVerdict() {
   if (!state.result || state.error) return null;
+  const construction = constructionVerdict(state.result.construction);
+  if (construction?.blocked) return construction;
   const fabric = state.result.fabric;
   const mod = designById(state.design);
   if (fabric && !fabric.exportable) {
     const advice = adviceFor(mod, fabric.issues.join('. '));
     const fix = fabric.issues.length > 0 && !!BINDINGS[state.design]?.sliders?.length;
-    return {
+    return constructionVerdict(state.result.construction, {
       level: 'heads-up', title: 'Check the geometry', fix,
       body: `${describeFabric(fabric)}${advice}${fix ? ' Fix it tries small changes to the settings and keeps the first one that clears this.' : ''} You can also export it as it is: it prints as drawn.`,
       action: null,
-    };
+    });
   }
-  const verdict = !mod.legacyPanel ? mod.verdict(state.result, state.designs[mod.id]) : state.design === 'squiggle'
+  const baseVerdict = !mod.legacyPanel ? mod.verdict(state.result, state.designs[mod.id]) : state.design === 'squiggle'
     ? buildSquiggleVerdict(state.result.stats, { colorChange: state.squiggle.colorChange })
     : buildVerdict(state.result.stats, { roomy: state.primary.roomy });
+  const verdict = constructionVerdict(state.result.construction, baseVerdict);
   if (verdict.level === 'ready' || verdict.level === 'ok') return null;
   return { ...verdict, body: verdict.body + adviceFor(mod, `${verdict.title} ${verdict.body}`) };
 }
@@ -1223,7 +1227,7 @@ function renderExport() {
   // Export can build a selected design independently of its bounded or pending preview.
   const problem = currentPrintSizeProblem();
   const invalidDraft = ['w', 'h'].some(axis => $(`#${state.design}-${axis}`)?.getAttribute('aria-invalid') === 'true');
-  btn.disabled = exporting || !!problem || invalidDraft || (!overviewActive && !!state.print.legacyCopies) || !(ok || isReady(state.design));
+  btn.disabled = exporting || !!state.result?.construction?.errors.length || !!problem || invalidDraft || (!overviewActive && !!state.print.legacyCopies) || !(ok || isReady(state.design));
   btn.title = readyGcode?.key === snapshotKey() ? 'The G-code for these settings is ready: Export saves it straight away.' : '';
   $('#print-fit-warning').hidden = !problem;
   $('#print-fit-message').textContent = problem;
@@ -2150,6 +2154,7 @@ async function exportGcode() {
     else if (previewBuild?.key === key) result = await previewBuild.promise;
     else result = await buildSwatch(input, { signal: controller.signal });
     if (controller.signal.aborted || snapshotKey() !== key) throw new DOMException('The design changed during export.', 'AbortError');
+    assertConstructionExportable(result);
     const moveCount = result.moveCount ?? result.moves?.length ?? 0;
     if (!moveCount) throw new Error('Nothing to print for this design and size.');
     const settings = JSON.stringify({ design: input.design, settings: input.studySettings, print: { ...savedPrint,

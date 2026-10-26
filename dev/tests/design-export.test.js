@@ -34,7 +34,7 @@ test('Bubbles export generates one full-size seeded design beyond the bounded pr
 test('export compaction excludes all toolpath arrays and timeline storage', () => {
   const result = generateDesignExport({ ...profiles, design: 'bubbles', settings: { size: 5, seed: 7, link: true }, width: 20, height: 20 });
   const compact = compactDesignExport(result);
-  assert.deepEqual(Object.keys(compact).sort(), ['cfg', 'fabric', 'gcode', 'layerPlan', 'moveCount', 'stats', 'warnings']);
+  assert.deepEqual(Object.keys(compact).sort(), ['cfg', 'construction', 'fabric', 'gcode', 'layerPlan', 'moveCount', 'stats', 'warnings']);
   assert.equal(compact.moveCount, result.moves.length);
   assert.equal(compact.gcode, result.gcode);
   assert.equal(compact.stats.moveStartSec, undefined);

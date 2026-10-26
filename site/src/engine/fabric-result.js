@@ -1,4 +1,5 @@
 import { plan } from './planner.js';
+import { refreshConstruction } from './construction-report.js';
 import { clipStrands, connectStrands, gridStrands, analyzeFabric, orderStrands, travelDistance, simplifyStrands, segmentContact } from './fabric.js';
 import { resolveCrossings } from './crossings.js';
 import { emitStrands } from './emit.js';
@@ -13,8 +14,8 @@ export function finishFabric(result, { boundary = null, flat = false, reinforce 
   const classes = new Map();
   for (const m of result.moves) if (m.extrude) { if (!classes.has(m.tag)) classes.set(m.tag, []); classes.get(m.tag).push(m.cls); }
   let strands = result.strands ?? [
-    ...(result.base ? (result.base.strands ?? [result.base.points]).map((pts, i) => ({ id: `base-${i}`, kind: 'base', pts })) : []),
-    ...(result.placements ?? []).map((p) => ({ id: p.id, kind: 'supported', pts: p.points.map((q, i) => ({ ...q, z: cfg.derived.loopBaseZ + q.z, cls: classes.get(p.id)?.[Math.max(0, i - 1)] ?? 'supported' })) })),
+    ...(result.base ? (result.base.strands ?? [result.base.points]).map((pts, i) => ({ id: `base-${i}`, family: 'carrier-base', role: 'carrier', kind: 'base', pts })) : []),
+    ...(result.placements ?? []).map((p) => ({ id: p.id, family: 'motif', role: 'native', kind: 'supported', pts: p.points.map((q, i) => ({ ...q, z: cfg.derived.loopBaseZ + q.z, cls: classes.get(p.id)?.[Math.max(0, i - 1)] ?? 'supported' })) })),
   ];
   // Older and raised generators enter here without layered provenance. Normalize metadata only.
   strands = strands.map((s) => ({ ...s, family: s.family ?? (s.role === 'tie' ? 'ties' : `L${(s.layer ?? 0) + 1}`), role: s.role ?? 'native' }));
@@ -58,5 +59,5 @@ export function finishFabric(result, { boundary = null, flat = false, reinforce 
   result.warnings = [...(result.warnings ?? []), ...fabric.issues];
   if (result.report) result.report = { ...result.report, components: fabric.components };
   result.gcode = writeGcode(result.moves, cfg, { stats: result.stats });
-  return result;
+  return refreshConstruction(result);
 }

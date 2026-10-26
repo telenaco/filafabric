@@ -172,7 +172,7 @@ export function generateWeaveTextile({ width, height, pitch = 4, binding = 'plai
       const piece = left.splice(pick, 1)[0];
       const pts = reverse ? piece.pts.slice().reverse() : piece.pts;
       at = pts[pts.length - 1];
-      strands.push({ id: `w${id++}`, kind: level === 1 ? 'base' : 'supported', name: level === 1 ? 'Lower strands' : 'Upper strands', pts });
+      strands.push({ id: `w${id++}`, family: `L${level}`, role: 'native', kind: level === 1 ? 'base' : 'supported', name: level === 1 ? 'Lower strands' : 'Upper strands', pts });
     }
   }
   if (strandWidth > pitch - 0.5) warnings.push('The strands are almost as wide as the pitch, so neighbouring lines will touch');

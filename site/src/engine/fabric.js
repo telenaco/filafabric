@@ -289,9 +289,18 @@ export function gridStrands(boundary, { spacing = 5, layerHeight = 0.2, inset = 
   return strands;
 }
 
+const analyzedGeometry = new WeakMap();
+/** Consume the result builder's final analysis once; later public reports recompute after edits. */
+export function constructionGeometry(strands, strandWidth, layerHeight) {
+  const cached = analyzedGeometry.get(strands);
+  analyzedGeometry.delete(strands);
+  return cached?.strandWidth === strandWidth && cached.layerHeight === layerHeight ? cached : null;
+}
+
 export function analyzeFabric(strands, { strandWidth = 0.45, layerHeight = 0.2, boundary = null, supportedAt = null } = {}) {
   const graph = contactGraph(strands, { strandWidth, layerHeight });
   const { found, arcs } = findCrossings(strands, { strandWidth });
+  analyzedGeometry.set(strands, { strandWidth, layerHeight, graph, found, arcs });
   const pointAt = (si, arc) => {
     const list = arcs[si]; let lo = 0, hi = list.length - 1;
     while (lo + 1 < hi) { const mid = (lo + hi) >> 1; if (list[mid] <= arc) lo = mid; else hi = mid; }

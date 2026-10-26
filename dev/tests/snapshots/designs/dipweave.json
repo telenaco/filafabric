@@ -10,7 +10,8 @@
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
-      "L1"
+      "warp",
+      "weft"
     ],
     "ties": 0
   },
@@ -25,7 +26,8 @@
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
-      "L1"
+      "warp",
+      "weft"
     ],
     "ties": 0
   },
@@ -40,7 +42,8 @@
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
-      "L1"
+      "warp",
+      "weft"
     ],
     "ties": 0
   },
@@ -55,7 +58,8 @@
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
-      "L1"
+      "warp",
+      "weft"
     ],
     "ties": 0
   }
