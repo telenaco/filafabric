@@ -42,7 +42,7 @@ What the tools do:
   paired decides how long the jumps are (a minimum-weight matching is the exact answer; nearest neighbour is the cheap
   one).
 
-## What is implemented (`src/engine/network.js`, `src/engine/travel.js`, `orderStrands` in `fabric.js`)
+## What is implemented (`site/src/engine/network.js`, `site/src/engine/travel.js`, `orderStrands` in `fabric.js`)
 
 Applied to Drawing & infill, an imported drawing's lines and a full panel's drawing, in this order:
 

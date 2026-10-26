@@ -8,5 +8,5 @@ if errorlevel 1 (
   exit /b 1
 )
 echo Starting the Textile G-code Generator...
-node tools\serve.mjs --open
+node dev\tools\serve.mjs --open
 pause

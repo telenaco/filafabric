@@ -6,12 +6,18 @@ node_modules/
 *.gcode
 *.3mf
 # ...except the small made-up test files the tests read
-!tests/fixtures/*.gcode
+!dev/tests/fixtures/*.gcode
 
-# numbered demo prints written by tools/export-demo-prints.mjs (regenerate them; they are local)
-DemoTestingPrints/
+# local working files: demo prints written by dev/tools/export-demo-prints.mjs, printer samples, personal tests
+/local/
 
-# research papers and personal test files: kept on this computer, never committed or published
-reference/publications/
+# leftovers waiting for the owner to check and delete
+/_to-delete/
+
+# research sources stay on this computer; the authored reports and the implementation pack are tracked
+/research/papers/
+/research/**/*.[pP][dD][fF]
+/research/**/*.[dD][oO][cC][xX]
+/research/.review-cache/
 SvgExampleTemplate.svg
 jpgImageTest.jpg

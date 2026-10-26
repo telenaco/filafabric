@@ -61,20 +61,20 @@ printer's *layer height* in the advanced settings.
 
 **Layers.** The printer setup (the printer chip in the header) sets the *layer thickness* for every design and the *number
 of layers*. Thickness is limited to what the nozzle can lay down: from a quarter to five eighths of its diameter in steps
-of 0.05 mm (`layerHeightOptions` in `src/engine/params.js`), so a 0.4 mm nozzle offers 0.10, 0.15, 0.20 and 0.25 mm. A
+of 0.05 mm (`layerHeightOptions` in `site/src/engine/params.js`), so a 0.4 mm nozzle offers 0.10, 0.15, 0.20 and 0.25 mm. A
 printer profile may say its `nozzle_diameter` (an imported slicer printer does); otherwise it is 0.4 mm. The thickness
 reaches every design through the material, so each design lays its first layer that thick. The number of layers is how
 many times the whole pattern is printed on top of itself, each copy one layer above the one before and lifting over what
 it crosses. Designs of raised loops keep their own height and say so.
 
 **Centres.** The round designs (Spiderweb, Rosette, Spirograph, Sunflower) close their middle with a small solid hub by
-default: a flat spiral whose turns overlap by 20% (`solidHub` in `src/engine/hub.js`), which is the start of one of the
+default: a flat spiral whose turns overlap by 20% (`solidHub` in `site/src/engine/hub.js`), which is the start of one of the
 lines, so nothing has to be tied on. The centre radius defaults to 0.6 mm (a centre 1.2 mm across) and is honoured:
 Rosette's inner waves taper to fit it and Spirograph's rings start at it. *Open* leaves a hole of that radius instead.
 
 **Travel.** A drawing is many separate strokes, and every move between two is a retract, a lift, a travel and a drop. The
-Drawing & infill, an imported drawing's lines and a full panel's drawing are therefore ordered by `src/engine/travel.js` and
-`src/engine/network.js` (the research and the measurements are in `docs/path-optimisation.md`): strands that touch end
+Drawing & infill, an imported drawing's lines and a full panel's drawing are therefore ordered by `site/src/engine/travel.js` and
+`site/src/engine/network.js` (the research and the measurements are in `docs/path-optimisation.md`): strands that touch end
 to end are merged into one (three passes of a wide line become one back-and-forth stroke); lines that meet or cross are
 rebuilt as the fewest strokes their network allows, an Eulerian trail decomposition that prints every line once (a
 lattice of 144 separate segments becomes 14 strokes, a triangulated net of 192 edges becomes 2); the rest are ordered
@@ -83,7 +83,7 @@ removes the longest moves, turning strands round and choosing each closed shape'
 is capped by a count of evaluations, not time, so the same drawing always gives the same G-code. On a drawing of sixty
 separate lines and circles it took the strands from 192 to 139 and the travel from 1047 to 836 mm.
 
-**Long lists fold.** Any picker with more than four options (`FOLD_AFTER` in `src/ui/panels.js`) is one line showing the
+**Long lists fold.** Any picker with more than four options (`FOLD_AFTER` in `site/src/ui/panels.js`) is one line showing the
 chosen option's picture and name, which opens to the whole list and closes again when one is chosen. Options are listed
 from the plainest to the most involved: strand shapes start with the sine wave, patterns with the one that leaves every
 wave the same. The Squiggle & Gyroid panel follows the same order and opens symmetric and undeformed (crossed, sine wave,
@@ -95,7 +95,7 @@ with the setting to change, and the export stays available. Only what cannot be 
 change: a bed the swatch does not fit, more moves than the budget, or more than 120,000 crossings (lines laid on top of
 each other that many times take minutes to lift over each other).
 
-**Swatches** are 100 × 100 mm everywhere, and `templates/swatch-100x100.svg` is a page of that size to draw on.
+**Swatches** are 100 × 100 mm everywhere, and `dev/templates/swatch-100x100.svg` is a page of that size to draw on.
 
 Crosshatch & isogrid is kept in the code and left out of the list for now (`hidden: true` on its card); its tests still
 run. So is Drawing & infill (from 21 October 2026): every design takes a drawing, and a link or a saved file still opens
@@ -106,12 +106,12 @@ A single layer of zigzag, wave or square rows whose peaks meet and close into ce
 the peaks just meeting; more is crossing. It has no card of its own.
 
 One SVG import serves every design: its lines print first, the swatch takes its size (so the size fields give way to a
-line that says so), and a switch cuts the pattern to its red shapes. Colour and width carry the meaning (`src/engine/drawing.js`):
+line that says so), and a switch cuts the pattern to its red shapes. Colour and width carry the meaning (`site/src/engine/drawing.js`):
 closed red is filled, closed blue is a hole, the innermost shape a point lies in decides, so blue inside red cuts a hole and
 red inside that is filled again; anything else is a line, printed as many passes as its stroke width asks for (width ÷
-extrusion width, rounded, at least one). The file is read by `src/engine/svg-parse.js`, which needs no browser. The panel is built from classes in
-`src/ui/panels.js`, so a change to a control is made once and applies to every design; tooltips are one layer
-(`src/ui/tooltip.js`) that shows any element's title in a bubble the moment the pointer rests on it.
+extrusion width, rounded, at least one). The file is read by `site/src/engine/svg-parse.js`, which needs no browser. The panel is built from classes in
+`site/src/ui/panels.js`, so a change to a control is made once and applies to every design; tooltips are one layer
+(`site/src/ui/tooltip.js`) that shows any element's title in a bubble the moment the pointer rests on it.
 
 What tells the flat line cards apart: **Crosshatch & isogrid** lays straight lines at chosen angles in each layer, so
 the angle is the design; **Dip weave** is a straight warp with a weft that dips to the bed between every warp, the
@@ -122,7 +122,7 @@ is cut into pieces, whatever the line shape and grid angle; only an outline with
 
 ## The publications
 
-`reference/publications-to-patterns-2026-10-15.md` says which of the papers in `reference/publications/` became a card
+`docs/reference/publications-to-patterns-2026-10-15.md` says which of the papers in `docs/reference/publications/` became a card
 (halftone net, spacer net, pillar weave, the three new weave bindings) and which were only context.
 
 Flow: a strand's points may carry a `flow` multiplier (1 = nominal bead). It scales the extruded volume of the move
@@ -131,7 +131,7 @@ no `flow` produce exactly the G-code they always did.
 
 ## The infill library
 
-`src/engine/infill.js` lays one layer of any PrusaSlicer 2.9 infill pattern inside any outline: rectilinear, aligned
+`site/src/engine/infill.js` lays one layer of any PrusaSlicer 2.9 infill pattern inside any outline: rectilinear, aligned
 rectilinear, grid, triangles, stars, cubic, line, concentric, honeycomb, 3D honeycomb, gyroid, Hilbert curve,
 Archimedean chords, octagram spiral, adaptive cubic, support cubic and lightning. All take one `spacing`, meaning
 area / line length, so two patterns at the same spacing use about the same filament (lightning is sparse by nature).

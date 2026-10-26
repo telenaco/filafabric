@@ -1,0 +1,1833 @@
+{
+  "format": 1,
+  "archive": "site/vendor/arachne/filafabric-source.tar.gz",
+  "archiveSha256": "1c271bdcfab5d2bb96a9e99a49c53b92dfa857bf65448b44c510aeb45332a618",
+  "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
+  "files": [
+    {
+      "path": ".github/workflows/test.yml",
+      "bytes": 468,
+      "sha256": "0d41e110baed95fcea795acea0fecddbdad493bb26efed43c422b547d9c22a9d"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 636,
+      "sha256": "f466184b03c23c916477d8644fc1ed4e71ce66670e1829abfab0f5f8619fc5a0"
+    },
+    {
+      "path": "CLAUDE.md",
+      "bytes": 1700,
+      "sha256": "f2cdd33196467d08a6c797e459c3e49f0290362c6b1394dc55f6582346e1e5f2"
+    },
+    {
+      "path": "README.md",
+      "bytes": 38056,
+      "sha256": "a60ab834486fcfa646171d8c1c1986416c68872ce85d4d61e476b8f14e5fde8a"
+    },
+    {
+      "path": "Run Textile Tool.bat",
+      "bytes": 278,
+      "sha256": "0bba85e8c3c0fa3d6fef52eee3bfc3624b4c3f9e642fbef24022fa5abbb8d992"
+    },
+    {
+      "path": "dev/migrations/0001_study_exports.sql",
+      "bytes": 542,
+      "sha256": "93c721aabd49ab7f5b081ce67ae0eaece6e99c9cb545ba74753156862cef8f46"
+    },
+    {
+      "path": "dev/templates/swatch-100x100.svg",
+      "bytes": 1359,
+      "sha256": "bed14e6cc6f64a0e091e7c13baa7e59b9f405a405ab41d2a93812526eb1cde9b"
+    },
+    {
+      "path": "dev/tests/adaptive-solids.test.js",
+      "bytes": 5057,
+      "sha256": "c48890aa8e0641a6f0efb1abc2a2b304784406c90ca18b0f0603be54172d6847"
+    },
+    {
+      "path": "dev/tests/auxetic.test.js",
+      "bytes": 2834,
+      "sha256": "ea2ec4db8813038859b6fb2330e7355b0d90571a9ccd0a7504985a0712aad155"
+    },
+    {
+      "path": "dev/tests/backing-mesh.test.js",
+      "bytes": 6770,
+      "sha256": "32df2a73d75ab75f9120ba73f0b06a060fe68ad14fcb48e34cf6edd70cfd3a19"
+    },
+    {
+      "path": "dev/tests/base.test.js",
+      "bytes": 2216,
+      "sha256": "0671c3874f88d782f9ca276b09686ad6eef92e35faf54ff898b80cfd36ab1b18"
+    },
+    {
+      "path": "dev/tests/basic-designs.test.js",
+      "bytes": 13810,
+      "sha256": "b1ec4561742447852dc9dd30c43b25b17e84fca9223b263ac07ab323ba414d04"
+    },
+    {
+      "path": "dev/tests/bed-size.test.js",
+      "bytes": 1285,
+      "sha256": "0532fdaed3f3079f9fed2cc9b44e1dc7ec656730b01f3aa7c1828fffcb621eaf"
+    },
+    {
+      "path": "dev/tests/boot.test.js",
+      "bytes": 1874,
+      "sha256": "8a9dc9bda8600429a588d8774751d31522332e9ad0a435eb82a9c03aadf35e60"
+    },
+    {
+      "path": "dev/tests/boundary.test.js",
+      "bytes": 1058,
+      "sha256": "c5389d0c12dda3bb59074b0697c2070338a1d2fc056e8fb9caee8bee80cac276"
+    },
+    {
+      "path": "dev/tests/brim.test.js",
+      "bytes": 14884,
+      "sha256": "d9602f63ae624a9f90324d077f189d1898e7afab4ffc860cb0a9308e6eedf769"
+    },
+    {
+      "path": "dev/tests/bubbles.test.js",
+      "bytes": 2323,
+      "sha256": "2ec6e3abb685683e31da9cb19258494542262a6ce6d1fdcfc3946d90682d0257"
+    },
+    {
+      "path": "dev/tests/chainmail.test.js",
+      "bytes": 1977,
+      "sha256": "933fe6e4e7f8215a8cbea93758f77073662eb22d9ef8da5d7f2019e215ab5a0c"
+    },
+    {
+      "path": "dev/tests/coil-controls.test.js",
+      "bytes": 3715,
+      "sha256": "3439cb5b6ef6ebd001b9dbbc628e215a2cffe24bbd7f144f901da45089d1723f"
+    },
+    {
+      "path": "dev/tests/coil.test.js",
+      "bytes": 4622,
+      "sha256": "369d8b7967b1e920a5e1f250799eed11c921e8e9980fb11e0c5a95689bee6c04"
+    },
+    {
+      "path": "dev/tests/conformal-guides.test.js",
+      "bytes": 7852,
+      "sha256": "15ae8963aa0b3bde88e6edf753d82d85ac1ad5467db31555449215921be5c780"
+    },
+    {
+      "path": "dev/tests/conformal.test.js",
+      "bytes": 3134,
+      "sha256": "0f2146c91cd920a6d2e96f403d7d657770c7d4d2c1236b0bfba272376e87fca4"
+    },
+    {
+      "path": "dev/tests/controls.test.js",
+      "bytes": 9036,
+      "sha256": "6d6c61a1c3ba594817188a7ea5cad9ebf7832d34d73a4804732918af263cc554"
+    },
+    {
+      "path": "dev/tests/crosshatch.test.js",
+      "bytes": 4477,
+      "sha256": "9d6292ec7f05f85249f5ed71b1c730cc5294a2aad48a2b7700b73eb4541ab22d"
+    },
+    {
+      "path": "dev/tests/crossings.test.js",
+      "bytes": 5324,
+      "sha256": "6c1c570ac5672905976e56ea1a5b92b707a65cc07c9f36cca1f6fde4770f0925"
+    },
+    {
+      "path": "dev/tests/design-export.test.js",
+      "bytes": 13056,
+      "sha256": "2f9fa8507285642fc96088f70d50cac32eb1cbef9799870e229753f3b6886282"
+    },
+    {
+      "path": "dev/tests/designs.test.js",
+      "bytes": 5523,
+      "sha256": "533e261cee54c9c178dbeed2bb27c1c1b5b7b11e176e1d7abd54cd1b33f54dd1"
+    },
+    {
+      "path": "dev/tests/diagnostics.test.js",
+      "bytes": 16766,
+      "sha256": "d96e5b5e1255b8b049d5331a7fbb1c0a79eb0dd94e5caa023a8e1e7d565df16a"
+    },
+    {
+      "path": "dev/tests/dipweave.test.js",
+      "bytes": 1805,
+      "sha256": "0c9bff1fb01059571cee57372ec635a042424c0394f7a111abb5fa6b32f9df3a"
+    },
+    {
+      "path": "dev/tests/drawing-union.test.js",
+      "bytes": 3281,
+      "sha256": "7068f183539b5f0f026c972abc163e9d58a3a7b8381d4175ac4db3a631164f1e"
+    },
+    {
+      "path": "dev/tests/emit.test.js",
+      "bytes": 3694,
+      "sha256": "e3d33c22f151440bc486d84f1670220d09f0517d88888c209fce564ce9fa7e31"
+    },
+    {
+      "path": "dev/tests/engine-extras.test.js",
+      "bytes": 2603,
+      "sha256": "1fa4b2a6f7eeceb43113ff52d22f506d3a63d95811b8474e5e875ec9b45993eb"
+    },
+    {
+      "path": "dev/tests/export-builder.test.js",
+      "bytes": 6061,
+      "sha256": "7f6c1ae08cfd16abace6748ed18787ddd7318e2b113206c0d048769df92a25be"
+    },
+    {
+      "path": "dev/tests/export-diagnostics.test.js",
+      "bytes": 3710,
+      "sha256": "fe609867c19493229dc301766367c977525260071c8cc4879908dccb66e1bbcf"
+    },
+    {
+      "path": "dev/tests/export-dialog.test.js",
+      "bytes": 12340,
+      "sha256": "61b7306158b4e12a7009e471fe7c97c7647e07f455eb2792d33fc13a9db6bd7b"
+    },
+    {
+      "path": "dev/tests/extrusion.test.js",
+      "bytes": 5289,
+      "sha256": "6636cb3837235a10faeda2e684d21b84d6434f3c3ddc5679de82977edad5f021"
+    },
+    {
+      "path": "dev/tests/fabric.test.js",
+      "bytes": 9337,
+      "sha256": "881b91001ea3d753b01ba522fe12911a9506328ee3fa292981996d938f891c02"
+    },
+    {
+      "path": "dev/tests/feedback.test.js",
+      "bytes": 6067,
+      "sha256": "bf318a4569a7f2f3c2f7fc9dae4b7c83719292ce756b639751a220c23174872d"
+    },
+    {
+      "path": "dev/tests/fiber.test.js",
+      "bytes": 3316,
+      "sha256": "00f1b68df2a8b735701b75c197c2f9cb3fc998eaccccf9e55dabf2116b61e787"
+    },
+    {
+      "path": "dev/tests/fields.test.js",
+      "bytes": 3566,
+      "sha256": "e755ef9931bb02a93f421c006cb389fe0bb961c73f25a242f42623cd301c8249"
+    },
+    {
+      "path": "dev/tests/filaflex-profile.test.js",
+      "bytes": 4184,
+      "sha256": "31511abc62b8d5b1a68d674485e69599a839b24faf328217cb120349be1d8c4e"
+    },
+    {
+      "path": "dev/tests/filament-settings.test.js",
+      "bytes": 5035,
+      "sha256": "899ec63b8379067345fc7e940c60d4791dad8ef0af589918d6bd07c7ab578ed7"
+    },
+    {
+      "path": "dev/tests/file-name.test.js",
+      "bytes": 16959,
+      "sha256": "f474a7f07fb58e0071ea03a923785425902d75559f0b74736ad6eb2513a5cd77"
+    },
+    {
+      "path": "dev/tests/fix-geometry.test.js",
+      "bytes": 5403,
+      "sha256": "5416a42e4689773ba163890ddedea36df9b708a8f8e9105321e442a28f660277"
+    },
+    {
+      "path": "dev/tests/fixtures/bambu-filament.json",
+      "bytes": 424,
+      "sha256": "b421b3f59391696085c93d201d329bf6333cd9a74de7a5dd8ac369671867bdf7"
+    },
+    {
+      "path": "dev/tests/fixtures/bambu-printer.json",
+      "bytes": 629,
+      "sha256": "dc8efa90287e50120b151f02491de93c017773c5fcf8b9f5713650cb2be3346d"
+    },
+    {
+      "path": "dev/tests/fixtures/prusa-bundle.ini",
+      "bytes": 731,
+      "sha256": "315b6c84ee01e4f667952b5750fad4ab43aebaa00e99b8301d097710fa088873"
+    },
+    {
+      "path": "dev/tests/fixtures/prusa-config.ini",
+      "bytes": 1847,
+      "sha256": "18ceb3519f2dd49d793026bb161ba3b4ec8ff622e2b629fdca0c70e2b46dda71"
+    },
+    {
+      "path": "dev/tests/fixtures/red-blue-lines.svg",
+      "bytes": 4174,
+      "sha256": "ef3d0d8d93793cb858d97da83a617c83124e0b054be5a2e596550ffa2689e00c"
+    },
+    {
+      "path": "dev/tests/fixtures/sliced.gcode",
+      "bytes": 709,
+      "sha256": "245dac7a857c5aceab90827e2f37c195320420c2892e35e1f808db8c0b4b44c3"
+    },
+    {
+      "path": "dev/tests/fixtures/svg-template-guided-outline.json",
+      "bytes": 31916,
+      "sha256": "d4c7b6e2195e50a126d50e59a383f00ea3b8f58048b768599c89f2290296fc62"
+    },
+    {
+      "path": "dev/tests/flowlines.test.js",
+      "bytes": 2277,
+      "sha256": "df2a78bf9d9091199ddefc730d826088856e707817ceda1b8d5a7f4e608370ef"
+    },
+    {
+      "path": "dev/tests/foamy-calibration.test.js",
+      "bytes": 7046,
+      "sha256": "25f9de1768327379d4c693e6e690970f8d1e9bd750942be0fe2a61b0a3e03963"
+    },
+    {
+      "path": "dev/tests/gate.test.js",
+      "bytes": 6250,
+      "sha256": "3b913577a981235aa205b169ad085cb23da9eea489fece142856fa10ce9707b2"
+    },
+    {
+      "path": "dev/tests/gcode.test.js",
+      "bytes": 8755,
+      "sha256": "74b38f74b2ea664a7a854333bb0449563aee71798c6ca6ab45e1fc8921f35fc9"
+    },
+    {
+      "path": "dev/tests/generate.test.js",
+      "bytes": 4186,
+      "sha256": "d8404c35a25768b4ba9955237faf6c911fcaf82a061bb32adc415abced5deb5f"
+    },
+    {
+      "path": "dev/tests/generic-filaments.test.js",
+      "bytes": 1618,
+      "sha256": "c32192908504dfbfda894e19bcf97c54fd907f181a591357f34884f5394dd1c2"
+    },
+    {
+      "path": "dev/tests/golden.test.js",
+      "bytes": 774,
+      "sha256": "022ec25100712c6fadacaed7999324ef6eeff72ed4bca5ac7e54cd713c637326"
+    },
+    {
+      "path": "dev/tests/golden/sample20.json",
+      "bytes": 178,
+      "sha256": "a3b741c117cb67888bc81ae249c0c344fed0b1a6f485f262a88a4fe6eee8df81"
+    },
+    {
+      "path": "dev/tests/guide-repulsion.test.js",
+      "bytes": 8079,
+      "sha256": "3ea98fafd1a24531cc2ae79e35a934b4f44d101b6cef1d12c15282e289f48f6d"
+    },
+    {
+      "path": "dev/tests/helpers.js",
+      "bytes": 1015,
+      "sha256": "9d30b8bdbe7ac97e78b4cafa4062754eae203a8cc5f420852a779c2fde416502"
+    },
+    {
+      "path": "dev/tests/infill.test.js",
+      "bytes": 6772,
+      "sha256": "86652d49ae5deacbad4c3f1bdafd19c8b28ecccedcec9d973c8c453a761e1df7"
+    },
+    {
+      "path": "dev/tests/lace.test.js",
+      "bytes": 9741,
+      "sha256": "a97da593ba893edf4f847a44c76cfce8671729e0b832aa24f4e38cdbda036098"
+    },
+    {
+      "path": "dev/tests/layer-thickness.test.js",
+      "bytes": 5707,
+      "sha256": "a601721e80492760d9f9f6d74a11b2ff7a0cefc1a157a268b7dbd6114e0f8032"
+    },
+    {
+      "path": "dev/tests/layers.test.js",
+      "bytes": 5821,
+      "sha256": "938ef23964390579ccb49be0ba364b28ec3bd783e45341c9d7ccbadc71b89c18"
+    },
+    {
+      "path": "dev/tests/lissajous.test.js",
+      "bytes": 2305,
+      "sha256": "432bd6c490fb64b3e501ee054746b3f9da9f414382378802e770f6ef5ebf2211"
+    },
+    {
+      "path": "dev/tests/machine-search.test.js",
+      "bytes": 1032,
+      "sha256": "3e93c7d3a50bbff39d76c1decfe0e5c166b1240b2ebe7a6591e34a4e08ad4793"
+    },
+    {
+      "path": "dev/tests/meander.test.js",
+      "bytes": 5707,
+      "sha256": "c727f56bc0faa6885e98db3f718c94d1b5127d80ef458a7532433051aa904467"
+    },
+    {
+      "path": "dev/tests/motion-time.test.js",
+      "bytes": 6109,
+      "sha256": "7b182c4e760616e0c13ff493423727377e3f5124a7e9d418d23d5fb1475dbad9"
+    },
+    {
+      "path": "dev/tests/motor-current.test.js",
+      "bytes": 7828,
+      "sha256": "e5290f745aa265a0ccfb32397daf98ee4b120e145116c1fa78d89e5c9e9fa7ba"
+    },
+    {
+      "path": "dev/tests/net-path.test.js",
+      "bytes": 3767,
+      "sha256": "23eda0618f1946821e5bb2f8ec17017cd362c870616918db8000b6e6a4710ffe"
+    },
+    {
+      "path": "dev/tests/network.test.js",
+      "bytes": 6139,
+      "sha256": "0e3e1c52e6462ee37f79a1e0ed8410cb8b65fde5a7c3e03203e695b9c9357c14"
+    },
+    {
+      "path": "dev/tests/option-thumbs.test.js",
+      "bytes": 5820,
+      "sha256": "924f64941aa065acac34a9d1d20f20b6bbd94fbed69df1dd957471e932ac38b1"
+    },
+    {
+      "path": "dev/tests/outline.test.js",
+      "bytes": 6934,
+      "sha256": "3b359026b6c66ec387497a30c2c8b8a61631f995b1e96d63d0cfce35460f3420"
+    },
+    {
+      "path": "dev/tests/overview.test.js",
+      "bytes": 7429,
+      "sha256": "77b616f9fda9e796baee7172fcba0858f1fea3b63a5a8c6aa4463aaee4cc0bef"
+    },
+    {
+      "path": "dev/tests/panel-guides.test.js",
+      "bytes": 5765,
+      "sha256": "9ca38a83c95544959e76bdb5aa39ba5a1a52e6a30a79d991f99a2b25399fa5ef"
+    },
+    {
+      "path": "dev/tests/panel.test.js",
+      "bytes": 15985,
+      "sha256": "ac575391750202dcb7d636899efc44cc69c46a117875dd52636685ada8473138"
+    },
+    {
+      "path": "dev/tests/params.test.js",
+      "bytes": 4600,
+      "sha256": "0caaee3370776cfd6bd7b9fcf49efc3a0ce6dcb15cc4c8b54bbcc944ac03b03e"
+    },
+    {
+      "path": "dev/tests/parquet.test.js",
+      "bytes": 1998,
+      "sha256": "bb9574354580382329dea5fb9634e5a6b4d5ceda6aa95df2c31b6866264dbb18"
+    },
+    {
+      "path": "dev/tests/perimeter-offset-budget.test.js",
+      "bytes": 1034,
+      "sha256": "1bb5ee77002268ad3241d78d6ccdf3bc3b3d869c7a1b26bf121a263a5f6f19ad"
+    },
+    {
+      "path": "dev/tests/perimeters.test.js",
+      "bytes": 8828,
+      "sha256": "e7d69636da356a1e69bc86cddac85d3554d117509df100b6cfc2f1a3516a47f7"
+    },
+    {
+      "path": "dev/tests/picture.test.js",
+      "bytes": 6621,
+      "sha256": "356dd9d98277eb49bf306b0d9f479722b2b1598b61ff00fb2ee13fe73a7e7ddd"
+    },
+    {
+      "path": "dev/tests/planner.test.js",
+      "bytes": 7901,
+      "sha256": "d91fd8bddd921893c9c0b0870a5346b87a490ad38a73c0dcfe56f59e61785836"
+    },
+    {
+      "path": "dev/tests/print-estimates.test.js",
+      "bytes": 2238,
+      "sha256": "25d655528194711ab9c909a4c17b0162c0210e0cb6f3c8781afb0b947c14112a"
+    },
+    {
+      "path": "dev/tests/privacy.test.js",
+      "bytes": 3956,
+      "sha256": "15eb6ea0aa776e775c2361ad0f00e89c7c26753c1301c5db2f14c41b4f4aecb0"
+    },
+    {
+      "path": "dev/tests/profile-import.test.js",
+      "bytes": 11948,
+      "sha256": "e4b09e2bed7e98d9382a16906f7cf4cef16e8689145ce87668dfa3e4376ffb96"
+    },
+    {
+      "path": "dev/tests/profile-search.test.js",
+      "bytes": 687,
+      "sha256": "9003b8ae3cf2a5ba884b78b3d471ea3dd9e48bf875d3e4a6b0609e7296ff13d3"
+    },
+    {
+      "path": "dev/tests/profile-store.test.js",
+      "bytes": 1015,
+      "sha256": "20bf61503f028b818271599e833bf2c7feda913964d39f99b15638e14829ad9d"
+    },
+    {
+      "path": "dev/tests/profiles.test.js",
+      "bytes": 3629,
+      "sha256": "ced938984b490ec34307d0b3f611d59ee638f8f43b099a0318b1aab8bef65988"
+    },
+    {
+      "path": "dev/tests/prusa-alignment.test.js",
+      "bytes": 3188,
+      "sha256": "aa0299dd789f66a0d9fbc1fda4a261ab0d11c901355afe4e2918e16f2ff4ce42"
+    },
+    {
+      "path": "dev/tests/pub-designs.test.js",
+      "bytes": 9252,
+      "sha256": "b747e1bc5ffb5c89f1a390de4d17d8f33d8050f14931b23499d59072093d7991"
+    },
+    {
+      "path": "dev/tests/relief-fringe.test.js",
+      "bytes": 7214,
+      "sha256": "1c917167553897aa0a303005b66fab990fa2c0a67ea5e0db082454d718568896"
+    },
+    {
+      "path": "dev/tests/repeats.test.js",
+      "bytes": 7385,
+      "sha256": "23b5f7488b0f724ba9d2eb96ab560ad32b47f239b59f95277e2c750bc6f7e693"
+    },
+    {
+      "path": "dev/tests/retraction.test.js",
+      "bytes": 3846,
+      "sha256": "6b146ac9eed1dc592fc38099702666adaf0d6da6450347d3006ddc6fcd289c0b"
+    },
+    {
+      "path": "dev/tests/review-fixes.test.js",
+      "bytes": 3522,
+      "sha256": "eda419c4ca86f3351e01062da3ca1d88910ed2d0cd2fc9db1579ab7607cede46"
+    },
+    {
+      "path": "dev/tests/rng.test.js",
+      "bytes": 1031,
+      "sha256": "8e8f151bcb95231ed14cb8e1b957a51f4bd6373c380473af5a18d251f5440cbd"
+    },
+    {
+      "path": "dev/tests/rosette.test.js",
+      "bytes": 2928,
+      "sha256": "f94ec5148a71273149983c817d1fb2d962931d1f12795c57088d3f9f012f6121"
+    },
+    {
+      "path": "dev/tests/row-order.test.js",
+      "bytes": 6066,
+      "sha256": "5c91226abea86231f27c08480a8fae40af0fa9f8f972cb877c31b1a30a012612"
+    },
+    {
+      "path": "dev/tests/sample-svg.test.js",
+      "bytes": 1923,
+      "sha256": "deacb68a2070ef9e89ce325008cc0b32c21f0b672c17248da7e8779e69ff765f"
+    },
+    {
+      "path": "dev/tests/scene.js",
+      "bytes": 1644,
+      "sha256": "75f188010a3bc0926a1a1188a3b16986a260ec446d54e4db9c9d01c69584ec19"
+    },
+    {
+      "path": "dev/tests/schema.test.js",
+      "bytes": 2167,
+      "sha256": "db6baafe64dc32cdb527043c11cdc9f0c22b9ff9b4752cfe0735062da0959077"
+    },
+    {
+      "path": "dev/tests/seam.test.js",
+      "bytes": 6227,
+      "sha256": "1620ef935db83cdebdf337ae64cb5f252b0a879251b43446dd59d48d7f85e58c"
+    },
+    {
+      "path": "dev/tests/selective-travel.test.js",
+      "bytes": 10671,
+      "sha256": "bfd7c644042bed6995fbdfe0990748cb08d0dea3aa1abef6160f2d36e0e4f7eb"
+    },
+    {
+      "path": "dev/tests/serve.test.js",
+      "bytes": 1564,
+      "sha256": "1316df141b41c153db3c1e54df989c6805c638321549705fdcf69f1748cd1f68"
+    },
+    {
+      "path": "dev/tests/shapes.test.js",
+      "bytes": 4479,
+      "sha256": "02857756457f18da8bef75bd1482dd793d74356b4f3827747f55b119beff8d5f"
+    },
+    {
+      "path": "dev/tests/share.test.js",
+      "bytes": 12064,
+      "sha256": "2b4db43a58fd7ef0f956c42a2ece366e768c3693c1f5486f7039abe00062d285"
+    },
+    {
+      "path": "dev/tests/small-centres.test.js",
+      "bytes": 2793,
+      "sha256": "01ce4c2842cf0b58a45b0de4ead108b7dbc9f03bb725cf42e93d5306618b3b8b"
+    },
+    {
+      "path": "dev/tests/solid-fill.test.js",
+      "bytes": 9393,
+      "sha256": "f2d8e3c5c6925634bbedd5ae1ac7387da40ed585cdef1d5e558476ec94ef714b"
+    },
+    {
+      "path": "dev/tests/solid-infill-joins.test.js",
+      "bytes": 3319,
+      "sha256": "d5435b821a4d69ec9778ac34286c21bc174504069b5c53e268bbceb4c07b4c5c"
+    },
+    {
+      "path": "dev/tests/solid-layers.test.js",
+      "bytes": 4416,
+      "sha256": "c600ace5e167d60e34b8dfc322001c1ffec84c28e25ca89453eca2122ca12c42"
+    },
+    {
+      "path": "dev/tests/source-currentness.test.js",
+      "bytes": 457,
+      "sha256": "686453e2bf9462641af3ad296a1a1372ee88448020c22296173b1778702136c2"
+    },
+    {
+      "path": "dev/tests/source-offer.test.js",
+      "bytes": 5845,
+      "sha256": "fcb99d46939c9af5bd04977cc2827dddfacb7bf77eaf463f5f1ac303494981e7"
+    },
+    {
+      "path": "dev/tests/spiral-weave.test.js",
+      "bytes": 10706,
+      "sha256": "9abd33faebc175fb64c6f4ba5a5bd431455f197e7825fdd9767221afeeeed45f"
+    },
+    {
+      "path": "dev/tests/spirograph.test.js",
+      "bytes": 2044,
+      "sha256": "ccc146f9929381341af86b5ae5e76942b39cf6bb23a324ca06c93282f6e12ca5"
+    },
+    {
+      "path": "dev/tests/squiggle-controls.test.js",
+      "bytes": 2261,
+      "sha256": "1b88b8334ef40e1a517a6dc5d356d6d3149e9dbd6943546aa42d6b16ceabba51"
+    },
+    {
+      "path": "dev/tests/squiggle-golden.test.js",
+      "bytes": 1638,
+      "sha256": "8290e1fe213f6206f521bc3f9e8f82e5f6bc2a7d68e3f9141837d8a7933fdf25"
+    },
+    {
+      "path": "dev/tests/squiggle.test.js",
+      "bytes": 10793,
+      "sha256": "231f9eb005a4a9b278da27611b59103016c6e195def67c2c0207fc54b6230a6f"
+    },
+    {
+      "path": "dev/tests/stack.test.js",
+      "bytes": 10546,
+      "sha256": "6cf0309214c1922bc2bf5ccd05d0f7e1b23b12b5e222480d982896d0629a51b1"
+    },
+    {
+      "path": "dev/tests/starlattice.test.js",
+      "bytes": 2816,
+      "sha256": "8749199f05507436c9bc46e88cd22e85ffb3583e6c8e3a50bb8fd686c7f66075"
+    },
+    {
+      "path": "dev/tests/study.test.js",
+      "bytes": 18721,
+      "sha256": "791489b240cb197be55a6140512fc1cab4ae563eeef03aadf244365167a6ef06"
+    },
+    {
+      "path": "dev/tests/sunflower.test.js",
+      "bytes": 4845,
+      "sha256": "327f835f04131e73f79680fca4991d6e7260d743c697d2d0d7ac7ee9fcb1197f"
+    },
+    {
+      "path": "dev/tests/svg-colour.test.js",
+      "bytes": 21096,
+      "sha256": "a54827082e6cded382f5a2e96b0a52936898be8fb208c0a83dbeda966b1f3233"
+    },
+    {
+      "path": "dev/tests/svg-edge-regressions.test.js",
+      "bytes": 9308,
+      "sha256": "caf20da645da081bc223681c9851f38457c6f0bca4b25e095828f80e551e369d"
+    },
+    {
+      "path": "dev/tests/svg-guides-integration.test.js",
+      "bytes": 5413,
+      "sha256": "fcbe782a0e5ecf5e4e223dfc3d9f9a56b3fe7afdf044053bb0b0f163f9ce037e"
+    },
+    {
+      "path": "dev/tests/svg-import.test.js",
+      "bytes": 5462,
+      "sha256": "cce0bf128313b64e5b15eb3d62ba9c7dd9c26eeaa742ba2e83ae27ef7e9da321"
+    },
+    {
+      "path": "dev/tests/svg-layer-order.test.js",
+      "bytes": 4327,
+      "sha256": "f0f58dd278e6dce0a23432cc030037437f3a77f10cdfa8ee641459c9e76d898f"
+    },
+    {
+      "path": "dev/tests/svg-lines.test.js",
+      "bytes": 3085,
+      "sha256": "92452fe3e7f620f9b9b26c93b908946245c711a6f9fb3207f38da71eacf3a263"
+    },
+    {
+      "path": "dev/tests/svg-solids.test.js",
+      "bytes": 6645,
+      "sha256": "f65d9025c5c18686640e4f217dce096362367cf3222cc6125c6b060ba567a936"
+    },
+    {
+      "path": "dev/tests/svgdesign.test.js",
+      "bytes": 7483,
+      "sha256": "4ba0e7c180371c96e7f2a7ccff080c12c440a317eb426c6006c0ee140a587fb6"
+    },
+    {
+      "path": "dev/tests/swatch.test.js",
+      "bytes": 1472,
+      "sha256": "51ced9c9379696d35318518057cb37db5061a0c7b2139c979799f39fc8fd045a"
+    },
+    {
+      "path": "dev/tests/tiler.test.js",
+      "bytes": 5423,
+      "sha256": "09493bb688f21d12b6e097cefcafb8db62f0a773ac514d73a858ce67d94a80eb"
+    },
+    {
+      "path": "dev/tests/toolpath-limits.test.js",
+      "bytes": 1351,
+      "sha256": "12b6e76da995b9dc2c71c0409d308236c729a0aaff44904eb6bd91806e8b91f4"
+    },
+    {
+      "path": "dev/tests/travel.test.js",
+      "bytes": 10953,
+      "sha256": "366c19d92f7e01ef61a41e8c7e1c203d36135e038d2950f80171d262745d0400"
+    },
+    {
+      "path": "dev/tests/truchet.test.js",
+      "bytes": 2247,
+      "sha256": "dfb8f4760c393c60fadcf2dbfe209305980aa9458fbb4fbc941f4117c5695c0c"
+    },
+    {
+      "path": "dev/tests/turing.test.js",
+      "bytes": 2495,
+      "sha256": "41f1ff4b7cf0460d2be35b7b780eca3d4e8406db732731686810b9a8794e9724"
+    },
+    {
+      "path": "dev/tests/vendor-profiles.test.js",
+      "bytes": 6931,
+      "sha256": "9c532941fd0cabac9b0e8ae19522f4e62624659f21aa979479446a2dc4973a50"
+    },
+    {
+      "path": "dev/tests/verdict.test.js",
+      "bytes": 3598,
+      "sha256": "69cf63cb8af421f9fdd05aa6ec741c13d52b82acdaf20180381b69505bd91c79"
+    },
+    {
+      "path": "dev/tests/voronoi.test.js",
+      "bytes": 4739,
+      "sha256": "91580806b0fadcf6a6221e60f59569cfc4f73cbc145a602523409e72dce75b42"
+    },
+    {
+      "path": "dev/tests/wave-edges.test.js",
+      "bytes": 3510,
+      "sha256": "02414f81343367e5831fff9da1cb10e6ba3a323b86f92df721b939eed2fe953c"
+    },
+    {
+      "path": "dev/tests/web.test.js",
+      "bytes": 2449,
+      "sha256": "3e9cb6ad4829ba679b135e294edf00a50e10b6aabcdab7bdff35de283ca303e3"
+    },
+    {
+      "path": "dev/tests/window-perimeters.test.js",
+      "bytes": 6635,
+      "sha256": "29f0fdad4d658d3bfa88ea9f5aec28c337a5104bd72954f72a30d446db6e6e41"
+    },
+    {
+      "path": "dev/tests/yellow-svg.test.js",
+      "bytes": 2396,
+      "sha256": "7fe4f7cf79211852aaa90179b001fd4e06dad75636718106432c37905d276f4d"
+    },
+    {
+      "path": "dev/tests/zigzag-continuity.test.js",
+      "bytes": 1878,
+      "sha256": "e28ba05b62809f3a703797c48666034f96ada7988a07166f0d20f091e04e466d"
+    },
+    {
+      "path": "dev/tools/audit-printability.mjs",
+      "bytes": 1618,
+      "sha256": "76a10fcba55aa096f152a3e7322fcc3f907e034119d185cdbdbc6f6470194997"
+    },
+    {
+      "path": "dev/tools/export-demo-prints.mjs",
+      "bytes": 7738,
+      "sha256": "3ea09de407a4c054230cb19bcbbab777d8de2e4d8eda84e91e7777719d5d902e"
+    },
+    {
+      "path": "dev/tools/export-retraction-test.mjs",
+      "bytes": 7336,
+      "sha256": "147c77347c7cc30c2cd2c0862bde08ead78673cb3a011bfcdc1a9ec58424c8d8"
+    },
+    {
+      "path": "dev/tools/export-seam-test.mjs",
+      "bytes": 9877,
+      "sha256": "92cadc720a20cd9d07a42d4e07074345aaf596eb7843249d546769207c88a805"
+    },
+    {
+      "path": "dev/tools/import-generic-filaments.mjs",
+      "bytes": 4391,
+      "sha256": "0a81ae11756aa17c00f7af20ee77bd90f595aa88fa4af6f406d603898e40d63f"
+    },
+    {
+      "path": "dev/tools/import-vendor-profiles.mjs",
+      "bytes": 14318,
+      "sha256": "0772263280e9505e3f2372183b84b31ea0f2da4d5ab0307f937a03a0abc92e87"
+    },
+    {
+      "path": "dev/tools/make-favicon.mjs",
+      "bytes": 5600,
+      "sha256": "13d496b41c5a273ae64084bb6f591573ab2a326a590f928daf44dd8596564102"
+    },
+    {
+      "path": "dev/tools/plate.mjs",
+      "bytes": 2806,
+      "sha256": "51deacb53b39b50057f7710920d870353fdd550b39e269e810c36b9ca3785d08"
+    },
+    {
+      "path": "dev/tools/profiles-index.mjs",
+      "bytes": 1439,
+      "sha256": "890b81c718086f37ee206a0c3161721ec5a9b5e67db5b3e17a75968ab4de332c"
+    },
+    {
+      "path": "dev/tools/serve.mjs",
+      "bytes": 3430,
+      "sha256": "7294856c4f990f7c2667ba298bcd1d15ace850335bcc290558074d3ddb1d6240"
+    },
+    {
+      "path": "dev/tools/set-password.mjs",
+      "bytes": 1107,
+      "sha256": "c5f60d81326f42e0d556c953fb21554df1ce5acd519a3b41e998a4f9f6921ade"
+    },
+    {
+      "path": "dev/tools/source-bundle.mjs",
+      "bytes": 8354,
+      "sha256": "36cb0b006c36be871ed3a5a77215ae8f0cc97c8457fe26c8cfb52d5ca2357367"
+    },
+    {
+      "path": "dev/tools/source-snapshot.mjs",
+      "bytes": 432,
+      "sha256": "1800b378c6c4585214e690505387ae5fc90197c8f2f80dcfa5f158713767bb9b"
+    },
+    {
+      "path": "dev/tools/source-verify.mjs",
+      "bytes": 432,
+      "sha256": "d0c3c20f1534ff99898a772cca2b2b04402a6366438899a2c7b79f3c161fe4a4"
+    },
+    {
+      "path": "dev/tools/tally-exports.mjs",
+      "bytes": 2599,
+      "sha256": "05fc0153def020e361c7eeec464a14e4a6d2633147427591f7a2a41cecc091e6"
+    },
+    {
+      "path": "dev/tools/update-golden.mjs",
+      "bytes": 607,
+      "sha256": "345bbc2695c8b516c2d0ab050d64dbbbbd735aa1fb44f4296ae818ba032436f8"
+    },
+    {
+      "path": "dev/tools/vendor-three.mjs",
+      "bytes": 1193,
+      "sha256": "864e788b98dc581723f4e93e0ef855973c4932e729af8c814256a7432e8e5b01"
+    },
+    {
+      "path": "docs/STUDY_SETUP.md",
+      "bytes": 5855,
+      "sha256": "4322a8d07f9a109b7402271e946c6121c61a2196167d51936f7f10b99c054b87"
+    },
+    {
+      "path": "docs/adaptive-solids.md",
+      "bytes": 4505,
+      "sha256": "3992189772a71f768f903e350ec08cbd26fc787a37b4ae9a8c55fa002aee8a19"
+    },
+    {
+      "path": "docs/blender-ceramics-review-2026-10-14.md",
+      "bytes": 9316,
+      "sha256": "22c95b577763b691ce24897fc8446dc86beeb780a890f1ba1e29a5109bc3fb70"
+    },
+    {
+      "path": "docs/fabric-structures.md",
+      "bytes": 20087,
+      "sha256": "c0937897d8d026d1a65c619cb96b859df4c17bc0a186211c279d7a8ba24011b5"
+    },
+    {
+      "path": "docs/foamy-calibration.md",
+      "bytes": 4854,
+      "sha256": "ecd32383f8aaae898fd7a0003ec18224513f1dcce4c716629d26658b867c04f6"
+    },
+    {
+      "path": "docs/lace-review-fixes.md",
+      "bytes": 5505,
+      "sha256": "3f84fdbc0d2e2b74a966542f8f26e3706a5e34c07b9a1ed4b41e5b6ca7a60b07"
+    },
+    {
+      "path": "docs/lace-solid-fill.md",
+      "bytes": 9952,
+      "sha256": "75d48e157962c9868e476b5d8f4188af3812a6307b7f57c3c93cdc59becb23ae"
+    },
+    {
+      "path": "docs/original-brief.md",
+      "bytes": 8479,
+      "sha256": "cc3a6c6663aa8e5d7621fa9777b6ccf6118041124b4890e3d9e6290cf56216b7"
+    },
+    {
+      "path": "docs/path-optimisation.md",
+      "bytes": 8441,
+      "sha256": "b329cda191ef192b7f5be29e25a90db91a14d2d32769d3b43439032b7987fc2b"
+    },
+    {
+      "path": "docs/product-direction-2026-10-14.md",
+      "bytes": 6928,
+      "sha256": "49fc149410d72ffeb09e83d3b16390d18c373decad1337b9ebffe30d5ba642cc"
+    },
+    {
+      "path": "docs/prusa-profile-alignment.md",
+      "bytes": 4020,
+      "sha256": "fb96bc2c5852017abb0a55483f9cd2b2271805fce54af41af1e11cc4a7efa4d6"
+    },
+    {
+      "path": "docs/reference/g-code-analysis-2026-10-14.md",
+      "bytes": 7873,
+      "sha256": "2e27d1bd6f95155352a02b408362c6f25ded082df091483a89ac4220c6dc498c"
+    },
+    {
+      "path": "docs/reference/line-algorithms-for-fabric-2026-10-14.md",
+      "bytes": 22031,
+      "sha256": "4b2f2926ef09504ebc272381337363326a44cb6547713095f34f1fae3e4d4e36"
+    },
+    {
+      "path": "docs/reference/publications-to-patterns-2026-10-15.md",
+      "bytes": 4357,
+      "sha256": "1c1f25d20912a1bfcaf42c06a3663a998f96190d47d52d3cf41c89973c3faea4"
+    },
+    {
+      "path": "docs/reference/research-notes-2026-10-14.md",
+      "bytes": 6753,
+      "sha256": "4de41060804416ccba58165399ff904900223df06889a25e4f69dd48e7c65164"
+    },
+    {
+      "path": "docs/reference/study-statistics.sql",
+      "bytes": 1492,
+      "sha256": "401e8db7c18cd8c3fe4708002f05fa49d5353058d00c7c9f495a55168434e784"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-14-coherent-fabric.md",
+      "bytes": 3425,
+      "sha256": "dbeb2d18f703a6ad850eba6546c6fad50291697c950cdd54a1b5f34d882db40d"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-14-fabric-design-library.md",
+      "bytes": 40707,
+      "sha256": "6e5e923f58ed2c04e3a1846efcd35ea121f3ee45badbabf6b2a5864927c97aee"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-14-textile-gcode-generator.md",
+      "bytes": 144519,
+      "sha256": "a3e49d63aa6b5f00e4efbe9ce0c29a686dfdaf3a6a89d3171a995629c64a1d51"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-22-adaptive-solids.md",
+      "bytes": 3567,
+      "sha256": "f3873c014135e64f7b2d1732545d452f5d977fece709da290c65d01a62aa451a"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-22-inside-perimeters.md",
+      "bytes": 7445,
+      "sha256": "c471c5a5013096d8d7b382b20c9d572e7c54d6a5d0fbbbdcd98a8e5046b7a367"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-22-lace-review-fixes.md",
+      "bytes": 2274,
+      "sha256": "1a01f2f2fe5f28533f8cd0ecffec2b25dcb61d277283602f149edf07e756172b"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-22-prusa-profile-alignment.md",
+      "bytes": 3576,
+      "sha256": "3a193f69be7d1b1b7060f92c7d7f49a5a9fbe66328bb7d32cbbfb7ae076dc9fa"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-10-22-remaining-lace-fixes.md",
+      "bytes": 5514,
+      "sha256": "d13b97998f84ad64338101b8b7636c6a08160c3f5bcffdf6dc0fd05e1b10e068"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-10-14-coherent-fabric-design.md",
+      "bytes": 2036,
+      "sha256": "e855832c84a671bac751ed717a70619af08aaa48b4586e24b09eb71951d7bab5"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-10-14-fabric-design-library-design.md",
+      "bytes": 10195,
+      "sha256": "dfbb841c4dc17f82ff2d804eee731f9ddf1f3c009de3bd7cdd6bdbce574d3b69"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-10-14-textile-gcode-generator-design.md",
+      "bytes": 27119,
+      "sha256": "7c6b0ad058126adf4da4f84b00d6e44fe68253a94c476176c824bc329032ffe6"
+    },
+    {
+      "path": "docs/superpowers/specs/2026-10-22-adaptive-solids-design.md",
+      "bytes": 2728,
+      "sha256": "636a2757b3eb76cc797f3391d7848db57b1bab60295e833c44a0696e31a23a5b"
+    },
+    {
+      "path": "docs/ux-round-2-2026-10-14.md",
+      "bytes": 6233,
+      "sha256": "0e933bbbe5ce8aca19a816b11e6ab76a27feaf7d7c7e535581f651ff0426b6f1"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 568,
+      "sha256": "457c68e10f81cf3ad1f187a2e8786e2d43b3901bd7541131cd1d60b3d68ca696"
+    },
+    {
+      "path": "package.json",
+      "bytes": 646,
+      "sha256": "c586a996b8f0b6533539e1e1fe601e057d7b6f6eeb4d83eabbe2f24ca4e3c197"
+    },
+    {
+      "path": "site/_routes.json",
+      "bytes": 67,
+      "sha256": "379e37f74e478c3cddb8eba43c5509ab0594074f3fda78968e37dd84e0ada486"
+    },
+    {
+      "path": "site/apple-touch-icon.png",
+      "bytes": 2815,
+      "sha256": "54f7230b376bb009f4b43f480375d35f6f80d2e396f818c9db01b7fb3559d0c5"
+    },
+    {
+      "path": "site/favicon.ico",
+      "bytes": 1972,
+      "sha256": "fc3ad4f122521e1a19476139a7ea8c77c463fec653ae0e401ca27f0067c2484b"
+    },
+    {
+      "path": "site/favicon.svg",
+      "bytes": 501,
+      "sha256": "61fa10af3633e1e4493e851ae96279399c4cfb16be0989ccd1dc20857c8e6685"
+    },
+    {
+      "path": "site/functions/api/study/exports.js",
+      "bytes": 2597,
+      "sha256": "8e2c30ce37fbbbffa60c37b56d166aee82e3edb7570e4e66ffeabbbe1be6b24d"
+    },
+    {
+      "path": "site/functions/api/study/status.js",
+      "bytes": 213,
+      "sha256": "5fa7f14b979dc8273b9591433566a15f6c561ebe0f885357a0f6538784a4e69e"
+    },
+    {
+      "path": "site/index.html",
+      "bytes": 35624,
+      "sha256": "ac269d10d69b6296e7f192fdf79f0787f0ca82a6884565ec8ecebfc0b3a09954"
+    },
+    {
+      "path": "site/profiles/MATERIAL_SOURCES.md",
+      "bytes": 5035,
+      "sha256": "2e97c9e1f79de761d993157e73c644466fa97dbcc85a148b5ef260559ff7a4ee"
+    },
+    {
+      "path": "site/profiles/README.md",
+      "bytes": 7437,
+      "sha256": "c89c65be7cdd695e3e173f775172132171d5522b65d4d1ba0b72ee41070fa9dc"
+    },
+    {
+      "path": "site/profiles/index.json",
+      "bytes": 366,
+      "sha256": "35e47221d96a4ba2e51d03c88c7101ee602b5c35ab7b0c00870dde737375768e"
+    },
+    {
+      "path": "site/profiles/library/bambu.json",
+      "bytes": 266282,
+      "sha256": "53867dfea162c2e7dd5a94b0df7abb6c9853b1d5b857e2f5b04bca34a4f69cc6"
+    },
+    {
+      "path": "site/profiles/library/creality.json",
+      "bytes": 14713,
+      "sha256": "24ce2fec697081bfb97cfaf5fbbbd4c7f38a22cd7295f1d569fd8ebdba0aff82"
+    },
+    {
+      "path": "site/profiles/library/index.json",
+      "bytes": 9568,
+      "sha256": "61ee90f4ff0eaf2848bebd2d7b4f718566685b6bc7921abf2be5589961d5495c"
+    },
+    {
+      "path": "site/profiles/library/prusa.json",
+      "bytes": 62306,
+      "sha256": "3f7ab172f8a447f7ad8b8e12b3575f97faef9c9836cc8b114b5819bd773834b7"
+    },
+    {
+      "path": "site/profiles/machines/large-gantry-1000.json",
+      "bytes": 1276,
+      "sha256": "9817429b94ae7dfb5a4653e50064b52fc00ef5b4fefc5aa2f5478cacbe63b62c"
+    },
+    {
+      "path": "site/profiles/machines/prusa-mk3s.json",
+      "bytes": 2470,
+      "sha256": "fdaedb0739c93837fb1585ab06b712a15c27c668bfde9d614888bbf53aa4bc98"
+    },
+    {
+      "path": "site/profiles/materials/filaflex-95-foamy.json",
+      "bytes": 2084,
+      "sha256": "10692ce9cf53de5c0339a073565a0c75238136706a6fe85eb97bd6f28a77b6fa"
+    },
+    {
+      "path": "site/profiles/materials/generic-abs.json",
+      "bytes": 1437,
+      "sha256": "b3c3aacf279685c6fa9ac1b412424c39c87f633b9288c591c57b6b43747fb96e"
+    },
+    {
+      "path": "site/profiles/materials/generic-flex-mk3.json",
+      "bytes": 833,
+      "sha256": "f0d6c182ab1111167779c26aa046543ec40572731441170db549893e9e13d37d"
+    },
+    {
+      "path": "site/profiles/materials/generic-hips.json",
+      "bytes": 1441,
+      "sha256": "d50f97ebd409ceb99753eb575d491554d9e861f004d591ca1f6ab8d93626c7b0"
+    },
+    {
+      "path": "site/profiles/materials/generic-petg.json",
+      "bytes": 1437,
+      "sha256": "017c7fe52ff781db8e8c81ef4eb0111558732c224f66c923fe4235348df3637b"
+    },
+    {
+      "path": "site/profiles/materials/generic-pla-silk.json",
+      "bytes": 1503,
+      "sha256": "5c4be658be6122a74a0102bc876ca5bbdaad029471e201921da2f3bb7c092a6b"
+    },
+    {
+      "path": "site/profiles/materials/generic-pla.json",
+      "bytes": 1938,
+      "sha256": "c81edfb77fe404b3e6c3508eab7eef6118b85dee6078747bfe1ceca997763a66"
+    },
+    {
+      "path": "site/profiles/materials/generic-pva.json",
+      "bytes": 1500,
+      "sha256": "83fa7caa4b48024d952d20db4b92038f26acc3afb8d33dcd80014ed97b57c7c1"
+    },
+    {
+      "path": "site/profiles/materials/generic-tpe.json",
+      "bytes": 2044,
+      "sha256": "88bc4a0d40fc829454925586861154599f34c81bfc67c6b5b3f0598f0ae20be6"
+    },
+    {
+      "path": "site/profiles/materials/ninjatek-ninjaflex-85a.json",
+      "bytes": 2165,
+      "sha256": "2a89b6b5f4300526b35f217e9fcb1ae0d8718036752fb48bced141dbd529fbef"
+    },
+    {
+      "path": "site/samples/filafabric-sample.svg",
+      "bytes": 4978,
+      "sha256": "74a987e62603ee073c8e4ecde58385538f2a3fe092d7b601a5d153a8dbcc1ed8"
+    },
+    {
+      "path": "site/samples/garment-crop-top-front.svg",
+      "bytes": 5116,
+      "sha256": "fc094062f71d18236558b584994bfc79397c0e00a7c46f2e6a251722214d5e4a"
+    },
+    {
+      "path": "site/samples/lace-sample.svg",
+      "bytes": 18336,
+      "sha256": "70d26918894da728386ce8368522a4251bf0cb4bba823c11fa56a48ec7ca9114"
+    },
+    {
+      "path": "site/samples/printer-profile.ini",
+      "bytes": 1854,
+      "sha256": "8728cf71dba3e8e2d0cbba85e96693849d30a36c6604f36ca5215afec1911215"
+    },
+    {
+      "path": "site/samples/printer-profile.json",
+      "bytes": 1419,
+      "sha256": "b625c1bc22fc507ea708422ec15946b9485f262a5cde9a79b354be432ddd7b2b"
+    },
+    {
+      "path": "site/source-offer.md",
+      "bytes": 2638,
+      "sha256": "cb154ed6f15b23a54ef541d82a4102fd519b134c8761c281a5ceddf4fb112e24"
+    },
+    {
+      "path": "site/source.html",
+      "bytes": 2284,
+      "sha256": "21cdf50f11fdfcacf3c7d7ae2cf62da5327202e07825e24d45f81b46b6597bee"
+    },
+    {
+      "path": "site/src/boot.js",
+      "bytes": 2868,
+      "sha256": "c6097e8330612999aac795b09b8125ef1bf77c0dca48cc3e4009286f8acdada2"
+    },
+    {
+      "path": "site/src/engine/adaptive-solids.js",
+      "bytes": 5631,
+      "sha256": "8b227064e32dbfb166cd020e554d4e53b7a5cfa0a0d21bdd2bdda55690c55f2f"
+    },
+    {
+      "path": "site/src/engine/auxetic.js",
+      "bytes": 4092,
+      "sha256": "5118d55efb3797f28c8de663ca22fe16598f7cbcadbe060ba0e2b13b3387da1d"
+    },
+    {
+      "path": "site/src/engine/backing.js",
+      "bytes": 6297,
+      "sha256": "db3f2a4106a882b6a5f868f4548791ee3f9227dcc5e20e66e7cb80f29b591fe5"
+    },
+    {
+      "path": "site/src/engine/base.js",
+      "bytes": 3365,
+      "sha256": "70c6fd27b9a903ee84481a35691ab369a309dbdc565863c39c0e7f9f0545488f"
+    },
+    {
+      "path": "site/src/engine/boundary.js",
+      "bytes": 4487,
+      "sha256": "2eb4293f78a06fdf44891a23438487c3d6defd472029d2ae141660a338c35020"
+    },
+    {
+      "path": "site/src/engine/brim.js",
+      "bytes": 23112,
+      "sha256": "50cf146fb2aad1930d68f336a5f3ff88f849cb40eeb421de70f47cad4c1db6df"
+    },
+    {
+      "path": "site/src/engine/bubbles.js",
+      "bytes": 13633,
+      "sha256": "4fcba3b788bb6372f6f0c5b7650d1f7817fc9ffd48eafdfc93bb0aa28aa11006"
+    },
+    {
+      "path": "site/src/engine/chainmail.js",
+      "bytes": 4445,
+      "sha256": "62669056cc52a4bf718ef628e90ef61c18720473f2c1d070b8b26dd2c0e200de"
+    },
+    {
+      "path": "site/src/engine/coil.js",
+      "bytes": 10936,
+      "sha256": "e231eae9f14027a733e28408cd34c3b97cf1cfd3f295fe9369d95a5bbaa5a133"
+    },
+    {
+      "path": "site/src/engine/conformal-guides.js",
+      "bytes": 27761,
+      "sha256": "4a337fbde64f745de9edd954145bd08b2f8bb8d265d1afa41080f054938efca4"
+    },
+    {
+      "path": "site/src/engine/conformal.js",
+      "bytes": 10694,
+      "sha256": "729d87e0651da1c168e5f6e0bae69335d65b85c059310cd88ec9a4f05458ce37"
+    },
+    {
+      "path": "site/src/engine/crosshatch.js",
+      "bytes": 2472,
+      "sha256": "4b38ecb8e957ba7117d0c11148f4e34bb5c9df13e3a6b3eb4ee5c11c7ab9e3d5"
+    },
+    {
+      "path": "site/src/engine/crossings.js",
+      "bytes": 14126,
+      "sha256": "5a96e697daebcc51719f41ea45997fe1aac78041718fb7007207123346bad174"
+    },
+    {
+      "path": "site/src/engine/design-export.js",
+      "bytes": 6686,
+      "sha256": "6e93274183f7e14b6c8ace19b2c6dd465c67e571bf9cf47e11784b9eaf0662eb"
+    },
+    {
+      "path": "site/src/engine/dipweave.js",
+      "bytes": 1015,
+      "sha256": "dca6a74daf263b90bdf96043de6a9fb656395fd72178327c7e87f5f3d2d05cc9"
+    },
+    {
+      "path": "site/src/engine/drawing.js",
+      "bytes": 15939,
+      "sha256": "a455cc65f5729379052a66851612738ef87b51e9d671068507b5043c8bb97ee4"
+    },
+    {
+      "path": "site/src/engine/emit.js",
+      "bytes": 13058,
+      "sha256": "d236719888f48f89235c4f3a00c179ad8788c52d08f2607388ae037b149a6eea"
+    },
+    {
+      "path": "site/src/engine/extrusion.js",
+      "bytes": 3210,
+      "sha256": "8578d926376bdde6e65fd7745595f12b37a6f18f04171c8c68a99d5cc0b1787d"
+    },
+    {
+      "path": "site/src/engine/fabric-result.js",
+      "bytes": 4620,
+      "sha256": "63b87bb6b56a7db3b30acbf11af57a2ed3ee3ebec6d24935bcfd9f3151221274"
+    },
+    {
+      "path": "site/src/engine/fabric.js",
+      "bytes": 24926,
+      "sha256": "cb54808f785bb6fbc51f4b3c19d4846ac91dcd354fc75900390f2877c35986ff"
+    },
+    {
+      "path": "site/src/engine/fiber.js",
+      "bytes": 2591,
+      "sha256": "c4e2ca7900397161e939a53f8a6356b8ca1bb63d6a4086a716fa163508472ffc"
+    },
+    {
+      "path": "site/src/engine/fields.js",
+      "bytes": 8652,
+      "sha256": "64dcb923541a33eafef9da97a0d82dced40c3fc990fa49bf66e78bc190175bed"
+    },
+    {
+      "path": "site/src/engine/fill.js",
+      "bytes": 7589,
+      "sha256": "89ff119c35868c5ef8cf789970cd7c3f52751c5355956dd873857269a69d0193"
+    },
+    {
+      "path": "site/src/engine/flowlines.js",
+      "bytes": 11392,
+      "sha256": "d7b0d0a0e8269cf1d286e40c1d67f78a19d149d01b74e914a182991fff7b16d7"
+    },
+    {
+      "path": "site/src/engine/fringe.js",
+      "bytes": 5771,
+      "sha256": "a4d3a772aab3b53d3a551e079b1666304b333affe8837f30005fa7571005ef02"
+    },
+    {
+      "path": "site/src/engine/gcode-modes.js",
+      "bytes": 825,
+      "sha256": "2bcacfeb2be01cafbf9732766fc534d023576c09fe154bf97d8a3dd83364e58a"
+    },
+    {
+      "path": "site/src/engine/gcode.js",
+      "bytes": 12799,
+      "sha256": "1f7c5d63283f997638f9e9f7ea49e3ba198d28d6ab0f69fd881e992c8bcc8bf4"
+    },
+    {
+      "path": "site/src/engine/generate.js",
+      "bytes": 3266,
+      "sha256": "2f9e217a52263a0130bb0dc4c9eee05718ecc1bdf46ba632d08f0e6830ea6373"
+    },
+    {
+      "path": "site/src/engine/halftone.js",
+      "bytes": 3837,
+      "sha256": "719a383c4262b5f33d168b637c4e39c80aed65b0b46d3e1c8ec913118d568785"
+    },
+    {
+      "path": "site/src/engine/hub.js",
+      "bytes": 601,
+      "sha256": "53006ae7dd729c7080debc22c5b88e5f078ed5b7c5ebf59f5837f3c2724f2fd1"
+    },
+    {
+      "path": "site/src/engine/infill.js",
+      "bytes": 20352,
+      "sha256": "6167d697612699a985e72bef40846108747a0124d9a95c601686a04bd06fc0ae"
+    },
+    {
+      "path": "site/src/engine/isolines.js",
+      "bytes": 4144,
+      "sha256": "d754a652c927683635d14fb966810a7e90e90312202589ca6aba30f696d22126"
+    },
+    {
+      "path": "site/src/engine/layers.js",
+      "bytes": 17978,
+      "sha256": "cf47d4bb1e3f9ca5174de9aaeb2e8619544dbb5255e42d4ddf18997370d12959"
+    },
+    {
+      "path": "site/src/engine/lissajous.js",
+      "bytes": 1741,
+      "sha256": "35149f2616f30222491a9d871854cee426ece441d7c72f7ae1cb74d703a43a5c"
+    },
+    {
+      "path": "site/src/engine/meander.js",
+      "bytes": 14259,
+      "sha256": "c26d2763c1abadde37903a2f6585e3f3ac5c85e02f4ae111debd216d25f86445"
+    },
+    {
+      "path": "site/src/engine/motion-time.js",
+      "bytes": 9166,
+      "sha256": "4a11292082a7b29ecf1274fbbe7f4239c735fbd01052f478b1d43985c36effe5"
+    },
+    {
+      "path": "site/src/engine/network.js",
+      "bytes": 12953,
+      "sha256": "68e1950f78efae15f02d2dbfa5257eb93ed07db71e5c5c1e943dedd6e542eea6"
+    },
+    {
+      "path": "site/src/engine/outline.js",
+      "bytes": 5139,
+      "sha256": "d17fcdfab2fe92d7b6b21aef77f909e173458de740e5e60168c0001aa7b0f17a"
+    },
+    {
+      "path": "site/src/engine/overview.js",
+      "bytes": 9283,
+      "sha256": "be05cb0f8116e656194c30bcc33f871544b3b3f959fda8aed45b661ade2f1a69"
+    },
+    {
+      "path": "site/src/engine/panel.js",
+      "bytes": 23641,
+      "sha256": "c4dcb22fdcaf69431a4d81b1abedd73456d6f1c9a45f60773b3111dab1e6d5c1"
+    },
+    {
+      "path": "site/src/engine/params.js",
+      "bytes": 13438,
+      "sha256": "168e4e7a3544a3ce313283f9f206fcd5e0b4da7fcf16b4de743b9552e8192c9c"
+    },
+    {
+      "path": "site/src/engine/parquet.js",
+      "bytes": 7522,
+      "sha256": "d0545a875110a313ff29c788550e6f45ce8660b75fbb944115c0beaeba52b66f"
+    },
+    {
+      "path": "site/src/engine/picture.js",
+      "bytes": 3314,
+      "sha256": "cc94ad941391b80011fd1ed626ab39783b39697a585a314522a2fb140ccdfd2a"
+    },
+    {
+      "path": "site/src/engine/pillars.js",
+      "bytes": 13630,
+      "sha256": "03dbefcb2118463c51e4afabfac2dc2f93bf4dc5d5406c6897833be7f96ac8f0"
+    },
+    {
+      "path": "site/src/engine/planner.js",
+      "bytes": 9595,
+      "sha256": "38326e011879e8063225a17054c52cbd5491f0355e040f679c19919e43284fcf"
+    },
+    {
+      "path": "site/src/engine/polygon-region.js",
+      "bytes": 7690,
+      "sha256": "0040411e97240739534802e423cbedbf3619eabc2f4fa3eec59fa3437de8d836"
+    },
+    {
+      "path": "site/src/engine/profile-import.js",
+      "bytes": 30795,
+      "sha256": "338113db1a4f8d4b64a9218e3024eb76578e13d111a6270d27fa524052bf2707"
+    },
+    {
+      "path": "site/src/engine/profiles.js",
+      "bytes": 6616,
+      "sha256": "321fc538829c51f284b1aa7169f3d22228e076f6b22337863fc6698a3609eb35"
+    },
+    {
+      "path": "site/src/engine/relief.js",
+      "bytes": 9087,
+      "sha256": "b40914bd208e6f402dd735d8d017d1eccad80a091e685926fccb0ef5a4154f58"
+    },
+    {
+      "path": "site/src/engine/repeats.js",
+      "bytes": 2040,
+      "sha256": "722a407e45919e5699877fc6a8787cd63d22ff9843dc64c02d21c85469cfd9dd"
+    },
+    {
+      "path": "site/src/engine/rng.js",
+      "bytes": 447,
+      "sha256": "c631bb1e11cd716d4620c631f444496b84582dc37dc8a166a2e3ec5ce988f98b"
+    },
+    {
+      "path": "site/src/engine/rosette.js",
+      "bytes": 2593,
+      "sha256": "d31efaa3aa19c2d88febf2591a54ef8415bb04caca95bb1ced70d2dc9eb02289"
+    },
+    {
+      "path": "site/src/engine/rotate-design.js",
+      "bytes": 1115,
+      "sha256": "fd21d6c59f14252b35bdd0fc60cb015be51162d255d38a125fbea0aafaf44ad3"
+    },
+    {
+      "path": "site/src/engine/shapes.js",
+      "bytes": 9162,
+      "sha256": "47c4302216dcfacd34110e79cf0e5747172b8e20fa3bd4272e31d614d59c3d82"
+    },
+    {
+      "path": "site/src/engine/solid-fill.js",
+      "bytes": 13623,
+      "sha256": "96d76e04940e7e8907a145e0e2ba432c0d16bb2d22ddf19908c3bcb8633b0d96"
+    },
+    {
+      "path": "site/src/engine/solid-infill-joins.js",
+      "bytes": 1868,
+      "sha256": "2765646e8cdcf2a7100a55be31d3fe418aa381bb56c6f3f7c542ffcf2f0e24e0"
+    },
+    {
+      "path": "site/src/engine/solid-perimeters.js",
+      "bytes": 4914,
+      "sha256": "0e40847c462dcf7cea271beac68999bf30dc5d4c7100b6c93aeecaa835fa9db5"
+    },
+    {
+      "path": "site/src/engine/spiral.js",
+      "bytes": 13298,
+      "sha256": "ca03e3268ace1e22718cb2bef3f7394f8d786e1c5a53e0831450f6af282138cf"
+    },
+    {
+      "path": "site/src/engine/spirograph.js",
+      "bytes": 3860,
+      "sha256": "1b7271fe8620584b323a09b248614e10f4ae2b07e7904455db871d6e1172945c"
+    },
+    {
+      "path": "site/src/engine/squiggle.js",
+      "bytes": 17614,
+      "sha256": "ee17bbe7a356b4bae185a6a3ff3e3f057f19da11df6a70c7d9ea12c907c14e8d"
+    },
+    {
+      "path": "site/src/engine/stack.js",
+      "bytes": 15893,
+      "sha256": "4a68bc38c849231843400103a060be1439c23d0d7296956e42f5f28564220805"
+    },
+    {
+      "path": "site/src/engine/starlattice.js",
+      "bytes": 12346,
+      "sha256": "6b16c07d3f9c64ff618fab77c17496c17ca2622f3c92d2452b851ef09eead1a8"
+    },
+    {
+      "path": "site/src/engine/stats.js",
+      "bytes": 3810,
+      "sha256": "0c6d8c70566dfa156775c7243a4b668b55f8b606ad47f895bb187d71694ebb9a"
+    },
+    {
+      "path": "site/src/engine/study-record.js",
+      "bytes": 4352,
+      "sha256": "0690d70760ebb80f2083db1db29fd7b93fc5320d01942716c16253390eae786a"
+    },
+    {
+      "path": "site/src/engine/sunflower.js",
+      "bytes": 5090,
+      "sha256": "ddb6bf8e27e29fb10ff7c4a1ba0005e73c87930b83c7a4869cb40fa8f7b2f767"
+    },
+    {
+      "path": "site/src/engine/svg-guides.js",
+      "bytes": 3362,
+      "sha256": "83ea1db75e65c03d49a4236e6cd1ef3ed0af0c2ee486a19b16ce87acab60aba9"
+    },
+    {
+      "path": "site/src/engine/svg-lines.js",
+      "bytes": 8397,
+      "sha256": "bdea4876fa84ef758c90b7d95aa760f6c06d585e0c6154e84bf7bb4b2bf27e9d"
+    },
+    {
+      "path": "site/src/engine/svg-parse.js",
+      "bytes": 21100,
+      "sha256": "c7053a7d2bc03da2b5e31d46302207b94d78c11a2092025272d1153fe2d28ba7"
+    },
+    {
+      "path": "site/src/engine/svg-solids.js",
+      "bytes": 15389,
+      "sha256": "26e802ef09ade702337be4c9c97201272430b352b54e28129151be6e3c2354d7"
+    },
+    {
+      "path": "site/src/engine/svgdesign.js",
+      "bytes": 8279,
+      "sha256": "420b96a9e3aae0c64ef2c3154a211c6cbaa73a8683414c33466f2c679f4f8d46"
+    },
+    {
+      "path": "site/src/engine/tiler.js",
+      "bytes": 6674,
+      "sha256": "0b7f49b49c4656c1ade0e0db4f5d757afcd009c35e209f40ab8df8c11797b02d"
+    },
+    {
+      "path": "site/src/engine/travel.js",
+      "bytes": 12267,
+      "sha256": "6b202926cf362b0790aeda893c640d6a987625c8075abd93a8c6e4bd8549664f"
+    },
+    {
+      "path": "site/src/engine/truchet.js",
+      "bytes": 4729,
+      "sha256": "ede1d56ae31c9aebfe6b4bb5fe827f8d17039c574d994c9b224e715964a754e3"
+    },
+    {
+      "path": "site/src/engine/turing.js",
+      "bytes": 5437,
+      "sha256": "41e2d71a6916529e5a4d8569b22f98cd32b633b8cb8b851051a7f1cc729d94ed"
+    },
+    {
+      "path": "site/src/engine/voronoi.js",
+      "bytes": 9563,
+      "sha256": "5fa50edcae636dea785e71cdfb8c43ba207d215abfd4b4b78689504b3b3a69bc"
+    },
+    {
+      "path": "site/src/engine/wavegrid.js",
+      "bytes": 6859,
+      "sha256": "bd521113a6950400dedea984568517465836187d24bc7f9e4a92f0bea9db7db8"
+    },
+    {
+      "path": "site/src/engine/weave.js",
+      "bytes": 10892,
+      "sha256": "2d987569a40d8506d4a59ab7833cdfbda3aa5deb0fbc5735ad8ac3e233cef9ae"
+    },
+    {
+      "path": "site/src/engine/web.js",
+      "bytes": 2550,
+      "sha256": "a1631dfdb50a8c6b158adc2a501c6da0ef5eebc313d1ac47704a5288bc7992a4"
+    },
+    {
+      "path": "site/src/engine/window.js",
+      "bytes": 1070,
+      "sha256": "3c9867bf10a725d2c36c67864affcc3a44d41aeccb372e736f4f648d1b456d58"
+    },
+    {
+      "path": "site/src/ui/basic-designs.js",
+      "bytes": 3706,
+      "sha256": "e249c1588ef808ca71be0619831039329d96d2b425a485275ab179dfbb2ddf83"
+    },
+    {
+      "path": "site/src/ui/bed-size.js",
+      "bytes": 781,
+      "sha256": "f3ff685794ffcb8a36d85941af4757430dd0194ad7543d681aeab2740c3f9854"
+    },
+    {
+      "path": "site/src/ui/coil-controls.js",
+      "bytes": 4275,
+      "sha256": "a6c95d15fc6dfb28e05e2f62e94596fd72ca8475190cdf3e41a48f23f7d30b68"
+    },
+    {
+      "path": "site/src/ui/controls.js",
+      "bytes": 7366,
+      "sha256": "0ae457d52e794d58babfe388fa2beee7c64452fa35feecdbe0d9815a1309de1c"
+    },
+    {
+      "path": "site/src/ui/designs.js",
+      "bytes": 18510,
+      "sha256": "df891f351163783a326efd2293b8b020d549b8c7310d95b98c2ccd1993ca7043"
+    },
+    {
+      "path": "site/src/ui/diagnostics.js",
+      "bytes": 7763,
+      "sha256": "c1382d990dba0534539efe46a8b81d2ad4e1d559ce13d9f0fd4c48a0452f2693"
+    },
+    {
+      "path": "site/src/ui/dom.js",
+      "bytes": 3159,
+      "sha256": "e1d000f8d0e2269d46d2c8d925b3c4e52e9f213d1e15f22ee858a0eac771f3c3"
+    },
+    {
+      "path": "site/src/ui/export-builder.js",
+      "bytes": 1950,
+      "sha256": "88ab29b660374a44d6ac004f3c1f054f8aab0c45585acc44f8351eb03ebee149"
+    },
+    {
+      "path": "site/src/ui/feedback.js",
+      "bytes": 9203,
+      "sha256": "22c09689d012e94085cedbf45b3fdb949b96d15a7ad2aea61ca0828a9d6b92f8"
+    },
+    {
+      "path": "site/src/ui/filament-settings.js",
+      "bytes": 7900,
+      "sha256": "d4a9ceec31ee47e96bf14ccf31d5a7aba08832b12d686423c49718ccdf7fe433"
+    },
+    {
+      "path": "site/src/ui/file-name.js",
+      "bytes": 10836,
+      "sha256": "7e651d2497e3170a68601c28293a3c5868697c0df9abdba1d7264322e0c1441f"
+    },
+    {
+      "path": "site/src/ui/fix-geometry.js",
+      "bytes": 5580,
+      "sha256": "c47e2565e79a78322f02c8bd6796ea84eb68a679248af105538700176f836ab7"
+    },
+    {
+      "path": "site/src/ui/gate-config.json",
+      "bytes": 161,
+      "sha256": "56c7786fcdfeb064e80bb07a27eaa7625b15ec2e82ac60eeb8e0accc0fe20264"
+    },
+    {
+      "path": "site/src/ui/gate.js",
+      "bytes": 2793,
+      "sha256": "9abb713c6c522589e513b9344a9e85a56c559e63bb26648b36e5fcf4ddaef88f"
+    },
+    {
+      "path": "site/src/ui/line-designs.js",
+      "bytes": 26450,
+      "sha256": "544729c5c0fad2dc1147fd96ebe24e1c20055f03f479b52121b31e852b8c714a"
+    },
+    {
+      "path": "site/src/ui/machine-search.js",
+      "bytes": 2766,
+      "sha256": "da63763d182f74d9217538558efea4a88926c13e998f59aa2602e2e04c6dab18"
+    },
+    {
+      "path": "site/src/ui/main.js",
+      "bytes": 122289,
+      "sha256": "2bf1ca7ba9a4e7212ef5cd45d74c49c27b070a48c22ea8be21d3a75499251b9c"
+    },
+    {
+      "path": "site/src/ui/more-designs.js",
+      "bytes": 37742,
+      "sha256": "f91fd8e2e09bb53b8524d38d316e8f18a778bc3ce8acd7103d606871b1f0756c"
+    },
+    {
+      "path": "site/src/ui/numeric.js",
+      "bytes": 416,
+      "sha256": "f45d7b0b2d72ae7c0014a318a97063cf3514684f6c634231ece4e23e888b9994"
+    },
+    {
+      "path": "site/src/ui/option-thumbs.js",
+      "bytes": 7335,
+      "sha256": "637c231400bca7e1fb072d81e93513288bfb772255b61c3b0f09e04e85cf661c"
+    },
+    {
+      "path": "site/src/ui/overview-worker.js",
+      "bytes": 549,
+      "sha256": "e7b5770ad5478a643645b8a87779b07e583f082dd3cb9d1b11defd1d899048e1"
+    },
+    {
+      "path": "site/src/ui/overview.js",
+      "bytes": 11164,
+      "sha256": "ececea6c4de6fc76828b57ee0f75647fee8907dc1246f8e2f74037610271cd77"
+    },
+    {
+      "path": "site/src/ui/panel-ui.js",
+      "bytes": 11591,
+      "sha256": "203854964fa928cd0798424aae3c352c7d36aedaac8ec8f54a0cc7f31cf9c10b"
+    },
+    {
+      "path": "site/src/ui/panel-worker.js",
+      "bytes": 812,
+      "sha256": "433d66e10a4334e58aef9f43fac896a354929576475f2ebb1f2dee5700cb2f39"
+    },
+    {
+      "path": "site/src/ui/panels.js",
+      "bytes": 49856,
+      "sha256": "71c3c2262c670ca21310fdb70d0ad1fc907f3208b1b9acd3f19c37500d222313"
+    },
+    {
+      "path": "site/src/ui/param-schema.js",
+      "bytes": 5261,
+      "sha256": "50475b87dbfa70eb7465dbef2ab59d33800a4dadec6096e4f140f35856cec9f8"
+    },
+    {
+      "path": "site/src/ui/preview.js",
+      "bytes": 13439,
+      "sha256": "8587f027187708a980f1fd0ed6e81a13717596ecb329ed91460b40aea8020595"
+    },
+    {
+      "path": "site/src/ui/print-estimates.js",
+      "bytes": 1458,
+      "sha256": "ede54eee8f417fb66c2332c209f6d07664a7756eabb6507e87de7eacb4591cce"
+    },
+    {
+      "path": "site/src/ui/printability-data.js",
+      "bytes": 15781,
+      "sha256": "8c4f5004e4b60a92eae5d6109f51cd94b96b338fd3adda1918d3de9aceb847e8"
+    },
+    {
+      "path": "site/src/ui/printability.js",
+      "bytes": 408,
+      "sha256": "4294cf2fe4c955119ff86603ca7fc81d9b1ae8ee16e3b72efe38d5498a5856f4"
+    },
+    {
+      "path": "site/src/ui/privacy.js",
+      "bytes": 2616,
+      "sha256": "1a039b2df29dd4628f8dc5c9771b1ee4832266574b32cf501981906d35ed039d"
+    },
+    {
+      "path": "site/src/ui/profile-picker.js",
+      "bytes": 4683,
+      "sha256": "7fe9f84af2c82d4fba6d202336a975c6f51e4c26936d39546304ca4a5a2bd6a7"
+    },
+    {
+      "path": "site/src/ui/profile-store.js",
+      "bytes": 6363,
+      "sha256": "7db4d9396c5efde4e98a3747fc5a3949ea2d2b4c55d623df0df6fc7f056f9006"
+    },
+    {
+      "path": "site/src/ui/pub-designs.js",
+      "bytes": 14767,
+      "sha256": "5844785de1263f665d220a03332a4c891be9a4e5505a0056262c90df642f41c8"
+    },
+    {
+      "path": "site/src/ui/share.js",
+      "bytes": 7737,
+      "sha256": "bf1e7faa5d9aaf6faddc126dca066cb6d7d335408f4cec437b45ed5cf6b2f427"
+    },
+    {
+      "path": "site/src/ui/squiggle-controls.js",
+      "bytes": 3133,
+      "sha256": "91c69062366bbb47786e9e84e49640f7df1d55a3229394220a0688e67dea103a"
+    },
+    {
+      "path": "site/src/ui/structure-controls.js",
+      "bytes": 6262,
+      "sha256": "f2ebcb8c5f0ca95c6cfdf04179232894390e80ce9926c71dfdfba918d230069b"
+    },
+    {
+      "path": "site/src/ui/study.js",
+      "bytes": 1498,
+      "sha256": "22db118057456a1d6ef1e0d60dc0beaece7915cedf459d9eeefdf4e7731e3a40"
+    },
+    {
+      "path": "site/src/ui/styles.css",
+      "bytes": 50555,
+      "sha256": "d1f2015502d7e00575e409941c91b4855113c78f0d5bd9823252b2d15e2b2f44"
+    },
+    {
+      "path": "site/src/ui/svg-design.js",
+      "bytes": 10160,
+      "sha256": "e3e6af63c7212c2e296fc47a88a5ce0fb94ae28d0c4c2cc398e01bcee58447ee"
+    },
+    {
+      "path": "site/src/ui/svg-lines.js",
+      "bytes": 429,
+      "sha256": "aebc2df5421b98ff7923d8777a7b845a894e56e1d4c76b17009aeed31703a3af"
+    },
+    {
+      "path": "site/src/ui/swatch-worker.js",
+      "bytes": 453,
+      "sha256": "20932d3faa6c2cf83fe5a1baf94cdb71a61f5a06eaef7a4205a3b18544cd9e02"
+    },
+    {
+      "path": "site/src/ui/swatch.js",
+      "bytes": 1559,
+      "sha256": "45502aa45b75593029523d33ddd164cf95f5e43155d39bf331e26c6c56f47f5f"
+    },
+    {
+      "path": "site/src/ui/thumbs.js",
+      "bytes": 13912,
+      "sha256": "75096bd3e0f871c931eaa51e068cde2d0deebfa460dd8ecd09fd0753f08bf68f"
+    },
+    {
+      "path": "site/src/ui/tooltip.js",
+      "bytes": 3535,
+      "sha256": "a206e80ef2ca7411ed1ea1313c8f07ad1decc82bff1c11011977c67591d8e166"
+    },
+    {
+      "path": "site/src/ui/verdict.js",
+      "bytes": 11115,
+      "sha256": "c50877d15b33df0b30574dfcd3000d32d279f23a79dd02e7514bc0c93e6cbde7"
+    },
+    {
+      "path": "site/study.html",
+      "bytes": 4051,
+      "sha256": "e06bbf4995a81441b03431da049ff5c71d98851fe17385d75f9b959946463843"
+    },
+    {
+      "path": "site/vendor/arachne/LICENSE.txt",
+      "bytes": 34520,
+      "sha256": "57c8ff33c9c0cfc3ef00e650a1cc910d7ee479a8bc509f6c9209a7c2a11399d6"
+    },
+    {
+      "path": "site/vendor/arachne/NOTICE.md",
+      "bytes": 1614,
+      "sha256": "a3007e03527c30b33f78a22e74a39666869a5036ff0f155b6346c56f140be897"
+    },
+    {
+      "path": "site/vendor/arachne/corresponding-source.tar.gz",
+      "bytes": 7050795,
+      "sha256": "354c5c94f81cb5af30da5402fef0bba6f32703b6605c276f2a6d8d610a042d7d"
+    },
+    {
+      "path": "site/vendor/arachne/provenance.json",
+      "bytes": 370,
+      "sha256": "f583b54deab6a82e0fea58e6d3ef0d5a9c5cf4615955ce5b6a3e9b079cf806f6"
+    },
+    {
+      "path": "site/vendor/arachne/slicer_core.js",
+      "bytes": 6411148,
+      "sha256": "275ea64bcfd2ebe5527b40683acb3b63d63462a385b4da3b4008c3b588a573c3"
+    },
+    {
+      "path": "site/vendor/fonts/instrument-sans/OFL.txt",
+      "bytes": 4538,
+      "sha256": "c27a3c53c3beed7f5c26853afa15991478ff7145d3754a36b0382f84e10c0d03"
+    },
+    {
+      "path": "site/vendor/fonts/instrument-sans/instrument-sans-latin-ext-wght-normal.woff2",
+      "bytes": 11144,
+      "sha256": "c4fcfea41f2c1cfeea9211fa43679845454a1d0e0d7e95e069c7e73c4ae302d2"
+    },
+    {
+      "path": "site/vendor/fonts/instrument-sans/instrument-sans-latin-wght-normal.woff2",
+      "bytes": 30092,
+      "sha256": "2ee17598a98d8a59e4df8152d015bec9ab8e4d5672cc0ab42bef806b568e3971"
+    },
+    {
+      "path": "site/vendor/three/LICENSE",
+      "bytes": 1081,
+      "sha256": "4c40a1ef62450b857c3b2aaf294936304cd552d965fbcd9d32d4c5bcf4ba4454"
+    },
+    {
+      "path": "site/vendor/three/addons/controls/OrbitControls.js",
+      "bytes": 32134,
+      "sha256": "80efaadea4f8a636a65fb0bd08bfef62f3d93a0bb94e2e7500f23176c5c07f4e"
+    },
+    {
+      "path": "site/vendor/three/addons/lines/LineMaterial.js",
+      "bytes": 10959,
+      "sha256": "9f947bca9c1413aeb55ebcb9790c9efe7a6db61a8c4bb124672486979c5b06f5"
+    },
+    {
+      "path": "site/vendor/three/addons/lines/LineSegments2.js",
+      "bytes": 9607,
+      "sha256": "9dcce823f86d7f00c4faa8c80ea3833fa86bf4957f394a1f64f3b126f6eea661"
+    },
+    {
+      "path": "site/vendor/three/addons/lines/LineSegmentsGeometry.js",
+      "bytes": 4632,
+      "sha256": "59419cee5eccbaacfab5939871308ee262a63761815f72ff49cbd217fd84fdb7"
+    },
+    {
+      "path": "site/vendor/three/three.module.js",
+      "bytes": 1304820,
+      "sha256": "0a3368c165eea773490aec7b77c22de70e3eac288503409256fdbf4d12578416"
+    }
+  ]
+}
