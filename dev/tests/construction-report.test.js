@@ -34,7 +34,7 @@ test('audit: crosshatch 0/90 is fused, relief keeps its Z, Bubbles stays connect
 });
 test('every ready card has a measured construction and shelf diagnosis', () => {
   const ready=DESIGNS.filter((c)=>c.status==='ready');
-  assert.equal(ready.length,31);
+  assert.equal(ready.length,37);
   for(const card of ready) {
     const r=run(card.id), c=r.construction;
     assert.ok(c,card.id);

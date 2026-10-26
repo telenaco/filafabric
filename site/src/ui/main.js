@@ -1,7 +1,6 @@
 import { PRINTABILITY } from './printability-data.js';
 import { validNumber } from './numeric.js';
 import { generate } from '../engine/generate.js';
-import { generateSquiggle, SAMPLERS, createImageSampler, minCrossingAmplitude } from '../engine/squiggle.js';
 import { placeOutline, unflattenRings } from '../engine/outline.js';
 import { createPreview, ROLES } from './preview.js';
 import { createOverview } from './overview.js';
@@ -9,8 +8,7 @@ import { useWholeOverview, canSimplifyPreview } from '../engine/overview.js';
 import { bedSizeLimits, printSizeProblem } from './bed-size.js';
 import { PrintEstimates, printTimeSeconds } from './print-estimates.js';
 import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airStrandMm, fitAspect, pileLiftFactor } from './controls.js';
-import { SQ_RANGES, SQUIGGLE_DEFAULTS, describeSquiggle, sizeForAspect } from './squiggle-controls.js';
-import { PICTURE, withPicture, pictureDarkness } from '../engine/picture.js';
+import { PICTURE, withPicture } from '../engine/picture.js';
 import { buildVerdict, buildSquiggleVerdict, formatMinutes, constructionVerdict } from './verdict.js';
 import { refreshConstruction, assertConstructionExportable } from '../engine/construction-report.js';
 import { stateToHash, hashToState, sanitizeState, PRINT_DEFAULTS } from './share.js';
@@ -71,11 +69,6 @@ const LOOP_SLIDERS = [
   { key: 'baseGap', label: 'Base openness', help: 'Gap between the lines of the backing mesh.', lo: 'Firm', hi: 'Airy', unit: 'mm', edit: true },
   { key: 'variation', label: 'Natural variation', help: 'Random wobble in each loop\'s size, height and angle.', lo: 'Even', hi: 'Wild', unit: '%', edit: true },
 ];
-const SQ_SLIDERS = [
-  { key: 'spacing', label: 'Line spacing', help: 'Distance between neighbouring wavy lines.', lo: 'Dense', hi: 'Airy', unit: 'mm', edit: true },
-  { key: 'amplitude', label: 'Wave depth', help: 'How far each line swings to the side.', lo: 'Subtle', hi: 'Deep', unit: 'mm', edit: true },
-  { key: 'wavelength', label: 'Wave length', help: 'Length of one full wave.', lo: 'Tight', hi: 'Stretched', unit: 'mm', edit: true },
-];
 const PATTERN_SCALE = { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false };
 // plainest first: the first one leaves every wave the same, the last ones need a picture
 const PATTERNS = [
@@ -117,28 +110,6 @@ const BINDINGS = {
       },
     },
   },
-  squiggle: {
-    sliders: SQ_SLIDERS,
-    host: '#sq-sliders',
-    get: (key) => state.squiggle[key],
-    set: (key, value) => { state.squiggle[key] = value; },
-    range: (key) => SQ_RANGES[key],
-    readout: (key) => {
-      const text = describeSquiggle(state.squiggle)[key];
-      const floor = parallelDepth();
-      if (key === 'amplitude' && floor !== null && state.squiggle.amplitude < floor) return `${text} · raised to ${floor.toFixed(2)} mm`;
-      return text;
-    },
-    size: {
-      host: '#sq-size',
-      ranges: { w: SQ_RANGES.width, h: SQ_RANGES.height },
-      get: () => [state.squiggle.width, state.squiggle.height],
-      set: (w, h) => {
-        state.squiggle.width = w;
-        state.squiggle.height = h;
-      },
-    },
-  },
 };
 
 const state = {
@@ -149,7 +120,6 @@ const state = {
   design: 'zigzag',
   primary: { ...PRIMARY_DEFAULTS },
   advanced: {},
-  squiggle: { ...SQUIGGLE_DEFAULTS },
   // settings of every design newer than the loop pile and squiggle, by design id
   designs: initialDesignSettings(DESIGNS),
   image: null, // { data: ImageData, name, px: [w, h], thumb: canvas }: stays on this computer, never in a link
@@ -178,7 +148,7 @@ function bindingFor(mod) {
   const items = mod.controls.filter((c) => c.kind === 'sliders').flatMap((c) => c.items);
   const scale = mod.controls.find((c) => c.kind === 'pattern')?.scale;
   const sliders = scale ? [...items, scale] : items;
-  const own = () => state.designs[mod.id];
+   const own = () => state.designs[mod.settingsKey ?? mod.id];
   // each sliders group has its own host: the first keeps the plain id
   const groups = mod.controls.filter((c) => c.kind === 'sliders').map((c, k) => ({ host: `#${mod.id}-sliders${k ? `-${k}` : ''}`, items: c.items }));
   return {
@@ -266,7 +236,6 @@ function snapshot() {
     material: state.material,
     primary: state.primary,
     advanced: state.advanced,
-    squiggle: state.squiggle,
     designs: state.designs,
     outline: state.outline,
     vector: state.vector,
@@ -298,7 +267,7 @@ const grams = (g) => (g < 1 ? g.toFixed(2) : g.toFixed(1));
 /* ---------- history (undo / redo) ---------- */
 function snapshotKey() {
   // the layer setup is part of what is saved and undone, like everything else that changes the print
-  return JSON.stringify({ d: state.design, m: state.machine, t: state.material, p: state.primary, a: state.advanced, s: state.squiggle, g: state.designs, o: state.outline, v: state.vector, y: state.print });
+  return JSON.stringify({ d: state.design, m: state.machine, t: state.material, p: state.primary, a: state.advanced, g: state.designs, o: state.outline, v: state.vector, y: state.print });
 }
 
 function commit() {
@@ -327,7 +296,6 @@ function loadState(data) {
   state.material = clean.material;
   state.primary = clean.primary;
   state.advanced = clean.advanced;
-  state.squiggle = clean.squiggle;
   state.designs = clean.designs;
   state.outline = clean.outline;
   state.vector = clean.vector;
@@ -516,7 +484,7 @@ function buildPanels() {
     panel.append(card.node);
     controls.push(card);
   }
-  for (const id of ['loop-pile', 'squiggle']) {
+  for (const id of ['loop-pile']) {
     const b = BINDINGS[id];
     const size = new SizeControl(host, id);
     $(b.size.host).replaceChildren(size.node);
@@ -709,13 +677,6 @@ function previewAtSelectedSize(input, { estimateOnly = false } = {}) {
   renderBusy();
 }
 
-/** The tone of the squiggle pattern across the swatch as it is previewed (a window at most 100 mm across). */
-function squiggleSampler(width = state.squiggle.width, height = state.squiggle.height) {
-  const s = state.squiggle;
-  if (s.pattern === 'image' && state.image) return pictureDarkness(state.image.data, width, height);
-  return SAMPLERS[s.pattern] ?? SAMPLERS.centerSpot;
-}
-
 /**
  * The outline as it will print for a width x height swatch (mm). A drawing's own shapes stay registered to its lines;
  * any other outline is rotated, then fitted inside the swatch.
@@ -736,13 +697,6 @@ function placedOutline(width, height, fullWidth = width, fullHeight = height) {
   }
   const placed = placeOutline(rings, { rotation: o.rotation, width: fullWidth, height: fullHeight });
   return width === fullWidth && height === fullHeight ? placed : windowRings(placed, width, height);
-}
-
-/** In parallel mode, the least wave depth that still lets each line cross its neighbours (mm). */
-function parallelDepth() {
-  const s = state.squiggle;
-  if (s.mode !== 'parallel') return null;
-  return minCrossingAmplitude(s.height / Math.max(2, Math.floor(s.height / s.spacing)));
 }
 
 /**
@@ -878,28 +832,10 @@ async function regenerate() {
     // Imported drawings keep their full scale within the explicitly labelled sample.
     const cap = state.vector && Math.max(state.vector.width, state.vector.height) <= 250 && state.vector.width <= machine.bed.width && state.vector.height <= machine.bed.depth ? 250 : 100;
     if (!mod.legacyPanel) {
-      const own = state.designs[mod.id];
+      const own = state.designs[mod.settingsKey ?? mod.id];
       const [w, h] = mod.size(own);
       const previewState = { ...own, width: Math.min(w, cap), height: Math.min(h, cap) };
       result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height, w, h), vector: mod.usesVector || mod.vectorGuides ? state.vector : null, vectorSize: [w, h], includeLines: !state.vector, picture: pictureFor(w, h), perimeters: state.print.meshPerimeters, printedBoundary: !!state.vector && !!state.outline?.page });
-    } else if (state.design === 'squiggle') {
-      const s = state.squiggle;
-      // a picture is shown whole: the preview is the whole swatch at the shape it has, shrunk to fit the window
-      const shrink = s.pattern === 'image' && state.image && !state.vector ? Math.min(1, cap / Math.max(s.width, s.height)) : null;
-      const pw = shrink ? Math.max(10, Math.round(s.width * shrink)) : Math.min(s.width, cap);
-      const ph = shrink ? Math.max(10, Math.round(s.height * shrink)) : Math.min(s.height, cap);
-      result = generateSquiggle(machine, material, {
-        width: pw,
-        height: ph,
-        mode: s.mode,
-        shape: s.shape,
-        spacing: s.spacing,
-        amplitude: s.amplitude,
-        wavelength: s.wavelength,
-        sampler: squiggleSampler(pw, ph),
-        colorChange: s.colorChange,
-        outline: placedOutline(pw, ph, shrink ? pw : s.width, shrink ? ph : s.height),
-      });
     } else {
       const [w, h] = sampleSize(state.primary);
       const textile = toTextile(state.primary, state.advanced);
@@ -927,7 +863,7 @@ async function regenerate() {
     // the backing mesh goes under all of it
     result = addBackingMesh(result, backingFor());
     // Offset the selected outline before clipping: a bounded preview must never invent an edge at its crop.
-    const pictured = state.design === 'squiggle' && state.squiggle.pattern === 'image' && state.image && !state.vector;
+    const pictured = state.design === 'squiggle' && settingsOf(state.design).pattern === 'image' && state.image && !state.vector;
     const fullWidth = pictured ? result.cfg.t.sample_width : selectedWidth;
     const fullHeight = pictured ? result.cfg.t.sample_height : selectedHeight;
     let brimOutline = result.outline;
@@ -1048,8 +984,7 @@ function currentVerdict() {
       action: null,
     });
   }
-  const baseVerdict = !mod.legacyPanel ? mod.verdict(state.result, state.designs[mod.id]) : state.design === 'squiggle'
-    ? buildSquiggleVerdict(state.result.stats, { colorChange: state.squiggle.colorChange })
+  const baseVerdict = !mod.legacyPanel ? (mod.verdict?.(state.result, settingsOf(state.design)) ?? buildSquiggleVerdict(state.result.stats, { colorChange: settingsOf(state.design).colorChange }))
     : buildVerdict(state.result.stats, { roomy: state.primary.roomy });
   const verdict = constructionVerdict(state.result.construction, baseVerdict);
   if (verdict.level === 'ready' || verdict.level === 'ok') return null;
@@ -1178,7 +1113,6 @@ function renderFigures() {
   toggle.hidden = false;
   const { stats, cfg } = state.result;
   const t = cfg.t;
-  const isSq = state.design === 'squiggle';
   const selected = BINDINGS[state.design].size.get();
   const sampled = t.sample_width !== selected[0] || t.sample_height !== selected[1];
   const mod = designById(state.design);
@@ -1188,7 +1122,7 @@ function renderFigures() {
     fig(grams(stats.filamentGrams), 'g', sampled ? 'Preview filament' : 'Filament'),
     !mod.legacyPanel
       ? (() => { const f = mod.figure(state.result); return fig(f.value, f.unit, f.label); })()
-      : isSq ? fig('2', '', 'Layers') : fig(stats.loops.toLocaleString('en'), '', 'Loops'),
+      : fig(stats.loops.toLocaleString('en'), '', 'Loops'),
   );
   host.append(el('p',{class:'estimate-info small muted',text:printTimeSeconds(stats)===null ? 'Motion estimate unavailable: this file contains motion the timing model cannot predict.' : 'Includes acceleration and startup motion. Heating, homing, bed levelling and manual pauses are extra.'}));
   toggle.textContent = state.details ? 'Hide details' : 'Details';
@@ -1213,7 +1147,7 @@ function renderFigures() {
       el('p', { class: 'note', text: 'Motion time uses acceleration, axis limits and classic jerk with bounded lookahead. Print-order playback keeps the commanded-motion clock. Short print runs and long travels can contribute to blobs and strings.' })
     );
   }
-  const what = !mod.legacyPanel ? mod.summary(state.result) : isSq ? 'a two-layer squiggle mesh' : `${stats.loops} loops`;
+  const what = !mod.legacyPanel ? mod.summary(state.result) : `${stats.loops} loops`;
   $('#preview').setAttribute('aria-label', `3D preview: ${what} on a ${t.sample_width} by ${t.sample_height} millimetre swatch, ${printTimeSeconds(stats)===null ? 'motion estimate unavailable' : `about ${minutes(stats)} minutes of modeled motion`}.`);
 }
 
@@ -1288,36 +1222,6 @@ function renderSliders() {
   for (const btn of $$('[data-edge]')) btn.setAttribute('aria-pressed', String((btn.dataset.edge === 'every') === state.primary.edgeLoops));
 }
 
-function renderSquiggleChoices() {
-  const s = state.squiggle;
-  const floor = parallelDepth();
-  $('#sq-mode-note').textContent = floor === null
-    ? 'Layer 1 runs in columns and layer 2 in rows, so the two cross everywhere.'
-    : `Layer 2 runs halfway between the layer 1 lines, in opposite phase. Waves stay at least ${floor.toFixed(2)} mm deep so every line crosses the lines on both sides.`;
-  $('#sq-pattern-hint').textContent = s.pattern === 'uniform'
-    ? 'Every wave is the same, so the fabric is symmetric. Choose a pattern to make some parts deeper.'
-    : floor === null
-      ? 'Darker parts of the pattern get deeper, tighter waves.'
-      : 'Darker parts of the pattern get deeper waves.';
-  for (const btn of $$('[data-sqmode]')) btn.setAttribute('aria-pressed', String(btn.dataset.sqmode === s.mode));
-  for (const btn of $$('[data-sqshape]')) btn.setAttribute('aria-pressed', String(btn.dataset.sqshape === s.shape));
-  for (const btn of $$('[data-pattern]')) btn.setAttribute('aria-pressed', String(btn.dataset.pattern === s.pattern));
-  $('#sq-color-change').checked = s.colorChange;
-
-  const showBox = s.pattern === 'image' || state.imageBoxOpen;
-  $('#sq-image-box').hidden = !showBox;
-  $('#sq-img-info').hidden = !state.image;
-  $('#sq-drop-label').textContent = state.image ? 'Drop another picture, or browse' : 'Drop a picture here, or browse';
-  if (state.image) {
-    $('#sq-img-name').textContent = state.image.name;
-    // the picture spans the swatch whatever its shape; matching the shape just stops it being stretched
-    const matched = Math.abs(s.width / s.height - state.image.px[0] / state.image.px[1]) < 0.02;
-    $('#sq-img-size').textContent = `${state.image.px[0]} × ${state.image.px[1]} px${matched ? ', the swatch has its shape' : ', stretched to fill the swatch'}`;
-    $('#sq-img-match').hidden = matched;
-  }
-  for (const fold of squiggleFolds.values()) fold.update();
-}
-
 function renderAdvancedSummary() {
   let total = 0;
   for (const group of ADVANCED_GROUPS) {
@@ -1361,7 +1265,6 @@ function render() {
   renderPrinter();
   renderSizes();
   renderSliders();
-  renderSquiggleChoices();
   renderDesignChoices();
   renderTilePressed();
   renderAdvancedSummary();
@@ -1486,67 +1389,6 @@ function drawPatternThumb(canvas, sampler) {
   }
 }
 
-/** The squiggle panel's long lists sit behind one line that names the chosen option, like every other design's. */
-const squiggleFolds = new Map();
-function foldSquiggle(id) {
-  if (squiggleFolds.has(id)) return;
-  const fold = new SectionFold(host, $(`#${id}`).closest('section'), { id });
-  squiggleFolds.set(id, fold);
-  controls.push(fold);
-}
-
-/** The strand-shape picker of the squiggle panel: the same shapes the Coil card offers. */
-function buildSquiggleShapes() {
-  $('#sq-shapes').replaceChildren(...SHAPE_IDS.map((shape) => {
-    const btn = el('button', { type: 'button', class: 'pattern', 'data-sqshape': shape, 'aria-pressed': 'false', title: SHAPES[shape].hint });
-    btn.innerHTML = `${shapeThumb(shape)}<span>${SHAPES[shape].label === 'Wave' ? 'Wave (default)' : SHAPES[shape].label}</span>`;
-    btn.addEventListener('click', () => {
-      state.squiggle.shape = shape;
-      renderSquiggleChoices();
-      schedule();
-      commit();
-    });
-    return btn;
-  }));
-  foldSquiggle('sq-shapes');
-}
-
-function buildPatterns() {
-  const host = $('#sq-patterns');
-  host.replaceChildren(...PATTERNS.map((p) => {
-    let thumb;
-    if (p.id === 'image') {
-      if (state.image) {
-        thumb = el('canvas', { class: 'pattern-thumb', width: 96, height: 96, 'aria-hidden': 'true' });
-        thumb.getContext('2d').drawImage(state.image.thumb, 0, 0, 96, 96);
-      } else {
-        thumb = el('span', { class: 'pattern-thumb upload', 'aria-hidden': 'true' }, icon('M9 12.5V4M5.5 7.5L9 4l3.5 3.5M3 14.5h12'));
-      }
-    } else {
-      thumb = el('canvas', { class: 'pattern-thumb', 'aria-hidden': 'true' });
-      drawPatternThumb(thumb, SAMPLERS[p.id]);
-    }
-    const btn = el('button', { type: 'button', class: 'pattern', 'data-pattern': p.id, 'aria-pressed': 'false' }, thumb, el('span', { text: p.label }));
-    btn.addEventListener('click', () => {
-      if (p.id === 'image' && !state.image) {
-        state.imageBoxOpen = true;
-        renderSquiggleChoices();
-        $('#sq-file-input').click();
-        return;
-      }
-      state.imageBoxOpen = false;
-      state.squiggle.pattern = p.id;
-      renderSquiggleChoices();
-      schedule();
-      commit();
-    });
-    return btn;
-  }));
-  foldSquiggle('sq-patterns');
-  renderSquiggleChoices();
-}
-
-/** The sections of the two hand-built panels fold like every other design's, closed until they are opened. */
 function foldRemainingSections() {
   for (const section of $$('#settings-body .panel > section.group')) {
     const heading = section.querySelector('h2');
@@ -1564,7 +1406,6 @@ function syncControls() {
   buildAdvanced();
   renderSliders();
   renderSizes();
-  renderSquiggleChoices();
   renderDesignChoices();
   $('#doc-name').value = state.docName;
   fillDialogSelects();
@@ -1723,12 +1564,11 @@ function renderTiles() {
 /** The settings object a design keeps its state in (the two older designs keep theirs at the top level). */
 function settingsOf(id) {
   if (id === 'loop-pile') return state.primary;
-  if (id === 'squiggle') return state.squiggle;
   const mod = designById(id);
   return state.designs[mod?.settingsKey ?? id];
 }
 
-/** A preset tile opens another design with some settings changed, for example the zigzag mesh on Squiggle & Gyroid. */
+/** A preset tile opens another design with some settings changed. */
 function openPresetTile(d) {
   const { design, patch } = d.opens;
   Object.assign(settingsOf(design), patch);
@@ -1768,13 +1608,9 @@ function currentSwatch() {
   const mod = designById(state.design);
   let settings, size, preset = null;
   if (!mod.legacyPanel) {
-    settings = state.designs[mod.id];
+    settings = state.designs[mod.settingsKey ?? mod.id];
     size = mod.size(settings);
     preset = mod.presetMatch ? mod.presetMatch(settings) : null;
-  } else if (mod.id === 'squiggle') {
-    settings = state.squiggle;
-    size = [settings.width, settings.height];
-    if (JSON.stringify(settings) === JSON.stringify(mod.defaults())) preset = 'default';
   } else {
     settings = { primary: state.primary, advanced: state.advanced };
     size = sampleSize(state.primary);
@@ -1857,7 +1693,6 @@ function clearPicture() {
   state.image = null;
   state.imageBoxOpen = false;
   forgetPictureChoices();
-  buildPatterns();
   renderControls();
   schedule();
   commit();
@@ -1901,9 +1736,7 @@ function loadPicture(file, designId = 'squiggle') {
     const target = settingsOf(designId);
     if (target) target.pattern = PICTURE;
     state.imageBoxOpen = false;
-    $('#sq-thumb').getContext('2d').drawImage(thumb, 0, 0, 112, 112);
-    buildPatterns();
-    renderControls();
+      renderControls();
     renderSizes();
     schedule();
     commit();
@@ -1912,38 +1745,6 @@ function loadPicture(file, designId = 'squiggle') {
   };
   img.onerror = () => { URL.revokeObjectURL(url); toast('That picture could not be opened.'); };
   img.src = url;
-}
-
-function bindSquiggle() {
-  for (const btn of $$('[data-sqmode]')) {
-    btn.addEventListener('click', () => {
-      state.squiggle.mode = btn.dataset.sqmode;
-      renderSquiggleChoices();
-      schedule();
-      commit();
-    });
-  }
-  $('#sq-color-change').addEventListener('change', (e) => {
-    state.squiggle.colorChange = e.target.checked;
-    schedule();
-    commit();
-  });
-
-  const fileInput = $('#sq-file-input');
-  fileInput.addEventListener('change', () => {
-    if (fileInput.files?.[0]) loadPicture(fileInput.files[0]);
-    fileInput.value = '';
-  });
-  const drop = $('#sq-dropzone');
-  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('dragover'); });
-  drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
-  drop.addEventListener('drop', (e) => {
-    e.preventDefault();
-    drop.classList.remove('dragover');
-    if (e.dataTransfer?.files?.[0]) loadPicture(e.dataTransfer.files[0]);
-  });
-  $('#sq-img-match').addEventListener('click', () => { givePictureShape('squiggle'); renderSquiggleChoices(); });
-  $('#sq-img-clear').addEventListener('click', clearPicture);
 }
 
 /* ---------- actions ---------- */
@@ -2206,7 +2007,7 @@ async function exportGcode() {
 async function shareLink() {
   const hash = stateToHash({ ...snapshot(), vector: null });
   const url = `${location.origin}${location.pathname}${hash}`;
-  const picture = state.design === 'squiggle' && state.squiggle.pattern === 'image';
+  const picture = settingsOf(state.design)?.pattern === PICTURE && !!state.image;
   const note = state.vector ? ' SVG paths stay in your saved settings file; the link shares the pattern settings.' : picture ? ' Your picture stays on this computer, so the link opens with the centre spot pattern.' : '';
   try {
     await navigator.clipboard.writeText(url);
@@ -2239,12 +2040,7 @@ async function openFile(file) {
 function resetDesign() {
   const mod = designById(state.design);
   if (!mod.legacyPanel) {
-    state.designs[mod.id] = mod.defaults();
-  } else if (state.design === 'squiggle') {
-    state.squiggle = { ...SQUIGGLE_DEFAULTS };
-    state.image = null;
-    state.imageBoxOpen = false;
-    buildPatterns();
+    state.designs[mod.settingsKey ?? mod.id] = mod.defaults();
   } else {
     state.primary = { ...PRIMARY_DEFAULTS };
     state.advanced = {};
@@ -2405,9 +2201,8 @@ function bindStatic() {
     else if (e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
   });
 
-  window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', () => { buildPatterns(); for (const c of controls) c.redraw(); });
+  window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', () => { for (const c of controls) c.redraw(); });
 
-  bindSquiggle();
 }
 
 async function init() {
@@ -2445,8 +2240,6 @@ async function init() {
 
   buildPanels();
   buildAdvanced();
-  buildSquiggleShapes();
-  buildPatterns();
   foldRemainingSections();
   fillDialogSelects();
   renderTiles();

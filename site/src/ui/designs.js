@@ -16,21 +16,23 @@
 //   figure(result) → { value, unit, label }, summary(result) → text for the preview's accessible name.
 import { patternField, withPicture } from '../engine/picture.js';
 import { PRIMARY_DEFAULTS, sanitizePrimary } from './controls.js';
-import { SQUIGGLE_DEFAULTS, sanitizeSquiggle } from './squiggle-controls.js';
+import { SQUIGGLE, SQ_PATTERNS } from './squiggle-controls.js';
 import {
   COIL_RANGES, COIL_DEFAULTS, COIL_PRESETS, COIL_SHAPES, COIL_PATTERNS, sanitizeCoil, describeCoil, coilParams, presetMatch,
 } from './coil-controls.js';
 import {
-  buildCoilVerdict, buildReliefVerdict, buildFringeVerdict, buildSpiralVerdict, buildBoucleVerdict, buildWeaveVerdict, buildLayeredVerdict,
+  buildCoilVerdict, buildReliefVerdict, buildFringeVerdict, buildSpiralVerdict, buildBoucleVerdict, buildWeaveVerdict, buildLayeredVerdict, buildSquiggleVerdict,
 } from './verdict.js';
 import { generateCoil } from '../engine/coil.js';
+import { generateSquiggle, generateSquiggleTextile, SAMPLERS } from '../engine/squiggle.js';
+import { pictureDarkness } from '../engine/picture.js';
 import { loopsClose } from '../engine/shapes.js';
 import { FIELD_IDS, createField } from '../engine/fields.js';
 import { generateRelief } from '../engine/relief.js';
 import { generateFringe } from '../engine/fringe.js';
 import { generateSpiral } from '../engine/spiral.js';
 import { generateWeave, WEAVE_BINDINGS, WEAVE_BINDING_IDS } from '../engine/weave.js';
-import { bindingThumb } from './thumbs.js';
+import { bindingThumb, thumbFromLayers } from './thumbs.js';
 import { OPTION_ICONS } from './option-thumbs.js';
 import { MORE_DESIGNS } from './more-designs.js';
 import { LINE_DESIGNS } from './line-designs.js';
@@ -47,6 +49,57 @@ const fieldFor = (s, picture, polarity = 'positive') => patternField(s.pattern, 
 const sizeOf = (s) => [s.width, s.height];
 const setSizeOf = (s, w, h) => { s.width = w; s.height = h; };
 const SCALE_SLIDER = { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false };
+
+const squiggleShapeCards = [
+  { id: 'squiggle', name: 'Wave net', shape: 'wave', family: 'waves', settingsKey: 'wave', joins: 'Two wavy families cross and fuse where they meet.' },
+  { id: 'square-net', name: 'Square-wave net', shape: 'square', family: 'waves', settingsKey: 'square-net', joins: 'Two square-wave families cross and fuse.' },
+  { id: 'honeycomb-layered', name: 'Honeycomb · layered', shape: 'honeycomb', family: 'cells', settingsKey: 'honeycomb', joins: 'Two half-hexagon families meet as cells.' },
+  { id: 'figure8-net', name: 'Figure-8 net', shape: 'figure8', family: 'loops', settingsKey: 'figure8-net', joins: 'Two figure-8 families cross and fuse.' },
+  { id: 'looped-net', name: 'Looped net', shape: 'looped', family: 'loops', settingsKey: 'looped-net', shelf: 'raised', support: 'built-in', joins: 'Loops circle over themselves and lift over the earlier pass.' },
+  { id: 'squiggle-rings', name: 'Squiggle rings (legacy)', shape: 'ring', family: 'rings', settingsKey: 'squiggle-rings', hidden: true, joins: 'Wavy ring families cross.' },
+  { id: 'squiggle-zigzag', name: 'Squiggle zigzag (legacy)', shape: 'zigzag', family: 'waves', settingsKey: 'squiggle-zigzag', hidden: true, joins: 'Two zigzag families cross and fuse.' },
+];
+
+function squiggleCard(def) {
+  const c = SQUIGGLE;
+  const defaults = () => ({ ...c.defaults, shape: def.shape });
+  const sanitize = (raw) => ({ ...c.sanitize(raw), shape: def.shape });
+  const controls = [
+    { kind: 'size', title: 'Size and shape' },
+    { kind: 'choice', key: 'mode', title: 'Structure', options: [
+      { id: 'cross', label: 'Crossed', hint: 'Two wavy layers cross and fuse at their intersections.', thumb: OPTION_ICONS['squiggle:mode'].cross },
+      { id: 'parallel', label: 'Parallel', hint: 'Two wavy families lie side by side and cross at their turns.', thumb: OPTION_ICONS['squiggle:mode'].parallel },
+    ] },
+    { kind: 'sliders', title: 'Look and feel', items: [
+      { key: 'spacing', label: 'Spacing', help: 'Distance between neighbouring lines.', lo: 'Close', hi: 'Open', unit: 'mm', edit: true },
+      { key: 'amplitude', label: 'Amplitude', help: 'Side-to-side swing of each line.', lo: 'Shallow', hi: 'Deep', unit: 'mm', edit: true },
+      { key: 'wavelength', label: 'Wavelength', help: 'Distance between successive waves.', lo: 'Short', hi: 'Long', unit: 'mm', edit: true },
+    ] },
+    { kind: 'switch', key: 'colorChange', label: 'Two colours', help: 'Pause after the first layer so you can load a second filament (M600).' },
+    { kind: 'pattern', key: 'pattern', title: 'Pattern', picture: 'positive', pictureHint: 'Dark parts of your picture make the waves deeper; lighter parts make them shallower.' },
+  ];
+  const generate = (machine, material, settings, { outline = null, picture = null } = {}) => {
+    const image = settings.pattern === 'image' && picture?.image ? pictureDarkness(picture.image, settings.width, settings.height) : null;
+    const sampler = image ?? SAMPLERS[settings.pattern] ?? SAMPLERS.centerSpot;
+    return generateSquiggle(machine, material, { width: settings.width, height: settings.height, mode: settings.mode, shape: def.shape,
+      spacing: settings.spacing, amplitude: settings.amplitude, wavelength: settings.wavelength, sampler,
+      colorChange: settings.colorChange, outline });
+  };
+  const thumbSettings = { ...defaults(), width: 36, height: 22 };
+  const thumbGeometry = generateSquiggleTextile({ ...thumbSettings, strandWidth: 0.4, layerHeight: 0.2 });
+  const thumbLayers = [[thumbGeometry.layer1], [thumbGeometry.layer2]];
+  return {
+    id: def.id, name: def.name, blurb: 'A two-family textile net made from shaped strands', about: 'Two families of continuous shaped strands meet in a flat mesh. The selected card fixes the strand shape; Structure controls whether the families cross or run in parallel.', file: 'squiggle', status: 'ready',
+    shelf: def.shelf ?? 'layered', family: def.family, support: def.support ?? 'self', state: 'untested', joins: def.joins, sources: {},
+    settingsKey: def.settingsKey, shape: def.shape, hidden: !!def.hidden, roles: { base: 'First family', anchored: 'Second family' },
+    defaults, sanitize, ranges: c.ranges, size: sizeOf, setSize: setSizeOf, controls, patterns: [...SQ_PATTERNS],
+    thumb: thumbFromLayers(thumbLayers, thumbSettings.width, thumbSettings.height), generate,
+    figure: () => ({ value: '2', unit: '', label: 'Layers' }),
+    describe: (s) => ({ ...c.describe(s), mode: s.mode === 'cross' ? 'Crossed' : 'Parallel' }),
+    verdict: (result, settings) => buildSquiggleVerdict(result.stats, { colorChange: settings.colorChange }),
+    summary: () => 'a two-family shaped-strand net',
+  };
+}
 
 /** What every newer design shares: its controls object spread in, size accessors, and the pieces the panel needs. */
 const fromControls = (c) => ({
@@ -75,27 +128,16 @@ export const DESIGNS = [
     defaults: () => ({ ...PRIMARY_DEFAULTS }),
     sanitize: sanitizePrimary,
   },
-  {
-    id: 'squiggle',
-    shelf: 'layered', family: 'waves', support: 'self', state: 'untested',
-    joins: "Two wavy layers cross and fuse where they meet.", sources: {},
-    name: 'Squiggle & Gyroid',
-    blurb: 'Two wavy layers that lock together',
-    file: 'squiggle',
-    status: 'ready',
-    legacyPanel: true,
-    roles: { base: 'Layer 1', anchored: 'Layer 2' },
-    defaults: () => ({ ...SQUIGGLE_DEFAULTS }),
-    sanitize: sanitizeSquiggle,
-  },
+  squiggleCard(squiggleShapeCards[0]),
   {
     id: 'zigzag-mesh',
     name: 'Advanced zigzag mesh',
-    blurb: 'Zigzag lines with the whole library of strand shapes and patterns',
+    blurb: 'Parallel zigzag strands with adjustable spacing and pattern.',
     file: 'squiggle',
     status: 'preset',
-    opens: { design: 'squiggle', patch: { shape: 'zigzag', mode: 'parallel' } },
+    opens: { design: 'squiggle-zigzag', patch: { mode: 'parallel' } },
   },
+  ...squiggleShapeCards.slice(1).map(squiggleCard),
   {
     id: 'coil',
     shelf: 'flat', family: 'loops', support: 'self', state: 'untested',

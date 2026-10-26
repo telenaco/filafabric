@@ -1,0 +1,18 @@
+[
+  {
+    "card": "figure8-net",
+    "preset": "default",
+    "settingsHash": "20bcff103277",
+    "gcodeSha256": "377e025839695c515326e18c3e7bb0b6fb87e40b7d1ea009c1496ff01ae9ed58",
+    "strands": 28,
+    "moves": 5367,
+    "extrudeMm": 1421.4,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  }
+]

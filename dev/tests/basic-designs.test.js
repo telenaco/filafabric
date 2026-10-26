@@ -203,7 +203,7 @@ test('the meander and Turing stripes are held by a gyroid backing unless straigh
 test('every tile has a card or a preset target, and the list can be built from the registry', () => {
   const ids = new Set(DESIGNS.map((d) => d.id));
   for (const id of ESSENTIALS) assert.ok(ids.has(id));
-  assert.ok(DESIGNS.some((d) => d.id === 'zigzag-mesh' && d.opens.design === 'squiggle'));
+  assert.ok(DESIGNS.some((d) => d.id === 'zigzag-mesh' && d.opens.design === 'squiggle-zigzag'));
 });
 
 test('the backing wave has a depth and a length you set, and a second backing is a third layer', () => {

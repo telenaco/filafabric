@@ -2,19 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as selection from '../../site/src/ui/designs.js';
 
-test('opening Squiggle from its Zigzag tile restores the base variant and retains custom controls', () => {
-  assert.equal(typeof selection.baseDesignSettings, 'function');
-  const original = { ...selection.DESIGNS.find((d) => d.id === 'squiggle').defaults(), shape: 'zigzag', mode: 'parallel', width: 80, height: 65, spacing: 0.8, amplitude: 6 };
-  const selected = selection.baseDesignSettings('squiggle', original);
-  assert.equal(selected.shape, 'wave');
-  assert.equal(selected.mode, 'cross');
+test('each Squiggle card fixes its own strand shape while retaining user settings', () => {
+  const card = selection.DESIGNS.find((d) => d.id === 'squiggle-zigzag');
+  const original = { ...card.defaults(), shape: 'wave', mode: 'parallel', width: 80, height: 65, spacing: 0.8, amplitude: 6 };
+  const selected = card.sanitize(original);
+  assert.equal(selected.shape, 'zigzag');
+  assert.equal(selected.mode, 'parallel');
   assert.equal(selected.width, 80);
   assert.equal(selected.height, 65);
   assert.equal(selected.spacing, 0.8);
   assert.equal(selected.amplitude, 6);
-  assert.equal(original.shape, 'zigzag', 'selection does not mutate saved settings');
-  const custom = { ...original, shape: 'ring' };
-  assert.deepEqual(selection.baseDesignSettings('squiggle', custom), custom, 'unrelated custom variants are preserved');
+  assert.equal(original.shape, 'wave', 'sanitizing does not mutate saved settings');
 });
 import { DESIGNS, designById, READY_IDS, isReady } from '../../site/src/ui/designs.js';
 import { defaultProfiles } from './helpers.js';
@@ -22,7 +20,7 @@ import { defaultProfiles } from './helpers.js';
 test('loop pile and squiggle come first and are ready', () => {
   assert.deepEqual(READY_IDS.slice(0, 2), ['loop-pile', 'squiggle']);
   assert.equal(designById('loop-pile').legacyPanel, true);
-  assert.equal(designById('squiggle').legacyPanel, true);
+  assert.equal(designById('squiggle').legacyPanel, undefined);
 });
 
 test('every module is complete', () => {
@@ -61,7 +59,7 @@ test('planned and preset tiles are not loadable designs, unknown ids are not rea
 
 test('the library holds every structure of the catalogue, all of them ready', () => {
   const ready = DESIGNS.filter((d) => d.status === 'ready').map((d) => d.id);
-  assert.deepEqual(ready.slice(0, 8), ['loop-pile', 'squiggle', 'coil', 'weave', 'spiral', 'boucle', 'relief', 'fringe']);
+  assert.deepEqual(ready.slice(0, 8), ['loop-pile', 'squiggle', 'square-net', 'honeycomb-layered', 'figure8-net', 'looped-net', 'squiggle-rings', 'squiggle-zigzag']);
   assert.deepEqual(DESIGNS.filter((d) => d.status === 'planned'), []);
 });
 

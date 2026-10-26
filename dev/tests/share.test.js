@@ -4,8 +4,9 @@ import { encodeState, decodeState, stateToHash, hashToState, sanitizeState, sani
 import { SQUIGGLE_DEFAULTS } from '../../site/src/ui/squiggle-controls.js';
 import { COIL_DEFAULTS } from '../../site/src/ui/coil-controls.js';
 import { DESIGNS } from '../../site/src/ui/designs.js';
+import { initialDesignSettings } from '../../site/src/ui/library.js';
 
-const newerDefaults = () => Object.fromEntries(DESIGNS.filter((d) => d.status === 'ready').map((d) => [d.id, d.defaults()]));
+const newerDefaults = () => initialDesignSettings(DESIGNS);
 import { PRIMARY_DEFAULTS } from '../../site/src/ui/controls.js';
 
 const known = { machines: ['prusa-mk3s'], materials: ['filaflex-95-foamy', 'generic-flex-mk3'] };
@@ -101,10 +102,9 @@ test('a version 2 link (squiggle key, no designs) opens identically', () => {
   assert.equal(s.squiggle.mode, 'parallel');
   assert.equal(s.squiggle.spacing, 4);
   const defaults = newerDefaults();
-  delete defaults.squiggle;
-  delete defaults['loop-pile'];
-  assert.deepEqual(Object.fromEntries(Object.entries(s.designs).filter(([id]) => id !== 'squiggle' && id !== 'loop-pile')), defaults);
-  assert.equal(s.designs.squiggle.spacing, 4);
+  defaults.wave = { ...defaults.wave, mode: 'parallel', spacing: 4 };
+  assert.deepEqual(s.designs, defaults);
+  assert.equal(s.designs.wave.spacing, 4);
   assert.deepEqual(s.designs.coil, COIL_DEFAULTS);
 });
 
@@ -113,16 +113,16 @@ test('v3 settings and colour choice migrate into v4 card records', () => {
     squiggle: { ...SQUIGGLE_DEFAULTS, colorChange: true }, print: { backing: true } }, known);
   assert.equal(s.v, 4);
   assert.equal(s.designs['loop-pile'].pileHeight, 4);
-  assert.equal(s.designs.squiggle.colourMode, 'face');
+  assert.equal(s.designs.wave.colorChange, true);
   assert.equal(s.designs.meander.support.spacing, 3.7);
   assert.equal(s.squiggle.colorChange, false);
 });
 
 test('legacy preset ids migrate through the map while preserving the selected card', () => {
   const s = sanitizeState({ v: 3, design: 'zigzag-mesh' }, known);
-  assert.equal(s.design, 'squiggle');
-  assert.equal(s.squiggle.shape, 'zigzag');
-  assert.equal(s.squiggle.mode, 'parallel');
+  assert.equal(s.design, 'squiggle-zigzag');
+  assert.equal(s.designs['squiggle-zigzag'].shape, 'zigzag');
+  assert.equal(s.designs['squiggle-zigzag'].mode, 'parallel');
 });
 
 test('coil settings travel in a link and are sanitised', () => {

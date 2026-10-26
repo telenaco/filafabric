@@ -22,7 +22,7 @@ The single place to see what is ready, who has it and where it stands. The revie
 | Ticket | Title | Depends on | Size | ∥ | State | Owner | PR |
 |---|---|---|---|---|---|---|---|
 | T1.1 | Panel template, Colour and Support kinds, card header | Phase 0 | M | | In review (local) | Codex | `t1-1-panel-template`, no push |
-| T1.2 | Split Squiggle & Gyroid into seven cards | T1.1 | L | ∥ T1.4, T1.5, T1.7, T1.8, T1.10 | Blocked | | |
+| T1.2 | Split Squiggle & Gyroid into seven cards | T1.1 | L | ∥ T1.4, T1.5, T1.7, T1.8, T1.10 | In review (local) | Codex | `t1-2-squiggle-cards`, no push |
 | T1.3 | Zigzag net and the preset alias | T1.2 | S | | Blocked | | |
 | T1.4 | Coil: Looped rows and Figure-8 rows | T1.1 | S | ∥ | Blocked | | |
 | T1.5 | Cells and grids | T1.1 | M | ∥ | Blocked | | |

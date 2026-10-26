@@ -34,6 +34,7 @@ import { defaultSection, sideProfile } from '../engine/side-profile.js';
 import { drawSideView } from './sideview.js';
 import { SHELVES, variantsOf } from './library.js';
 import { BACKING_STYLES } from '../engine/backing.js';
+import { SAMPLERS } from '../engine/squiggle.js';
 
 const fmt = (n) => String(Math.round(n * 10) / 10);
 
@@ -254,7 +255,8 @@ function drawFieldThumb(canvas, field) {
     for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(10 + i * 14, 24, 5, 0, Math.PI * 2); ctx.stroke(); }
     return;
   }
-  const sampler = createField(field);
+  const sampler = FIELDS[field] ? createField(field) : SAMPLERS[field];
+  if (!sampler) return;
   const cells = 24;
   ctx.fillStyle = accent;
   for (let j = 0; j < cells; j++) {
@@ -460,8 +462,9 @@ export class PatternPicker extends Control {
     this.buttons = patterns.map((field) => {
       const canvas = el('canvas', { class: 'pattern-thumb', 'data-field': field, 'aria-hidden': 'true' });
       const picture = field === PICTURE;
-      const label = picture ? 'Your picture' : field === 'none' ? 'Plain' : FIELDS[field].label;
-      const title = picture ? (pictureHint || 'Use a picture of your own as the pattern') : field === 'none' ? 'Every loop the same' : FIELDS[field].hint;
+      const special = { uniform: ['Even', 'Every strand has the same shape.'], gradientX: ['Across', 'The pattern changes from left to right.'], gradientY: ['Down', 'The pattern changes from bottom to top.'], centerSpot: ['Centre spot', 'The pattern is strongest at the centre.'], waves: ['Waves', 'A repeating wave field across the fabric.'] }[field];
+      const label = picture ? 'Your picture' : field === 'none' ? 'Plain' : FIELDS[field]?.label ?? special?.[0] ?? field;
+      const title = picture ? (pictureHint || 'Use a picture of your own as the pattern') : field === 'none' ? 'Every loop the same' : FIELDS[field]?.hint ?? special?.[1] ?? '';
       const btn = el('button', { type: 'button', class: 'pattern', 'data-choice': `${designId}:${key}:${field}`, 'aria-pressed': 'false', title }, canvas, el('span', { text: label }));
       btn.addEventListener('click', () => {
         if (picture && !host.picture?.()) { this.fileInput.click(); return; }

@@ -87,6 +87,10 @@ const HUB = {
 };
 
 export const OPTION_ICONS = {
+  'squiggle:mode': {
+    cross: icon(path(wave(8, { vertical: true }), B) + path(wave(24, { vertical: true }), B) + path(wave(15), A) + path(wave(25), A)),
+    parallel: icon(path(wave(7), B) + path(wave(20), B) + path(wave(13), A)),
+  },
   // Zigzag mesh: how the two layers lie
   'zigzag:mode': {
     parallel: icon(path(zigzag(7), B) + path(zigzag(16), A) + path(zigzag(25), B)),

@@ -57,13 +57,12 @@ import { DESIGNS } from './designs.js';
 /** Old IDs and setting variants that can be routed to a currently implemented card. */
 export const MIGRATIONS = Object.freeze([
   ...DESIGNS.filter((card) => card.status === 'ready').flatMap((card) => (card.legacy ?? []).map((rule) => Object.freeze({ from: rule.id, to: card.id, patch: rule.patch ?? null }))),
-  { from: 'zigzag-mesh', to: 'squiggle', patch: { shape: 'zigzag', mode: 'parallel' } },
+  { from: 'zigzag-mesh', to: 'squiggle-zigzag', patch: { mode: 'parallel' } },
 ]);
 
 /** Converts an older persisted state to schema v4 before its values are sanitised. */
 export function migrateState(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
-  if (raw.v === 4) return raw;
   const migrated = { ...raw, designs: { ...(raw.designs && typeof raw.designs === 'object' && !Array.isArray(raw.designs) ? raw.designs : {}) } };
   if (raw.primary && typeof raw.primary === 'object' && !migrated.designs['loop-pile']) migrated.designs['loop-pile'] = { ...raw.primary };
   if (raw.squiggle && typeof raw.squiggle === 'object' && !migrated.designs.squiggle) migrated.designs.squiggle = { ...raw.squiggle };
@@ -78,6 +77,15 @@ export function migrateState(raw) {
       migrated.designs[card.id] = { ...(migrated.designs[card.id] ?? {}), support: backing };
     }
     migrated.v = 4;
+  }
+  if (migrated.design === 'squiggle') {
+    let source = migrated.designs.wave ?? migrated.designs.squiggle ?? migrated.squiggle ?? {};
+    if (source.colourMode === 'face' && source.colorChange !== true) source = { ...source, colorChange: true };
+    const target = ({ wave: 'squiggle', square: 'square-net', honeycomb: 'honeycomb-layered', figure8: 'figure8-net', looped: 'looped-net', ring: 'squiggle-rings', zigzag: 'squiggle-zigzag' })[source.shape] ?? 'squiggle';
+    const card = DESIGNS.find((entry) => entry.id === target);
+    const key = card?.settingsKey ?? target;
+    migrated.design = target;
+    migrated.designs[key] = { ...source, shape: card?.shape ?? 'wave' };
   }
   const rule = MIGRATIONS.find((entry) => entry.from === migrated.design);
   if (rule) {
