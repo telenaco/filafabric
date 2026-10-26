@@ -353,7 +353,7 @@ const STAR = defineControls({
 LINE_DESIGNS.push(layered({
   id: 'starlattice',
   shelf: 'flat', family: 'lattices', support: 'self', state: 'untested',
-  joins: "Star straps in non-crossing families meet at the tile edges.", sources: {},
+  joins: "Star straps in non-crossing families meet at the tile edges.", sources: { catalogue: ['S3'], papers: [30, 31] },
   optimizeTravel: true,
   name: 'Star lattice',
   blurb: 'Islamic star patterns, one family of straps per layer',

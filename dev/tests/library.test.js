@@ -29,7 +29,9 @@ test('all 39 ready cards have the exact ticket metadata', () => {
     "   | `zigzag` | layered | waves | self | untested | Two zigzag layers fuse where they meet. |",
     "   | `svgdesign` | layered | motif | auto | untested | Your drawing, held by a backing printed with it. |",
     "   | `crosshatch` | layered | grids | self | untested | Straight lines in two or three directions fuse where they cross. |",
-    "   | `auxetic` | flat | cells | self | untested | Zigzag rows joined by struts into cells. |",
+    "   | `crosshatch-wavy` | layered | grids | self | untested | Straight lines in two or three directions fuse where they cross. |",
+    "   | `auxetic` | flat | cells | self | untested | Bow-tie cells joined by struts; they widen when pulled. |",
+    "   | `honeycomb-flat` | flat | cells | self | untested | Hexagon cells share their walls in one pass. |",
     "   | `dipweave` | raised | woven | self | untested | Wefts rise over the warps and dip between them. |",
     "   | `web` | layered | radial | self | untested | A spiral crossed by a radial zigzag. |",
     "   | `chainmail` | layered | rings | self | untested | Rings on two layers overlap and fuse. |",
@@ -51,13 +53,20 @@ test('all 39 ready cards have the exact ticket metadata', () => {
     "   | `pillarweave` | raised | spacers | self | untested | Fibre locked round upright pillars. |",
   ].join("\n");
   const rows = [...brief.matchAll(/\| `([^`]+)` \| (flat|layered|raised) \| (\w+) \| (self|auto|built-in) \| (untested|needs-repair) \| ([^|]+) \|/g)];
-  assert.equal(rows.length, 39);
-  assert.equal(DESIGNS.filter(d => d.status === 'ready').length, 39);
+  assert.equal(rows.length, 41);
+  assert.equal(DESIGNS.filter(d => d.status === 'ready').length, 41);
   for (const [, id, shelf, family, support, state, joins] of rows) {
     const card = DESIGNS.find(d => d.id === id);
     assert.deepEqual(validateCard(card), [], id);
     assert.deepEqual([card.shelf, card.family, card.support, card.state, card.joins], [shelf, family, support, state, joins.trim()]);
-    assert.deepEqual(card.sources, {});
+    const sources = {
+      auxetic: { catalogue: ['S4'], papers: [24, 26, 55] },
+      'honeycomb-flat': { catalogue: ['S4'], papers: [24, 26, 55] },
+      crosshatch: { catalogue: ['S2'], papers: [29, 54, 9] },
+      'crosshatch-wavy': { catalogue: ['S2'], papers: [29, 54, 9] },
+      starlattice: { catalogue: ['S3'], papers: [30, 31] },
+    };
+    assert.deepEqual(card.sources, sources[id] ?? {});
     assert.ok(Object.hasOwn(FAMILIES, family));
   }
 });

@@ -700,8 +700,8 @@ export class ChoiceSection extends OptionSection {
       html: `${opt.thumb ?? ''}<span>${opt.label}</span>`,
       hint: opt.hint,
       picture: opt.thumb ? null : opt.picture ?? null,
-      pressed: () => String(this.settings[key]) === opt.id,
-      apply: () => { Object.assign(this.settings, opt.patch ?? {}); this.settings[key] = opt.id; },
+      pressed: () => String(this.settings[key]) === String(opt.value ?? opt.id),
+      apply: () => { Object.assign(this.settings, opt.patch ?? {}); this.settings[key] = opt.value ?? opt.id; },
     }));
   }
 }

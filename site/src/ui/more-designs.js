@@ -90,8 +90,8 @@ export function layered(def) {
     status: 'ready',
     thumb,
     roles: def.roles ?? { base: 'Layer 1', anchored: 'Later layers' },
-    defaults: () => ({ ...c.defaults }),
-    sanitize: c.sanitize,
+    defaults: def.defaults ?? (() => ({ ...c.defaults })),
+    sanitize: def.sanitize ?? c.sanitize,
     ranges: c.ranges,
     presets: c.presets,
     presetMatch: c.presetMatch,
@@ -143,14 +143,13 @@ const CROSSHATCH = defineControls({
   defaults: { width: 100, height: 100, directions: '0-90', spacing: 3.5, shape: 'wave', size: 0, pitch: 6, colorChange: false },
   enums: { directions: DIRECTION_IDS, shape: WAVY },
   bools: ['colorChange'],
-  presets: [
+    presets: [
     { id: 'square', name: 'Square', blurb: 'Two layers at 90°', patch: { directions: '0-90', size: 0 } },
     { id: 'diagonal', name: 'Diagonal', blurb: 'On the bias', patch: { directions: '45-135', size: 0 } },
     { id: 'isogrid', name: 'Isogrid', blurb: 'Three layers 60° apart', patch: { directions: '0-60-120', size: 0 } },
     { id: 'kagome', name: 'Kagome', blurb: 'Hexagons and triangles, two strands at a node', patch: { directions: 'kagome', size: 0 } },
-    { id: 'wavy-diagonal', name: 'Wavy diagonal', blurb: 'Lines that can stretch', patch: { directions: '45-135', shape: 'wave', size: 1.25 } },
   ],
-  describe: (s) => ({ spacing: `${r1(s.spacing)} mm apart`, size: s.size === 0 ? 'Straight' : `${r2(s.size)} mm`, pitch: `${r1(s.pitch)} mm` }),
+  describe: (s) => ({ spacing: `${r1(s.spacing)} mm apart` }),
 });
 
 const BACKING_LABELS = {
@@ -163,12 +162,13 @@ export const MORE_DESIGNS = [
   layered({
     id: 'crosshatch',
     shelf: 'layered', family: 'grids', support: 'self', state: 'untested',
-    joins: "Straight lines in two or three directions fuse where they cross.", sources: {},
+    joins: "Straight lines in two or three directions fuse where they cross.", sources: { catalogue: ['S2'], papers: [29, 54, 9] },
     optimizeTravel: true,
-    hidden: true, // out of the list for now; the design and its tests stay
+    hidden: false,
+    settingsKey: 'grid',
     name: 'Crosshatch & isogrid',
     blurb: 'Straight lines at the angles you choose, layer on layer',
-    about: 'The angle is the design here: layers of parallel lines, each layer at its own angle, so every pair of layers crosses. Square drapes like woven cloth on the bias; three directions 60° apart are close to the same in every direction. Give the lines a wave so they can stretch along their length.',
+    about: 'The angle is the design here: straight layers of parallel lines, each layer at its own angle, so every pair of layers crosses. Square drapes like woven cloth on the bias; three directions 60° apart are close to the same in every direction.',
     file: 'crosshatch',
     c: CROSSHATCH,
     bundle: 'directions',
@@ -182,18 +182,16 @@ export const MORE_DESIGNS = [
         hint: 'The angle of each layer. Every pair of layers crosses.',
         options: DIRECTION_IDS.map((id) => ({ id, label: DIRECTIONS[id].label, hint: DIRECTIONS[id].hint })),
       },
-      { kind: 'choice', key: 'shape', title: 'Line shape', hint: 'Only used when the wave size is above zero.', options: shapeOptions() },
       {
         kind: 'sliders',
         title: 'Look and feel',
         items: [
           { key: 'spacing', label: 'Line spacing', help: 'Distance between neighbouring lines in a layer.', lo: 'Dense', hi: 'Airy', unit: 'mm', edit: true },
-          { key: 'size', label: 'Wave size', help: 'How far each line swings to the side. Zero is straight.', lo: 'Straight', hi: 'Deep', unit: 'mm', edit: true },
-          { key: 'pitch', label: 'Wave length', help: 'Length of one full wave.', lo: 'Tight', hi: 'Long', unit: 'mm', edit: true },
         ],
       },
-      COLOUR,
     ],
+    defaults: () => ({ ...CROSSHATCH.defaults, shape: 'looped', size: 0 }),
+    sanitize: (raw) => ({ ...CROSSHATCH.sanitize(raw), shape: 'looped', size: 0 }),
     build: (s, boundary) => crosshatchLayers(boundary, { directions: s.directions, spacing: s.spacing, shape: s.shape, size: s.size, pitch: s.pitch }),
     summary: (result) => `a crosshatch of ${result.layerCount} layers with ${result.report.crossings} crossings`,
   }),
@@ -215,24 +213,18 @@ const AUXETIC = defineControls({
 MORE_DESIGNS.push(layered({
   id: 'auxetic',
   shelf: 'flat', family: 'cells', support: 'self', state: 'untested',
-  joins: "Zigzag rows joined by struts into cells.", sources: {},
+  joins: "Bow-tie cells joined by struts; they widen when pulled.", sources: { catalogue: ['S4'], papers: [24, 26, 55] },
   optimizeTravel: true,
-  name: 'Auxetic mesh',
-  blurb: 'Honeycomb and re-entrant (bow-tie) cells',
+  name: 'Re-entrant mesh',
+  blurb: 'Bow-tie cells that widen when pulled',
   about: 'Rows of zigzag, each the mirror of the one below, and staircases that climb through them. Struts at the waists make an ordinary honeycomb; struts at the wide points make bow-tie cells that widen when pulled, so the fabric spreads under tension and hugs a curve.',
   file: 'auxetic',
   c: AUXETIC,
-  bundle: 'cell',
+  defaults: () => ({ ...AUXETIC.defaults, cell: 'reentrant' }),
+  sanitize: (raw) => ({ ...AUXETIC.sanitize(raw), cell: 'reentrant' }),
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
-    {
-      kind: 'choice',
-      key: 'cell',
-      title: 'Cell',
-      hint: 'Where the struts join the rows.',
-      options: CELL_IDS.map((id) => ({ id, label: CELLS[id].label, hint: CELLS[id].hint })),
-    },
     {
       kind: 'sliders',
       title: 'Look and feel',
@@ -247,6 +239,45 @@ MORE_DESIGNS.push(layered({
   build: (s, boundary) => auxeticLayers(boundary, { rowPitch: s.rowPitch, period: s.period, amplitude: s.amplitude, cell: s.cell }),
   summary: (result) => `an auxetic mesh of ${result.report.crossings} crossings`,
 }));
+
+const crosshatch = MORE_DESIGNS[0];
+crosshatch.presets = CROSSHATCH.presets.filter((preset) => preset.id !== 'wavy-diagonal');
+MORE_DESIGNS.push({
+  ...crosshatch, id: 'crosshatch-wavy', name: 'Grid & isogrid · legacy waves', hidden: true, settingsKey: 'crosshatch-wavy',
+  defaults: () => ({ ...CROSSHATCH.defaults }), sanitize: CROSSHATCH.sanitize,
+  controls: [
+    { kind: 'presets', title: 'Start from' }, { kind: 'size', title: 'Size and shape' },
+    ...crosshatch.controls.filter((section) => section.kind === 'choice'),
+    { kind: 'choice', key: 'shape', title: 'Line shape', options: shapeOptions() },
+    { kind: 'sliders', title: 'Look and feel', items: [
+      { key: 'spacing', label: 'Line spacing', help: 'Distance between neighbouring lines in a layer.', lo: 'Dense', hi: 'Airy', unit: 'mm', edit: true },
+      { key: 'size', label: 'Wave size', help: 'How far each line swings to the side.', lo: 'Straight', hi: 'Deep', unit: 'mm', edit: true },
+      { key: 'pitch', label: 'Wave length', help: 'Length of one full wave.', lo: 'Tight', hi: 'Long', unit: 'mm', edit: true },
+    ] },
+  ],
+});
+MORE_DESIGNS.at(-1).presets = CROSSHATCH.presets;
+
+const honeycombFlat = layered({
+  id: 'honeycomb-flat', shelf: 'flat', family: 'cells', support: 'self', state: 'untested',
+  joins: 'Hexagon cells share their walls in one pass.', sources: { catalogue: ['S4'], papers: [24, 26, 55] },
+  name: 'Honeycomb · flat', blurb: 'Hexagon cells share their walls in one pass',
+  about: 'A single connected pass of convex hexagon cells joined by struts.', file: 'auxetic', c: AUXETIC,
+  defaults: () => ({ ...AUXETIC.defaults, cell: 'hexagon' }),
+  sanitize: (raw) => ({ ...AUXETIC.sanitize(raw), cell: 'hexagon' }),
+  controls: [
+    { kind: 'size', title: 'Size and shape' },
+    { kind: 'sliders', title: 'Look and feel', items: [
+      { key: 'rowPitch', label: 'Row spacing', help: 'Distance between cell rows.', lo: 'Close', hi: 'Wide', unit: 'mm', edit: true },
+      { key: 'period', label: 'Cell width', help: 'Length of one zigzag, and so the width of a cell.', lo: 'Narrow', hi: 'Wide', unit: 'mm', edit: true },
+      { key: 'amplitude', label: 'Cell depth', help: 'Depth of each hexagon cell.', lo: 'Shallow', hi: 'Deep', unit: 'mm', edit: true },
+    ] },
+  ],
+  build: (s, boundary) => auxeticLayers(boundary, { rowPitch: s.rowPitch, period: s.period, amplitude: s.amplitude, cell: 'hexagon' }),
+  summary: (result) => `a flat honeycomb of ${result.report.crossings} crossings`,
+});
+honeycombFlat.settingsKey = 'honeycomb';
+MORE_DESIGNS.push(honeycombFlat);
 
 const DIPWEAVE = defineControls({
   ranges: { ...SIZE, warpPitch: { min: 0.8, max: 8, step: 0.1 }, weftPitch: { min: 0.8, max: 8, step: 0.1 } },
@@ -296,6 +327,10 @@ MORE_DESIGNS.push(layered({
   },
   summary: (result) => `a dip weave of ${result.report.crossings} crossings`,
 }));
+
+const auxetic = MORE_DESIGNS.find((card) => card.id === 'auxetic');
+auxetic.presets = AUXETIC.presets.filter((preset) => preset.id !== 'honeycomb');
+auxetic.presetMatch = (s) => AUXETIC.presets.filter((preset) => preset.id !== 'honeycomb').find((preset) => Object.entries(preset.patch).every(([key, value]) => s[key] === value))?.id ?? null;
 
 const WEB = defineControls({
   ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, spokes: { min: 8, max: 48, step: 4 }, hub: { min: 0, max: 10, step: 0.1 }, tooth: { min: 0, max: 2, step: 0.25 } },
@@ -479,7 +514,10 @@ MORE_DESIGNS.push(layered({
         { key: 'phase', label: 'Phase', help: 'Turns the curve: zero is a straight diagonal at the extreme, larger fills the diamond.', lo: 'Squeezed', hi: 'Open', unit: '°', edit: true },
       ],
     },
-    { kind: 'switch', key: 'second', label: 'Second curve', help: 'A copy with its phase turned, which crosses the first everywhere.' },
+    { kind: 'choice', key: 'second', title: 'Structure', options: [
+      { id: 'one', value: false, label: 'One curve', hint: 'One closed curve crosses itself in diamonds.' },
+      { id: 'two', value: true, label: 'Two curves', hint: 'A second curve with its phase turned crosses the first everywhere.' },
+    ] },
     COLOUR,
   ],
   build: (s, boundary) => lissajousLayers(boundary, { a: s.a, b: s.b, phase: s.phase, second: s.second }),

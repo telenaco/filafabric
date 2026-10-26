@@ -17,22 +17,6 @@
   },
   {
     "card": "auxetic",
-    "preset": "honeycomb",
-    "settingsHash": "165423839073",
-    "gcodeSha256": "0f876d486d707b534802fab14c7fd042c6d6885169b783f118088ccdf42d8547",
-    "strands": 10,
-    "moves": 408,
-    "extrudeMm": 399.9,
-    "zMin": 0.2,
-    "zMax": 0.4,
-    "families": [
-      "L1",
-      "L2"
-    ],
-    "ties": 0
-  },
-  {
-    "card": "auxetic",
     "preset": "re-entrant",
     "settingsHash": "5d16381d2275",
     "gcodeSha256": "d390842c5d166901d5dca26735f1bba14147c30c74ef8b03a5357dc9d850ff1a",

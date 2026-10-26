@@ -94,6 +94,14 @@ export function migrateState(raw) {
     migrated.design = target;
     migrated.designs[target] = { ...source, shape: target === 'coil' ? 'looped' : source.shape };
   }
+  if (migrated.design === 'auxetic' && migrated.designs.auxetic?.cell === 'hexagon') {
+    migrated.design = 'honeycomb-flat';
+    migrated.designs['honeycomb-flat'] = { ...migrated.designs.auxetic, cell: 'hexagon' };
+  }
+  if (migrated.design === 'crosshatch' && Number(migrated.designs.crosshatch?.size ?? 0) > 0) {
+    migrated.design = 'crosshatch-wavy';
+    migrated.designs['crosshatch-wavy'] = { ...migrated.designs.crosshatch };
+  }
   const rule = MIGRATIONS.find((entry) => entry.from === migrated.design);
   if (rule) {
     const current = migrated.designs[rule.from] ?? migrated.designs[rule.to] ?? {};

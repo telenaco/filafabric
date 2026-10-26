@@ -338,6 +338,17 @@ export const DESIGNS = [
 // the Drawing & infill card (svgdesign) comes first after the original structures, then the line-algorithm library and the newer line designs
 DESIGNS.push(...BASIC_DESIGNS, ...SVG_DESIGNS, ...MORE_DESIGNS, ...LINE_DESIGNS, ...PUBLICATION_DESIGNS);
 
+// These constructions use incompatible setting schemas: the layered card is a Squiggle net (mode,
+// spacing, amplitude, wavelength), while the flat card is an Auxetic cell (rowPitch, period, amplitude).
+// Keep their controls and stored settings separate rather than silently interpreting one schema as the other.
+const flatHoneycomb = DESIGNS.find((card) => card.id === 'honeycomb-flat');
+if (flatHoneycomb) flatHoneycomb.settingsKey = 'honeycomb-flat';
+const starLattice = DESIGNS.find((card) => card.id === 'starlattice');
+if (starLattice) {
+  starLattice.joins = 'Star straps in non-crossing families meet at the tile edges.';
+  starLattice.sources = { catalogue: ['S3'], papers: [30, 31] };
+}
+
 // Coil's visible cards fix the strand shape; retain the old shape picker only for saved links that used it.
 const coil = DESIGNS.find((card) => card.id === 'coil');
 const legacyCoil = { ...coil, controls: coil.controls, presets: COIL_PRESETS };
