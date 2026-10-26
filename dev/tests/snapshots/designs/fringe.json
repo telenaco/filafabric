@@ -1,0 +1,54 @@
+[
+  {
+    "card": "fringe",
+    "preset": "default",
+    "settingsHash": "d9c3032a99fb",
+    "gcodeSha256": "0d2c60174dfdd662101370086d5cc63bb91483a31203df9bd54f312b53b90311",
+    "strands": 59,
+    "moves": 1634,
+    "extrudeMm": 1319.8,
+    "zMin": 0.2,
+    "zMax": 2.931538290774993,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "fringe",
+    "preset": "fringe",
+    "settingsHash": "d9c3032a99fb",
+    "gcodeSha256": "0d2c60174dfdd662101370086d5cc63bb91483a31203df9bd54f312b53b90311",
+    "strands": 59,
+    "moves": 1634,
+    "extrudeMm": 1319.8,
+    "zMin": 0.2,
+    "zMax": 2.931538290774993,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "fringe",
+    "preset": "shag",
+    "settingsHash": "61ae95ce150e",
+    "gcodeSha256": "f1d2188f316cd07f01f7b09c9695b5fd4383ef94963da0b4e7350af910764cf2",
+    "strands": 65,
+    "moves": 2356,
+    "extrudeMm": 1611.7,
+    "zMin": 0.2,
+    "zMax": 4.859760068116509,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "fringe",
+    "preset": "fine-pile",
+    "settingsHash": "5a02eb0b14bb",
+    "gcodeSha256": "35268391d325e0d90471c06de738220eb470186820f9ff15bd042c24a922c5a8",
+    "strands": 142,
+    "moves": 2436,
+    "extrudeMm": 1766.5,
+    "zMin": 0.2,
+    "zMax": 1.8434870884133296,
+    "families": [],
+    "ties": 0
+  }
+]

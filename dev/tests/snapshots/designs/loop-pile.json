@@ -1,0 +1,15 @@
+[
+  {
+    "card": "loop-pile",
+    "preset": "default",
+    "settingsHash": "fae10ec1a9f8",
+    "gcodeSha256": "d51d261815caa7ff5819f8de51d8753859d8347727060413c709b42bce5f855e",
+    "strands": 48,
+    "moves": 3951,
+    "extrudeMm": 2208.2,
+    "zMin": 0.2,
+    "zMax": 3.6,
+    "families": [],
+    "ties": 0
+  }
+]

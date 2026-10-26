@@ -1,0 +1,67 @@
+[
+  {
+    "card": "spirograph",
+    "preset": "default",
+    "settingsHash": "25fe53776642",
+    "gcodeSha256": "955ba316728e22bdf5e7a436468e6df14e044ee3d395cd3fc69ea5c3e111ae07",
+    "strands": 29,
+    "moves": 2582,
+    "extrudeMm": 974.4,
+    "zMin": 0.2,
+    "zMax": 0.6000000000000001,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "spirograph",
+    "preset": "loops",
+    "settingsHash": "25fe53776642",
+    "gcodeSha256": "955ba316728e22bdf5e7a436468e6df14e044ee3d395cd3fc69ea5c3e111ae07",
+    "strands": 29,
+    "moves": 2582,
+    "extrudeMm": 974.4,
+    "zMin": 0.2,
+    "zMax": 0.6000000000000001,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "spirograph",
+    "preset": "scales",
+    "settingsHash": "55a09eae5024",
+    "gcodeSha256": "185e7e286f8c98549d3d032230fa317b53395644476a9befaf7a0cdf4840da13",
+    "strands": 45,
+    "moves": 2763,
+    "extrudeMm": 1050.6,
+    "zMin": 0.2,
+    "zMax": 0.6000000000000001,
+    "families": [],
+    "ties": 4
+  },
+  {
+    "card": "spirograph",
+    "preset": "web",
+    "settingsHash": "4314f69e4cef",
+    "gcodeSha256": "35423e619aee3961feef431600778dd6790375e89bcf7cd3c47c4623d51a10e2",
+    "strands": 37,
+    "moves": 1341,
+    "extrudeMm": 739.8,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 8
+  },
+  {
+    "card": "spirograph",
+    "preset": "fine",
+    "settingsHash": "e3afea611f33",
+    "gcodeSha256": "3c4eb0e774f1d62c97d5757895cd996514c80ea6fab4cb4d84e2d77b65d50dc4",
+    "strands": 27,
+    "moves": 3991,
+    "extrudeMm": 1191.9,
+    "zMin": 0.2,
+    "zMax": 0.7946663096921622,
+    "families": [],
+    "ties": 0
+  }
+]

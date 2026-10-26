@@ -1,0 +1,67 @@
+[
+  {
+    "card": "coil",
+    "preset": "default",
+    "settingsHash": "94c6c65a77fe",
+    "gcodeSha256": "772b1cbb70340ee7632f8c7364cf6eef5f421b08ef6d090b2378989a8604507f",
+    "strands": 30,
+    "moves": 1922,
+    "extrudeMm": 790.4,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 4
+  },
+  {
+    "card": "coil",
+    "preset": "open-chain",
+    "settingsHash": "582b763296f1",
+    "gcodeSha256": "d7db708eb8296a8746a301f4b4f3cb10b5cb7fc513929c273bc9ea32e3e48f34",
+    "strands": 28,
+    "moves": 1074,
+    "extrudeMm": 440,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 15
+  },
+  {
+    "card": "coil",
+    "preset": "overlapping",
+    "settingsHash": "28ff58a09d38",
+    "gcodeSha256": "fef53d4e9a9a016bec23a520395facd0bbbf693b6c7049c6cedf8222936a44cb",
+    "strands": 32,
+    "moves": 2261,
+    "extrudeMm": 924,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 4
+  },
+  {
+    "card": "coil",
+    "preset": "dense",
+    "settingsHash": "c0f0652f8986",
+    "gcodeSha256": "b4699d35805ddbf3058f6e1613e0497919816eba7beeeb3047fd4457db27a0b1",
+    "strands": 44,
+    "moves": 4088,
+    "extrudeMm": 1559.1,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 4
+  },
+  {
+    "card": "coil",
+    "preset": "zigzag-cells",
+    "settingsHash": "dbe1e0c81b00",
+    "gcodeSha256": "cb0fc150f5bf4686005ea785fccd3ad0e455b1971ff62cf1c09ae40eaa6e12d0",
+    "strands": 29,
+    "moves": 1223,
+    "extrudeMm": 637.4,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 4
+  }
+]

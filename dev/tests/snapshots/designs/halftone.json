@@ -1,0 +1,80 @@
+[
+  {
+    "card": "halftone",
+    "preset": "default",
+    "settingsHash": "7362473e96bb",
+    "gcodeSha256": "059fa9b2bd6a4f6aae0e09a26e78ccd65c74c53460fac68dad0555f5d4bc3042",
+    "strands": 2,
+    "moves": 1603,
+    "extrudeMm": 873.4,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "halftone",
+    "preset": "soft",
+    "settingsHash": "e7cae8394df1",
+    "gcodeSha256": "6323e55eb2933d3209cf3b551f652336952b3a601d4460f2661eaf707ea38370",
+    "strands": 2,
+    "moves": 1209,
+    "extrudeMm": 878.4,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "halftone",
+    "preset": "strong",
+    "settingsHash": "f7a1be4f14c2",
+    "gcodeSha256": "adf3b0d3f36437ad429b33302d50c606960e35231eb5e36dc78d8e58a0d98e77",
+    "strands": 2,
+    "moves": 1651,
+    "extrudeMm": 873.4,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "halftone",
+    "preset": "colour-swap",
+    "settingsHash": "800b3215d6f4",
+    "gcodeSha256": "c8cfbee1f1bbb47b697c8999b60310fca0ae74ccb004f30fff1c2958033eae78",
+    "strands": 2,
+    "moves": 1604,
+    "extrudeMm": 873.4,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "halftone",
+    "preset": "diagonal",
+    "settingsHash": "f891eda0a0ba",
+    "gcodeSha256": "9d5867765fd7d9d2bd4386088940f9a5a9d8c3b035cd0ba3af69c8de90bc6f72",
+    "strands": 2,
+    "moves": 1514,
+    "extrudeMm": 882.1,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "halftone",
+    "preset": "curvilinear",
+    "settingsHash": "38c7bc88ed1c",
+    "gcodeSha256": "91b0632b15770d4ddbc45f68cea11639e306a8d2444c281c29bf6a875e77a62b",
+    "strands": 2,
+    "moves": 2723,
+    "extrudeMm": 1038.8,
+    "zMin": 0.2,
+    "zMax": 0.5956981253304544,
+    "families": [],
+    "ties": 0
+  }
+]

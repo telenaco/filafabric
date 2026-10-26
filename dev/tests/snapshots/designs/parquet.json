@@ -1,0 +1,67 @@
+[
+  {
+    "card": "parquet",
+    "preset": "default",
+    "settingsHash": "37b40bacf843",
+    "gcodeSha256": "1eb48a90d8af3566240ce4a8406fbc4aeb6ec16ddbde157134f06792df45f0d2",
+    "strands": 70,
+    "moves": 3160,
+    "extrudeMm": 1292.2,
+    "zMin": 0.2,
+    "zMax": 0.4794277065083395,
+    "families": [],
+    "ties": 14
+  },
+  {
+    "card": "parquet",
+    "preset": "herringbone",
+    "settingsHash": "37b40bacf843",
+    "gcodeSha256": "1eb48a90d8af3566240ce4a8406fbc4aeb6ec16ddbde157134f06792df45f0d2",
+    "strands": 70,
+    "moves": 3160,
+    "extrudeMm": 1292.2,
+    "zMin": 0.2,
+    "zMax": 0.4794277065083395,
+    "families": [],
+    "ties": 14
+  },
+  {
+    "card": "parquet",
+    "preset": "long-planks",
+    "settingsHash": "0bf8c80743b9",
+    "gcodeSha256": "a115e695ca3afe0b5a6794756a5483ae61e7d2e653b3073b6e87f1733a80f403",
+    "strands": 86,
+    "moves": 2132,
+    "extrudeMm": 1499.3,
+    "zMin": 0.2,
+    "zMax": 0.4299920164947992,
+    "families": [],
+    "ties": 38
+  },
+  {
+    "card": "parquet",
+    "preset": "basket",
+    "settingsHash": "2abb2ff155bd",
+    "gcodeSha256": "86adb12fc0562137b35bd5eb37554184e0f3742f4b19bd7af75dd57ba60f80a8",
+    "strands": 13,
+    "moves": 975,
+    "extrudeMm": 1358.9,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "parquet",
+    "preset": "chevron",
+    "settingsHash": "547e63b983c2",
+    "gcodeSha256": "5f0010566e01a117c376306d582381ade7ff9e330072fe126c57fbde523c2ce1",
+    "strands": 45,
+    "moves": 3022,
+    "extrudeMm": 1194.3,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 0
+  }
+]

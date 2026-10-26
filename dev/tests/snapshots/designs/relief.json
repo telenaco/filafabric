@@ -1,0 +1,54 @@
+[
+  {
+    "card": "relief",
+    "preset": "default",
+    "settingsHash": "e4671b81a783",
+    "gcodeSha256": "815dd4f7f3cf4df5a919ebbe56c2369ac9970a095b215d6d9bfdafb9ace5e7ee",
+    "strands": 3,
+    "moves": 994,
+    "extrudeMm": 1393.3,
+    "zMin": 0.2,
+    "zMax": 2.5903670487215322,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "relief",
+    "preset": "seersucker",
+    "settingsHash": "525b1e983b49",
+    "gcodeSha256": "41894cd8e332f034c0454e8a04e51c654c0d152f1b430c47e889f25ccaa9d950",
+    "strands": 3,
+    "moves": 1176,
+    "extrudeMm": 1653.3,
+    "zMin": 0.2,
+    "zMax": 1.264558387017977,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "relief",
+    "preset": "bobbles",
+    "settingsHash": "4a088478f823",
+    "gcodeSha256": "349b6f06920ab2ba9741b1aefcd13725704024eeb25a87b732eacf1fe66c3445",
+    "strands": 3,
+    "moves": 994,
+    "extrudeMm": 1396.1,
+    "zMin": 0.2,
+    "zMax": 2.63791860248078,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "relief",
+    "preset": "pleats",
+    "settingsHash": "a5cb59bfce3e",
+    "gcodeSha256": "24ea413b2abf32d85e509f1a40e91b45dcf4800beda9a0f66e494a5b01c79eb5",
+    "strands": 3,
+    "moves": 994,
+    "extrudeMm": 1397.6,
+    "zMin": 0.2,
+    "zMax": 2.4894732805337116,
+    "families": [],
+    "ties": 0
+  }
+]

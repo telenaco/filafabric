@@ -1,0 +1,54 @@
+[
+  {
+    "card": "rosette",
+    "preset": "default",
+    "settingsHash": "75ed8320abc8",
+    "gcodeSha256": "a2e8526de81defb1a5c6ccc725fa1cfcd2c9df068e8fd5dcbbccd2226f51dfd1",
+    "strands": 33,
+    "moves": 2524,
+    "extrudeMm": 979.6,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 2
+  },
+  {
+    "card": "rosette",
+    "preset": "rosette",
+    "settingsHash": "75ed8320abc8",
+    "gcodeSha256": "a2e8526de81defb1a5c6ccc725fa1cfcd2c9df068e8fd5dcbbccd2226f51dfd1",
+    "strands": 33,
+    "moves": 2524,
+    "extrudeMm": 979.6,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 2
+  },
+  {
+    "card": "rosette",
+    "preset": "lace",
+    "settingsHash": "aa3698e54343",
+    "gcodeSha256": "217cd251d2af90cf525cc3b18601d7a09f904c0c240e7975009a2555277b74b9",
+    "strands": 44,
+    "moves": 4393,
+    "extrudeMm": 1258.6,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "rosette",
+    "preset": "bold",
+    "settingsHash": "99cc24f8053c",
+    "gcodeSha256": "7a25c5dc9d4c738452c028a89fc6e695a92aabbcc985f4c871656c546be55570",
+    "strands": 22,
+    "moves": 1303,
+    "extrudeMm": 704.7,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 1
+  }
+]

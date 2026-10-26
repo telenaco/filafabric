@@ -1,0 +1,93 @@
+[
+  {
+    "card": "svgdesign",
+    "preset": "default",
+    "settingsHash": "33877a143eb7",
+    "gcodeSha256": "abe82a01df210808218927e93ab78f7aaf8f3e9b0609219a359206699c42b2a5",
+    "strands": 14,
+    "moves": 682,
+    "extrudeMm": 607.7,
+    "zMin": 0.2,
+    "zMax": 0.47483779948848887,
+    "families": [],
+    "ties": 2
+  },
+  {
+    "card": "svgdesign",
+    "preset": "line-art",
+    "settingsHash": "a0200fbfb7e8",
+    "gcodeSha256": "9f83e6d48c3ab8360284d6fb9701ddf5682e203d00837faa9574321e708cfb00",
+    "strands": 1,
+    "moves": 145,
+    "extrudeMm": 125.7,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "svgdesign",
+    "preset": "filled",
+    "settingsHash": "779fee01f76d",
+    "gcodeSha256": "0320aa97a8b45dbbb67fc955bdd7d85fdedc74219389193cc1412323a00c7bed",
+    "strands": 13,
+    "moves": 137,
+    "extrudeMm": 245.1,
+    "zMin": 0.2,
+    "zMax": 0.5430906114210892,
+    "families": [],
+    "ties": 8
+  },
+  {
+    "card": "svgdesign",
+    "preset": "outline-gyroid",
+    "settingsHash": "eb76f0636a93",
+    "gcodeSha256": "4d97c32b72e0d328de70b0e7719fa6f995a017b69cc069f573b21d453c75784e",
+    "strands": 11,
+    "moves": 588,
+    "extrudeMm": 435.4,
+    "zMin": 0.2,
+    "zMax": 0.4159843362999523,
+    "families": [],
+    "ties": 2
+  },
+  {
+    "card": "svgdesign",
+    "preset": "filled-backed",
+    "settingsHash": "33877a143eb7",
+    "gcodeSha256": "abe82a01df210808218927e93ab78f7aaf8f3e9b0609219a359206699c42b2a5",
+    "strands": 14,
+    "moves": 682,
+    "extrudeMm": 607.7,
+    "zMin": 0.2,
+    "zMax": 0.47483779948848887,
+    "families": [],
+    "ties": 2
+  },
+  {
+    "card": "svgdesign",
+    "preset": "two-layer",
+    "settingsHash": "8cba549720a4",
+    "gcodeSha256": "d84fe79701a30878dae25f8ae534511feb582c36097d5cb9c20267960094a68d",
+    "strands": 17,
+    "moves": 1091,
+    "extrudeMm": 927.5,
+    "zMin": 0.2,
+    "zMax": 0.6396859918184323,
+    "families": [],
+    "ties": 2
+  },
+  {
+    "card": "svgdesign",
+    "preset": "lightning-badge",
+    "settingsHash": "5cd16f266a30",
+    "gcodeSha256": "492c16afd87366827202e447a53d4a51e56a2f881edb69b29a3384f0e1d917c5",
+    "strands": 19,
+    "moves": 268,
+    "extrudeMm": 295.5,
+    "zMin": 0.2,
+    "zMax": 0.6000000000000001,
+    "families": [],
+    "ties": 0
+  }
+]

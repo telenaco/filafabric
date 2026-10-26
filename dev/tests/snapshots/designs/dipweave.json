@@ -1,0 +1,54 @@
+[
+  {
+    "card": "dipweave",
+    "preset": "default",
+    "settingsHash": "d98e774b635d",
+    "gcodeSha256": "33161818802edfdfa2670755783434c98b409c27dc9a77af5a5a98751f0ab83b",
+    "strands": 2,
+    "moves": 236,
+    "extrudeMm": 732.4,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "dipweave",
+    "preset": "fine",
+    "settingsHash": "bf50468d7be1",
+    "gcodeSha256": "6c71d8789869267fea588ea76f7cf2c73bde842e61f0f1060f9c8b1e95826fda",
+    "strands": 2,
+    "moves": 333,
+    "extrudeMm": 870.7,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "dipweave",
+    "preset": "open",
+    "settingsHash": "311ccb4b285c",
+    "gcodeSha256": "8210239d1e997549ef0b6944e72638d3c08603cd5f2f5619a3d5077781a93020",
+    "strands": 2,
+    "moves": 142,
+    "extrudeMm": 564.2,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "dipweave",
+    "preset": "ribbed",
+    "settingsHash": "6b5e5ba66488",
+    "gcodeSha256": "49257f5623f0994bfbf2eebd37debf2dabf7b504c1ea0835781458cf420d6b6f",
+    "strands": 2,
+    "moves": 218,
+    "extrudeMm": 759,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [],
+    "ties": 0
+  }
+]

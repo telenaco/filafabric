@@ -8,7 +8,7 @@ The single place to see what is ready, who has it and where it stands. The revie
 
 | Ticket | Title | Depends on | Size | ∥ | State | Owner | PR |
 |---|---|---|---|---|---|---|---|
-| T0.0 | Output snapshots of every card | — | S | | Ready | | |
+| T0.0 | Output snapshots of every card | — | S | | In review (local; known baseline test exception) | Codex | [Local handoff](T0_0_Local_Review.md); `t0-0-output-snapshots`, no push |
 | T0.1 | Card IDs, metadata and `library.js` | T0.0 | M | ∥ T0.2 | Blocked | | |
 | T0.2 | Strand provenance tags | T0.0 | M | ∥ T0.1 | Blocked | | |
 | T0.3 | Construction report + shelf check | T0.2 | M | ∥ T0.4 | Blocked | | |
@@ -121,6 +121,7 @@ The single place to see what is ready, who has it and where it stands. The revie
 |---|---|---|---|
 | The source-offer tool (`dev/tools/source-bundle.mjs`) normalises line endings only for listed text extensions and for files named exactly `LICENSE` or `NOTICE` at the root. A checkout with Windows line endings therefore fails the source-currentness test because of `site/vendor/three/LICENSE`. Treat any file named `LICENSE`/`NOTICE` in any folder as text. Not seen on Linux (GitHub, Cloudflare). | reorganisation, 26 Oct 2026 | S | Ready |
 | Wave net bundles (bond control for the Squiggle generator) | T4.2 | M | Blocked (after T4.2) |
+| Resolve C13/T0.2 snapshot wording: C13 records `families`, but T0.2 introduces those tags while requiring unchanged snapshots. See [T0.0 review note](T0_0_Local_Review.md#clarification-before-t02). | T0.0 review, 26 Oct 2026 | S | Reviewer clarification before T0.2 |
 
 ## Open decisions for Luis
 

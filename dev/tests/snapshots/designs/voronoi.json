@@ -1,0 +1,54 @@
+[
+  {
+    "card": "voronoi",
+    "preset": "default",
+    "settingsHash": "ad23144bdb18",
+    "gcodeSha256": "608d1bbe45cbae026cc483a4774cb3db48457dd1b05ffc74063e6ef611951a8a",
+    "strands": 19,
+    "moves": 277,
+    "extrudeMm": 719.8,
+    "zMin": 0.2,
+    "zMax": 0.8,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "voronoi",
+    "preset": "lace",
+    "settingsHash": "ad23144bdb18",
+    "gcodeSha256": "608d1bbe45cbae026cc483a4774cb3db48457dd1b05ffc74063e6ef611951a8a",
+    "strands": 19,
+    "moves": 277,
+    "extrudeMm": 719.8,
+    "zMin": 0.2,
+    "zMax": 0.8,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "voronoi",
+    "preset": "scatter",
+    "settingsHash": "e7f439159f2b",
+    "gcodeSha256": "657b3d6393d9e7092795da1730c0c924514743fcc067072e76a6526a18727f81",
+    "strands": 23,
+    "moves": 409,
+    "extrudeMm": 726.7,
+    "zMin": 0.2,
+    "zMax": 0.8,
+    "families": [],
+    "ties": 0
+  },
+  {
+    "card": "voronoi",
+    "preset": "graded",
+    "settingsHash": "11a5f98e7445",
+    "gcodeSha256": "5a12b3def8cf7a3d2a2d4e5b9827d1ea901d00eed8b5773e1527c5b149ca9fa9",
+    "strands": 15,
+    "moves": 217,
+    "extrudeMm": 686.2,
+    "zMin": 0.2,
+    "zMax": 0.8,
+    "families": [],
+    "ties": 0
+  }
+]
