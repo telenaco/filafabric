@@ -523,6 +523,27 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "step-lace",
+    "score": 23.658825361605032,
+    "components": 1,
+    "joints": 132,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 3.0413812670973357,
+    "maxSlopeDeg": 10.976062827410363,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 132,
+    "moves": 9690,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 3478.959263513968,
+      "afterMm": 384.3608068824663
+    }
+  },
+  {
     "id": "conformal",
     "score": 24.33428099406511,
     "components": 1,
@@ -961,6 +982,24 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "scales",
+    "score": 43.04409092542675,
+    "components": 1,
+    "joints": 432,
+    "reversedCrossings": 0,
+    "separatedCrossings": 32978,
+    "longestUnsupported": 10.722045462713375,
+    "maxSlopeDeg": 0,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 432,
+    "moves": 19178,
+    "clearanceFlags": 0,
+    "routing": null
+  },
+  {
     "id": "parquet",
     "score": 43.66038521675302,
     "components": 1,
@@ -1003,25 +1042,22 @@ export const PRINTABILITY = [
     }
   },
   {
-    "id": "step-lace",
-    "score": 48.22799015433356,
+    "id": "paired-loops",
+    "score": 49.10119256784656,
     "components": 1,
-    "joints": 160,
+    "joints": 622,
     "reversedCrossings": 0,
-    "separatedCrossings": 2,
-    "longestUnsupported": 7.613995077166777,
-    "maxSlopeDeg": 25.000000000000007,
+    "separatedCrossings": 0,
+    "longestUnsupported": 9.00059628392328,
+    "maxSlopeDeg": 0,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 160,
-    "moves": 5973,
+    "hops": 622,
+    "moves": 40498,
     "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 3078.686231806477,
-      "afterMm": 517.3521017002422
-    }
+    "routing": null
   },
   {
     "id": "voronoi",
@@ -1144,24 +1180,6 @@ export const PRINTABILITY = [
     "routing": null
   },
   {
-    "id": "paired-loops",
-    "score": 98.3538631247124,
-    "components": 1,
-    "joints": 1341,
-    "reversedCrossings": 0,
-    "separatedCrossings": 5216,
-    "longestUnsupported": 8.825070514054996,
-    "maxSlopeDeg": 13.653722096602415,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 1341,
-    "moves": 89853,
-    "clearanceFlags": 0,
-    "routing": null
-  },
-  {
     "id": "pillarweave",
     "score": 111.4825385465194,
     "components": 1,
@@ -1238,26 +1256,5 @@ export const PRINTABILITY = [
     "moves": 7138,
     "clearanceFlags": 0,
     "routing": null
-  },
-  {
-    "id": "scales",
-    "score": 245.8100003815027,
-    "components": 1,
-    "joints": 434,
-    "reversedCrossings": 0,
-    "separatedCrossings": 78250,
-    "longestUnsupported": 99.57999999999993,
-    "maxSlopeDeg": 25.000000381502833,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 433,
-    "moves": 367433,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 4941.622583710831,
-      "afterMm": 1100.4578436220786
-    }
   }
 ];

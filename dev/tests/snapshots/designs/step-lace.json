@@ -3,44 +3,42 @@
     "card": "step-lace",
     "preset": "default",
     "settingsHash": "90ee544180a6",
-    "gcodeSha256": "76b674cd012505c5249e4f2bdb3bb4e5e20933e535c56caeeccb74ac1586f652",
-    "strands": 52,
-    "moves": 1328,
-    "extrudeMm": 1801.8,
+    "gcodeSha256": "c1a367aed443b0bd531c0d4cb50131f49197b64911f836d05267b38bbf73ed31",
+    "strands": 42,
+    "moves": 1855,
+    "extrudeMm": 2582.8,
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
       "lines",
-      "tie",
-      "ties"
+      "tie"
     ],
-    "ties": 15
+    "ties": 0
   },
   {
     "card": "step-lace",
     "preset": "step",
     "settingsHash": "90ee544180a6",
-    "gcodeSha256": "76b674cd012505c5249e4f2bdb3bb4e5e20933e535c56caeeccb74ac1586f652",
-    "strands": 52,
-    "moves": 1328,
-    "extrudeMm": 1801.8,
+    "gcodeSha256": "c1a367aed443b0bd531c0d4cb50131f49197b64911f836d05267b38bbf73ed31",
+    "strands": 42,
+    "moves": 1855,
+    "extrudeMm": 2582.8,
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
       "lines",
-      "tie",
-      "ties"
+      "tie"
     ],
-    "ties": 15
+    "ties": 0
   },
   {
     "card": "step-lace",
     "preset": "hexagon",
     "settingsHash": "c32d9d9bf402",
-    "gcodeSha256": "dc7b279cecf3f03b0aab4523a4522d067dc9e3ef9ca073ce1b6d52dc7d67b02c",
-    "strands": 10,
-    "moves": 2099,
-    "extrudeMm": 1146.8,
+    "gcodeSha256": "bdf6d56bb19c068b75ad537ef754f26c5612574b55d1158be8283834486f3ec0",
+    "strands": 20,
+    "moves": 2085,
+    "extrudeMm": 1117.8,
     "zMin": 0.2,
     "zMax": 0.6202690808251545,
     "families": [
@@ -53,10 +51,10 @@
     "card": "step-lace",
     "preset": "ripple",
     "settingsHash": "fb56ae35f0e0",
-    "gcodeSha256": "c176b4ba662b500a21f0bab23e9e5b649e319afbf23130253c926d8f51284734",
-    "strands": 10,
-    "moves": 415,
-    "extrudeMm": 686.6,
+    "gcodeSha256": "859bba878b40bea9ad159b7089a5bd0ab0e898decacf04abcebee76d9eaa4192",
+    "strands": 18,
+    "moves": 408,
+    "extrudeMm": 675.1,
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
@@ -69,10 +67,10 @@
     "card": "step-lace",
     "preset": "petal",
     "settingsHash": "96fd39a12c4c",
-    "gcodeSha256": "d4f98680facb8a847f13523c898160886a183714f0012b8a7a7ac43b1acab9f9",
-    "strands": 34,
-    "moves": 2212,
-    "extrudeMm": 1107,
+    "gcodeSha256": "c47a01099805bf2a0a4facbe9d68c4a5302e47da14ef0af2eecceae305b34bcf",
+    "strands": 85,
+    "moves": 4280,
+    "extrudeMm": 1692.4,
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [

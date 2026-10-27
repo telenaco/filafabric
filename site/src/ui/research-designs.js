@@ -153,9 +153,9 @@ const STEP_LACE=withColour(defineControls({
   describe:s=>({spacing:`${r1(s.spacing)} mm`,tie:s.tie,tieLength:`${r1(s.tieLength)} mm`,tieDepth:`${r1(s.tieDepth)} mm`}),
 }));
 const PAIRED_LOOPS=withColour(defineControls({
-  ranges:{...SIZE,loopWidth:{min:2,max:10,step:.1},aspect:{min:1.2,max:2.6,step:.05},rowPitch:{min:2,max:15,step:.1},offset:{min:.25,max:.75,step:.05}},
-  defaults:{width:100,height:100,loopWidth:4,aspect:1.8,rowPitch:4.32,offset:.5,colorChange:false},
-  describe:s=>({loopWidth:`${r1(s.loopWidth)} mm`,aspect:`${r1(s.aspect)}× tall`,rowPitch:`${r1(s.rowPitch)} mm`,offset:`${r2(s.offset)} loop`}),
+  ranges:{...SIZE,loopWidth:{min:2,max:10,step:.1},aspect:{min:1.2,max:2.6,step:.05},rowPitch:{min:0,max:15,step:.1},offset:{min:.25,max:.75,step:.05}},
+  defaults:{width:100,height:100,loopWidth:4,aspect:1.8,rowPitch:0,offset:.5,colorChange:false},
+  describe:s=>({loopWidth:`${r1(s.loopWidth)} mm`,aspect:`${r1(s.aspect)}× tall`,rowPitch:s.rowPitch>0?`${r1(s.rowPitch)} mm`:'auto',offset:`${r2(s.offset)} loop`}),
 }));
 const SCALES=withColour(defineControls({
   ranges:{...SIZE,pitch:{min:4,max:20,step:.1},gap:{min:.4,max:2,step:.05},scaleLayers:{min:1,max:10,step:1},carrierLayers:{min:1,max:3,step:1}},

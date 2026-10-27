@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "site/vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "413dae7f92d539701a19bcf7457cd24fbdefc690914358f69bf40a6041992720",
+  "archiveSha256": "dba62b2d22fd74870bcf2f4e9983ba8e2555d97f3002e9b0b1d8489bf9d77c49",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -501,8 +501,8 @@
     },
     {
       "path": "dev/tests/paired-loops-connected.test.js",
-      "bytes": 1635,
-      "sha256": "ab549d66ba7c1d27dfe832c5d5328fe39837e968e987966a094a7c397809e0b3"
+      "bytes": 3050,
+      "sha256": "1cf3e1992aff80b88cc9c03e8746a0a628d951ef28de1d314ee4c2018c31c1c2"
     },
     {
       "path": "dev/tests/paired-loops.test.js",
@@ -670,9 +670,14 @@
       "sha256": "deacb68a2070ef9e89ce325008cc0b32c21f0b672c17248da7e8779e69ff765f"
     },
     {
+      "path": "dev/tests/scales-acceptance.test.js",
+      "bytes": 4163,
+      "sha256": "ea56fb4e585513e7eeeaa66268eb1d91d2a3f33c6573147822749672b877d276"
+    },
+    {
       "path": "dev/tests/scales-budget.test.js",
-      "bytes": 1767,
-      "sha256": "b4648ac3a4c90571f762eb9e79e4a9003a0c95ea987100cf2dcae1641fddb849"
+      "bytes": 1838,
+      "sha256": "a5b4f44bd88927dc00426828aebe7ebfb85d462e7c8724fef84c86f887dae27f"
     },
     {
       "path": "dev/tests/scales.test.js",
@@ -871,8 +876,8 @@
     },
     {
       "path": "dev/tests/snapshots/designs/paired-loops.json",
-      "bytes": 359,
-      "sha256": "2fa35e02eb05cfe1255fc125539c30e63a4c55c25cc9418ed02ac9180565c554"
+      "bytes": 357,
+      "sha256": "78ccf44e0ea1678ab8e01121c1760cecd51d9ef9bd28284312ccc37d1e1a99c5"
     },
     {
       "path": "dev/tests/snapshots/designs/parquet.json",
@@ -921,8 +926,8 @@
     },
     {
       "path": "dev/tests/snapshots/designs/scales.json",
-      "bytes": 384,
-      "sha256": "36525d62c923c9ebc0e2e9277c366934e26f65bca49f6da18e7fec2a78f250ff"
+      "bytes": 385,
+      "sha256": "476017bfb17a4155e49bad51a77eeec7f4855c65bceebd698af51644d833e0bb"
     },
     {
       "path": "dev/tests/snapshots/designs/spacer.json",
@@ -976,8 +981,8 @@
     },
     {
       "path": "dev/tests/snapshots/designs/step-lace.json",
-      "bytes": 1763,
-      "sha256": "304a77ab22ee1798de15040e96f92e052fad082735ffaf72ed240dc23737cd37"
+      "bytes": 1735,
+      "sha256": "20a7624f54b16e4fb548b97abbe81c08b08f77d00b6813e7dfc4bbfa236075f1"
     },
     {
       "path": "dev/tests/snapshots/designs/stochastic-net.json",
@@ -1103,6 +1108,11 @@
       "path": "dev/tests/starlattice.test.js",
       "bytes": 2816,
       "sha256": "8749199f05507436c9bc46e88cd22e85ffb3583e6c8e3a50bb8fd686c7f66075"
+    },
+    {
+      "path": "dev/tests/step-lace-span.test.js",
+      "bytes": 2277,
+      "sha256": "82cacc6bab810f1fdf61465ec542c205dcef35267b37821fa6b94646e7e24722"
     },
     {
       "path": "dev/tests/step-lace.test.js",
@@ -1751,8 +1761,8 @@
     },
     {
       "path": "site/src/engine/construction-report.js",
-      "bytes": 14801,
-      "sha256": "ccc365a603f1d953287c2fa8e6e5af721f30b444b744f4c488884471050847ed"
+      "bytes": 14473,
+      "sha256": "c034e0dfa209058f6d0e7db603ba7bd865f826717a1498d1d19e36741f8329a0"
     },
     {
       "path": "site/src/engine/crosshatch.js",
@@ -1926,8 +1936,8 @@
     },
     {
       "path": "site/src/engine/paired-loops.js",
-      "bytes": 1531,
-      "sha256": "af3430748e641cdb30706860f3989cbfeeb8f2e93876a96b19a94261a858b16b"
+      "bytes": 2090,
+      "sha256": "5e77cbfc7aea2ba7669b53bc6eef2066b0c07fc4d479d2fc9bb51e0f3843c9d7"
     },
     {
       "path": "site/src/engine/panel.js",
@@ -2026,8 +2036,8 @@
     },
     {
       "path": "site/src/engine/scales.js",
-      "bytes": 3602,
-      "sha256": "872bcd1d03744bc60463e388c94eedbd4dadf92b72300efd62221ed2d0fb9392"
+      "bytes": 5365,
+      "sha256": "d83c9256a0e091abc5e8da4d1d5bc41721fadbb3438c744a6698e8b54a07e344"
     },
     {
       "path": "site/src/engine/shapes.js",
@@ -2096,8 +2106,8 @@
     },
     {
       "path": "site/src/engine/step-lace.js",
-      "bytes": 2301,
-      "sha256": "161028686dd5664169f9a5ff0c4fc4eb7d5a01545f041967873a161bea177adf"
+      "bytes": 3132,
+      "sha256": "5a5cc044d3ad7b06d13f2e9317aa16fc053e10c64e65a3acee6a134bb0fc82d0"
     },
     {
       "path": "site/src/engine/stochastic-net.js",
@@ -2336,8 +2346,8 @@
     },
     {
       "path": "site/src/ui/printability-data.js",
-      "bytes": 29706,
-      "sha256": "43151a660257f5e718cf10fe1baa67e9f51769ed060f1511f1ebee68810bc166"
+      "bytes": 29593,
+      "sha256": "1583804cc89fb94949f73f1a677ddbe167cbcb7c739618e117f1826fb67eb847"
     },
     {
       "path": "site/src/ui/printability.js",
@@ -2366,8 +2376,8 @@
     },
     {
       "path": "site/src/ui/research-designs.js",
-      "bytes": 48277,
-      "sha256": "ff0eb984a956005078e5e8bb9a0b72c496ad3c0bc188f6c61f2e4ed5fe6cd7d2"
+      "bytes": 48294,
+      "sha256": "720f7ed76f43e489fbeee2e8a2864f673137ac36e26fcce752f39bc51def3c4c"
     },
     {
       "path": "site/src/ui/share.js",
