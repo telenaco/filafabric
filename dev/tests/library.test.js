@@ -67,10 +67,12 @@ test('all ready cards have the exact ticket metadata', () => {
     "   | `star-metric` | flat | cells | self | untested | Metric cell walls meet at shared vertices and close against the perimeter. |",
     "   | `isohedral-tiles` | flat | lattices | self | untested | Shared prototile edges are deduplicated and joined into a repeating net. |",
     "   | `lace-backing` | layered | lattices | auto | untested | The open carrier crosses and holds each motif island. |",
+    "   | `rings-raised` | raised | rings | self | untested | Each ring climbs over the rings printed before it, building up in levels. |",
+    "   | `corrugation` | raised | textures | built-in | untested | Smooth ridges rise over a crossed base net. |",
   ].join("\n");
   const rows = [...brief.matchAll(/\| `([^`]+)` \| (flat|layered|raised) \| (\w+) \| (self|auto|built-in) \| (untested|needs-repair) \| ([^|]+) \|/g)];
-  assert.equal(rows.length, 56);
-  assert.equal(DESIGNS.filter(d => d.status === 'ready').length, 56);
+  assert.equal(rows.length, 58);
+  assert.equal(DESIGNS.filter(d => d.status === 'ready').length, 58);
   for (const [, id, shelf, family, support, state, joins] of rows) {
     const card = DESIGNS.find(d => d.id === id);
     assert.deepEqual(validateCard(card), [], id);
@@ -96,6 +98,8 @@ test('all ready cards have the exact ticket metadata', () => {
       'star-metric': { catalogue: ['S7'], papers: [46] },
       'isohedral-tiles': { catalogue: ['S7'], papers: [47, 54] },
       'lace-backing': { catalogue: ['M1'], papers: [58, 59] },
+      'rings-raised': { papers: [31, 36], notes: ["Luis's construction; not from a paper"] },
+      corrugation: { catalogue: ['N2'] },
     };
     assert.deepEqual(card.sources, sources[id] ?? {});
     assert.ok(Object.hasOwn(FAMILIES, family));
@@ -149,13 +153,16 @@ test('validation rejects malformed metadata and skips preset tiles', () => {
 
 test('variants default to each card id; unknown ids have no variants', () => {
   for (const card of DESIGNS.filter(d => d.status === 'ready' && !d.hidden)) {
-    const expected = card.settingsKey
+    const expected = card.variantGroup
+      ? Object.keys(SHELVES).flatMap(shelf => DESIGNS.filter(other => other.status === 'ready' && !other.hidden && other.shelf === shelf && other.variantGroup === card.variantGroup))
+      : card.settingsKey
       ? Object.keys(SHELVES).flatMap(shelf => DESIGNS.filter(other => other.status === 'ready' && !other.hidden && other.shelf === shelf && other.settingsKey === card.settingsKey))
       : [card];
     assert.deepEqual(variantsOf(card.id), expected);
   }
   for (const card of DESIGNS.filter(d => d.status === 'ready' && d.hidden)) assert.deepEqual(variantsOf(card.id), []);
   assert.deepEqual(variantsOf('missing'), []);
+  assert.deepEqual(variantsOf('rings-flat').map(card=>card.id),['rings-flat','chainmail','rings-raised']);
   const cards = ['raised', 'flat', 'layered'].map(shelf => ({ ...DESIGNS[0], id: `test-${shelf}`, shelf, settingsKey: 'test' }));
   DESIGNS.push(...cards);
   try { assert.deepEqual(variantsOf('test-flat').map(d => d.shelf), ['flat', 'layered', 'raised']); }
@@ -215,7 +222,7 @@ test('reserved permanent IDs are documented, without creating future cards', () 
     "   | L-03 | `square-net` | Square-wave net | new ID, Squiggle generator |",
     "   | L-04 | `honeycomb-layered` | Honeycomb \u00b7 layered | new ID, Squiggle generator; settingsKey `honeycomb` |",
     "   | L-05 | `figure8-net` | Figure-8 net | new ID, Squiggle generator |",
-    "   | L-06 | `chainmail` | Rings \u00b7 layered | existing ID; settingsKey `rings` |",
+    "   | L-06 | `chainmail` | Rings \u00b7 layered | existing ID; comparison group `rings` (card-specific geometry settings) |",
     "   | L-07 | `bubbles` | Bubbles | existing |",
     "   | L-08 | `crosshatch` | Grid & isogrid \u00b7 layered | existing ID; settingsKey `grid` |",
     "   | L-09 | `rotated-stack` | Rotated stack | new |",

@@ -26,7 +26,7 @@
  * | L-03 | `square-net` | Square-wave net | new ID, Squiggle generator |
  * | L-04 | `honeycomb-layered` | Honeycomb · layered | new ID, Squiggle generator; settingsKey `honeycomb` |
  * | L-05 | `figure8-net` | Figure-8 net | new ID, Squiggle generator |
- * | L-06 | `chainmail` | Rings · layered | existing ID; settingsKey `rings` |
+ * | L-06 | `chainmail` | Rings · layered | existing ID; comparison group `rings` (card-specific geometry settings) |
  * | L-07 | `bubbles` | Bubbles | existing |
  * | L-08 | `crosshatch` | Grid & isogrid · layered | existing ID; settingsKey `grid` |
  * | L-09 | `rotated-stack` | Rotated stack | new |
@@ -192,6 +192,7 @@ export function validateCard(mod) {
   if (!['tested', 'untested', 'needs-repair'].includes(mod.state)) problems.push('Unknown card state.');
   if (!object(mod.sources)) problems.push('Sources must be an object.');
   if (mod.settingsKey !== undefined && typeof mod.settingsKey !== 'string') problems.push('Settings key must be a string.');
+  if (mod.variantGroup !== undefined && (typeof mod.variantGroup !== 'string' || !mod.variantGroup.trim())) problems.push('Variant group must be a non-empty string.');
   if (mod.legacy !== undefined && (!Array.isArray(mod.legacy) || mod.legacy.some(entry => !object(entry) || typeof entry.id !== 'string' || (entry.patch !== undefined && !object(entry.patch))))) problems.push('Legacy must be an array of { id, patch? } records.');
   return problems;
 }
@@ -205,10 +206,11 @@ export function libraryGroups(designs = DESIGNS) {
   ]));
 }
 
-/** Ready variants sharing the explicit settings key, or their own permanent id. */
+/** Ready variants sharing an explicit comparison group or settings key, or their own permanent id. */
 export function variantsOf(id, designs = DESIGNS) {
   const card = designs.find(card => card.id === id && card.status === 'ready' && !card.hidden);
   if (!card) return [];
+  if (card.variantGroup) return Object.keys(SHELVES).flatMap(shelf => designs.filter(other => other.status === 'ready' && !other.hidden && other.shelf === shelf && other.variantGroup === card.variantGroup));
   if (!card.settingsKey) return [card];
   return Object.keys(SHELVES).flatMap(shelf => designs.filter(other => other.status === 'ready' && !other.hidden && other.shelf === shelf && other.settingsKey === card.settingsKey));
 }

@@ -27,9 +27,9 @@ import { DESIGNS, designById, isReady, baseDesignSettings } from './designs.js';
 import { THUMBS, shapeThumb, presetThumb } from './thumbs.js';
 import { defaultSection, sideProfile } from '../engine/side-profile.js';
 import { drawSideView } from './sideview.js';
-import { SHELVES, libraryGroups, initialDesignSettings, selectVariant } from './library.js';
-import { swatchCode } from './swatch.js';
-import { exportFileName, relevantKeys } from './file-name.js';
+import { SHELVES, libraryGroups, initialDesignSettings, selectVariant, variantsOf } from './library.js';
+import { swatchCode, fingerprint } from './swatch.js';
+import { exportFileName, relevantKeys, variantsFileName } from './file-name.js';
 import { FIELDS, FIELD_IDS, createField } from '../engine/fields.js';
 import { SHAPES, SHAPE_IDS } from '../engine/shapes.js';
 import { readSvgLines } from './svg-lines.js';
@@ -41,6 +41,7 @@ import { summariseDrawing, describeDrawing, interpretDrawing } from '../engine/d
 import { addExtraLayers, nativeLayerInfo } from '../engine/stack.js';
 import { colourResult, strandLayer } from '../engine/colour-plan.js';
 import { generateDesignBase, compactDesignExport } from '../engine/design-export.js';
+import { combineVariantResults, planVariantLayout } from '../engine/variant-export.js';
 import { rotateDesignInput } from '../engine/rotate-design.js';
 import { applyBrim } from '../engine/brim.js';
 import { boundaryFor } from '../engine/layers.js';
@@ -425,6 +426,7 @@ const host = {
   previewResult: (id) => state.design === id && state.resultKey === snapshotKey() ? state.result : null,
   layerCount: (id) => id === state.design && state.result?.strands?.length ? Math.max(...state.result.strands.map(strandLayer)) + 1 : 2,
   switchDesign: (id) => setDesign(id, { fromVariant: true }),
+  printVariants: (id) => { void exportAllVariants(id); },
   change: () => afterDesignChange(),
   nudge: () => afterControl(),
   sizeChanged: () => { renderControls(); schedule(); },
@@ -1975,6 +1977,73 @@ async function exportGcode() {
   }
 }
 
+let variantExportReady=null;
+function drawVariantPreview(result,variants){
+  const host=$('#variants-preview'),svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox',`-2 -2 ${result.width+4} ${result.height+4}`);svg.setAttribute('role','img');svg.setAttribute('aria-label',`Top-down overview of ${variants.length} variants on one bed`);
+  const colors=['#b44737','#276e69','#a46b25','#566c9a'];
+  for(let i=0;i<variants.length;i++){
+    const x=result.pieces[i].x,y=result.pieces[i].y,w=result.pieces[i].width,h=result.pieces[i].height;
+    const rect=document.createElementNS(svg.namespaceURI,'rect');rect.setAttribute('x',x);rect.setAttribute('y',result.height-y-h);rect.setAttribute('width',w);rect.setAttribute('height',h);rect.setAttribute('fill','none');rect.setAttribute('stroke','currentColor');rect.setAttribute('stroke-dasharray','1.5 1');rect.setAttribute('stroke-width','.25');svg.append(rect);
+    const label=document.createElementNS(svg.namespaceURI,'text');label.setAttribute('x',x+w/2);label.setAttribute('y',result.height-y-h-1);label.setAttribute('text-anchor','middle');label.setAttribute('font-size','2.5');label.textContent=variants[i].name;svg.append(label);
+    const path=document.createElementNS(svg.namespaceURI,'path');let d='';
+    for(const strand of result.strands.filter(s=>s.id.startsWith(`variant-${i+1}-`))){if(strand.pts.length<2)continue;d+=`M ${strand.pts[0].x} ${result.height-strand.pts[0].y}`;for(let k=1;k<strand.pts.length;k++)d+=` L ${strand.pts[k].x} ${result.height-strand.pts[k].y}`;}
+    path.setAttribute('d',d);path.setAttribute('fill','none');path.setAttribute('stroke',colors[i%colors.length]);path.setAttribute('stroke-width','.45');path.setAttribute('stroke-linecap','round');path.setAttribute('stroke-linejoin','round');svg.append(path);
+  }
+  host.replaceChildren(svg);
+}
+
+async function exportAllVariants(id){
+  if(exporting)return;
+  const variants=variantsOf(id),dialog=$('#variants-dialog');
+  if(variants.length<2){toast('This design has no printable variants.');return;}
+  const controller=new AbortController();exportController=controller;exporting=true;variantExportReady=null;
+  const button=$('#variants-download'),status=$('#variants-status'),note=$('#variants-note'),list=$('#variants-list');
+  button.disabled=true;list.replaceChildren();$('#variants-preview').replaceChildren();
+  status.textContent='Checking the bed and building each variant…';note.textContent='Each piece is independently generated with the selected printer, filament and print setup.';
+  if(!dialog.open)dialog.showModal();
+  exportLabel='Building comparison set…';renderBusy();
+  try{
+    const [requestedW,requestedH]=BINDINGS[id].size.get(),machine=state.machines.get(state.machine),material=printMaterial();
+    const layout=planVariantLayout({width:requestedW,height:requestedH,count:variants.length,machine,material,overrides:{layer_height:state.print.layerHeight}});
+    const settingsByCard=Object.fromEntries(variants.map(card=>[card.id,structuredClone(settingsOf(card.id))]));
+    const results=[];
+    for(let index=0;index<variants.length;index++){
+      const card=variants[index];status.textContent=`Building ${index+1} of ${variants.length}: ${card.name}…`;
+      exportLabel=`Building ${card.name} (${index+1}/${variants.length})…`;renderBusy();
+      const input=structuredClone(exportOptions(layout.width,layout.height));
+      input.design=card.id;input.settings=structuredClone(settingsByCard[card.id]);input.studySettings=structuredClone(settingsByCard[card.id]);input.outline=placedOutline(layout.width,layout.height);
+      const result=await buildSwatch(input,{signal:controller.signal,preview:true});
+      if(controller.signal.aborted)throw new DOMException('Comparison build cancelled.','AbortError');
+      result.designId=card.id;results.push(result);
+    }
+    const combined=combineVariantResults(results,{machine,material,positions:layout.positions,width:layout.totalWidth,height:layout.totalHeight,settings:settingsByCard,print:{...state.print},gap:layout.gap});
+    const family=variants[0].variantGroup??variants[0].settingsKey??variants[0].family,hash=combined.settingsHash,name=variantsFileName(family,hash),code=`${family}-variants-${hash}`;
+    combined.gcode=combined.gcode.replace('; Textile G-code generator v1\n',match=>`${match}; swatch ${code}\n`);
+    combined.swatchCode=code;combined.filename=name;combined.scaled=layout.scaled;combined.pieces.forEach((piece,index)=>{piece.position=[layout.positions[index].x,layout.positions[index].y];piece.settings=settingsByCard[piece.card];});
+    variantExportReady=combined;
+    drawVariantPreview(combined,variants);
+    const mm=n=>Math.round(n*10)/10; // the layout is exact (76.49999999999999); the list is for reading
+    list.replaceChildren(...combined.pieces.map(piece=>el('li',{text:`${piece.index}. ${variants[piece.index-1].name} — ${mm(piece.width)} × ${mm(piece.height)} mm at (${mm(piece.x)}, ${mm(piece.y)}) mm · ${piece.settingsHash}`})));
+    status.textContent=`${variants.length} variants fit on one bed${layout.scaled?` at ${layout.width.toFixed(1)} × ${layout.height.toFixed(1)} mm each (scaled down from ${requestedW} × ${requestedH} mm)`: ` at ${mm(layout.width)} × ${mm(layout.height)} mm each`}.`;
+    note.textContent=`One G-code file · ${layout.gap} mm gaps · swatch ${code}. ${layout.scaled?'The swatch was reduced proportionally to fit the selected printer.':''}`;
+    button.disabled=false;
+  }catch(error){
+    if(error.name==='AbortError'){status.textContent='Comparison export cancelled.';}
+    else{status.textContent=`Could not build variants: ${error.message}`;recordBuildFailure(error,{...exportOptions(),design:id,operation:'variants-export'});}
+    variantExportReady=null;
+  }finally{exporting=false;exportController=null;renderBusy();render();}
+}
+
+function downloadVariants(){
+  const result=variantExportReady;if(!result)return;
+  const record={format:1,swatchCode:result.swatchCode,filename:result.filename,createdAt:new Date().toISOString(),machine:result.cfg.machine.id,material:result.cfg.material.id,dimensions:{width:result.width,height:result.height},pieces:result.pieces.map(({index,card,settingsHash,position,width,height,settings})=>({index,card,settingsHash,position,width,height,settings}))};
+  download(result.filename,new Blob([result.gcode],{type:'text/plain'}));
+  download(result.filename.replace(/\.gcode$/i,'.swatch.json'),new Blob([JSON.stringify(record,null,2)],{type:'application/json'}));
+  toast(`Saved ${result.pieces.length} variants${result.scaled?' at the reduced swatch size':''}: ${result.filename}`);
+  $('#variants-dialog').close('export');variantExportReady=null;
+}
+
 async function shareLink() {
   const hash = stateToHash({ ...snapshot(), vector: null });
   const url = `${location.origin}${location.pathname}${hash}`;
@@ -2119,6 +2188,9 @@ function bindStatic() {
   $('#btn-undo').addEventListener('click', undo);
   $('#btn-redo').addEventListener('click', redo);
   $('#btn-export').addEventListener('click', () => { void exportGcode(); });
+  $('#variants-cancel').addEventListener('click', () => { exportController?.abort(); variantExportReady=null; $('#variants-dialog').close('cancel'); });
+  $('#variants-download').addEventListener('click', downloadVariants);
+  $('#variants-dialog').addEventListener('close', () => { if(exporting)exportController?.abort(); variantExportReady=null; });
   $('#btn-panel').addEventListener('click', closeMenus);
   $('#btn-share').addEventListener('click', shareLink);
   $('#btn-details').addEventListener('click', () => { state.details = !state.details; renderFigures(); });

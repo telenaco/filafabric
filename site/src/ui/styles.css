@@ -604,6 +604,17 @@ dialog p { margin: 6px 0; }
 .steps { margin: 8px 0; padding-left: 22px; }
 .steps li { margin: 6px 0; }
 .dialog-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+.variants-dialog { max-width: min(920px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow: auto; }
+.variants-preview { min-height: 180px; margin: 14px 0; overflow: auto; background: var(--surface, var(--panel)); border: 1px solid var(--line); }
+.variants-preview svg { display: block; width: 100%; min-width: 520px; max-height: min(52vh, 520px); }
+.variants-list { margin: 10px 0; padding-left: 22px; }
+.variants-list li { margin: 4px 0; }
+.variants-dialog .dialog-actions { gap: 8px; flex-wrap: wrap; }
+@media (max-width: 560px) {
+  .variants-dialog { padding: 16px; }
+  .variants-preview { min-height: 140px; }
+  .variants-dialog .dialog-actions > button { flex: 1 1 100%; min-height: 44px; }
+}
 
 /* the feedback form: pick what it is about, write it, send */
 #feedback-dialog { max-width: 520px; max-height: calc(100dvh - 32px); overflow: auto; }

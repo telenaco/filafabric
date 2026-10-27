@@ -691,6 +691,45 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "rings-raised",
+    "score": 34.66099090076771,
+    "components": 1,
+    "joints": 222,
+    "reversedCrossings": 0,
+    "separatedCrossings": 180,
+    "longestUnsupported": 7.98317376608812,
+    "maxSlopeDeg": 7.59464336859147,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 222,
+    "moves": 32020,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 2854.52978363519,
+      "afterMm": 2854.52978363519
+    }
+  },
+  {
+    "id": "corrugation",
+    "score": 35.414288643431185,
+    "components": 1,
+    "joints": 2,
+    "reversedCrossings": 0,
+    "separatedCrossings": 1122,
+    "longestUnsupported": 8.012121212121215,
+    "maxSlopeDeg": 19.29004621918875,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 2,
+    "moves": 7138,
+    "clearanceFlags": 0,
+    "routing": null
+  },
+  {
     "id": "turing",
     "score": 35.531481944663625,
     "components": 1,

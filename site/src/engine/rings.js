@@ -65,7 +65,9 @@ export function ringsLayers(boundary, {
       }
     }
   }
-  rings.sort((a, b) => a.rowOrder - b.rowOrder);
+  if(order==='checker')rings.sort((a,b)=>((Math.round(a.centre.y/rowStep)+Math.round(a.centre.x/pitch))%2)-((Math.round(b.centre.y/rowStep)+Math.round(b.centre.x/pitch))%2)||a.rowOrder-b.rowOrder);
+  else if(order==='spiral')rings.sort((a,b)=>{const da=Math.hypot(a.centre.x-(box.minX+box.maxX)/2,a.centre.y-(box.minY+box.maxY)/2),db=Math.hypot(b.centre.x-(box.minX+box.maxX)/2,b.centre.y-(box.minY+box.maxY)/2);return da-db||Math.atan2(a.centre.y-(box.minY+box.maxY)/2,a.centre.x-(box.minX+box.maxX)/2)-Math.atan2(b.centre.y-(box.minY+box.maxY)/2,b.centre.x-(box.minX+box.maxX)/2);});
+  else rings.sort((a, b) => a.rowOrder - b.rowOrder);
   const layers = [rings];
   layers.families = ['rings'];
   layers.centres = centres;

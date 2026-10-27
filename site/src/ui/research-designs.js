@@ -13,6 +13,8 @@ import { meanderTiesLayers, CURVES, CURVE_IDS } from '../engine/meander.js';
 import { kirigamiLayers } from '../engine/kirigami.js';
 import { starMetricLayers } from '../engine/star-metric.js';
 import { isohedralLayers, isohedralParameterCount, isohedralMaterialClass } from '../engine/isohedral.js';
+import { climbOverlaps } from '../engine/climb.js';
+import { buildLayeredVerdict } from './verdict.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const COLOUR = { kind: 'switch', key: 'colorChange', label: 'Two colours', help: 'Pause after the first layer so you can load a second filament (M600).' };
@@ -26,9 +28,9 @@ const ISOHEDRAL = withColour(defineControls({
 }));
 
 const RINGS = withColour(defineControls({
-  ranges: { ...SIZE, ringSize: { min: 3, max: 20, step: .5 }, overlap: { min: .45, max: 3, step: .05 }, patternScale: { min: .5, max: 2, step: .25 } },
-  defaults: { width: 100, height: 100, ringSize: 8, overlap: .9, lattice: 'hex', pattern: 'none', patternScale: 1, patternEffect: 'size', colorChange: false },
-  enums: { lattice: RING_LATTICE_IDS, pattern: withPicture(['none', ...FIELD_IDS]) },
+  ranges: { ...SIZE, ringSize: { min: 3, max: 20, step: .5 }, overlap: { min: .45, max: 3, step: .05 }, patternScale: { min: .5, max: 2, step: .25 },levelHeight:{min:.15,max:.4,step:.05},maxLevels:{min:2,max:6,step:1},rampLength:{min:.8,max:4,step:.1} },
+  defaults: { width: 100, height: 100, ringSize: 8, overlap: .9, lattice: 'hex', pattern: 'none', patternScale: 1, patternEffect: 'size', colorChange: false,buildOrder:'rows',levelHeight:.2,maxLevels:4,rampLength:1.5 },
+  enums: { lattice: RING_LATTICE_IDS, pattern: withPicture(['none', ...FIELD_IDS]),buildOrder:['rows','checker','spiral'] },
   bools: ['colorChange'],
   presets: [
     { id: 'staggered', name: 'Staggered', blurb: 'Close-packed hexagonal lattice', patch: { lattice: 'hex', ringSize: 8, overlap: .9 } },
@@ -144,6 +146,7 @@ const STAR_METRIC=withColour({...STAR_METRIC_BASE,sanitize(raw){
 export const RESEARCH_DESIGNS = [layered({
   id: 'rings-flat', name: 'Rings · flat', blurb: 'Overlapping loops in one pass', about: 'One pass of overlapping rings on a staggered or square lattice. The loops overlap rather than meeting at a point, making a flexible sheet whose local contact can be graded by a picture.', file: 'rings-flat', c: RINGS,
   shelf: 'flat', family: 'rings', support: 'self', state: 'untested', settingsKey: 'rings',
+  variantGroup:'rings',
   joins: 'Rings overlap and fuse in one pass.', sources: { catalogue: ['M4'], papers: [53, 66] },
   patternEffects: ['size'], patterns: withPicture(['none', ...FIELD_IDS]),
   controls: [
@@ -166,6 +169,17 @@ export const RESEARCH_DESIGNS = [layered({
     return { layers: [...built], families: built.families, extra: built.extra };
   },
   summary: result => `rings in one pass, ${result.report.crossings} joins`,
+}), layered({
+  id:'rings-raised',name:'Rings · raised',blurb:'Each ring climbs over earlier rings',about:"Each ring climbs over rings printed before it, building up in levels. This is Luis's construction; not from a paper. Height is capped so the next ring can climb without exceeding the selected number of levels.",file:'rings-raised',c:RINGS,
+  shelf:'raised',family:'rings',support:'self',state:'untested',settingsKey:'rings',joins:'Each ring climbs over the rings printed before it, building up in levels.',sources:{papers:[31,36],notes:["Luis's construction; not from a paper"]},
+  variantGroup:'rings',
+   controls:[{kind:'presets',title:'Start from'},{kind:'size',title:'Size and shape'},{kind:'choice',key:'lattice',title:'Structure',hint:'Choose the arrangement of ring centres.',options:[{id:'hex',label:'Staggered'},{id:'square',label:'Square'}]},{kind:'choice',key:'buildOrder',title:'Build order',options:[{id:'rows',label:'Rows',hint:'A steady row-by-row staircase.'},{id:'checker',label:'Checker',hint:'Alternate rings between two levels.'},{id:'spiral',label:'Centre out',hint:'Build from the centre toward the edge.'}]},{kind:'sliders',title:'Look and feel',items:[{key:'ringSize',label:'Ring size',lo:'Small',hi:'Large',unit:'mm',edit:true},{key:'overlap',label:'Overlap',lo:'Touching',hi:'Deep',unit:'mm',edit:true},{key:'levelHeight',label:'Level height',help:'Rise added at each new overlap.',lo:'Low',hi:'High',unit:'mm',edit:true},{key:'maxLevels',label:'Most levels',help:'Maximum permitted height above the bed.',lo:'Few',hi:'Many',unit:'',edit:true},{key:'rampLength',label:'Ramp length',help:'Distance used to climb between levels.',lo:'Short',hi:'Long',unit:'mm',edit:true}]},COLOUR],
+  defaults:()=>({...RINGS.defaults,buildOrder:'rows',levelHeight:.2,maxLevels:4,rampLength:1.5}),
+  sanitize(raw){const base=RINGS.sanitize(raw);return {...base,buildOrder:['rows','checker','spiral'].includes(raw?.buildOrder)?raw.buildOrder:'rows',levelHeight:Math.max(.15,Math.min(.4,Number(raw?.levelHeight)||.2)),maxLevels:Math.max(2,Math.min(6,Math.round(Number(raw?.maxLevels)||4))),rampLength:Math.max(.8,Math.min(4,Number(raw?.rampLength)||1.5))};},
+  ranges:{...RINGS.ranges,levelHeight:{min:.15,max:.4,step:.05},maxLevels:{min:2,max:6,step:1},rampLength:{min:.8,max:4,step:.1}},
+  build:(s,boundary,ctx)=>{const built=ringsLayers(boundary,{lattice:s.lattice,ringSize:s.ringSize,overlap:s.overlap,sizeField:patternField(s.pattern,{scale:s.patternScale,picture:ctx?.picture}),bead:ctx?.bead??.45,order:s.buildOrder}),extra={...built.extra,clearanceOrder:true};extra.transform=(strands,cfg)=>{const climbed=climbOverlaps(strands,{bead:cfg.t.extrusion_width,layerHeight:cfg.t.layer_height,levelHeight:s.levelHeight,maxLevels:s.maxLevels,rampLength:s.rampLength});extra.clipped=climbed.clipped;return climbed.strands;};return {layers:[...built],families:built.families,extra};},
+  verdict:(result,s)=>{const v=buildLayeredVerdict(result);if(result.clipped>0)v.body+=` Some rings could not climb higher and fuse into the layer below (${result.clipped}).`;return v;},
+  summary:result=>`rings build up to ${result.construction.levels?.max??1} levels`,
 }), layered({
   id: 'rotating-squares', name: 'Rotating squares', blurb: 'Alternating squares linked at their corners', about: 'Alternating squares turn in opposite directions and join only at their corners through short necks. Pulling the sheet makes the units counter-rotate; the border band closes the free edge. The reported auxetic result used ABS squares on a pre-stretched knit, so this single-material version remains untested.', file: 'rotating-squares', c: SQUARE_UNITS,
   shelf: 'flat', family: 'lattices', support: 'self', state: 'untested', settingsKey: 'rotating-units',

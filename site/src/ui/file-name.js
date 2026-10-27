@@ -115,6 +115,14 @@ export function ownName(docName) {
   return slug && slug !== 'untitled-swatch' ? shorten(slug, 40) : '';
 }
 
+/** Stable family-level name for a bed containing several design variants. */
+export function variantsFileName(family, hash) {
+  const cleanFamily=String(family??'fabric').toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'')||'fabric';
+  const safeHash=String(hash??'').toLowerCase().replace(/[^a-f0-9]/g,'').slice(0,12);
+  if(!safeHash)throw new TypeError('A settings fingerprint is required for a variants export.');
+  return `${cleanFamily}-variants-${safeHash}.gcode`;
+}
+
 /** Whether every named setting still has the design's default value (a swatch that started from no preset). */
 export function untouched(keys, s, defaults) {
   return keys.every((k) => s[k] === defaults[k] || s[k] && typeof s[k] === 'object' && JSON.stringify(s[k]) === JSON.stringify(defaults[k]));

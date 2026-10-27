@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#171c26">
 <link rel="preload" href="vendor/fonts/instrument-sans/instrument-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="src/ui/styles.css?v=20261023-profile-pickers">
+<link rel="stylesheet" href="src/ui/styles.css?v=20261027-variants-export">
 <script type="importmap">
 { "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
 </script>
@@ -215,6 +215,18 @@
   </aside>
 </div>
 
+<dialog id="variants-dialog" class="variants-dialog" aria-labelledby="variants-title">
+  <h2 id="variants-title">Print all variants</h2>
+  <p id="variants-status" class="muted" role="status" aria-live="polite">Preparing variants…</p>
+  <div id="variants-preview" class="variants-preview" aria-label="Side-by-side variant preview"></div>
+  <ul id="variants-list" class="variants-list"></ul>
+  <p id="variants-note" class="small muted"></p>
+  <div class="dialog-actions">
+    <button type="button" class="btn" id="variants-cancel">Cancel</button>
+    <button type="button" class="btn primary" id="variants-download" disabled>Export one G-code file</button>
+  </div>
+</dialog>
+
 <dialog id="printer-dialog" aria-labelledby="printer-dialog-title">
   <form method="dialog">
     <h2 id="printer-dialog-title">Printer setup</h2>
@@ -346,6 +358,6 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-<script type="module" src="src/boot.js?v=20261023-profile-pickers"></script>
+<script type="module" src="src/boot.js?v=20261027-variants-export"></script>
 </body>
 </html>

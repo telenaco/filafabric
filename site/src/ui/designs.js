@@ -29,7 +29,8 @@ import { generateSquiggle, generateSquiggleTextile, SAMPLERS } from '../engine/s
 import { pictureDarkness } from '../engine/picture.js';
 import { loopsClose } from '../engine/shapes.js';
 import { FIELD_IDS, createField } from '../engine/fields.js';
-import { generateRelief } from '../engine/relief.js';
+import { generateRelief, reliefPlacements } from '../engine/relief.js';
+import { hatch } from '../engine/layers.js';
 import { generateFringe } from '../engine/fringe.js';
 import { generateSpiral } from '../engine/spiral.js';
 import { generateWeave, WEAVE_BINDINGS, WEAVE_BINDING_IDS } from '../engine/weave.js';
@@ -42,7 +43,7 @@ import { SVG_DESIGNS } from './svg-design.js';
 import { PUBLICATION_DESIGNS } from './pub-designs.js';
 import { BASIC_DESIGNS } from './basic-designs.js';
 import {
-  RELIEF_CONTROLS, FRINGE_CONTROLS, BOUCLE_CONTROLS, SPIRAL_CONTROLS, WEAVE_CONTROLS, withColour,
+  RELIEF_CONTROLS, FRINGE_CONTROLS, BOUCLE_CONTROLS, SPIRAL_CONTROLS, WEAVE_CONTROLS, withColour, defineControls,
 } from './structure-controls.js';
 import { colourMode, colourResult } from '../engine/colour-plan.js';
 import { legacySupport, sanitizeSupport } from '../engine/backing.js';
@@ -348,6 +349,22 @@ export const DESIGNS = [
 
 // the Drawing & infill card (svgdesign) comes first after the original structures, then the line-algorithm library and the newer line designs
 DESIGNS.push(...BASIC_DESIGNS, ...SVG_DESIGNS, ...MORE_DESIGNS, ...RESEARCH_DESIGNS, ...LINE_DESIGNS, ...PUBLICATION_DESIGNS);
+
+const CORRUGATION=withColour(defineControls({
+  ranges:{width:{min:10,max:240,step:5},height:{min:10,max:200,step:5},rise:{min:.2,max:1.2,step:.05},wavelength:{min:4,max:30,step:.5},direction:{min:0,max:180,step:1},baseOpenness:{min:.8,max:4,step:.1}},
+  defaults:{width:100,height:100,rise:.6,wavelength:10,direction:0,baseOpenness:3,colorChange:false},
+  describe:s=>({rise:`${s.rise} mm`,wavelength:`${s.wavelength} mm`,direction:`${s.direction}°`,baseOpenness:`${s.baseOpenness} mm`}),
+}));
+DESIGNS.push({
+  ...fromControls(CORRUGATION),id:'corrugation',name:'Corrugation',blurb:'Shallow ridges over a supporting net',file:'corrugation',
+  shelf:'raised',family:'textures',support:'built-in',state:'untested',joins:'Smooth ridges rise over a crossed base net.',sources:{catalogue:['N2']},
+  about:'A fixed sine field makes shallow, even ridges in one direction. A crossed base net supports every crest; rise is capped at 1.2 mm and the slope stays below 0.35. Geometry estimates are not physical qualification.',
+  roles:{base:'Supporting net',anchored:'On the bed',lifting:'Rising and falling',free:'Raised'},
+  controls:[{kind:'size',title:'Size and shape'},{kind:'sliders',title:'Look and feel',items:[{key:'rise',label:'Rise',help:'Maximum ridge height above the base.',lo:'Shallow',hi:'High',unit:'mm',edit:true},{key:'wavelength',label:'Wavelength',help:'Distance between successive ridges.',lo:'Fine',hi:'Broad',unit:'mm',edit:true},{key:'direction',label:'Direction',help:'Angle of the ridges across the swatch.',lo:'0°',hi:'180°',unit:'°',edit:true},{key:'baseOpenness',label:'Base openness',help:'The supporting crossed net stays close enough to support each crest.',lo:'Dense',hi:'Open',unit:'mm',edit:true}]},{kind:'switch',key:'colorChange',label:'Two colours'}],
+  generate:(machine,material,s,{outline=null}={})=>{const angle=s.direction*Math.PI/180,field=(x,y)=>.5+.5*Math.sin(2*Math.PI*(x*Math.cos(angle)+y*Math.sin(angle))/s.wavelength);return generateRelief(machine,material,{width:s.width,height:s.height,relief:s.rise,rowPitch:s.baseOpenness,field,outline,maxSlopeDeg:Math.atan(.35)*180/Math.PI});},
+  overviewLayers:(s,boundary)=>{const angle=s.direction*Math.PI/180,field=(x,y)=>.5+.5*Math.sin(2*Math.PI*(x*Math.cos(angle)+y*Math.sin(angle))/s.wavelength),relief=reliefPlacements({width:s.width,height:s.height,field,relief:s.rise,rowPitch:s.baseOpenness,boundary,maxSlopeDeg:Math.atan(.35)*180/Math.PI});return [hatch(boundary,{spacing:s.baseOpenness}),relief.placements.map(p=>p.points)];},
+  verdict:r=>buildReliefVerdict(r.relief),figure:r=>({value:r.relief.peak.toFixed(1),unit:'mm',label:'Peak height'}),summary:r=>`corrugation with ridges up to ${r.relief.peak.toFixed(1)} millimetres high`,
+});
 
 // These constructions use incompatible setting schemas: the layered card is a Squiggle net (mode,
 // spacing, amplitude, wavelength), while the flat card is an Auxetic cell (rowPitch, period, amplitude).

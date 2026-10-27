@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DESIGNS, designById } from '../../site/src/ui/designs.js';
-import { relevantKeys, settingsFileName, exportFileName, parseFileName, ownName } from '../../site/src/ui/file-name.js';
+import { relevantKeys, settingsFileName, exportFileName, parseFileName, ownName, variantsFileName } from '../../site/src/ui/file-name.js';
 
 const PRINT = { layerHeight: 0.2, extraLayers: 0, brim: 2 };
 const MATERIAL = 'filaflex-95-foamy';
@@ -275,4 +275,10 @@ test('legacy export callers keep their copies token and parser return shape', ()
   assert.equal(back.brim, 0);
   assert.equal(back.material, MATERIAL);
   assert.equal(Object.hasOwn(back, 'extraLayers'), false);
+});
+
+test('variant jobs have a stable family and hash filename, and reject an empty hash',()=>{
+  assert.equal(variantsFileName('Rings','a1b2c3'),'rings-variants-a1b2c3.gcode');
+  assert.equal(variantsFileName('ring mail','ABCDEF1234567890'),'ring-mail-variants-abcdef123456.gcode');
+  assert.throws(()=>variantsFileName('rings',''),/fingerprint is required/);
 });

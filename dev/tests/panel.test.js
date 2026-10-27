@@ -100,7 +100,7 @@ test('every design exports bounded texture sections with the appropriate row pre
     const r = await exportPanel({ machine, material, design: d.id, settings, width: 60, height: 60, repeat: 30 }, { write: async (s) => { text += s; } });
     assert.equal(r.sections, 4, d.id);
     assert.match(text, /BODY END/, d.id);
-    assert.match(text, ['loop-pile', 'relief', 'fringe'].includes(d.id) ? /texture section 1; origin 0,30/ : /texture section 1; origin 0,0/, d.id);
+    assert.match(text, ['loop-pile', 'relief', 'fringe', 'corrugation'].includes(d.id) ? /texture section 1; origin 0,30/ : /texture section 1; origin 0,0/, d.id);
   }
 });
 
