@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "site/vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "a939c125c5c9038d16aeb49ecb12d43caf32a375e7077107f9fca9fa7456dbc8",
+  "archiveSha256": "d53780e11a973db5112793c394b90ec0a14d895cfb6f8de3048be5fc1f4bcf1b",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -251,8 +251,8 @@
     },
     {
       "path": "dev/tests/file-name.test.js",
-      "bytes": 17182,
-      "sha256": "64dd928705f298dbfd08f0cfb4bf23fa11cd89c62f5f5263492499a2a2fc184c"
+      "bytes": 17260,
+      "sha256": "f31d5a198d04832989e6498d1a3af70838acb21a6c5bb6e33965c8c816cfcd13"
     },
     {
       "path": "dev/tests/fix-geometry.test.js",
@@ -355,6 +355,11 @@
       "sha256": "86652d49ae5deacbad4c3f1bdafd19c8b28ecccedcec9d973c8c453a761e1df7"
     },
     {
+      "path": "dev/tests/isohedral.test.js",
+      "bytes": 3248,
+      "sha256": "773b6725dea4efd3e3ede86c48cbaf60d3332a5e9a4e6eccc44cae67bc88d4f7"
+    },
+    {
       "path": "dev/tests/kirigami.test.js",
       "bytes": 1266,
       "sha256": "af9139d51fa2d6151d0870a9558f73f12dc1b90dfc9d9cdbb13c7106789e7fcb"
@@ -376,8 +381,8 @@
     },
     {
       "path": "dev/tests/library.test.js",
-      "bytes": 18904,
-      "sha256": "b1fd8f4f4b7f0ae53865338ff11c3ff26684d45a44198a8a85ee233092e21c17"
+      "bytes": 19113,
+      "sha256": "8a4dc12b4bdc31250c021160ab881974686246f1b50148ce1af53ad21ce6eee9"
     },
     {
       "path": "dev/tests/line-align.test.js",
@@ -738,6 +743,11 @@
       "path": "dev/tests/snapshots/designs/honeycomb-layered.json",
       "bytes": 352,
       "sha256": "44a644bb4a4de3480afdab4d7cc2168c25de951eee55b29f40c23ae0fcf39f12"
+    },
+    {
+      "path": "dev/tests/snapshots/designs/isohedral-tiles.json",
+      "bytes": 1415,
+      "sha256": "20e167b0b87d6aefc09c95e8e74b8f5b1a13847a89a79bb431d6150ed88bfb1d"
     },
     {
       "path": "dev/tests/snapshots/designs/kirigami.json",
@@ -1710,6 +1720,11 @@
       "sha256": "6167d697612699a985e72bef40846108747a0124d9a95c601686a04bd06fc0ae"
     },
     {
+      "path": "site/src/engine/isohedral.js",
+      "bytes": 5887,
+      "sha256": "eb7dfb8795cf6bc228a208aaa291a582984e24c1addb513f57d973c88bc26f96"
+    },
+    {
       "path": "site/src/engine/isolines.js",
       "bytes": 4144,
       "sha256": "d754a652c927683635d14fb966810a7e90e90312202589ca6aba30f696d22126"
@@ -2056,8 +2071,8 @@
     },
     {
       "path": "site/src/ui/file-name.js",
-      "bytes": 11616,
-      "sha256": "4fbbd89b8ef1295a63d0d548dcfb18214e81c23b90438624b33de4e716b24c4e"
+      "bytes": 11876,
+      "sha256": "be40632562d7bf9f19ca5c1ae1f7c9fd09db8d102ed931f82bbce1ac0b3f464f"
     },
     {
       "path": "site/src/ui/fix-geometry.js",
@@ -2151,8 +2166,8 @@
     },
     {
       "path": "site/src/ui/printability-data.js",
-      "bytes": 26872,
-      "sha256": "9b730573ad5b71ecb5ab5856e3e51d93b5081dcb2076957761196682195079fa"
+      "bytes": 27332,
+      "sha256": "3399ff0e09c2698882ef1fd0ee4cde81289d19a076b28090cc4b4c521fe20201"
     },
     {
       "path": "site/src/ui/printability.js",
@@ -2181,8 +2196,8 @@
     },
     {
       "path": "site/src/ui/research-designs.js",
-      "bytes": 35208,
-      "sha256": "66e555b7e1714f467b1ae0c7c5760e1dcf1b52f6002217e61b8386f91748e3b8"
+      "bytes": 37949,
+      "sha256": "aed63164edc9a72fe4745e4face476eb4ba8d0a2de0c5995ce8c3a69d4a675d0"
     },
     {
       "path": "site/src/ui/share.js",
@@ -2293,6 +2308,26 @@
       "path": "site/vendor/fonts/instrument-sans/instrument-sans-latin-wght-normal.woff2",
       "bytes": 30092,
       "sha256": "2ee17598a98d8a59e4df8152d015bec9ab8e4d5672cc0ab42bef806b568e3971"
+    },
+    {
+      "path": "site/vendor/tactile/LICENSE",
+      "bytes": 1515,
+      "sha256": "2a81c92e54c97bab1bd9a067ab4f1dce41c2fa260ab00fd14040a5ecab8a4101"
+    },
+    {
+      "path": "site/vendor/tactile/PROVENANCE.md",
+      "bytes": 510,
+      "sha256": "efc033eac7d69d75696fccc001e08e8c5c6ee8ac5bdee7770215a9aa390ab52a"
+    },
+    {
+      "path": "site/vendor/tactile/package.json",
+      "bytes": 685,
+      "sha256": "e2c0b62a12b37da4c0bc43c53f10a2994e4fa4c3258d64a9e35bc415cb4233c7"
+    },
+    {
+      "path": "site/vendor/tactile/tactile.js",
+      "bytes": 67568,
+      "sha256": "1c60f28be95c09818cd2fe8a100e228d6344a7050e6cec40ea56c3c184d61554"
     },
     {
       "path": "site/vendor/three/LICENSE",

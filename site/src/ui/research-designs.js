@@ -12,9 +12,18 @@ import { laceLayers, laceOnCarrierLayers } from '../engine/lace.js';
 import { meanderTiesLayers, CURVES, CURVE_IDS } from '../engine/meander.js';
 import { kirigamiLayers } from '../engine/kirigami.js';
 import { starMetricLayers } from '../engine/star-metric.js';
+import { isohedralLayers, isohedralParameterCount, isohedralMaterialClass } from '../engine/isohedral.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const COLOUR = { kind: 'switch', key: 'colorChange', label: 'Two colours', help: 'Pause after the first layer so you can load a second filament (M600).' };
+const ISOHEDRAL = withColour(defineControls({
+  ranges:{...SIZE,scale:{min:5,max:30,step:.5},shape1:{min:-1,max:2,step:.05},shape2:{min:-1,max:2,step:.05},shape3:{min:-1,max:2,step:.05},shape4:{min:-1,max:2,step:.05},shape5:{min:-1,max:2,step:.05},shape6:{min:-1,max:2,step:.05}},
+  defaults:{width:100,height:100,family:'IH28',scale:10,shape1:0,shape2:0,shape3:0,shape4:0,shape5:0,shape6:0,colorChange:false},
+  enums:{family:['IH28','IH21','IH1','IH41','IH84','IH2','IH3','IH7','IH10','IH14','IH18','IH20']},
+  bools:['colorChange'],
+  presets:[{id:'square',name:'Square symmetry',blurb:'A fourfold repeating tile',patch:{family:'IH28'}},{id:'hexagonal',name:'Hexagonal symmetry',blurb:'A sixfold repeating tile',patch:{family:'IH21'}},{id:'triangle',name:'Triangular symmetry',blurb:'A threefold repeating tile',patch:{family:'IH1'}}],
+  describe:s=>({family:s.family,scale:`${r1(s.scale)} mm`}),
+}));
 
 const RINGS = withColour(defineControls({
   ranges: { ...SIZE, ringSize: { min: 3, max: 20, step: .5 }, overlap: { min: .45, max: 3, step: .05 }, patternScale: { min: .5, max: 2, step: .25 } },
@@ -337,6 +346,14 @@ export const RESEARCH_DESIGNS = [layered({
   ],
   build:(s,boundary,ctx)=>{const tone=patternField(s.pattern,{scale:s.patternScale,picture:ctx?.picture});const built=starMetricLayers(boundary,{...s,tone});return {layers:[...built],families:built.families,extra:built.extra};},
   summary:result=>`${result.sites} star-metric sites`,
+}), layered({
+  id:'isohedral-tiles',name:'Isohedral tiles',blurb:'A repeating network of tile edges',about:'TactileJS supplies the periodic tile geometry for the selected isohedral family. Edges are straightened for this first printable study; the expected symmetry class is a geometric prediction, not a measured material property.',file:'isohedral-tiles',c:ISOHEDRAL,
+  shelf:'flat',family:'lattices',support:'self',state:'untested',settingsKey:'isohedral-tiles',joins:'Shared prototile edges are deduplicated and joined into a repeating net.',sources:{catalogue:['S7'],papers:[47,54]},
+  controls:[{kind:'presets',title:'Start from'},{kind:'size',title:'Size and shape'},
+    {kind:'choice',key:'family',title:'Tile family',hint:'The initial curated set uses TactileJS families; more than 80 are available in the library.',options:['IH28','IH21','IH1','IH41','IH84','IH2','IH3','IH7','IH10','IH14','IH18','IH20'].map(id=>({id,label:id,hint:`Predicted symmetry class: ${isohedralMaterialClass(id)}; geometric expectation, not a physical result.`}))},
+    {kind:'sliders',title:'Shape and scale',items:[{key:'scale',label:'Tile scale',help:'Approximate repeat scale.',lo:'Small',hi:'Large',unit:'mm',edit:true},...[1,2,3,4,5,6].map(i=>({key:`shape${i}`,label:`Shape ${i}`,help:'Isohedral prototile parameter (−1 to 2).',lo:'−1',hi:'2',unit:'',edit:true}))]},COLOUR],
+  build:(s,boundary)=>{const count=isohedralParameterCount(s.family),params=Array.from({length:count},(_,i)=>s[`shape${i+1}`]??0),built=isohedralLayers(boundary,{family:s.family,params,scale:s.scale});return {layers:[...built],families:built.families,extra:built.extra};},
+  summary:result=>`${result.family} with ${result.uniqueEdges} unique tile edges`,
 }), layered({
   id:'lace-backing',name:'Lace + backing',blurb:'A decorative motif held by an open carrier',about:'Ring, petal or scallop lace is printed face-down on the bed, then held by one open carrier pass or two crossed passes. Unlike connected lace, the motifs need no necks because the carrier supports each island. Only motif-first ordering is implemented.',file:'lace-backing',c:CONNECTED_LACE,
   shelf:'layered',family:'lattices',support:'auto',state:'untested',joins:'The open carrier crosses and holds each motif island.',sources:{catalogue:['M1'],papers:[58,59]},

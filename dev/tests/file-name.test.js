@@ -76,7 +76,7 @@ test('every design gives a short, safe name that reads back to the same design a
     assert.equal(back.material, MATERIAL);
     // every setting that made it into the name reads back with the value it was written with
     for (const [key, value] of Object.entries(back.settings)) {
-      const original = keys.find((k) => k === key || ({ fill: 'designPattern', fillSp: 'designSpacing', fillAng: 'designAngle', area: 'backingArea', b1: 'backing1Pattern', b1Sp: 'backing1Spacing', b1Ang: 'backing1Angle', b2: 'backing2Pattern', b2Sp: 'backing2Spacing', b2Ang: 'backing2Angle', scale: 'patternScale', overlap: 'rowOverlap', twoColours: 'colorChange' })[key] === k);
+      const original = keys.find((k) => k === key || ({ fill: 'designPattern', fillSp: 'designSpacing', fillAng: 'designAngle', area: 'backingArea', b1: 'backing1Pattern', b1Sp: 'backing1Spacing', b1Ang: 'backing1Angle', b2: 'backing2Pattern', b2Sp: 'backing2Spacing', b2Ang: 'backing2Angle', scale: 'patternScale', overlap: 'rowOverlap', twoColours: 'colorChange',shA:'shape1',shB:'shape2',shC:'shape3',shD:'shape4',shE:'shape5',shF:'shape6' })[key] === k);
       assert.ok(original, `${mod.id}: ${key} is one of its settings`);
       const v = s[original];
       assert.equal(value, typeof v === 'number' ? String(Number(v.toFixed(2))) : v === true ? 'on' : String(v), `${mod.id}: ${key}`);

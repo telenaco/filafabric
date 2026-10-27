@@ -19,6 +19,27 @@ export const PRINTABILITY = [
     "routing": null
   },
   {
+    "id": "isohedral-tiles",
+    "score": 3.15,
+    "components": 1,
+    "joints": 78,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 0,
+    "maxSlopeDeg": 0,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 63,
+    "moves": 2185,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 3955.204936520684,
+      "afterMm": 573.4045841253995
+    }
+  },
+  {
     "id": "meander-ties",
     "score": 5.35,
     "components": 1,

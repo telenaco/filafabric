@@ -410,7 +410,7 @@ The Pattern effect is `size`: density follows the picture through the subdivisio
 - Schumacher et al. 2018, [Paper 54](../../reports/FilaFabric_Research_Reference_and_Design_Notes.md#paper-54-schumacher-2018--mechanical-characterization-of-structured-sheet-materials): 93 isohedral families; tiling symmetry sets the material class;
 - FlexScale, [Paper 47](../../reports/FilaFabric_Research_Reference_and_Design_Notes.md#paper-47-montes-maestre-2024--flexscale-flexible-scaled-sheets), which used the *Tactile* JavaScript library (isohedral.ca).
 
-**Gate before code (resolved 27 October 2026):** TactileJS is BSD 3-Clause; Luis approved vendoring the pinned library under `site/vendor/tactile/`. Keep its upstream licence and provenance with the source.
+**Gate before code (resolved 27 October 2026):** TactileJS is BSD 3-Clause; Luis approved vendoring the pinned library under `site/vendor/tactile/`. See [local review](../04_Review/T2_11_Local_Review.md). Keep its upstream licence and provenance with the source.
 
 **What it is:** the outlines of an isohedral tiling, printed as a connected net. Choosing a family and its shape parameters changes the cell outline continuously.
 

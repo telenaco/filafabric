@@ -65,11 +65,12 @@ test('all ready cards have the exact ticket metadata', () => {
     "   | `meander-ties` | flat | curves | self | untested | Designed ties bridge nearby folds of one space-filling curve. |",
     "   | `kirigami` | flat | lattices | self | untested | The remaining solid sheet joins the slit pattern as one filled piece. |",
     "   | `star-metric` | flat | cells | self | untested | Metric cell walls meet at shared vertices and close against the perimeter. |",
+    "   | `isohedral-tiles` | flat | lattices | self | untested | Shared prototile edges are deduplicated and joined into a repeating net. |",
     "   | `lace-backing` | layered | lattices | auto | untested | The open carrier crosses and holds each motif island. |",
   ].join("\n");
   const rows = [...brief.matchAll(/\| `([^`]+)` \| (flat|layered|raised) \| (\w+) \| (self|auto|built-in) \| (untested|needs-repair) \| ([^|]+) \|/g)];
-  assert.equal(rows.length, 55);
-  assert.equal(DESIGNS.filter(d => d.status === 'ready').length, 55);
+  assert.equal(rows.length, 56);
+  assert.equal(DESIGNS.filter(d => d.status === 'ready').length, 56);
   for (const [, id, shelf, family, support, state, joins] of rows) {
     const card = DESIGNS.find(d => d.id === id);
     assert.deepEqual(validateCard(card), [], id);
@@ -93,6 +94,7 @@ test('all ready cards have the exact ticket metadata', () => {
       'meander-ties': { catalogue: ['S3'] },
       kirigami: { catalogue: ['S4'], papers: [48] },
       'star-metric': { catalogue: ['S7'], papers: [46] },
+      'isohedral-tiles': { catalogue: ['S7'], papers: [47, 54] },
       'lace-backing': { catalogue: ['M1'], papers: [58, 59] },
     };
     assert.deepEqual(card.sources, sources[id] ?? {});

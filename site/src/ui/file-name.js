@@ -11,6 +11,7 @@
 /** Short, readable names for the settings whose own names are long; every other setting keeps its own name. */
 export const SHORT = {
   designPattern: 'fill', designSpacing: 'fillSp', designAngle: 'fillAng',
+  shape1:'shA',shape2:'shB',shape3:'shC',shape4:'shD',shape5:'shE',shape6:'shF',
   backing: 'backing', backingArea: 'area',
   backing1Pattern: 'b1', backing1Spacing: 'b1Sp', backing1Angle: 'b1Ang',
   backing2Pattern: 'b2', backing2Spacing: 'b2Sp', backing2Angle: 'b2Ang',
@@ -26,7 +27,9 @@ export function relevantKeys(mod, s) {
   for (const c of mod.controls ?? []) {
     if (typeof c.when === 'function' && !c.when(s)) continue;
     if (c.kind === 'choice' || c.kind === 'shape') keys.push(c.key);
-    else if (c.kind === 'sliders') for (const item of c.items) keys.push(item.key);
+    else if (c.kind === 'sliders') {
+      for (const item of c.items) if (typeof item.filenameWhen !== 'function' || item.filenameWhen(s)) keys.push(item.key);
+    }
     else if (c.kind === 'pattern') {
       keys.push(c.key);
       if (c.scale) keys.push(c.scale.key);
@@ -175,7 +178,7 @@ export function parseFileName(name) {
     }
     const dash = t.indexOf('-');
     const number = NUMBER_TOKEN.exec(t);
-    if (number) settings[number[1]] = number[2];
+    if (number) settings[({shA:'shape1',shB:'shape2',shC:'shape3',shD:'shape4',shE:'shape5',shF:'shape6'})[number[1]] ?? number[1]] = number[2];
     else if (dash > 0) settings[t.slice(0, dash)] = t.slice(dash + 1);
   }
   return { design, preset, size: [Number(dims[1]), Number(dims[2])], panel, settings, layerHeight, layers, ...(solidLayers !== null ? { solidLayers } : {}), ...(extraLayers !== null ? { extraLayers } : {}), ...(perimeters !== null ? { perimeters } : {}), ...(meshPerimeters !== null ? { meshPerimeters } : {}), brim, material, swatchName, ...(settingsDigest ? { settingsDigest } : {}) };
