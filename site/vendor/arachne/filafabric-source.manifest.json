@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "site/vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "8139a89a3bd6edef8c7a9f4a2150fda508fd6a4c8ccc535793672ee23f227def",
+  "archiveSha256": "413dae7f92d539701a19bcf7457cd24fbdefc690914358f69bf40a6041992720",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -598,6 +598,11 @@
       "path": "dev/tests/pub-designs.test.js",
       "bytes": 9252,
       "sha256": "b747e1bc5ffb5c89f1a390de4d17d8f33d8050f14931b23499d59072093d7991"
+    },
+    {
+      "path": "dev/tests/regions.test.js",
+      "bytes": 4792,
+      "sha256": "2d8e47d50e1862c726254de5fcf359400aa95c4be1cfbe4f69ad7cb81a2ef679"
     },
     {
       "path": "dev/tests/relief-fringe.test.js",
@@ -1480,6 +1485,11 @@
       "sha256": "636a2757b3eb76cc797f3391d7848db57b1bab60295e833c44a0696e31a23a5b"
     },
     {
+      "path": "docs/swatches/TEMPLATE.md",
+      "bytes": 1643,
+      "sha256": "aac51573ceb1ded32093117c8ae7fb10c690495b8d1106eff464e582645d3e08"
+    },
+    {
       "path": "docs/ux-round-2-2026-10-14.md",
       "bytes": 6233,
       "sha256": "0e933bbbe5ce8aca19a816b11e6ab76a27feaf7d7c7e535581f651ff0426b6f1"
@@ -1968,6 +1978,11 @@
       "path": "site/src/engine/profiles.js",
       "bytes": 6616,
       "sha256": "321fc538829c51f284b1aa7169f3d22228e076f6b22337863fc6698a3609eb35"
+    },
+    {
+      "path": "site/src/engine/regions.js",
+      "bytes": 5487,
+      "sha256": "72b36db446010166c45d7c811bfa6d02e5b2944c2f9dbe1a8fec520b28e83d69"
     },
     {
       "path": "site/src/engine/relief.js",

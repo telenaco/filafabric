@@ -47,7 +47,7 @@ The single place to see what is ready, who has it and where it stands. The revie
 | T2.8 | F-10 Stochastic net | Phase 1 | L | In review (local) | Codex, reviewed by Claude | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md), no push |
 | T2.9 | F-15 Voronoi cells | Phase 1 | S | In review (local) | Codex, reviewed by Claude | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md), no push |
 | T2.10 | F-11 Star-metric cells | Phase 1 | L | In review (local) | Codex, reviewed by Claude | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md), no push |
-| T2.11 | F-12 Isohedral tiles (licence gate) | Phase 1 + licence check | L | Licence approved 27 Oct 2026 (TactileJS, BSD 3-Clause); implementation not in these commits | | Not committed yet |
+| T2.11 | F-12 Isohedral tiles (licence gate) | Phase 1 + licence check | L | In review (local; BSD-3-Clause TactileJS pinned and approved) | Codex | [T2.11 review](T2_11_Local_Review.md), no push |
 | T2.12 | F-13 Connected lace | Phase 1 | L | In review (local; export bug fixed in review) | Codex, reviewed by Claude | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md), no push |
 | T2.13 | F-14 Meander with ties | Phase 1 | M | In review (local; rebuilt in review) | Codex, reviewed by Claude | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md), no push |
 | T2.14 | F-19 Kirigami sheet | Phase 1 | M | In review (local; generation time halved in review) | Codex, reviewed by Claude | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md), no push |
@@ -57,42 +57,42 @@ The single place to see what is ready, who has it and where it stands. The revie
 | Ticket | Card | Depends on | Size | State | Owner | PR |
 |---|---|---|---|---|---|---|
 | T3.1 | L-25 Lace + backing | T1.8, T2.12 | M | In review (local; built with T2.12) | Codex, reviewed by Claude | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md#t31-built-alongside-t212), no push |
-| T3.2 | L-26 Step, ripple and petal lace | T1.8 | M | Blocked | | |
-| T3.3 | L-27 Paired loops | T2.1 (planes option) | M | Blocked | | |
-| T3.4 | L-28 Scales on a carrier | T1.8 (T2.11 optional) | L | Blocked | | |
-| T3.5 | L-19 Woven draft generator | Phase 1 | M | Blocked | | |
+| T3.2 | L-26 Step, ripple and petal lace | T1.8 | M | In progress (engine/card and focused tests; tie-span acceptance test and full review remain) | Codex | no push |
+| T3.3 | L-27 Paired loops | T2.1 (planes option) | M | In progress (engine/card and connectivity tests; Z-envelope acceptance needs refinement) | Codex | no push |
+| T3.4 | L-28 Scales on a carrier | T1.8 (T2.11 optional) | L | In progress (basic tile/carrier engine and card; exact gap and Z-envelope checks remain) | Codex | no push |
+| T3.5 | L-19 Woven draft generator | Phase 1 | M | In review (local; draft editor, presets, drawdown/cross-section and engine tests; browser review pending) | Codex | no push |
 
 ## Phase 4: Raised engine
 
 | Ticket | Capability | Depends on | Size | State | Owner | PR |
 |---|---|---|---|---|---|---|
-| T4.1 | Print order from nozzle clearance | Phase 0 | M | Blocked | | |
-| T4.2 | Bond control | Phase 0 | M | Blocked | | |
-| T4.3 | Lifted crossings | T4.1 | M | Blocked | | |
-| T4.4 | Bridged crossings | T4.1 (shares T4.3 helper) | S | Blocked | | |
-| T4.5 | Sliding channels | T4.1 | L | Blocked | | |
-| T4.6 | Climbing overlaps | T4.1 | L | Blocked | | |
-| T4.7 | Raised reporting and preview | T4.3–T4.6 | M | Blocked | | |
+| T4.1 | Print order from nozzle clearance | Phase 0 | M | In review (local; focused acceptance tests pass) | Codex | no push |
+| T4.2 | Bond control | Phase 0 | M | In review (local; bundle geometry and mask tests pass) | Codex | no push |
+| T4.3 | Lifted crossings | T4.1 | M | In review (local; focused acceptance tests pass) | Codex | no push |
+| T4.4 | Bridged crossings | T4.1 (shares T4.3 helper) | S | In review (local; focused acceptance tests pass) | Codex | no push |
+| T4.5 | Sliding channels | T4.1 | L | In review (local module; raised card remains gated on exportability/geometry) | Codex | no push |
+| T4.6 | Climbing overlaps | T4.1 | L | In review (local; focused acceptance tests pass) | Codex | no push |
+| T4.7 | Raised reporting and preview | T4.3–T4.6 | M | In review (local; focused diagnostics tests pass) | Codex | no push |
 
 ## Phase 5: Raised cards and comparisons
 
 | Ticket | Card / feature | Depends on | Size | State | Owner | PR |
 |---|---|---|---|---|---|---|
-| T5.0 | Strand transform hook | Phase 1 | S | Blocked | | |
-| T5.1 | R-01 Rings · raised | T2.3, T4.6, T5.0 | M | Blocked | | |
-| T5.2 | R-09 Grid · lifted crossings | T4.3, T5.0 | M | Blocked | | |
-| T5.3 | R-10 Grid · sliding channels | T4.5, T5.0 | M | Blocked | | |
-| T5.4 | R-11 Wave net · bridged | T4.4, T5.0 | S | Blocked | | |
-| T5.5 | R-12 Corrugation | Phase 1 | M | Blocked | | |
+| T5.0 | Strand transform hook | Phase 1 | S | In review (local; no-op and raised-Z regressions pass) | Codex | no push |
+| T5.1 | R-01 Rings · raised | T2.3, T4.6, T5.0 | M | In review (local; settings, level cap, ordering and clearance tests pass) | Codex | no push |
+| T5.2 | R-09 Grid · lifted crossings | T4.3, T5.0 | M | Blocked (paused by Luis: required `all` default fails fabric connectivity/exportability) | | |
+| T5.3 | R-10 Grid · sliding channels | T4.5, T5.0 | M | Blocked (prototype fails connectivity, below-crossing order and slope checks; not in ready catalogue) | | |
+| T5.4 | R-11 Wave net · bridged | T4.4, T5.0 | S | Blocked (prototype leaves disconnected fabric regions; not in ready catalogue) | | |
+| T5.5 | R-12 Corrugation | Phase 1 | M | In review (local; bounded height/slope and supporting-net test pass) | Codex | no push |
 | T5.6 | R-13 Colour exposure | T1.6, T1.7, T8.3 calibration | M | Blocked | | |
-| T5.7 | Print all variants | T0.7 | M | Blocked | | |
+| T5.7 | Print all variants | T0.7 | M | In review (local; bed layout, one-file export, preview dialog and focused acceptance tests; browser review pending) | Codex | no push |
 
 ## Phase 6: Repairs
 
 | Ticket | Card | Depends on | Size | State | Owner | PR |
 |---|---|---|---|---|---|---|
 | T6.1 | Parquet | T0.3 | L | Blocked | | |
-| T6.2 | Truchet tiles | T0.3 | M | Blocked | | |
+| T6.2 | Truchet tiles | T0.3 | M | Blocked (diagnosis complete; arc repair and seed-compatibility choice await review) | Codex | [diagnosis](T6_2_Diagnosis.md), no push |
 | T6.3 | Meander and Turing | T0.3, T1.8 | M | Blocked | | |
 
 ## Phase 7: Drawing tools
@@ -100,9 +100,9 @@ The single place to see what is ready, who has it and where it stands. The revie
 | Ticket | Title | Depends on | Size | State | Owner | PR |
 |---|---|---|---|---|---|---|
 | T7.1 | Line alignment and pass spacing | Phase 0 | M | In review (local) | Codex | [T7.1 handoff](T7_1_Local_Review.md), no push |
-| T7.2 | Keep each path's colour on import | Phase 0 | S | Blocked | | |
-| T7.3 | Region model and default roles | T7.2 | M | Blocked | | |
-| T7.4 | The colour bar | T7.3 | M | Blocked | | |
+| T7.2 | Keep each path's colour on import | Phase 0 | S | In review (local implementation already present; SVG parsing and legacy sanitization tests pass) | Codex | no push |
+| T7.3 | Region model and default roles | T7.2 | M | In review (local pure model, default roles, disjoint nested polygons and disabled-region geometry; focused tests pass) | Codex | no push |
+| T7.4 | The colour bar | T7.3 | M | In progress (pure accessible chip model and tests; UI wiring/browser review remains) | Codex | no push |
 | T7.5 | Apply and Export | T7.4 | M | Blocked | | |
 | T7.6 | Building a piece from regions, with seams | T7.3, T4.1, T1.8 | L | Blocked | | |
 | T7.7 | Regions in links, files and swatch codes | T7.6 | S | Blocked | | |
@@ -111,7 +111,7 @@ The single place to see what is ready, who has it and where it stands. The revie
 
 | Ticket | Title | Owner | State |
 |---|---|---|---|
-| T8.1 | Swatch records and the *Tested* badge | implementer + Luis | Ready (record format can start now) |
+| T8.1 | Swatch records and the *Tested* badge | implementer + Luis | In progress (record template added; existing-print evidence and Luis approval remain user-gated) |
 | T8.2 | Comparison sets | Luis + implementer | Blocked (needs Phase 5) |
 | T8.3 | Calibration for the new capabilities | Luis + implementer | Blocked (needs Phase 4) |
 
