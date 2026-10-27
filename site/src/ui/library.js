@@ -203,6 +203,31 @@ export function validateCard(mod) {
 }
 
 /** Visible ready cards grouped and sorted by shelf, family, test state and name. */
+/**
+ * The order cards are listed in, simplest first: plain regular patterns, then patterns with more to understand, then those built
+ * from graphs, random seeds, pictures or several stages. One list for all three shelves; a card not named here comes after those
+ * that are, in the order it already had. Change the order by moving an id.
+ */
+export const SIMPLEST_FIRST = Object.freeze([
+  // plain, regular patterns
+  'honeycomb-flat', 'auxetic', 'rings-flat', 'coil', 'figure8-rows', 'zigzag', 'crosshatch', 'squiggle', 'square-net', 'rotated-stack',
+  'rings-raised', 'loop-pile',
+  // regular, with a little more to set
+  'rotating-squares', 'rotating-triangles', 'arrowhead-band', 'starlattice', 'harmonograph', 'spiral-cells', 'kirigami', 'honeycomb-layered',
+  'figure8-net', 'moire-net', 'chainmail', 'spiral', 'sunflower', 'rosette', 'web', 'spirograph', 'flowlines',
+  'looped-net', 'relief', 'corrugation', 'fringe', 'wave-bridged', 'grid-lifted',
+  // built from graphs, seeds, pictures or several stages
+  'voronoi-cells', 'star-metric', 'isohedral-tiles', 'connected-lace', 'meander-ties', 'voronoi', 'bubbles', 'conformal', 'parquet', 'truchet',
+  'meander', 'turing', 'weave', 'paired-loops', 'step-lace', 'lace-backing', 'scales', 'boucle', 'stochastic-net',
+  'colour-exposure', 'dipweave', 'pillarweave', 'spacer', 'grid-sliding', 'svgdesign',
+]);
+
+/** @param cards  cards of one shelf @returns {object[]} the same cards, simplest first */
+export function simplestFirst(cards) {
+  const rank = (card) => { const at = SIMPLEST_FIRST.indexOf(card.id); return at < 0 ? SIMPLEST_FIRST.length : at; };
+  return cards.map((card, index) => ({ card, index })).sort((a, b) => rank(a.card) - rank(b.card) || a.index - b.index).map(({ card }) => card);
+}
+
 export function libraryGroups(designs = DESIGNS) {
   const stateOrder = { tested: 0, untested: 1, 'needs-repair': 2 };
   return Object.fromEntries(Object.keys(SHELVES).map(shelf => [shelf,

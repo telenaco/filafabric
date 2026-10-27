@@ -27,7 +27,7 @@ import { searchMachines } from './machine-search.js?v=20261019-printer-setup';
 import { createProfilePicker } from './profile-picker.js';
 import { DESIGNS, designById, isReady, baseDesignSettings } from './designs.js';
 import { THUMBS, shapeThumb, presetThumb } from './thumbs.js';
-import { SHELVES, libraryGroups, initialDesignSettings, selectVariant, variantsOf } from './library.js';
+import { SHELVES, libraryGroups, initialDesignSettings, selectVariant, variantsOf, simplestFirst } from './library.js';
 import { regionsFromDrawing, REGION_LIMIT, sanitizeSeam, regionsFingerprint } from '../engine/regions.js';
 import { RegionControls } from './region-controls.js';
 import { bindSwatchLab, swatchRecord } from './swatch-lab.js';
@@ -652,9 +652,10 @@ function renderRegions(force=false) {
   const multi=requiresApply(),keyNow=snapshotKey(),applied=readyGcode?.key===keyNow||state.resultKey===keyNow;
   const button=$('#btn-apply');
   button.disabled=exporting||!!previewBuild||!!currentPrintSizeProblem()||!isReady(state.design);
-  button.textContent=previewBuild?'Applying…':applied?'Applied':multi?'Apply whole piece':'Apply';
+  button.textContent=previewBuild?'Applying…':applied?'Export G-code':multi?'Apply whole piece':'Apply';
+  button.dataset.mode=applied?'export':'apply';
   button.classList.toggle('has-changes',!applied);
-  button.title=applied?'The current settings are applied.':'Build all enabled regions with these settings.';
+  button.title=applied?'Save the G-code for the current settings.':'Build all enabled regions with these settings.';
   $('#apply-status').hidden=!state.regions?.length;
   if(state.regions?.length&&!previewBuild)$('#apply-status').textContent=applied?'Whole piece is current. Export is ready.':multi?'Settings changed. Apply the whole piece before exporting.':'Updating the whole piece…';
 }
@@ -1675,7 +1676,7 @@ function renderTiles() {
       el('span', { class: 'shelf-title', text: SHELVES[shelf].label }),
       el('span', { class: 'shelf-hint', text: SHELVES[shelf].hint }));
     details.setAttribute('aria-labelledby', titleId);
-    details.append(title, el('div', { class: 'shelf-cards' }, ...groups.flatMap(({ cards }) => cards.map(makeTile))));
+    details.append(title, el('div', { class: 'shelf-cards' }, ...simplestFirst(groups.flatMap(({ cards }) => cards)).map(makeTile)));
     return details;
   };
   const groups = libraryGroups();
@@ -2357,7 +2358,7 @@ function bindStatic() {
   $('#btn-redo').addEventListener('click', redo);
   $('#btn-export').addEventListener('click', () => { void exportGcode(); });
   $('#btn-details').addEventListener('click', () => { state.details = !state.details; renderFigures(); });
-  $('#btn-apply').addEventListener('click', () => { void applyPiece(); });
+  $('#btn-apply').addEventListener('click', () => { if ($('#btn-apply').dataset.mode === 'export') { if (!$('#btn-export').disabled) void exportGcode(); } else void applyPiece(); });
   $('#btn-swatch-record').addEventListener('click',()=>{
     closeMenus();
     const input=exportOptions(),code=currentSwatch();

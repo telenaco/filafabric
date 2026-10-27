@@ -270,3 +270,15 @@ test('reserved permanent IDs are documented, without creating future cards', () 
   assert.equal(new Set(DESIGNS.map(d => d.id)).size, DESIGNS.length);
   assert.ok(!DESIGNS.some(d => d.id === 'isogrid-flat'));
 });
+
+test('cards are listed simplest first, and every visible card has a place in that order', async () => {
+  const { SIMPLEST_FIRST, simplestFirst } = await import('../../site/src/ui/library.js');
+  const visible = DESIGNS.filter((d) => d.status === 'ready' && !d.hidden).map((d) => d.id);
+  assert.deepEqual(visible.filter((id) => !SIMPLEST_FIRST.includes(id)), [], 'a new card needs a place in SIMPLEST_FIRST');
+  assert.deepEqual(SIMPLEST_FIRST.filter((id) => !visible.includes(id)), [], 'SIMPLEST_FIRST names a card that is not there');
+  assert.equal(new Set(SIMPLEST_FIRST).size, SIMPLEST_FIRST.length);
+  const flat = simplestFirst(DESIGNS.filter((d) => d.status === 'ready' && !d.hidden && d.shelf === 'flat')).map((d) => d.id);
+  assert.deepEqual(flat.slice(0, 3), ['honeycomb-flat', 'auxetic', 'rings-flat']);
+  assert.equal(flat.at(-1), 'stochastic-net', 'the random graph is the most involved flat card');
+  assert.deepEqual(simplestFirst([{ id: 'zzz' }, { id: 'auxetic' }, { id: 'yyy' }]).map((c) => c.id), ['auxetic', 'zzz', 'yyy'], 'unlisted cards keep their order, after the listed ones');
+});

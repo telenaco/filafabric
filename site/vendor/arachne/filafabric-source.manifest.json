@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "site/vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "a9cf31f80e0c76f5f1e1f0bbdcb550c8b7e0d866f23f6d0a100de54caf9033bc",
+  "archiveSha256": "889f5ebdeaea11354e06ae82d819214b3f0a2ae8cdf90eb661ec15b6abec8d0d",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -421,8 +421,8 @@
     },
     {
       "path": "dev/tests/library.test.js",
-      "bytes": 21825,
-      "sha256": "3287f77cd111fa1b73c4258cc5d0d30b1b65d2990800ad87857ccced4e98aa16"
+      "bytes": 22933,
+      "sha256": "fffe3944db61bc1164628709841abb23367a8a273d938616d99830d3a8e6c2f0"
     },
     {
       "path": "dev/tests/lift.test.js",
@@ -1621,8 +1621,8 @@
     },
     {
       "path": "site/index.html",
-      "bytes": 32068,
-      "sha256": "9f6b3f3a7970dd558912b2770e95069c4f6f0ad1484c944cd7dbcaa943577543"
+      "bytes": 32075,
+      "sha256": "1d16d6540b744c0fdf23d38f23d7abcfb935fc9c3f1a19a1fab8bec7edaee396"
     },
     {
       "path": "site/profiles/MATERIAL_SOURCES.md",
@@ -2381,8 +2381,8 @@
     },
     {
       "path": "site/src/ui/library.js",
-      "bytes": 13235,
-      "sha256": "e8279523e0b2842cac5b44c7dd289eebdd0d483a4d1ade57f873cde74b7a4a26"
+      "bytes": 15001,
+      "sha256": "ed3f1c80e7dc64962423b4c79c6f1ade7e742c9128a19fd5efef44c8b0acb410"
     },
     {
       "path": "site/src/ui/line-designs.js",
@@ -2396,13 +2396,13 @@
     },
     {
       "path": "site/src/ui/main.js",
-      "bytes": 132854,
-      "sha256": "96563556702e1cedbc5818520f94a4ea5e4f9a529cfaba6a6d931641f7adf195"
+      "bytes": 133054,
+      "sha256": "b5df414c25b67f15d15ee7e8935b34ac201b5d1bef161792903503a4ab0f1d12"
     },
     {
       "path": "site/src/ui/more-designs.js",
-      "bytes": 55439,
-      "sha256": "90cbf5e89ef1fe8673618757f61109c443ed1a37064e4d0122a082d1e8d9a8e3"
+      "bytes": 55441,
+      "sha256": "b10b56ff95a50d71893ccff2a1c5b230d1025608fbb054c60cc39423a29fb581"
     },
     {
       "path": "site/src/ui/numeric.js",

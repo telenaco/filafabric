@@ -237,7 +237,7 @@ export const MORE_DESIGNS = [layered(GRID_DEF)];
 
 
 const AUXETIC = defineControls({
-  ranges: { ...SIZE, rowPitch: { min: 0.8, max: 10, step: 0.1 }, period: { min: 4, max: 16, step: 0.5 }, amplitude: { min: 0.5, max: 4, step: 0.25 } },
+  ranges: { ...SIZE, rowPitch: { min: 0.8, max: 10, step: 0.1 }, period: { min: 1.5, max: 16, step: 0.5 }, amplitude: { min: 0.5, max: 4, step: 0.25 } },
   defaults: { width: 100, height: 100, rowPitch: 6, period: 8, amplitude: 1.75, cell: 'reentrant', colorChange: false },
   enums: { cell: CELL_IDS },
   bools: ['colorChange'],
