@@ -19,6 +19,8 @@ import { lissajousLayers } from '../engine/lissajous.js';
 import { truchetLayers, TILES, TILE_IDS } from '../engine/truchet.js';
 import { voronoiLayers } from '../engine/voronoi.js';
 import { turingLayers } from '../engine/turing.js';
+import { rotatedStackLayers, STACK_TURNS } from '../engine/rotated-stack.js';
+import { moireLayers } from '../engine/moire.js';
 import { FIELD_IDS, createField } from '../engine/fields.js';
 import { BACKING_STYLES, BACKING_LAYER_COUNTS } from '../engine/backing.js';
 import { thicknessAlong, THICKNESS_RANGES } from '../engine/pattern-effects.js';
@@ -128,6 +130,7 @@ export function layered(def) {
         inset: def.usesVector ? 0 : undefined,
         optimizeTravel: !!def.optimizeTravel,
         extra: { layerCount: built.layers.length, ...(built.extra ?? {}) },
+        planes: !!built.extra?.planes,
         ramp: def.ramp ?? 1.6,
       });
       if (built.warnings?.length) result.warnings.push(...built.warnings);
@@ -398,13 +401,14 @@ MORE_DESIGNS.push(layered({
 }));
 
 const CHAINMAIL = defineControls({
-  ranges: { ...SIZE, spacing: { min: 0.8, max: 10, step: 0.1 }, ratio: { min: 1.1, max: 1.8, step: 0.1 } },
-  defaults: { width: 100, height: 100, spacing: 6, ratio: 1.5, colorChange: false },
+  ranges: { ...SIZE, spacing: { min: 0.8, max: 10, step: 0.1 }, ratio: { min: 1.1, max: 1.8, step: 0.1 }, ringSize: { min: 3, max: 20, step: 0.5 }, overlap: { min: .45, max: 3, step: .05 } },
+  defaults: { width: 100, height: 100, spacing: 6, ratio: 1.5, ringSize: 9, overlap: 3, lattice: 'hex', colorChange: false },
+  enums: { lattice: ['hex', 'square'] },
   bools: ['colorChange'],
   presets: [
-    { id: 'mail', name: 'Mail', blurb: 'Rings overlapping like chainmail', patch: { spacing: 6, ratio: 1.5 } },
-    { id: 'fine', name: 'Fine mail', blurb: 'Small rings, close together', patch: { spacing: 4, ratio: 1.5 } },
-    { id: 'loose', name: 'Loose rings', blurb: 'Barely overlapping, soft', patch: { spacing: 7, ratio: 1.2 } },
+    { id: 'mail', name: 'Mail', blurb: 'Rings overlapping like chainmail', patch: { spacing: 6, ratio: 1.5, ringSize: 9, overlap: 3, lattice: 'hex' } },
+    { id: 'fine', name: 'Fine mail', blurb: 'Small rings, close together', patch: { spacing: 4, ratio: 1.5, ringSize: 6, overlap: 2, lattice: 'hex' } },
+    { id: 'loose', name: 'Loose rings', blurb: 'Barely overlapping, soft', patch: { spacing: 7, ratio: 1.2, ringSize: 8.4, overlap: 1.4, lattice: 'hex' } },
   ],
   describe: (s) => ({ spacing: `${r1(s.spacing)} mm apart`, ratio: `${Math.round((s.ratio - 1) * 100)}% overlap` }),
 });
@@ -594,11 +598,11 @@ MORE_DESIGNS.push(layered({
   summary: (result) => `a Truchet pattern of ${result.report.crossings} crossings`,
 }));
 
-const VORONOI = defineControls({
+export const VORONOI = defineControls({
   ranges: { ...SIZE, spacing: { min: 0.8, max: 14, step: 0.1 }, relax: { min: 0, max: 8, step: 1 }, seed: { min: 1, max: 999, step: 1 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
-  defaults: { width: 100, height: 100, spacing: 8, relax: 5, seed: 11, pattern: 'none', patternScale: 1, colorChange: false },
+  defaults: { width: 100, height: 100, spacing: 8, relax: 5, seed: 11, pattern: 'none', patternScale: 1, border: true, colorChange: false },
   enums: { pattern: withPicture(['none', ...FIELD_IDS]) },
-  bools: ['colorChange'],
+  bools: ['colorChange','border'],
   presets: [
     { id: 'lace', name: 'Lace', blurb: 'Even, round cells', patch: { spacing: 8, relax: 5, pattern: 'none' } },
     { id: 'scatter', name: 'Scatter', blurb: 'Random cells, no relaxing', patch: { spacing: 8, relax: 0, pattern: 'none' } },
@@ -610,6 +614,7 @@ const VORONOI = defineControls({
 MORE_DESIGNS.push(layered({
   id: 'voronoi', patternEffects: ['size'],
   shelf: 'layered', family: 'cells', support: 'self', state: 'untested',
+  settingsKey: 'voronoi',
   joins: "Triangle edges print first, then the cells over them.", sources: {},
   optimizeTravel: true,
   name: 'Voronoi lace',
@@ -649,6 +654,96 @@ const TURING = defineControls({
   ],
   describe: (s) => ({ wavelength: `${r1(s.wavelength)} mm between stripes`, seed: `#${s.seed}`, angle: `${s.angle}°`, spacing: `${r1(s.spacing)} mm apart`, backingDepth: `${r1(s.backingDepth)} mm each way`, backingLength: `${r1(s.backingLength)} mm per wave` }),
 });
+
+const ROTATED_STACK = defineControls({
+  ranges: { ...SIZE, layers: { min: 2, max: 8, step: 1 }, strand: { min: .4, max: .9, step: .05 }, gapFactor: { min: .5, max: 2, step: .25 } },
+  defaults: { width: 100, height: 100, layers: 3, turn: 90, strand: .45, gapFactor: 1, colorChange: false },
+  enums: { turn: STACK_TURNS },
+  bools: ['colorChange'],
+  presets: [
+    { id: 'wearable', name: "Lu's wearable mesh", blurb: '90° layers with a close, soft gap', patch: { turn: 90, gapFactor: .5, layers: 3 } },
+    { id: 'open-60', name: 'Open 60°', blurb: 'Three directions with a wider gap', patch: { turn: 60, gapFactor: 1.5, layers: 3 } },
+    { id: 'fine-45', name: 'Fine 45°', blurb: 'Four closely spaced planes', patch: { turn: 45, gapFactor: 1, layers: 4 } },
+  ],
+  describe: s => ({ layers: `${s.layers} layers`, turn: `${s.turn}° per layer`, strand: `${r2(s.strand)} mm thick`, gapFactor: `${r1(s.gapFactor)} × strand width` }),
+});
+
+const turnThumb = turn => `<svg viewBox="0 0 48 28" aria-hidden="true"><g fill="none" stroke="var(--accent)" stroke-width="1.2">${[0, Number(turn)].map(a => `<path d="M4 7H44M4 14H44M4 21H44" transform="rotate(${a} 24 14)"/>`).join('')}</g></svg>`;
+const turnOptions = STACK_TURNS.map(turn => ({ id: turn, label: `${turn}°`, hint: `Each plane turns ${turn}° from the one below.`, thumb: turnThumb(turn) }));
+
+MORE_DESIGNS.push(layered({
+  id: 'rotated-stack', shelf: 'layered', family: 'grids', support: 'self', state: 'untested',
+  joins: 'Straight parallel strands bond where each rotated plane crosses the one below.',
+  sources: { papers: [69] },
+  name: 'Rotated stack', blurb: 'Straight strands, turned plane by plane',
+  about: "Layers of straight strands, each turned from the one below. The gap between strands is the main softness control: in Lu's 1.8 mm NinjaFlex meshes, doubling it from one to two strand widths cut stiffness by about 40%.",
+  file: 'rotated-stack', c: ROTATED_STACK,
+  controls: [
+    { kind: 'presets', title: 'Start from' },
+    { kind: 'size', title: 'Size and shape' },
+    { kind: 'choice', key: 'turn', title: 'Structure', hint: 'Each printed plane turns from the one below.', options: turnOptions },
+    { kind: 'sliders', title: 'Look and feel', items: [
+      { key: 'layers', label: 'Layers', help: 'Each layer is a separate plane of straight strands.', lo: '2', hi: '8', unit: '', edit: true },
+      { key: 'strand', label: 'Strand thickness', help: 'Sets extrusion width. A thicker strand makes a firmer mesh.', lo: 'Thin', hi: 'Thick', unit: 'mm', edit: true },
+      { key: 'gapFactor', label: 'Gap between strands', help: 'The main softness control. Lu et al. measured lower stiffness with wider gaps in 1.8 mm NinjaFlex meshes.', lo: 'Close', hi: 'Open', unit: '× strand', edit: true },
+    ] },
+    COLOUR,
+  ],
+  build: (s, boundary, ctx) => {
+    const built = rotatedStackLayers(boundary, s, { bead: ctx?.bead ?? .45 });
+    return { layers: [...built], families: built.families, extra: built.extra };
+  },
+  summary: result => `${result.layerCount} rotated planes with ${result.report.crossings} crossings`,
+}));
+
+const MOIRE_BASE = defineControls({
+  ranges: { ...SIZE, pitchA: { min: 1.2, max: 6, step: .1 }, pitchDiff: { min: 0, max: 1, step: .02 }, angleDiff: { min: 0, max: 15, step: .5 }, size: { min: 0, max: 2, step: .1 }, patternScale: { min: .5, max: 2, step: .25 } },
+  defaults: { width: 100, height: 100, pitchA: 2, pitchDiff: .1, angleDiff: 3, size: 0, shape: 'wave', wavelength: 6, pattern: 'none', patternScale: 1, colorChange: false },
+  enums: { shape: ['wave', 'zigzag'], pattern: ['none', ...FIELD_IDS, 'image'] },
+  bools: ['colorChange'],
+  presets: [
+    { id: 'fine-bands', name: 'Fine bands', blurb: 'Close pitches, gentle angle', patch: { pitchA: 2, pitchDiff: .1, angleDiff: 3, size: 0 } },
+    { id: 'wide-bands', name: 'Wide bands', blurb: 'A larger difference between pitches', patch: { pitchA: 2, pitchDiff: .25, angleDiff: 2, size: 0 } },
+    { id: 'wavy', name: 'Wavy interference', blurb: 'Soft waves make the bands wander', patch: { pitchA: 2.2, pitchDiff: .12, angleDiff: 4, size: 1, shape: 'wave' } },
+  ],
+  describe: s => ({ pitch: `${r1(s.pitchA)} / ${r1(s.pitchA + s.pitchDiff)} mm`, angle: `${r1(s.angleDiff)}° apart` }),
+});
+const MOIRE = { ...MOIRE_BASE, sanitize: raw => {
+  const out = MOIRE_BASE.sanitize(raw);
+  if (out.pitchDiff === 0 && out.angleDiff === 0) out.angleDiff = .5;
+  return out;
+} };
+
+MORE_DESIGNS.push(layered({
+  id: 'moire-net', shelf: 'layered', family: 'grids', support: 'self', state: 'untested',
+  joins: 'Two close-pitched line families cross to make broad interference bands.',
+  sources: { catalogue: ['M7'], papers: [43, 58, 61] },
+  name: 'Moiré net', blurb: 'Interference bands from two close line pitches',
+  about: 'Two straight or wavy families with slightly different pitch or angle make broad bands. The picture shifts the second family to draw an image in those bands. The cited papers mention moiré-like structures but do not measure this textile; its printability remains untested.',
+  file: 'moire-net', c: MOIRE, patternEffects: ['phase'], patterns: withPicture(['none', ...FIELD_IDS]),
+  controls: [
+    { kind: 'presets', title: 'Start from' },
+    { kind: 'size', title: 'Size and shape' },
+    { kind: 'choice', key: 'shape', title: 'Line shape', hint: 'Both families use the same line shape.', options: [
+      { id: 'wave', label: 'Wave', hint: 'Rounded waves in both families.' },
+      { id: 'zigzag', label: 'Zigzag', hint: 'Angular waves in both families.' },
+    ] },
+    { kind: 'sliders', title: 'Look and feel', items: [
+      { key: 'pitchA', label: 'Gap between strands', help: 'The first family’s pitch; the second starts slightly wider.', lo: 'Close', hi: 'Open', unit: 'mm', edit: true },
+      { key: 'pitchDiff', label: 'Pitch difference', help: 'A small difference makes wider bands. If pitches match, a slight angle difference is required.', lo: 'Same', hi: 'Different', unit: 'mm', edit: true },
+      { key: 'angleDiff', label: 'Angle difference', help: 'The second family turns by this many degrees. Matching pitch and angle would make the families coincide.', lo: 'Parallel', hi: 'Turned', unit: '°', edit: true },
+      { key: 'size', label: 'Wave depth', help: 'How far the strands wander. Zero keeps both families straight.', lo: 'Straight', hi: 'Wavy', unit: 'mm', edit: true },
+    ] },
+    { kind: 'pattern', key: 'pattern', title: 'Moiré image', hint: 'The picture shifts the second family to draw its tones in the bands.', picture: 'positive', pictureHint: 'Dark parts of the picture shift the second family by up to one pitch.', scale: { key: 'patternScale', label: 'Pattern size', help: 'Stretches the picture or field across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false } },
+    COLOUR,
+  ],
+  build: (s, boundary, ctx) => {
+    const phaseField = patternField(s.pattern, { scale: s.patternScale, picture: ctx?.picture });
+    const built = moireLayers(boundary, { pitchA: s.pitchA, pitchB: s.pitchA + s.pitchDiff, angleA: 0, angleB: s.angleDiff, shape: s.size > 0 ? s.shape : null, size: s.size, wavelength: s.wavelength, phaseField });
+    return { layers: [...built], families: built.families, extra: built.extra, warnings: built.warnings };
+  },
+  summary: result => `Two interference families with ${result.report.crossings} crossings`,
+}));
 
 MORE_DESIGNS.push(layered({
   id: 'turing',

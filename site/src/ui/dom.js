@@ -18,6 +18,14 @@ export function el(tag, props = {}, ...children) {
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+/** Like el, for SVG: an SVG element has to be made in the SVG namespace, or the browser never draws it. */
+export function svgEl(tag, props = {}, ...children) {
+  const node = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(props)) if (v !== false && v !== null && v !== undefined) node.setAttribute(k, String(v));
+  for (const c of children) if (c !== null && c !== undefined && c !== false) node.append(c);
+  return node;
+}
+
 /** A small line icon drawn from one SVG path in an 18 x 18 box. */
 export function icon(d, { size = 18, fill = false } = {}) {
   const svg = document.createElementNS(SVG_NS, 'svg');

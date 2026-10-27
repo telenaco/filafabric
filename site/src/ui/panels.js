@@ -23,7 +23,7 @@
 //   toast(message)       say something briefly
 //   vectorSize()         [w, h] of the imported SVG, or null when none is imported
 //   svg()                what the import card shows, see SvgImportCard
-import { el, helpBubble } from './dom.js';
+import { el, svgEl, helpBubble } from './dom.js';
 import { validNumber } from './numeric.js';
 import { FIELDS, createField } from '../engine/fields.js';
 import { PICTURE } from '../engine/picture.js';
@@ -706,6 +706,40 @@ export class ChoiceSection extends OptionSection {
   }
 }
 
+/** A small editable polar petal; pointer and keyboard edits update one metric span at a time. */
+export class PetalSection extends Section {
+  buildBody(){
+    this.svg=svgEl('svg',{viewBox:'0 0 240 180',class:'petal-editor',role:'group','aria-label':this.spec.hint??'Edit petal metric'});
+    this.rays=[];this.handles=[];
+    this.svg.addEventListener('pointerdown',event=>{const target=event.target.closest('[data-handle]');if(target){target.setPointerCapture(event.pointerId);this.dragIndex=Number(target.dataset.handle);this.drag(event);}});
+    this.svg.addEventListener('pointermove',event=>{if(this.dragIndex!==undefined)this.drag(event);});
+    this.svg.addEventListener('pointerup',()=>{this.dragIndex=undefined;this.host.commit?.();});
+    // returned for the section to hold: `this.node` is the section itself, and appending it to itself throws
+    return el('div',{class:'petal-control'},this.hint(),this.svg);
+  }
+  get values(){const value=this.settings[this.spec.key];return Array.isArray(value)?value.slice(0,7):[1,.6,1];}
+  update(){
+    const values=this.values,n=values.length,cx=120,cy=90,maximum=1.5,points=[];
+    for(let i=0;i<n*2;i++){
+      const angle=Math.PI*2*i/(n*2),sector=i%(n*2),idx=Math.floor(sector/2),t=(sector%2)*.5;
+      const radius=values[idx]*(1-t)+(values[(idx+1)%n]??values[idx])*t;
+      points.push(`${cx+radius/maximum*68*Math.cos(angle)},${cy+radius/maximum*68*Math.sin(angle)}`);
+    }
+    this.svg.replaceChildren(svgEl('polygon',{points:points.join(' '),class:'petal-shape'}));
+    this.handles=values.map((value,index)=>{
+      const angle=2*Math.PI*index/n,x=cx+value/maximum*68*Math.cos(angle),y=cy+value/maximum*68*Math.sin(angle);
+      const circle=svgEl('circle',{cx:x,cy:y,r:9,class:'petal-handle',tabindex:'0',role:'slider','aria-label':`Petal span ${index+1}`,'aria-valuemin':'.3','aria-valuemax':'1.5','aria-valuenow':value,'data-handle':index});
+      circle.addEventListener('keydown',event=>{if(!['ArrowUp','ArrowRight','ArrowDown','ArrowLeft'].includes(event.key))return;event.preventDefault();const next=this.values;next[index]=Math.max(.3,Math.min(1.5,Math.round((next[index]+(['ArrowUp','ArrowRight'].includes(event.key)?0.05:-0.05))*20)/20));this.settings[this.spec.key]=next;this.host.change();});
+      this.svg.append(circle);return circle;
+    });
+  }
+  drag(event){
+    const rect=this.svg.getBoundingClientRect(),x=(event.clientX-rect.left)/rect.width*240-120,y=(event.clientY-rect.top)/rect.height*180-90;
+    const index=this.dragIndex,angle=2*Math.PI*index/this.values.length,radial=(x*Math.cos(angle)+y*Math.sin(angle))/68*1.5;
+    const next=this.values;next[index]=Math.max(.3,Math.min(1.5,Math.round(radial*20)/20));this.settings[this.spec.key]=next;this.host.nudge();this.update();
+  }
+}
+
 /** An on/off switch with its explanation beside it. */
 export class SwitchSection extends Section {
   buildBody() {
@@ -880,7 +914,7 @@ export class SupportSection extends Section {
 /** Returns panel-template contract violations for one card's controls list. */
 export function panelOrderErrors(controls = []) {
   const errors = [];
-  const groups = { presets: 0, size: 1, choice: 2, sliders: 3, switch: 3, pattern: 4, colour: 5, support: 6 };
+  const groups = { presets: 0, size: 1, choice: 2, petal: 2, sliders: 3, switch: 3, pattern: 4, colour: 5, support: 6 };
   let last = -1;
   const seen = new Set();
   let slidersSeen = false;
@@ -907,6 +941,7 @@ export const SECTION_TYPES = {
   size: SizeSection,
   shape: ShapeSection,
   choice: ChoiceSection,
+  petal: PetalSection,
   switch: SwitchSection,
   sliders: SlidersSection,
   pattern: PatternSection,

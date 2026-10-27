@@ -1,0 +1,62 @@
+[
+  {
+    "card": "rings-flat",
+    "preset": "default",
+    "settingsHash": "334ec6088fcb",
+    "gcodeSha256": "1b413aebe039b3126c3b4dda567de9d1c1e6aaf412d4be12b5c1db7bcd15d07b",
+    "strands": 22,
+    "moves": 1348,
+    "extrudeMm": 520.6,
+    "zMin": 0.2,
+    "zMax": 0.41887365515812686,
+    "families": [
+      "rings"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "rings-flat",
+    "preset": "staggered",
+    "settingsHash": "334ec6088fcb",
+    "gcodeSha256": "1b413aebe039b3126c3b4dda567de9d1c1e6aaf412d4be12b5c1db7bcd15d07b",
+    "strands": 22,
+    "moves": 1348,
+    "extrudeMm": 520.6,
+    "zMin": 0.2,
+    "zMax": 0.41887365515812686,
+    "families": [
+      "rings"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "rings-flat",
+    "preset": "square",
+    "settingsHash": "da2d714fc013",
+    "gcodeSha256": "b048cc86579c408a17e4a8e2db03a8ad3700e6e0d288a17d0233a5396a17d70b",
+    "strands": 20,
+    "moves": 1114,
+    "extrudeMm": 452,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "rings"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "rings-flat",
+    "preset": "open",
+    "settingsHash": "6061379dcedb",
+    "gcodeSha256": "b4440b4120f2fb999bb5a3e9c1c7356e0ef1043fc72abdf31e22d8285622a01e",
+    "strands": 12,
+    "moves": 724,
+    "extrudeMm": 355.7,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "rings"
+    ],
+    "ties": 0
+  }
+]

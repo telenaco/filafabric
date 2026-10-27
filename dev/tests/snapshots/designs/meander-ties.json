@@ -1,0 +1,66 @@
+[
+  {
+    "card": "meander-ties",
+    "preset": "default",
+    "settingsHash": "6fa334439cb1",
+    "gcodeSha256": "923a16ab980ad428cb54b0f93a8b8633ea5fa945dfea7f0b08b08a73b0b45d16",
+    "strands": 26,
+    "moves": 268,
+    "extrudeMm": 397.3,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "curve",
+      "ties-designed"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "meander-ties",
+    "preset": "hilbert",
+    "settingsHash": "6fa334439cb1",
+    "gcodeSha256": "923a16ab980ad428cb54b0f93a8b8633ea5fa945dfea7f0b08b08a73b0b45d16",
+    "strands": 26,
+    "moves": 268,
+    "extrudeMm": 397.3,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "curve",
+      "ties-designed"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "meander-ties",
+    "preset": "peano",
+    "settingsHash": "abbf3ae15891",
+    "gcodeSha256": "f95baa581d96e0afa4eaf45de2e0466917d2f6cfea785224c573bdc9c7ea25b7",
+    "strands": 26,
+    "moves": 219,
+    "extrudeMm": 403.3,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "curve",
+      "ties-designed"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "meander-ties",
+    "preset": "maze",
+    "settingsHash": "cdb206e00339",
+    "gcodeSha256": "d446aedc576164bdee889e5659a7afd0943348862a01f03f42e5dff8e3d35801",
+    "strands": 34,
+    "moves": 193,
+    "extrudeMm": 455.8,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "curve",
+      "ties-designed"
+    ],
+    "ties": 0
+  }
+]

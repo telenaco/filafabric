@@ -1,0 +1,70 @@
+[
+  {
+    "card": "connected-lace",
+    "preset": "default",
+    "settingsHash": "bcb3bb4a9206",
+    "gcodeSha256": "8cdb0f8dc2ec316e863f7c571916c0fb44fd2772fbc6c504489ebae4c93ab233",
+    "strands": 40,
+    "moves": 779,
+    "extrudeMm": 528.6,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "border",
+      "motifs",
+      "necks"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "connected-lace",
+    "preset": "petal-lace",
+    "settingsHash": "8297c8204c16",
+    "gcodeSha256": "12de0bd981d68a3445af42a0cbda27f49e2f29336b0554cafa83afeb8898dce5",
+    "strands": 32,
+    "moves": 588,
+    "extrudeMm": 490.3,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "border",
+      "motifs",
+      "necks"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "connected-lace",
+    "preset": "ring-lace",
+    "settingsHash": "e0538bcadb41",
+    "gcodeSha256": "534345f34a6fa872ad1bfa02a6f4d62f165da80ba8f41672784248f4ccdcce42",
+    "strands": 31,
+    "moves": 390,
+    "extrudeMm": 357.6,
+    "zMin": 0.2,
+    "zMax": 0.35175771837660175,
+    "families": [
+      "border",
+      "motifs",
+      "necks"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "connected-lace",
+    "preset": "scallop-lace",
+    "settingsHash": "ec2609697a4d",
+    "gcodeSha256": "c17f7e7223156d019d2d74f3abd8c29e950dbee4090f3d4f72cb6160fb21d31e",
+    "strands": 19,
+    "moves": 319,
+    "extrudeMm": 361.1,
+    "zMin": 0.2,
+    "zMax": 0.37171546983392023,
+    "families": [
+      "border",
+      "motifs",
+      "necks"
+    ],
+    "ties": 0
+  }
+]

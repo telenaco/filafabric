@@ -33,6 +33,9 @@ The reviewer goes through this for every pull request. **Implementers: run throu
 - [ ] The card checklist ([Phase 2 scaffolding §4](../03_Tickets/Phase2_New_Flat_and_Layered_Cards.md#shared-scaffolding-for-every-new-card)) is complete for new cards.
 - [ ] Each test name reads as a sentence about behaviour.
 - [ ] `npm test` passes on the branch; the reviewer re-runs it.
+- [ ] **A card passes the export gate at its default and every preset** (`assertConstructionExportable`). `generateDesignSummaries` now fails on it, so `npm test` and `npm run snapshots` both catch a card the Export button would refuse.
+- [ ] **Every strand family a card declares appears in its output.** A family that exists in the registry but is cut away by the shape (a border drawn exactly on the outline, say) makes the export fail.
+- [ ] The card also holds together at the **extremes of each slider** (minimum and maximum), not only at its default; the reviewer tries them.
 
 ## 6. Performance
 - [ ] A 100 × 100 mm default swatch generates in about a second or less; slower generators have a measurement and a reason in the PR.
@@ -43,10 +46,12 @@ The reviewer goes through this for every pull request. **Implementers: run throu
 - [ ] Labels say what the control does to the fabric; help is one plain sentence; British spelling.
 - [ ] Every interactive element is reachable by keyboard and has an accessible name; badges carry text.
 - [ ] Screenshots at desktop and phone width; no overlapping, cut-off or unreadable text; no console errors.
+- [ ] **Open the studio in a browser and click through the card (and any card whose panel code you touched).** `npm test` builds no real DOM, so a panel class can stop the whole studio from starting while every test passes (this happened with the Star-metric petal editor). SVG must be made with `svgEl`, never `el('svg')`.
 - [ ] Every claim from a paper is phrased as the paper's result ("in Lu's NinjaFlex meshes …"), never as a FilaFabric property.
 
 ## 8. Docs and licensing
 - [ ] New modules have a header comment; exported functions have JSDoc.
 - [ ] The plan's card row and the ticket board are still accurate (updated in the same PR if needed).
+- [ ] After any engine change: `node dev/tools/audit-printability.mjs` was re-run (the gallery ranks cards by it; nine entries had gone stale), `npm run snapshots` was re-run with every change explained, and the source archive was rebuilt last (`npm run source:snapshot`, after staging new files).
 - [ ] No third-party code without a licence check and Luis's approval; vendored code under `site/vendor/` with its licence.
 - [ ] No copied text from papers beyond short quotes; no paper PDFs in the repository.

@@ -7,6 +7,8 @@ export const PATTERN_EFFECTS = Object.freeze({
   height: { label: 'Height', hint: 'Higher where the pattern is dark' },
   bonding: { label: 'Bonding', hint: 'Strands touch where dark and keep a gap where light' },
   direction: { label: 'Direction', hint: 'The lines turn one way where dark and the other where light' },
+  phase: { label: 'Moiré image', hint: 'Shifts the second family to draw the picture in the bands' },
+  twist: { label: 'Twist', hint: 'Tighter spirals where dark: softer there' },
 });
 
 export const THICKNESS_RANGES = Object.freeze({

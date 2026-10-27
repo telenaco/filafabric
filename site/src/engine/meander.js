@@ -302,3 +302,124 @@ export function meanderLayers(boundary, { curve = 'hilbert', cell = 6, angle = 4
   const layer1 = clipPolyline(pts, boundary);
   return { layers: [layer1, ...stack()], extra: { order, cells: n } };
 }
+
+/** The point on segment a-b nearest to p. */
+function nearestOnSegment(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y, len2 = dx * dx + dy * dy;
+  const u = len2 > 0 ? Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2)) : 0;
+  return { x: a.x + u * dx, y: a.y + u * dy };
+}
+
+/** True when segments p1-p2 and p3-p4 cross at a point inside both; touching at an end does not count. */
+function segmentsCross(p1, p2, p3, p4) {
+  const side = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+  return side(p3, p4, p1) * side(p3, p4, p2) < 0 && side(p1, p2, p3) * side(p1, p2, p4) < 0;
+}
+
+/**
+ * A backing-free meander held together by designed in-plane ties between nearby parallel folds. Ties start at stations
+ * every `tieInterval` mm along each run (not at every point of its rounded corners, which would pile them on top of one
+ * another), run straight across the gap to the nearest fold beside it, and are dropped when they would cross the curve,
+ * another tie, or sit closer to a tie than half the interval. The ties are native geometry, so the result stays one
+ * layer: a tie meets the curve end-on and nothing is stacked.
+ */
+export function meanderTiesLayers(boundary, { curve = 'hilbert', cell = 6, angle = 45, tieInterval = 6, tieLength = null, seed = 1, bead = 0.45 } = {}) {
+  const interval = Math.max(2, Math.min(20, Number(tieInterval) || 6)), width = Math.max(0.45, Number(bead) || 0.45);
+  const reach = cell * 1.2;
+  const base = meanderLayers(boundary, { curve, cell, angle, seed, backing: 'straight', backingLayers: 'one' }).layers[0];
+  const runs = base.filter((path) => path.length >= 2).map((path, i) => {
+    const run = path.map((p) => ({ ...p }));
+    run.family = 'curve'; run.role = 'native'; run.runId = i;
+    return run;
+  });
+
+  // every piece of every run, with how far along its run it starts, so a tie can skip folds the curve itself already joins
+  const byRun = runs.map(() => []);
+  const lengths = runs.map(() => 0);
+  runs.forEach((run, r) => {
+    let arc = 0;
+    for (let i = 1; i < run.length; i++) {
+      const a = run[i - 1], b = run[i], length = Math.hypot(b.x - a.x, b.y - a.y);
+      if (length > 1e-6) byRun[r].push({ r, a, b, length, arc, ux: (b.x - a.x) / length, uy: (b.y - a.y) / length, stamp: 0 });
+      arc += length;
+    }
+    lengths[r] = arc;
+  });
+
+  // a coarse grid of the pieces, so that finding the folds beside a station does not scan the whole curve
+  const grid = new Map();
+  const slot = (i, j) => i * 65537 + j;
+  for (const s of byRun.flat()) {
+    for (let i = Math.floor(Math.min(s.a.x, s.b.x) / reach); i <= Math.floor(Math.max(s.a.x, s.b.x) / reach); i++) {
+      for (let j = Math.floor(Math.min(s.a.y, s.b.y) / reach); j <= Math.floor(Math.max(s.a.y, s.b.y) / reach); j++) {
+        if (!grid.has(slot(i, j))) grid.set(slot(i, j), []);
+        grid.get(slot(i, j)).push(s);
+      }
+    }
+  }
+  let stamp = 0;
+  const piecesNear = (x0, y0, x1, y1) => {
+    const found = [];
+    stamp++;
+    for (let i = Math.floor(x0 / reach); i <= Math.floor(x1 / reach); i++) {
+      for (let j = Math.floor(y0 / reach); j <= Math.floor(y1 / reach); j++) {
+        for (const s of grid.get(slot(i, j)) ?? []) if (s.stamp !== stamp) { s.stamp = stamp; found.push(s); }
+      }
+    }
+    return found;
+  };
+
+  const ties = [], mids = [], tied = new Set();
+  /** Tries the ties from `p` on piece `s`, nearest fold first, and keeps the first that is clear of everything. */
+  const tryTie = (s, p, minSpacing) => {
+    const candidates = [];
+    for (const other of piecesNear(p.x - reach, p.y - reach, p.x + reach, p.y + reach)) {
+      if (Math.abs(s.ux * other.ux + s.uy * other.uy) < 0.8) continue; // only folds that run alongside
+      if (other.r === s.r && Math.abs(other.arc - s.arc) < 2 * cell) continue; // the curve already joins these
+      const q = nearestOnSegment(p, other.a, other.b), d = Math.hypot(q.x - p.x, q.y - p.y);
+      if (d >= 1.5 * width && d <= reach) candidates.push({ q, d, other });
+    }
+    candidates.sort((x, y) => x.d - y.d);
+    for (const { q, d, other } of candidates) {
+      const ux = (q.x - p.x) / d, uy = (q.y - p.y) / d;
+      if (Math.abs(ux * s.ux + uy * s.uy) > 0.5) continue; // a tie runs across the folds, not along them
+      const mid = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
+      if (mids.some((m) => Math.hypot(m.x - mid.x, m.y - mid.y) < minSpacing)) continue;
+      // a hair in from both ends, so touching the fold it starts and ends on is not a crossing
+      const e1 = { x: p.x + ux * 0.05, y: p.y + uy * 0.05 }, e2 = { x: q.x - ux * 0.05, y: q.y - uy * 0.05 };
+      const crossesCurve = piecesNear(Math.min(p.x, q.x), Math.min(p.y, q.y), Math.max(p.x, q.x), Math.max(p.y, q.y)).some((o) => segmentsCross(e1, e2, o.a, o.b));
+      if (crossesCurve || ties.some((t) => segmentsCross(e1, e2, t[0], t[1]))) continue;
+      const extra = Math.max(0, (Number(tieLength) || 0) - d) / 2;
+      const tie = [{ x: p.x - ux * extra, y: p.y - uy * extra }, { x: q.x + ux * extra, y: q.y + uy * extra }];
+      tie.family = 'ties-designed'; tie.role = 'native';
+      // declared joints: where the tie meets the curve it is joined to it, not laid over it
+      const here = { id: `tie:${ties.length}:a`, x: p.x, y: p.y }, there = { id: `tie:${ties.length}:b`, x: q.x, y: q.y };
+      tie.joints = [here, there];
+      (runs[s.r].joints ??= []).push(here); (runs[other.r].joints ??= []).push(there);
+      ties.push(tie); mids.push(mid); tied.add(s.r); tied.add(other.r);
+      return;
+    }
+  };
+
+  /** Walks the runs picked by `wanted`, trying a tie every `step` mm of their length. */
+  const place = (step, minSpacing, wanted) => {
+    runs.forEach((run, r) => {
+      if (!wanted(r)) return;
+      let next = step / 2;
+      for (const s of byRun[r]) {
+        for (; next <= s.arc + s.length; next += step) {
+          const t = (next - s.arc) / s.length;
+          tryTie(s, { x: s.a.x + (s.b.x - s.a.x) * t, y: s.a.y + (s.b.y - s.a.y) * t }, minSpacing);
+        }
+      }
+    });
+  };
+  place(interval, interval / 2, () => true);
+  // a long run that caught no tie at those stations is tried again, closer together
+  place(interval / 3, interval / 6, (r) => lengths[r] > 2 * interval && !tied.has(r));
+
+  const layers = [[...runs, ...ties]];
+  layers.families = ['curve', 'ties-designed'];
+  layers.extra = { families: layers.families, runs: runs.length, ties: ties.length, tieInterval: interval };
+  return layers;
+}

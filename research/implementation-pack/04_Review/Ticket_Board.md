@@ -28,35 +28,35 @@ The single place to see what is ready, who has it and where it stands. The revie
 | T1.5 | Cells and grids | T1.1 | M | ∥ | In review (local) | Codex | `t1-5-cells-grids`, no push |
 | T1.6 | Pattern section; halftone as Line thickness | T1.2, T1.5 | L | | In review (local) | Codex | `t1-6-pattern-effects`, no push |
 | T1.7 | Colour section and colour plan | T1.1 | M | ∥ | In review (local) | Codex | `t1-7-colour-plan`; [handoff](T1_7_Local_Review.md), no push |
-| T1.8 | Support section and one carrier | T1.1 | L | ∥ | Blocked | | |
-| T1.9 | Look and feel labels and help text | T1.2–T1.5 | S | | Blocked | | |
-| T1.10 | Move the remaining cards | T1.1 | M | ∥ | Blocked | | |
-| T1.11 | Library QA pass | all of Phase 1 | S | | Blocked | | |
+| T1.8 | Support section and one carrier | T1.1 | L | ∥ | In review (local) | Codex, finished by Claude | `t1-8-support-carriers`; [review note](T1_8_Local_Review.md), no push |
+| T1.9 | Look and feel labels and help text | T1.2–T1.5 | S | | In review (local) | Codex | [T1.9 handoff](T1_9_Local_Review.md), no push |
+| T1.10 | Move the remaining cards | T1.1 | M | ∥ | In review (local; already complete) | Codex | `t1-8-support-carriers`; no push |
+| T1.11 | Library QA pass | all of Phase 1 | S | | In review (local) | Codex | [browser sweep](T1_11_Local_QA.md), no push |
 
 ## Phase 2: New Flat and Layered cards (all ∥ with each other, except T2.5 after or with T2.4)
 
 | Ticket | Card | Depends on | Size | State | Owner | PR |
 |---|---|---|---|---|---|---|
-| T2.1 | L-09 Rotated stack | Phase 1 | M | Blocked | | |
-| T2.2 | L-10 Moiré net | Phase 1 | S | Blocked | | |
-| T2.3 | F-01 Rings · flat | Phase 1 | M | Blocked | | |
-| T2.4 | F-06 Rotating squares | Phase 1 | M | Blocked | | |
-| T2.5 | F-07 Rotating triangles | T2.4 helpers | M | Blocked | | |
-| T2.6 | F-08 Arrowhead band | Phase 1 | M | Blocked | | |
-| T2.7 | F-09 Spiral cells | Phase 1 | M | Blocked | | |
-| T2.8 | F-10 Stochastic net | Phase 1 | L | Blocked | | |
-| T2.9 | F-15 Voronoi cells | Phase 1 | S | Blocked | | |
-| T2.10 | F-11 Star-metric cells | Phase 1 | L | Blocked | | |
-| T2.11 | F-12 Isohedral tiles (licence gate) | Phase 1 + licence check | L | Blocked | | |
-| T2.12 | F-13 Connected lace | Phase 1 | L | Blocked | | |
-| T2.13 | F-14 Meander with ties | Phase 1 | M | Blocked | | |
-| T2.14 | F-19 Kirigami sheet | Phase 1 | M | Blocked | | |
+| T2.1 | L-09 Rotated stack | Phase 1 | M | In review (local) | Codex | [T2.1 handoff](T2_1_Local_Review.md), no push |
+| T2.2 | L-10 Moiré net | Phase 1 | S | In review (local) | Codex | [T2.2 handoff](T2_2_Local_Review.md), no push |
+| T2.3 | F-01 Rings · flat | Phase 1 | M | In review (local) | Codex | [T2.3 handoff](T2_3_Local_Review.md), no push |
+| T2.4 | F-06 Rotating squares | Phase 1 | M | In review (local) | Codex | [T2.4 handoff](T2_4_Local_Review.md), no push |
+| T2.5 | F-07 Rotating triangles | T2.4 helpers | M | In review (local) | Codex, reviewed by Claude | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md), no push |
+| T2.6 | F-08 Arrowhead band | Phase 1 | M | In review (local) | Codex, reviewed by Claude | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md), no push |
+| T2.7 | F-09 Spiral cells | Phase 1 | M | In review (local) | Codex, reviewed by Claude | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md), no push |
+| T2.8 | F-10 Stochastic net | Phase 1 | L | In review (local) | Codex, reviewed by Claude | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md), no push |
+| T2.9 | F-15 Voronoi cells | Phase 1 | S | In review (local) | Codex, reviewed by Claude | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md), no push |
+| T2.10 | F-11 Star-metric cells | Phase 1 | L | In review (local) | Codex, reviewed by Claude | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md), no push |
+| T2.11 | F-12 Isohedral tiles (licence gate) | Phase 1 + licence check | L | Licence approved 27 Oct 2026 (TactileJS, BSD 3-Clause); implementation not in these commits | | Not committed yet |
+| T2.12 | F-13 Connected lace | Phase 1 | L | In review (local; export bug fixed in review) | Codex, reviewed by Claude | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md), no push |
+| T2.13 | F-14 Meander with ties | Phase 1 | M | In review (local; rebuilt in review) | Codex, reviewed by Claude | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md), no push |
+| T2.14 | F-19 Kirigami sheet | Phase 1 | M | In review (local; generation time halved in review) | Codex, reviewed by Claude | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md), no push |
 
 ## Phase 3: Motif on carrier and weave
 
 | Ticket | Card | Depends on | Size | State | Owner | PR |
 |---|---|---|---|---|---|---|
-| T3.1 | L-25 Lace + backing | T1.8, T2.12 | M | Blocked | | |
+| T3.1 | L-25 Lace + backing | T1.8, T2.12 | M | In review (local; built with T2.12) | Codex, reviewed by Claude | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md#t31-built-alongside-t212), no push |
 | T3.2 | L-26 Step, ripple and petal lace | T1.8 | M | Blocked | | |
 | T3.3 | L-27 Paired loops | T2.1 (planes option) | M | Blocked | | |
 | T3.4 | L-28 Scales on a carrier | T1.8 (T2.11 optional) | L | Blocked | | |
@@ -99,7 +99,7 @@ The single place to see what is ready, who has it and where it stands. The revie
 
 | Ticket | Title | Depends on | Size | State | Owner | PR |
 |---|---|---|---|---|---|---|
-| T7.1 | Line alignment and pass spacing | Phase 0 | M | Blocked | | |
+| T7.1 | Line alignment and pass spacing | Phase 0 | M | In review (local) | Codex | [T7.1 handoff](T7_1_Local_Review.md), no push |
 | T7.2 | Keep each path's colour on import | Phase 0 | S | Blocked | | |
 | T7.3 | Region model and default roles | T7.2 | M | Blocked | | |
 | T7.4 | The colour bar | T7.3 | M | Blocked | | |
@@ -119,9 +119,9 @@ The single place to see what is ready, who has it and where it stands. The revie
 
 | Item | Found | Size | State |
 |---|---|---|---|
-| The source-offer tool (`dev/tools/source-bundle.mjs`) normalises line endings only for listed text extensions and for files named exactly `LICENSE` or `NOTICE` at the root. A checkout with Windows line endings therefore fails the source-currentness test because of `site/vendor/three/LICENSE`. Treat any file named `LICENSE`/`NOTICE` in any folder as text. Not seen on Linux (GitHub, Cloudflare). | reorganisation, 26 Oct 2026 | S | Ready |
+| ~~The source-offer tool normalised line endings only for `LICENSE`/`NOTICE` at the repository root~~ **Fixed in T1.8's branch:** files with those names in any folder are canonicalised, with a test that fails on the old rule. | reorganisation, 26 Oct 2026 | S | Done (local, `t1-8-support-carriers`) |
 | Wave net bundles (bond control for the Squiggle generator) | T4.2 | M | Blocked (after T4.2) |
-| Resolve C13/T0.2 snapshot wording: C13 records `families`, but T0.2 introduces those tags while requiring unchanged snapshots. See [T0.0 review note](T0_0_Local_Review.md#clarification-before-t02). | T0.0 review, 26 Oct 2026 | S | Reviewer clarification before T0.2 |
+| ~~Resolve C13/T0.2 snapshot wording~~ **Resolved:** `families` stays in the snapshot schema. T0.0 records `[]`; T0.2 may change only the `families` field of every snapshot (every other field, including the G-code hash, must stay identical). Done that way. | T0.0 review, 26 Oct 2026 | S | Resolved |
 
 ## Open decisions for Luis
 
@@ -138,3 +138,7 @@ The single place to see what is ready, who has it and where it stands. The revie
 | 9 | Old links with a global backing on a self-supporting card: drop the extra backing | dropped, with a note | [T1.8](../03_Tickets/Phase1_Move_Existing_Designs.md#t18-support-section-and-one-carrier) |
 | 10 | Colour plan when regions ask for different filament changes | first region's plan, with a warning | [T7.6](../03_Tickets/Phase7_Drawing_Tools.md#t76-building-a-piece-from-regions-with-seams) |
 | 11 | Which current cards are already printed (for *Tested* badges) | none except Bubbles once recorded | [T8.1](../03_Tickets/Phase8_Physical_Validation.md#t81-swatch-records-and-the-tested-badge) |
+| 12 | The nine measured shelf exceptions (Auxetic, Honeycomb · flat, Star lattice, Harmonograph, Dip weave, Looped net, Squiggle rings, Voronoi, Spirograph): relabel each card, or change how it prints | declared shelf stays; the exception list keeps the audit honest | [T1.8 review](T1_8_Local_Review.md#decisions-for-luis), `SHELF_EXCEPTIONS` in `construction-report.js` |
+| 13 | ~~Isohedral tiles: vendor the Tactile library or implement starter families~~ **Resolved 27 October 2026:** use TactileJS; BSD 3-Clause reviewed, Luis approved; source pinned under `site/vendor/tactile/` | TactileJS, pinned | [T2.11](../03_Tickets/Phase2_New_Flat_and_Layered_Cards.md#t211-f-12-isohedral-tiles-isohedral-tiles) |
+| 14 | An old link with the global backing switched on, opened on Meander, Turing or Your drawing: becomes a two-layer zigzag carrier (the old mesh cannot be reproduced exactly), or is dropped everywhere | zigzag carrier on those three, dropped elsewhere | [T1.8 review](T1_8_Local_Review.md#decisions-for-luis) |
+| 15 | Free line ends in the new cards: Spiral cells has 32 along the sheet edge (its arms stop 2 mm inside the edge and it has no border option); Voronoi cells (12) and Stochastic net (9) have interior dead-end stubs from their random structure. Add a border or prune the stubs, or accept them | accepted as they are (they are reported, not blocked) | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md) |

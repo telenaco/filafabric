@@ -760,6 +760,10 @@ body:not(.locked) > #gate { display: none; }
 .pattern .shape-thumb { display: block; }
 .pattern-scale { margin-top: 14px; }
 .pattern-scale[hidden] { display: none; }
+.petal-editor { display: block; width: min(100%, 320px); height: auto; overflow: visible; touch-action: none; }
+.petal-shape { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+.petal-handle { fill: var(--paper); stroke: var(--accent); stroke-width: 2; cursor: grab; }
+.petal-handle:focus-visible { outline: none; stroke-width: 4; }
 /* the picture as a pattern: how the design reads it, its name and size, and what can be done with it */
 .picture-box { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
 .picture-box[hidden] { display: none; }

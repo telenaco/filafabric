@@ -88,6 +88,29 @@ export function findCrossings(strands, { strandWidth = 0.5, cell = 1, mergeDista
     }
   });
 
+  // Designed joints, looked up by position: a crossing beside a joint that both strands declare is a join, not an
+  // over-under. Searching every joint of both strands for each crossing is quadratic on a sheet of joined fill lines.
+  const jointReach = Math.max(strandWidth, .5);
+  const jointIndex = strands.map((s) => {
+    if (!s.joints?.length) return null;
+    const byCell = new Map();
+    for (const j of s.joints) {
+      const key = cellKey(Math.floor(j.x / jointReach), Math.floor(j.y / jointReach));
+      if (byCell.has(key)) byCell.get(key).push(j);
+      else byCell.set(key, [j]);
+    }
+    return byCell;
+  });
+  const jointsAt = (si, x, y) => {
+    const near = [], index = jointIndex[si];
+    if (!index) return near;
+    const ix = Math.floor(x / jointReach), iy = Math.floor(y / jointReach);
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+      for (const j of index.get(cellKey(ix + dx, iy + dy)) ?? []) if (Math.hypot(x - j.x, y - j.y) <= jointReach) near.push(j);
+    }
+    return near;
+  };
+
   // every crossing once, with its position along both strands
   const found = [];
   const recent = new Map();
@@ -103,6 +126,9 @@ export function findCrossings(strands, { strandWidth = 0.5, cell = 1, mergeDista
         const pb = strands[B.si].pts[B.i], qb = strands[B.si].pts[B.i + 1];
         const hit = intersect(pa.x, pa.y, qa.x, qa.y, pb.x, pb.y, qb.x, qb.y);
         if (!hit) continue;
+        const x = pa.x + hit[0] * (qa.x - pa.x), y = pa.y + hit[0] * (qa.y - pa.y);
+        const jointsNearA = jointsAt(A.si, x, y);
+        if (jointsNearA.length && jointsAt(B.si, x, y).some((jb) => jointsNearA.some((ja) => ja.id === jb.id))) continue;
         const arcA = arcs[A.si][A.i] + hit[0] * (arcs[A.si][A.i + 1] - arcs[A.si][A.i]);
         const arcB = arcs[B.si][B.i] + hit[1] * (arcs[B.si][B.i + 1] - arcs[B.si][B.i]);
         if (A.si === B.si && Math.abs(arcB - arcA) < minArc) continue;
@@ -120,7 +146,7 @@ export function findCrossings(strands, { strandWidth = 0.5, cell = 1, mergeDista
         const da = Math.atan2(qa.y - pa.y, qa.x - pa.x), db = Math.atan2(qb.y - pb.y, qb.x - pb.x);
         let angle = Math.abs(((da - db) * 180) / Math.PI) % 180;
         if (angle > 90) angle = 180 - angle;
-        const c = { sa: A.si, sb: B.si, arcA, arcB, x: pa.x + hit[0] * (qa.x - pa.x), y: pa.y + hit[0] * (qa.y - pa.y), angle };
+        const c = { sa: A.si, sb: B.si, arcA, arcB, x, y, angle };
         if (near) near.push(c);
         else recent.set(key, [c]);
         found.push(c);

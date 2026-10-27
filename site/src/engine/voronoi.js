@@ -1,6 +1,7 @@
 import { createRng } from './rng.js';
 import { ConfigError } from './params.js';
 import { clipPolyline, trailsFromEdges, densify, chainPolylines } from './layers.js';
+import { findCrossings } from './crossings.js';
 
 /**
  * Voronoi lace: a centroidal Voronoi tessellation (Lloyd-relaxed, so the cells are even and round) with its Delaunay
@@ -205,4 +206,24 @@ export function voronoiLayers(boundary, { spacing = 8, relax = 4, seed = 1, tone
   }
   const { delaunay: dEdges, voronoi: vEdges } = tessellate(points, box);
   return { layers: [toLayer(dEdges), toLayer(vEdges)], extra: { sites: points.length } };
+}
+
+/** Flat Voronoi cell walls, optionally closed by the swatch perimeter. Shares the exact site/tessellation path above. */
+export function voronoiCellsLayers(boundary,{spacing=8,relax=4,seed=1,tone=null,border=true}={}){
+  const lace=voronoiLayers(boundary,{spacing,relax,seed,tone,whole:true});
+  const walls=lace.layers[1];
+  for(const p of walls)p.family='cells';
+  const outline=border?(boundary.rings??[]).map(r=>{
+    const cx=r.reduce((n,p)=>n+p.x,0)/r.length,cy=r.reduce((n,p)=>n+p.y,0)/r.length;
+    const inset=r.map(p=>{const d=Math.hypot(cx-p.x,cy-p.y),step=Math.min(.6,d*.08);return d?{x:p.x+(cx-p.x)*step/d,y:p.y+(cy-p.y)*step/d}:p;});
+    const path=densify([...inset,inset[0]]);path.family='border';return path;
+  }):[];
+  const paths=[...walls,...outline],{found}=findCrossings(paths.map((p)=>({pts:p.map((q)=>({...q,z:0}))})),{strandWidth:.45,cell:1});
+  found.forEach((crossing,index)=>{
+    const id=`voronoi-cell-node:${index}`;
+    for(const pathIndex of [crossing.sa,crossing.sb]){paths[pathIndex].joints??=[];paths[pathIndex].joints.push({id,x:crossing.x,y:crossing.y});}
+  });
+  const layers=[paths];layers.families=['cells','border'];
+  layers.extra={families:layers.families,sites:lace.extra.sites,border};
+  return layers;
 }

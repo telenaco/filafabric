@@ -248,6 +248,7 @@ export const SHELF_EXCEPTIONS = Object.freeze({
   voronoi: 'Declared layered as a cellular mesh, but the measured 0.800 mm envelope exceeds the two-native-family 0.650 mm layered ceiling.',
   spirograph: 'Declared layered as overlapping curves, but its measured 0.656 mm envelope exceeds the two-native-family 0.650 mm layered ceiling.',
   starlattice: 'Declared flat as a planar lattice, but its two crossing native families at 0.400 mm satisfy layered.',
+  kirigami: 'Declared flat as a solid sheet: its orthogonal infill passes are intentionally fused at the same Z, not separate textile layers.',
   'looped-net': 'Declared raised for its over-under self-crossing strand, but its current measured default envelope is only 0.400 mm and the general rule classifies it as layered; geometry estimates are not physical qualification.',
   'squiggle-rings': 'Declared layered as a ring net, but the ring generator settles self-crossings to a measured 0.773 mm envelope and the general rule classifies it as raised; geometry estimates are not physical qualification.',
 });

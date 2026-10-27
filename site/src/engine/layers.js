@@ -279,7 +279,7 @@ export function crossingReport(items, areaMm2, strandWidth = 0.45) {
 export function layersToStrands(layers, { families, source, layerHeight = 0.2, strandWidth = 0.45, colorChange = false, ramp = 1.6, boundary = null, coherent = false, inset = strandWidth / 2, optimizeTravel = false } = {}) {
   const provenance = (p, k) => ({ family: p.family ?? layers[k].family ?? families?.[k] ?? `L${k + 1}`, role: p.role ?? layers[k].role ?? 'native', source: p.source ?? layers[k].source ?? source });
   if (coherent) {
-    let flat = layers.flatMap((list, k) => list.filter((p) => p.length >= 2).map((p, i) => ({ ...provenance(p, k), id: `l${k + 1}-${i + 1}`, layer: k, kind: k ? 'supported' : 'base', name: `Layer ${k + 1}`, ...(Number.isFinite(p.rowOrder) ? { rowOrder: p.rowOrder } : {}), pts: p.map((q) => ({ x: q.x, y: q.y, z: layerHeight, ...(q.flow !== undefined ? { flow: q.flow } : {}) })) })));
+    let flat = layers.flatMap((list, k) => list.filter((p) => p.length >= 2).map((p, i) => ({ ...provenance(p, k), id: `l${k + 1}-${i + 1}`, layer: k, kind: k ? 'supported' : 'base', name: `Layer ${k + 1}`, ...(Number.isFinite(p.rowOrder) ? { rowOrder: p.rowOrder } : {}), ...(p.joints?.length ? { joints: p.joints } : {}), pts: p.map((q) => ({ x: q.x, y: q.y, z: layerHeight, ...(q.flow !== undefined ? { flow: q.flow } : {}) })) })));
     flat = simplifyStrands(flat);
     if (boundary) flat = clipStrands(flat, boundary, inset);
     if (boundary) flat = connectStrands(flat, boundary, { strandWidth }).strands;
@@ -300,7 +300,7 @@ export function layersToStrands(layers, { families, source, layerHeight = 0.2, s
   layers.forEach((polylines, k) => {
     const flat = polylines
       .filter((p) => p.length >= 2)
-      .map((p, i) => ({ ...provenance(p, k), id: `l${k + 1}-${i + 1}`, layer: k, kind: k === 0 ? 'base' : 'supported', name: `Layer ${k + 1}`, pts: p.map((q) => ({ x: q.x, y: q.y, z: layerHeight * (k + 1) })) }));
+      .map((p, i) => ({ ...provenance(p, k), id: `l${k + 1}-${i + 1}`, layer: k, kind: k === 0 ? 'base' : 'supported', name: `Layer ${k + 1}`, pts: p.map((q) => ({ x: q.x, y: q.y, z: layerHeight * (k + 1), ...(q.flow !== undefined ? { flow: q.flow } : {}) })) }));
     // a strand crosses its own earlier pass in the layer: lift over it by a little more than a layer
     const settled = resolveCrossings(flat, { lift: layerHeight * 1.25, strandWidth, ramp }).strands;
     settled.forEach((s, i) => {
@@ -315,7 +315,7 @@ export function layersToStrands(layers, { families, source, layerHeight = 0.2, s
  * End to end for a layered design: machine, material and layers of polylines in, moves, stats, G-code and report out.
  * @param layers  array of layers, each an array of polylines of { x, y } in mm
  */
-export function layeredResult(machine, material, { width, height, layers, families, source, colorChange = false, outline = null, extra = {}, ramp = 1.6, inset, optimizeTravel = false }) {
+export function layeredResult(machine, material, { width, height, layers, families, source, colorChange = false, outline = null, extra = {}, ramp = 1.6, inset, optimizeTravel = false, planes = false }) {
   const cfg = resolveConfig(machine, material, { sample_width: width, sample_height: height });
   const fit = bedFitErrors(cfg);
   if (fit.length > 0) throw new PreflightError(fit);
@@ -323,7 +323,7 @@ export function layeredResult(machine, material, { width, height, layers, famili
   if (points > MAX_MOVES) {
     throw new ConfigError([`This layout would need about ${points.toLocaleString('en')} moves; the limit is ${MAX_MOVES.toLocaleString('en')}. Use wider spacing, larger cells or a smaller swatch.`]);
   }
-  const strands = layersToStrands(layers, { families: families ?? extra.families, source, layerHeight: cfg.t.layer_height, strandWidth: cfg.t.extrusion_width, colorChange, ramp, boundary: boundaryFor(width, height, outline), coherent: true, inset, optimizeTravel });
+  const strands = layersToStrands(layers, { families: families ?? extra.families, source, layerHeight: cfg.t.layer_height, strandWidth: cfg.t.extrusion_width, colorChange, ramp, boundary: boundaryFor(width, height, outline), coherent: !planes, inset, optimizeTravel });
   const moves = emitStrands(strands, { retraction: cfg.derived.retraction });
   const stats = computeStats(moves, cfg, []);
   stats.loops = 0;

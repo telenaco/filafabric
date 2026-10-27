@@ -52,10 +52,24 @@ test('all ready cards have the exact ticket metadata', () => {
     "   | `halftone` | layered | waves | self | untested | A crossed net whose line thickness carries a picture. |",
     "   | `spacer` | raised | spacers | built-in | untested | Two nets held apart by small pillars. |",
     "   | `pillarweave` | raised | spacers | self | untested | Fibre locked round upright pillars. |",
+    "   | `rotated-stack` | layered | grids | self | untested | Straight parallel strands bond where each rotated plane crosses the one below. |",
+    "   | `moire-net` | layered | grids | self | untested | Two close-pitched line families cross to make broad interference bands. |",
+    "   | `rings-flat` | flat | rings | self | untested | Rings overlap and fuse in one pass. |",
+    "   | `rotating-squares` | flat | lattices | self | untested | Alternating square outlines meet only through corner necks and a border band. |",
+    "   | `rotating-triangles` | flat | lattices | self | untested | Alternating triangular outlines meet through corner necks and a border band. |",
+    "   | `arrowhead-band` | flat | lattices | self | untested | Arrowhead arms nest across rows and continuous side rails retain the edges. |",
+    "   | `spiral-cells` | flat | lattices | self | untested | Four spiral arms meet at their cell centre and shared edge midpoints. |",
+    "   | `voronoi-cells` | flat | cells | self | untested | Voronoi cell walls meet at shared vertices and close against the perimeter. |",
+    "   | `stochastic-net` | flat | grids | self | untested | K-nearest links meet at shared nodes; the perimeter anchors the edge. |",
+    "   | `connected-lace` | flat | lattices | self | untested | Each motif links to lattice neighbours through necks; a perimeter line closes the boundary. |",
+    "   | `meander-ties` | flat | curves | self | untested | Designed ties bridge nearby folds of one space-filling curve. |",
+    "   | `kirigami` | flat | lattices | self | untested | The remaining solid sheet joins the slit pattern as one filled piece. |",
+    "   | `star-metric` | flat | cells | self | untested | Metric cell walls meet at shared vertices and close against the perimeter. |",
+    "   | `lace-backing` | layered | lattices | auto | untested | The open carrier crosses and holds each motif island. |",
   ].join("\n");
   const rows = [...brief.matchAll(/\| `([^`]+)` \| (flat|layered|raised) \| (\w+) \| (self|auto|built-in) \| (untested|needs-repair) \| ([^|]+) \|/g)];
-  assert.equal(rows.length, 41);
-  assert.equal(DESIGNS.filter(d => d.status === 'ready').length, 41);
+  assert.equal(rows.length, 55);
+  assert.equal(DESIGNS.filter(d => d.status === 'ready').length, 55);
   for (const [, id, shelf, family, support, state, joins] of rows) {
     const card = DESIGNS.find(d => d.id === id);
     assert.deepEqual(validateCard(card), [], id);
@@ -66,6 +80,20 @@ test('all ready cards have the exact ticket metadata', () => {
       crosshatch: { catalogue: ['S2'], papers: [29, 54, 9] },
       'crosshatch-wavy': { catalogue: ['S2'], papers: [29, 54, 9] },
       starlattice: { catalogue: ['S3'], papers: [30, 31] },
+      'rotated-stack': { papers: [69] },
+      'moire-net': { catalogue: ['M7'], papers: [43, 58, 61] },
+      'rings-flat': { catalogue: ['M4'], papers: [53, 66] },
+      'rotating-squares': { catalogue: ['S4'], papers: [55] },
+      'rotating-triangles': { papers: [6, 34] },
+      'arrowhead-band': { papers: [1, 68] },
+      'spiral-cells': { catalogue: ['S5'], papers: [42] },
+      'voronoi-cells': { papers: [44] },
+      'stochastic-net': { catalogue: ['S6'], papers: [44, 45] },
+      'connected-lace': { catalogue: ['S1'], papers: [59, 60, 58] },
+      'meander-ties': { catalogue: ['S3'] },
+      kirigami: { catalogue: ['S4'], papers: [48] },
+      'star-metric': { catalogue: ['S7'], papers: [46] },
+      'lace-backing': { catalogue: ['M1'], papers: [58, 59] },
     };
     assert.deepEqual(card.sources, sources[id] ?? {});
     assert.ok(Object.hasOwn(FAMILIES, family));
@@ -91,7 +119,7 @@ test('library groups order cards by print state and then name', () => {
 });
 
 test('panel order accepts the six-section order and rejects legacy or repeated groups', () => {
-  assert.deepEqual(panelOrderErrors([{ kind: 'presets' }, { kind: 'size' }, { kind: 'choice' }, { kind: 'choice' },
+  assert.deepEqual(panelOrderErrors([{ kind: 'presets' }, { kind: 'size' }, { kind: 'choice' }, { kind: 'petal' }, { kind: 'choice' },
     { kind: 'sliders' }, { kind: 'switch', key: 'link' }, { kind: 'pattern' }, { kind: 'colour' }, { kind: 'support' }]), []);
   assert.ok(panelOrderErrors([{ kind: 'shape' }]).some((error) => error.includes('shape')));
   assert.ok(panelOrderErrors([{ kind: 'switch', key: 'colorChange' }]).some((error) => error.includes('colorChange')));
@@ -118,7 +146,12 @@ test('validation rejects malformed metadata and skips preset tiles', () => {
 });
 
 test('variants default to each card id; unknown ids have no variants', () => {
-  for (const card of DESIGNS.filter(d => d.status === 'ready' && !d.hidden)) assert.deepEqual(variantsOf(card.id), [card]);
+  for (const card of DESIGNS.filter(d => d.status === 'ready' && !d.hidden)) {
+    const expected = card.settingsKey
+      ? Object.keys(SHELVES).flatMap(shelf => DESIGNS.filter(other => other.status === 'ready' && !other.hidden && other.shelf === shelf && other.settingsKey === card.settingsKey))
+      : [card];
+    assert.deepEqual(variantsOf(card.id), expected);
+  }
   for (const card of DESIGNS.filter(d => d.status === 'ready' && d.hidden)) assert.deepEqual(variantsOf(card.id), []);
   assert.deepEqual(variantsOf('missing'), []);
   const cards = ['raised', 'flat', 'layered'].map(shelf => ({ ...DESIGNS[0], id: `test-${shelf}`, shelf, settingsKey: 'test' }));

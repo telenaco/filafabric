@@ -1,0 +1,67 @@
+[
+  {
+    "card": "moire-net",
+    "preset": "default",
+    "settingsHash": "1fcfd34fc7e0",
+    "gcodeSha256": "8810d502524e829ec4f41dc131e44d385968f2dd748e2f0079a6365124b6562e",
+    "strands": 3,
+    "moves": 167,
+    "extrudeMm": 1251.4,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "A",
+      "B"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "moire-net",
+    "preset": "fine-bands",
+    "settingsHash": "1fcfd34fc7e0",
+    "gcodeSha256": "8810d502524e829ec4f41dc131e44d385968f2dd748e2f0079a6365124b6562e",
+    "strands": 3,
+    "moves": 167,
+    "extrudeMm": 1251.4,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "A",
+      "B"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "moire-net",
+    "preset": "wide-bands",
+    "settingsHash": "7de7ca2511ae",
+    "gcodeSha256": "f1f108e583a30f87ff45ee1ab8ec0ade9a24ee96cb38fe7758307173a12ebc8b",
+    "strands": 2,
+    "moves": 173,
+    "extrudeMm": 1218.5,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "A",
+      "B"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "moire-net",
+    "preset": "wavy",
+    "settingsHash": "2e7c1180f72f",
+    "gcodeSha256": "e44da60533ad99fafff306633eae136770b389a5f7edc24b7e0d1522c8a9078b",
+    "strands": 10,
+    "moves": 2640,
+    "extrudeMm": 1334.3,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "A",
+      "B",
+      "ties"
+    ],
+    "ties": 2
+  }
+]

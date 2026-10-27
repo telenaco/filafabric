@@ -36,6 +36,7 @@ import { generateWeave, WEAVE_BINDINGS, WEAVE_BINDING_IDS } from '../engine/weav
 import { bindingThumb, thumbFromLayers, rowsThumb } from './thumbs.js';
 import { OPTION_ICONS } from './option-thumbs.js';
 import { MORE_DESIGNS } from './more-designs.js';
+import { RESEARCH_DESIGNS } from './research-designs.js';
 import { LINE_DESIGNS } from './line-designs.js';
 import { SVG_DESIGNS } from './svg-design.js';
 import { PUBLICATION_DESIGNS } from './pub-designs.js';
@@ -346,7 +347,7 @@ export const DESIGNS = [
 ];
 
 // the Drawing & infill card (svgdesign) comes first after the original structures, then the line-algorithm library and the newer line designs
-DESIGNS.push(...BASIC_DESIGNS, ...SVG_DESIGNS, ...MORE_DESIGNS, ...LINE_DESIGNS, ...PUBLICATION_DESIGNS);
+DESIGNS.push(...BASIC_DESIGNS, ...SVG_DESIGNS, ...MORE_DESIGNS, ...RESEARCH_DESIGNS, ...LINE_DESIGNS, ...PUBLICATION_DESIGNS);
 
 // These constructions use incompatible setting schemas: the layered card is a Squiggle net (mode,
 // spacing, amplitude, wavelength), while the flat card is an Auxetic cell (rowPitch, period, amplitude).

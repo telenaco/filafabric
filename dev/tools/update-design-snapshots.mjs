@@ -9,6 +9,7 @@ import { DESIGNS } from '../../site/src/ui/designs.js';
 import { generate } from '../../site/src/engine/generate.js';
 import { generateSquiggle, SAMPLERS } from '../../site/src/engine/squiggle.js';
 import { startPosition } from '../../site/src/engine/params.js';
+import { assertConstructionExportable } from '../../site/src/engine/construction-report.js';
 import { toTextile, pileLiftFactor } from '../../site/src/ui/controls.js';
 import { defaultProfiles, projectRoot } from '../tests/helpers.js';
 
@@ -75,11 +76,17 @@ export function summarizeOutput(card, preset, settings, result) {
   };
 }
 
-/** @param {object} design Ready registry entry. @returns {object[]} C13 summaries in default/preset registry order. */
+/**
+ * A card whose output the export button would refuse (a family lost to the shape, say) is not a printable card, so it
+ * cannot be recorded here either.
+ * @param {object} design Ready registry entry. @returns {object[]} C13 summaries in default/preset registry order.
+ */
 export function generateDesignSummaries(design) {
   return designCases(design).map(({ preset, settings }) => {
     try {
-      return summarizeOutput(design.id, preset, settings, generateDesign(design, settings));
+      const result = generateDesign(design, settings);
+      if (result.construction) assertConstructionExportable(result);
+      return summarizeOutput(design.id, preset, settings, result);
     } catch (error) {
       throw new Error(`Cannot snapshot ${design.id} / ${preset}: ${error.message}`, { cause: error });
     }
