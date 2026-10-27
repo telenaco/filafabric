@@ -3,7 +3,7 @@ import { densify, clipPolyline } from './layers.js';
 import { windowRings } from './window.js';
 import { finishAtPrintedBoundary } from './fabric.js';
 import { infillLines, INFILL_IDS } from './infill.js';
-import { classifyPaths, interpretDrawing, linePasses } from './drawing.js';
+import { classifyPaths, interpretDrawing, linePassesDetailed } from './drawing.js';
 import { carrierLayers } from './backing.js';
 
 /**
@@ -97,7 +97,13 @@ export function svgDesignLayers(boundary, settings, vector = null, { bead = 0.45
   // the edge of every red or blue shape, and every line with its passes
   const cropLines = (pts) => clipPolyline(pts, boundary, 0);
   const edges = includeLines && (onlyLayer === null || onlyLayer === 0) ? model.shapes.flatMap((sh) => cropLines([...sh.ring, { ...sh.ring[0] }])) : [];
-  const lines = includeLines && (onlyLayer === null || onlyLayer === 0) ? model.lines.flatMap((line) => linePasses(line, bead)).flatMap(cropLines) : [];
+  let droppedPasses = 0;
+  const lines = includeLines && (onlyLayer === null || onlyLayer === 0) ? model.lines.flatMap((line) => {
+    const detail = linePassesDetailed(line, bead, { align: s.lineAlign ?? 'centre', spacing: s.passSpacing ?? .8 });
+    droppedPasses += detail.dropped;
+    return detail.passes;
+  }).flatMap(cropLines) : [];
+  if (droppedPasses) warnings.push(`${droppedPasses} passes did not fit inside small shapes.`);
   const outlines = [...edges, ...lines];
   const rings = windowRings(model.rings, s.width, s.height);
   const shape = rings.length ? new PolygonBoundary(rings) : null;

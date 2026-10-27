@@ -23,7 +23,7 @@ const patternOptions = () => INFILL_IDS.map((id) => {
   return { id, label: INFILL_PATTERNS[id].label, hint: INFILL_PATTERNS[id].hint, thumb };
 });
 
-const spacing = (key, label, help) => ({ key, label, help, lo: 'Dense', hi: 'Open', unit: 'mm', edit: true });
+const spacing = (key, label, help, lo = 'Dense', hi = 'Open', unit = 'mm') => ({ key, label, help, lo, hi, unit, edit: true });
 const angle = (key, help) => ({ key, label: 'Angle', help, lo: '0°', hi: '180°', unit: '°', edit: true });
 
 const SVGDESIGN = defineControls({
@@ -31,6 +31,7 @@ const SVGDESIGN = defineControls({
     ...SIZE,
     designSpacing: { min: 0.8, max: 12, step: 0.1 },
     designAngle: { min: 0, max: 180, step: 5 },
+    passSpacing: { min: 0.6, max: 1, step: 0.05 },
     backing1Spacing: { min: 0.8, max: 14, step: 0.1 },
     backing1Angle: { min: 0, max: 180, step: 5 },
     backing2Spacing: { min: 0.8, max: 14, step: 0.1 },
@@ -43,6 +44,8 @@ const SVGDESIGN = defineControls({
     designPattern: 'rectilinear',
     designSpacing: 2.5,
     designAngle: 45,
+    lineAlign: 'centre',
+    passSpacing: 0.8,
     backing: 'one',
     backingArea: 'swatch',
     backing1Pattern: 'gyroid',
@@ -55,6 +58,7 @@ const SVGDESIGN = defineControls({
   },
   enums: {
     mode: DESIGN_MODES,
+    lineAlign: ['centre', 'inside', 'outside', 'left', 'right'],
     designPattern: INFILL_IDS,
     backing: BACKING_COUNTS,
     backingArea: BACKING_AREAS,
@@ -116,14 +120,22 @@ export const SVG_DESIGNS = [
           { id: 'both', label: 'Lines and fill', hint: 'The outline plus the fill inside it' },
         ],
       },
+      { kind: 'choice', key: 'lineAlign', title: 'Lines sit', hint: 'Closed paths use Inside / Centre / Outside. Open paths use Left / Centre / Right; other choices leave that path centred.', options: [
+        { id: 'centre', label: 'Centre', hint: 'Passes stay centred on the drawn path.' },
+        { id: 'inside', label: 'Inside', hint: 'Closed paths stay inside their outline.' },
+        { id: 'outside', label: 'Outside', hint: 'Closed paths sit outside their outline.' },
+        { id: 'left', label: 'Left', hint: 'Passes sit to the left of the path as drawn.' },
+        { id: 'right', label: 'Right', hint: 'Passes sit to the right of the path as drawn.' },
+      ] },
       { kind: 'choice', key: 'designPattern', title: 'Fill pattern', hint: 'What the closed shapes are filled with.', options: PATTERNS(), when: filled },
       {
         kind: 'sliders',
-        title: 'Fill',
+        title: 'Look and feel',
         when: filled,
         items: [
           spacing('designSpacing', 'Fill spacing', 'Distance between the fill\'s lines, as if they were parallel: the same value is the same amount of filament in every pattern.'),
           angle('designAngle', 'Turns the whole pattern.'),
+          spacing('passSpacing', 'Pass spacing', 'Distance between neighbouring line passes as a fraction of the bead width.', '0.6×', '1.0×', '×'),
         ],
       },
       {

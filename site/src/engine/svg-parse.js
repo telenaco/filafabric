@@ -144,6 +144,15 @@ function rgbOf(value) {
   return null;
 }
 
+/** Preserve the exact opaque RGB paint while keeping semantic classes separate. */
+function hexOf(value, current) {
+  let v = String(value ?? '').trim().toLowerCase();
+  if (v === 'none' || v === 'transparent') return null;
+  if (v === 'currentcolor') v = String(current ?? 'black').trim().toLowerCase();
+  const rgb = rgbOf(v);
+  return rgb ? `#${rgb.map((n) => n.toString(16).padStart(2, '0')).join('')}` : null;
+}
+
 /** Semantic red/blue contours, CSS green/lime solids and yellow guides, with a little room for export rounding. */
 function paintClass(value, current) {
   let v = String(value).trim().toLowerCase();
@@ -152,10 +161,10 @@ function paintClass(value, current) {
   const rgb = rgbOf(v);
   if (!rgb) return 'other';
   const [r, g, b] = rgb;
-  if (r >= 250 && g <= 5 && b <= 5) return 'red';
-  if (b >= 250 && r <= 5 && g <= 5) return 'blue';
-  if (g >= 120 && r <= 5 && b <= 5) return 'green';
-  if (r >= 250 && g >= 250 && b <= 5) return 'yellow';
+  if (r >= 90 && r >= g * 1.35 && r >= b * 1.35) return 'red';
+  if (b >= 90 && b >= r * 1.35 && b >= g * 1.2) return 'blue';
+  if (g >= 90 && g >= r * 1.35 && g >= b * 1.2) return 'green';
+  if (r >= 150 && g >= 150 && b <= Math.min(r, g) * 0.55) return 'yellow';
   return 'other';
 }
 
@@ -383,6 +392,8 @@ export function parseSvg(text, name = 'SVG lines') {
     const style = {
       fill: own.fill !== undefined && own.fill !== 'inherit' ? paintClass(own.fill, own.color ?? inherited.color) : inherited.fill,
       stroke: own.stroke !== undefined && own.stroke !== 'inherit' ? paintClass(own.stroke, own.color ?? inherited.color) : inherited.stroke,
+      fillHex: own.fill !== undefined && own.fill !== 'inherit' ? hexOf(own.fill, own.color ?? inherited.color) : inherited.fillHex,
+      strokeHex: own.stroke !== undefined && own.stroke !== 'inherit' ? hexOf(own.stroke, own.color ?? inherited.color) : inherited.strokeHex,
       strokeWidth: own['stroke-width'] !== undefined && own['stroke-width'] !== 'inherit' && /\d/.test(own['stroke-width']) ? lengthOf(own['stroke-width'], inherited.strokeWidth) : inherited.strokeWidth,
       color: own.color ?? inherited.color,
     };
@@ -396,6 +407,7 @@ export function parseSvg(text, name = 'SVG lines') {
 
     const semantic = (color) => ['red', 'blue', 'green', 'yellow'].includes(color);
     const color = semantic(style.stroke) && !semantic(style.fill) ? style.stroke : style.fill !== 'none' ? style.fill : style.stroke;
+    const hex = semantic(style.stroke) && !semantic(style.fill) ? style.strokeHex : style.fill !== 'none' ? style.fillHex : style.strokeHex;
     if (color === 'none') return; // neither filled nor stroked: not drawn
     const det = Math.abs(here[0] * here[3] - here[1] * here[2]);
     const scale = Math.sqrt(det) || 1;
@@ -440,11 +452,11 @@ export function parseSvg(text, name = 'SVG lines') {
         const X = here[0] * px + here[2] * py + here[4], Y = here[1] * px + here[3] * py + here[5];
         return { x: round(originX + (X - view[0]) * unit), y: round(size.height - (originY + (Y - view[1]) * unit)) };
       }));
-      styles.push({ color, width: widthMm });
+      styles.push({ color, hex, width: widthMm });
     }
   };
 
-  visit(svg, IDENTITY, { fill: 'other', stroke: 'none', strokeWidth: 1, color: 'black' });
+  visit(svg, IDENTITY, { fill: 'other', stroke: 'none', fillHex: '#000000', strokeHex: null, strokeWidth: 1, color: 'black' });
   if (!paths.length) throw new Error('No printable paths were found. Convert text to paths and export vector strokes.');
   const result = sanitizeSvgLines({ name, ...size, paths, styles });
   if (!result) throw new Error('The SVG contains invalid geometry.');

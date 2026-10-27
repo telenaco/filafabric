@@ -44,7 +44,7 @@ export function sanitizeSvgLines(raw) {
   const styles = raw.styles;
   if (Array.isArray(styles) && styles.length === raw.paths.length
     && styles.every((s) => s && COLOURS.has(s.color) && Number.isFinite(s.width) && s.width >= 0 && s.width <= 1000)) {
-    out.styles = styles.map((s) => ({ color: s.color, width: Math.round(s.width * 1000) / 1000 }));
+    out.styles = styles.map((s) => ({ color: s.color, ...(typeof s.hex === 'string' && /^#[0-9a-f]{6}$/i.test(s.hex) ? { hex: s.hex.toLowerCase() } : {}), width: Math.round(s.width * 1000) / 1000 }));
   }
   return out;
 }
@@ -247,12 +247,75 @@ export function offsetPolyline(pts, d) {
 }
 
 /** One printed path per pass: the line itself for one pass, otherwise parallel paths that together fill its width. */
-export function linePasses(line, bead = 0.45) {
-  const n = passesFor(line.width, bead);
-  if (n === 1) return [line.pts];
-  // Adjacent beads share at least 20% of their width so a multi-pass stroke bonds as one line.
-  const pitch = Math.min(line.width / n, bead * 0.8);
-  return Array.from({ length: n }, (_, k) => offsetPolyline(line.pts, (k - (n - 1) / 2) * pitch));
+const signedArea = (pts) => {
+  let area = 0;
+  for (let i = 0; i < pts.length - 1; i++) area += pts[i].x * pts[i + 1].y - pts[i + 1].x * pts[i].y;
+  return area / 2;
+};
+
+function crossesSelf(path) {
+  const n = path.length - 1;
+  const cross = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+  for (let i = 0; i < n; i++) for (let j = i + 2; j < n; j++) {
+    if (i === 0 && j === n - 1) continue;
+    const a = path[i], b = path[i + 1], c = path[j], d = path[j + 1];
+    if (cross(a, b, c) * cross(a, b, d) < -1e-10 && cross(c, d, a) * cross(c, d, b) < -1e-10) return true;
+  }
+  return false;
+}
+
+function insideRing(point, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const a = ring[i], b = ring[j];
+    if ((a.y > point.y) !== (b.y > point.y) && point.x < (b.x - a.x) * (point.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+  }
+  return inside;
+}
+
+export function linePassesDetailed(line, bead = 0.45, { align = 'centre', spacing = 0.8 } = {}) {
+  const pts = line.pts;
+  const closed = !!closedRing(pts);
+  const validAlign = closed
+    ? ['centre', 'inside', 'outside'].includes(align) ? align : 'centre'
+    : ['centre', 'left', 'right'].includes(align) ? align : 'centre';
+  const pitch = Math.max(1e-6, (Number.isFinite(spacing) ? Math.max(.6, Math.min(1, spacing)) : .8) * bead);
+  const oneSided = validAlign !== 'centre';
+  // Centre keeps the historical count and pitch byte-for-byte. Only new alignments use the coverage formula.
+  const n = line.width > 0 && bead > 0
+    ? oneSided ? Math.max(1, Math.min(MAX_PASSES, Math.round((line.width - bead) / pitch) + 1)) : passesFor(line.width, bead)
+    : 1;
+  const actualPitch = oneSided ? pitch : Math.min(line.width / n, bead * .8);
+  let side = validAlign;
+  if (closed && (side === 'inside' || side === 'outside')) {
+    const positive = signedArea(pts) > 0;
+    side = side === 'inside' ? (positive ? 'left' : 'right') : (positive ? 'right' : 'left');
+  } else if (!closed && (side === 'inside' || side === 'outside')) side = 'centre';
+  const offsets = Array.from({ length: n }, (_, k) => oneSided
+    ? (side === 'left' ? 1 : side === 'right' ? -1 : 0) * (bead / 2 + k * actualPitch)
+    : (k - (n - 1) / 2) * actualPitch);
+  const result = [];
+  let dropped = 0;
+  const sourceArea = closed ? signedArea(pts) : 0;
+  for (const offset of offsets) {
+    const candidate = offsetPolyline(pts, offset);
+    if (closed && (validAlign === 'inside' || validAlign === 'outside')) {
+      const area = signedArea(candidate);
+      const wrongSign = validAlign === 'inside' ? Math.sign(area) !== Math.sign(sourceArea) : Math.sign(area) !== Math.sign(sourceArea);
+      const escaped = candidate.slice(0, -1).some(point => !insideRing(point, pts));
+      if (crossesSelf(candidate) || Math.abs(area) < bead * bead || wrongSign || validAlign === 'inside' && escaped) {
+        dropped += offsets.length - result.length;
+        break;
+      }
+    }
+    result.push(candidate);
+  }
+  return { passes: result, dropped };
+}
+
+/** One printed path per pass. Centre alignment retains the historical count, pitch and offsets. */
+export function linePasses(line, bead = 0.45, options = {}) {
+  return linePassesDetailed(line, bead, options).passes;
 }
 
 /**
@@ -262,18 +325,23 @@ export function linePasses(line, bead = 0.45) {
  * returned in `whole`, because they lie on the boundary themselves.
  * @returns { model, clipped: [{ pts, shape }], whole: [{ pts, shape }] }
  */
-export function drawingPolylines(vector, { scaleX = 1, scaleY = 1, offsetX = 0, offsetY = 0, bead = 0.45, edges = 'all' } = {}) {
+export function drawingPolylines(vector, { scaleX = 1, scaleY = 1, offsetX = 0, offsetY = 0, bead = 0.45, edges = 'all', lineAlign = 'centre', passSpacing = 0.8 } = {}) {
   const model = interpretDrawing(vector, { scaleX, scaleY });
   const shift = (pts) => pts.map((p) => ({ x: p.x - offsetX, y: p.y - offsetY }));
   const clipped = [], whole = [];
-  for (const line of model.lines) for (const pts of linePasses(line, bead)) clipped.push({ pts: shift(pts), shape: false });
+  let droppedPasses = 0;
+  for (const line of model.lines) {
+    const detail = linePassesDetailed(line, bead, { align: lineAlign, spacing: passSpacing });
+    droppedPasses += detail.dropped;
+    for (const pts of detail.passes) clipped.push({ pts: shift(pts), shape: false });
+  }
   const kept = edges === 'kept';
   for (const s of model.shapes) {
     if (kept && !s.kept) continue;
     const poly = { pts: shift([...s.ring, s.ring[0]]), shape: true };
     (kept ? whole : clipped).push(poly);
   }
-  return { model, clipped, whole };
+  return { model, clipped, whole, droppedPasses };
 }
 
 /* ---------- the page ---------- */

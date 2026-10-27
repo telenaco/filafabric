@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "site/vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "e09587f709e9555a0ad43c4c5e08f85930459933e26ce8b56b827bb09fcfd028",
+  "archiveSha256": "2c817fcbd28dbb273cc1ea7eac825a7d780365c3d15398d3eaf1e8c20657d98e",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -363,6 +363,11 @@
       "path": "dev/tests/library.test.js",
       "bytes": 15940,
       "sha256": "68e1ae4fccc59cec0bebe5d144d0dfc14842733ed339bba13b2b8018cde3d86d"
+    },
+    {
+      "path": "dev/tests/line-align.test.js",
+      "bytes": 4434,
+      "sha256": "a72112fbca4343692b9631de724925d6450d37f8dc7a9f0e479a062115c26ebd"
     },
     {
       "path": "dev/tests/lissajous.test.js",
@@ -767,7 +772,7 @@
     {
       "path": "dev/tests/snapshots/designs/svgdesign.json",
       "bytes": 2549,
-      "sha256": "01ef3138010105ecbe321ccc2ce38ed7c7a6f862de663814c04f25dd13061248"
+      "sha256": "6842770d6db664ba2d855f76edbdd3bdcfee87db1c5b32a8ceeac565223df5fa"
     },
     {
       "path": "dev/tests/snapshots/designs/truchet.json",
@@ -881,8 +886,8 @@
     },
     {
       "path": "dev/tests/svg-colour.test.js",
-      "bytes": 21096,
-      "sha256": "a54827082e6cded382f5a2e96b0a52936898be8fb208c0a83dbeda966b1f3233"
+      "bytes": 22055,
+      "sha256": "34f645368104f0ef2bdcbc361cadf611568c2a4b1602a4972a4534e3f3ec7abc"
     },
     {
       "path": "dev/tests/svg-edge-regressions.test.js",
@@ -1491,8 +1496,8 @@
     },
     {
       "path": "site/src/engine/drawing.js",
-      "bytes": 15939,
-      "sha256": "a455cc65f5729379052a66851612738ef87b51e9d671068507b5043c8bb97ee4"
+      "bytes": 19157,
+      "sha256": "c28781f93f213d30d73edadd5c0def17b458d29ae2ee7799bb7b65f6c25c43ba"
     },
     {
       "path": "site/src/engine/emit.js",
@@ -1761,8 +1766,8 @@
     },
     {
       "path": "site/src/engine/svg-parse.js",
-      "bytes": 21100,
-      "sha256": "c7053a7d2bc03da2b5e31d46302207b94d78c11a2092025272d1153fe2d28ba7"
+      "bytes": 22035,
+      "sha256": "b4fbcfcb75def29d9ed369849c31e487b942c0c234f3d96a6cbbf75658113a82"
     },
     {
       "path": "site/src/engine/svg-solids.js",
@@ -1771,8 +1776,8 @@
     },
     {
       "path": "site/src/engine/svgdesign.js",
-      "bytes": 8948,
-      "sha256": "0674d48f78e51b024a85c2e52086832786828ca043319a30ed99d44c3f007a79"
+      "bytes": 9240,
+      "sha256": "816fc1b9d64b21ea85e01303695aa680fbf49de7a6f2d6e1fcb7044f76b9d7f4"
     },
     {
       "path": "site/src/engine/tiler.js",
@@ -2026,8 +2031,8 @@
     },
     {
       "path": "site/src/ui/svg-design.js",
-      "bytes": 10325,
-      "sha256": "fcd496deae6322d06f6d679806283fb3bb0c19e05fa19106ead7a4b3bc3dd481"
+      "bytes": 11346,
+      "sha256": "bef1d5a69e45dee28e0ffa1cc4deff178347fc59dcdae737653c267a7f78a004"
     },
     {
       "path": "site/src/ui/svg-lines.js",
