@@ -93,6 +93,8 @@
 <div class="app">
   <aside class="designs" aria-labelledby="designs-title">
     <h2 class="eyebrow" id="designs-title" title="Essentials first, then the rest easiest first. Every design opens at 100 × 100 mm. The order ranks the default geometry by free spans, slopes, nozzle lifts and clearance flags; physical testing pending.">Designs</h2>
+    <input type="search" id="design-filter" class="design-filter" placeholder="Find a design by name" aria-label="Find a design by name" autocomplete="off" spellcheck="false">
+    <p class="design-filter-none small muted" id="design-filter-none" hidden>No design has that name.</p>
     <div class="design-list" id="design-list"></div>
     <div class="design-list" id="experimental-design-list"></div>
     <p class="more-designs">More structures are on the way.</p>

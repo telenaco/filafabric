@@ -1683,7 +1683,31 @@ function renderTiles() {
   $('#design-list').replaceChildren(...['flat', 'layered', 'raised'].map((shelf) => shelfNode(shelf, groups[shelf])));
   $('#experimental-design-list').replaceChildren(...(presets.length ? [el('section', { class: 'library-shelf quick-starts', 'aria-label': 'Quick starts' },
     el('h2', { class: 'family-heading', text: 'Quick starts' }), ...presets.map(makeTile))] : []));
+  applyDesignFilter();
   renderTilePressed();
+}
+
+/** Hides the cards whose name does not contain what was typed, and the shelves left empty; opens the shelves that have matches. */
+const shelfWasOpen = new Map();
+function applyDesignFilter() {
+  const box = $('#design-filter');
+  if (!box) return;
+  const words = box.value.toLowerCase().split(/\s+/).filter(Boolean);
+  let shown = 0;
+  for (const details of document.querySelectorAll('#design-list .library-shelf')) {
+    if (!shelfWasOpen.has(details)) shelfWasOpen.set(details, details.open);
+    let here = 0;
+    for (const tile of details.querySelectorAll('.design-tile')) {
+      const text = `${tile.querySelector('.design-name')?.textContent ?? ''} ${tile.dataset.design ?? ''}`.toLowerCase();
+      const match = words.every((word) => text.includes(word));
+      tile.hidden = !match;
+      if (match) here++;
+    }
+    details.hidden = words.length > 0 && here === 0;
+    details.open = words.length ? here > 0 : shelfWasOpen.get(details);
+    shown += here;
+  }
+  $('#design-filter-none').hidden = !(words.length && shown === 0);
 }
 
 /** The settings object a design keeps its state in (the two older designs keep theirs at the top level). */
@@ -2357,6 +2381,8 @@ function bindStatic() {
   $('#btn-undo').addEventListener('click', undo);
   $('#btn-redo').addEventListener('click', redo);
   $('#btn-export').addEventListener('click', () => { void exportGcode(); });
+  $('#design-filter').addEventListener('input', applyDesignFilter);
+  $('#design-filter').addEventListener('keydown', (event) => { if (event.key === 'Escape' && event.target.value) { event.target.value = ''; applyDesignFilter(); } });
   $('#btn-details').addEventListener('click', () => { state.details = !state.details; renderFigures(); });
   $('#btn-apply').addEventListener('click', () => { if ($('#btn-apply').dataset.mode === 'export') { if (!$('#btn-export').disabled) void exportGcode(); } else void applyPiece(); });
   $('#btn-swatch-record').addEventListener('click',()=>{

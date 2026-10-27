@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "site/vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "889f5ebdeaea11354e06ae82d819214b3f0a2ae8cdf90eb661ec15b6abec8d0d",
+  "archiveSha256": "1bcab19ffd31c0f84ae5fca944f852a1ce1f4dfae6bda2c41d3da868d5c2d1f4",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -1621,8 +1621,8 @@
     },
     {
       "path": "site/index.html",
-      "bytes": 32075,
-      "sha256": "1d16d6540b744c0fdf23d38f23d7abcfb935fc9c3f1a19a1fab8bec7edaee396"
+      "bytes": 32357,
+      "sha256": "a9d871bd217c815cb8ce5769416d9a17ebad5edea055a94872fb1cb49888f746"
     },
     {
       "path": "site/profiles/MATERIAL_SOURCES.md",
@@ -2396,8 +2396,8 @@
     },
     {
       "path": "site/src/ui/main.js",
-      "bytes": 133054,
-      "sha256": "b5df414c25b67f15d15ee7e8935b34ac201b5d1bef161792903503a4ab0f1d12"
+      "bytes": 134359,
+      "sha256": "b4d2649c5cea93b018342e23561f75dad8c6d7aa668f51556e6b11b90779e332"
     },
     {
       "path": "site/src/ui/more-designs.js",
@@ -2526,8 +2526,8 @@
     },
     {
       "path": "site/src/ui/styles.css",
-      "bytes": 58963,
-      "sha256": "d45ef1796890e3e5d97424c70f03bda9976f379090a8f9a580fc4c9d25ea694f"
+      "bytes": 59496,
+      "sha256": "5fa1ed50ed7f98a0bbf43fe898ae6c8e86666aca008dc6fbbec8890f603a728c"
     },
     {
       "path": "site/src/ui/svg-design.js",

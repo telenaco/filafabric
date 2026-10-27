@@ -129,6 +129,9 @@ The single place to see what is ready, who has it and where it stands. The revie
 | Wave net bundles (bond control for the Squiggle generator) | T4.2 | M | Implemented locally: 1–5 strands, bonded/gapped spacing and a bonding field; validation deferred. |
 | Collapsible Flat / Layered / Raised shelves and Pattern controls | Luis | S | Implemented locally; Flat opens by default. |
 | ~~Resolve C13/T0.2 snapshot wording~~ **Resolved:** `families` stays in the snapshot schema. T0.0 records `[]`; T0.2 may change only the `families` field of every snapshot (every other field, including the G-code hash, must stay identical). Done that way. | T0.0 review, 26 Oct 2026 | S | Resolved |
+| Done 28 Oct 2026 (Luis): estimates on every card and preset at 100 x 100 mm, side-view strip and "How a drawing prints" removed, page fits the window, Export G-code, simplest-first order, finer cell width (Re-entrant mesh, Honeycomb · flat), name filter above the designs | Luis | S | Implemented locally (branch `filafabric-integration`). |
+| 2D view that plays the print order, with the G-code building in the background; SVG export of the 2D view; slider limits tied to the nozzle bead | Luis | M | Proposed as its own session (card in the app); not started. |
+| **To do next (Luis, 28 Oct 2026):** Flat, single-layer versions of Truchet tiles, Turing stripes, Meander, Bouclé & picots and Parquet, without the backing. The live site printed these as two layers, the second being the backing. They go on the Flat shelf as one layer each; they are not printable alone, by design. **Do not build the backing now:** Luis will supply it (a six-sack option for the back). Keep the existing two-layer cards as they are. | Luis | M | Not started. Ask Luis for the backing before wiring it. |
 
 ## Open decisions for Luis
 
