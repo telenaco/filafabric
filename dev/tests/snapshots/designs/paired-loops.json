@@ -1,0 +1,18 @@
+[
+  {
+    "card": "paired-loops",
+    "preset": "default",
+    "settingsHash": "dd9b51b16193",
+    "gcodeSha256": "9135c4acce6b54dadbf367d36332bc8fbeda92201144dfc7ac56f0e5554df47d",
+    "strands": 138,
+    "moves": 9223,
+    "extrudeMm": 2466.8,
+    "zMin": 0.2,
+    "zMax": 0.65,
+    "families": [
+      "loops-A",
+      "loops-B"
+    ],
+    "ties": 0
+  }
+]

@@ -35,6 +35,7 @@ import { drawSideView } from './sideview.js';
 import { SHELVES, variantsOf } from './library.js';
 import { BACKING_STYLES } from '../engine/backing.js';
 import { SAMPLERS } from '../engine/squiggle.js';
+import { draftBinding, WEAVE_DRAFT_PRESETS } from '../engine/weave.js';
 
 const fmt = (n) => String(Math.round(n * 10) / 10);
 
@@ -611,6 +612,63 @@ export class Section extends Control {
   }
 }
 
+/** Loom draft editor: repeatable threading, tie-up and treadling with a live drawdown and row cross-section. */
+export class DraftSection extends Section {
+  buildBody() {
+    this.body=el('div',{class:'draft-editor'});
+    this.presetButtons=el('div',{class:'draft-presets','role':'group','aria-label':'Draft presets'});
+    for(const [id,label] of [['point-twill','Point twill'],['block','Block weave'],['herringbone','Herringbone'],['custom','Custom']]){
+      const button=el('button',{type:'button',class:'btn small',text:label,'data-draft-preset':id});
+      button.addEventListener('click',()=>this.applyPreset(id));this.presetButtons.append(button);
+    }
+    this.validation=el('p',{class:'draft-validation small','aria-live':'polite',role:'status'});
+    this.grids=el('div',{class:'draft-grids'});
+    this.threading=el('div',{class:'draft-grid-wrap'});this.tieup=el('div',{class:'draft-grid-wrap'});this.treadling=el('div',{class:'draft-grid-wrap'});
+    this.drawdown=el('div',{class:'draft-drawdown-wrap'});this.crossSection=el('div',{class:'draft-cross-section'});
+    this.grids.append(this.threading,this.tieup,this.treadling);
+    this.body.append(this.presetButtons,this.validation,this.grids,this.drawdown,this.crossSection);
+    return this.body;
+  }
+
+  applyPreset(id){
+    const draft=WEAVE_DRAFT_PRESETS[id];if(draft)this.settings.draft={preset:id,...structuredClone(draft)};else this.settings.draft={...this.settings.draft,preset:'custom'};
+    this.host.change();
+  }
+
+  refresh(){
+    const draft=this.settings.draft;
+    for(const button of this.presetButtons.querySelectorAll('[data-draft-preset]'))button.setAttribute('aria-pressed',String(button.dataset.draftPreset===draft.preset));
+    const shafts=Math.max(1,draft.tieup.length),treadles=Math.max(1,...draft.tieup.map(row=>row.length));
+    this.threading.replaceChildren(el('h3',{text:'Threading · shaft for each warp'}),...draft.threading.map((shaft,index)=>{
+      const button=el('button',{type:'button',class:'draft-cell',text:String(shaft+1),title:`Warp ${index+1}: shaft ${shaft+1}`,'aria-label':`Warp ${index+1}, shaft ${shaft+1}`});
+      button.addEventListener('click',()=>{draft.threading[index]=(shaft+1)%shafts;draft.preset='custom';this.host.change();});return button;
+    }));
+    this.tieup.replaceChildren(el('h3',{text:'Tie-up · shafts × treadles'}));
+    const table=el('table',{class:'draft-matrix','aria-label':'Tie-up matrix'}),head=el('tr',{},el('th',{text:'Shaft'}),...Array.from({length:treadles},(_,j)=>el('th',{text:`T${j+1}`})));table.append(el('thead',{},head));
+    const tbody=el('tbody');draft.tieup.forEach((row,i)=>{const tr=el('tr',{},el('th',{scope:'row',text:`S${i+1}`}));for(let j=0;j<treadles;j++){const active=!!row[j],button=el('button',{type:'button',class:'draft-cell tieup-cell',text:active?'●':'—','aria-pressed':String(active),'aria-label':`Shaft ${i+1}, treadle ${j+1}, ${active?'tied':'not tied'}`});button.addEventListener('click',()=>{row[j]=!row[j];draft.preset='custom';this.host.change();});tr.append(el('td',{},button));}tbody.append(tr);});table.append(tbody);this.tieup.append(table);
+    this.treadling.replaceChildren(el('h3',{text:'Treadling · treadle for each pick'}),...draft.treadling.map((treadle,index)=>{const button=el('button',{type:'button',class:'draft-cell',text:String(treadle+1),title:`Pick ${index+1}: treadle ${treadle+1}`,'aria-label':`Pick ${index+1}, treadle ${treadle+1}`});button.addEventListener('click',()=>{draft.treadling[index]=(treadle+1)%treadles;draft.preset='custom';this.host.change();});return button;}));
+    let binding,error='';try{binding=draftBinding(draft);}catch(exception){error=exception.message;}
+    if(error){this.validation.textContent=error;this.validation.classList.add('is-error');this.drawdown.replaceChildren();this.crossSection.replaceChildren();return;}
+    this.validation.classList.remove('is-error');
+    const columns=Math.min(24,Math.max(1,draft.threading.length)),rows=Math.min(24,Math.max(1,draft.treadling.length));
+    let longest=0;for(let i=0;i<draft.threading.length;i++)for(const over of [true,false]){let run=0;for(let j=0;j<draft.treadling.length*2;j++){if(binding.over(i,j)===over){run++;longest=Math.max(longest,run);}else run=0;}}
+    this.validation.textContent=longest>4?`Long floats (${longest} crossings) sag and snag.`:'Draft is bound in both directions; no float exceeds four crossings.';
+    const svg=svgEl('svg',{viewBox:`0 0 ${columns*18} ${rows*18}`,role:'img','aria-label':'Live weave drawdown; raised cells mean warp is over weft'});
+    const cross=this.crossSection;
+    const paintCross=(pick)=>{
+      const strip=svgEl('svg',{viewBox:`0 0 ${columns*18} 54`,role:'img','aria-label':`Cross-section at pick ${pick+1}`});
+      for(let i=0;i<columns;i++){
+        const over=binding.over(i,pick),x=i*18;
+        strip.append(svgEl('rect',{x,y:over?30:8,width:17,height:9,rx:1,fill:'var(--ink, #333)',opacity:'.55'}));
+        strip.append(svgEl('rect',{x,y:over?8:30,width:17,height:9,rx:1,fill:'var(--accent, #8d5137)'}));
+      }
+      cross.replaceChildren(el('span',{class:'small muted',text:`Cross-section · pick ${pick+1} · dark weft, accent warp`}),strip);
+    };
+    for(let j=0;j<rows;j++)for(let i=0;i<columns;i++){const over=binding.over(i,j),rect=svgEl('rect',{x:i*18,y:j*18,width:17,height:17,rx:1,fill:over?'var(--accent, #8d5137)':'var(--ink, #333)',opacity:over?'.9':'.48',tabindex:0,role:'button','aria-label':`Warp ${i+1}, pick ${j+1}: ${over?'warp over':'weft over'}`});rect.addEventListener('pointerenter',()=>paintCross(j));rect.addEventListener('focus',()=>paintCross(j));svg.append(rect);}
+    this.drawdown.replaceChildren(el('h3',{text:'Drawdown · select or hover a pick for its cross-section'}),svg);paintCross(0);
+  }
+}
+
 /** A grid of option buttons, one of which is pressed. Subclasses say what the options are. */
 class OptionSection extends Section {
   /** @returns [{ attrs, html?, text?, hint, pressed(), apply() }] */
@@ -915,7 +973,7 @@ export class SupportSection extends Section {
 /** Returns panel-template contract violations for one card's controls list. */
 export function panelOrderErrors(controls = []) {
   const errors = [];
-  const groups = { presets: 0, size: 1, choice: 2, petal: 2, sliders: 3, switch: 3, pattern: 4, colour: 5, support: 6 };
+  const groups = { presets: 0, size: 1, choice: 2, petal: 2, draft: 2, sliders: 3, switch: 3, pattern: 4, colour: 5, support: 6 };
   let last = -1;
   const seen = new Set();
   let slidersSeen = false;
@@ -948,6 +1006,7 @@ export const SECTION_TYPES = {
   pattern: PatternSection,
   colour: ColourSection,
   support: SupportSection,
+  draft: DraftSection,
 };
 
 /** One design's whole panel: its name, then its sections in the order its registry entry lists them. */

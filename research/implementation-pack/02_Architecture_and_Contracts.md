@@ -120,7 +120,7 @@ A card's `controls` list must follow this order. Each group may appear at most o
 |---|---|---|
 | 0 | Start from | `presets` (optional) |
 | 1 | Size and shape | `size` |
-| 2 | Structure | `choice` (zero or more), `petal` (optional metric editor) |
+| 2 | Structure | `choice` (zero or more), `petal` (optional metric editor), `draft` (optional weave draft editor) |
 | 3 | Look and feel | `sliders` (one), optionally followed by a `switch` that belongs to it (for example Link in Bubbles) |
 | 4 | Pattern | `pattern` (optional) |
 | 5 | Colour | `colour` (new kind; replaces `switch key=colorChange`) |

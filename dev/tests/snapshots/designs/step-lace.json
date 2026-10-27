@@ -1,0 +1,84 @@
+[
+  {
+    "card": "step-lace",
+    "preset": "default",
+    "settingsHash": "90ee544180a6",
+    "gcodeSha256": "76b674cd012505c5249e4f2bdb3bb4e5e20933e535c56caeeccb74ac1586f652",
+    "strands": 52,
+    "moves": 1328,
+    "extrudeMm": 1801.8,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "lines",
+      "tie",
+      "ties"
+    ],
+    "ties": 15
+  },
+  {
+    "card": "step-lace",
+    "preset": "step",
+    "settingsHash": "90ee544180a6",
+    "gcodeSha256": "76b674cd012505c5249e4f2bdb3bb4e5e20933e535c56caeeccb74ac1586f652",
+    "strands": 52,
+    "moves": 1328,
+    "extrudeMm": 1801.8,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "lines",
+      "tie",
+      "ties"
+    ],
+    "ties": 15
+  },
+  {
+    "card": "step-lace",
+    "preset": "hexagon",
+    "settingsHash": "c32d9d9bf402",
+    "gcodeSha256": "dc7b279cecf3f03b0aab4523a4522d067dc9e3ef9ca073ce1b6d52dc7d67b02c",
+    "strands": 10,
+    "moves": 2099,
+    "extrudeMm": 1146.8,
+    "zMin": 0.2,
+    "zMax": 0.6202690808251545,
+    "families": [
+      "lines",
+      "tie"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "step-lace",
+    "preset": "ripple",
+    "settingsHash": "fb56ae35f0e0",
+    "gcodeSha256": "c176b4ba662b500a21f0bab23e9e5b649e319afbf23130253c926d8f51284734",
+    "strands": 10,
+    "moves": 415,
+    "extrudeMm": 686.6,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "lines",
+      "tie"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "step-lace",
+    "preset": "petal",
+    "settingsHash": "96fd39a12c4c",
+    "gcodeSha256": "d4f98680facb8a847f13523c898160886a183714f0012b8a7a7ac43b1acab9f9",
+    "strands": 34,
+    "moves": 2212,
+    "extrudeMm": 1107,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "lines",
+      "tie"
+    ],
+    "ties": 0
+  }
+]

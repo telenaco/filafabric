@@ -69,10 +69,13 @@ test('all ready cards have the exact ticket metadata', () => {
     "   | `lace-backing` | layered | lattices | auto | untested | The open carrier crosses and holds each motif island. |",
     "   | `rings-raised` | raised | rings | self | untested | Each ring climbs over the rings printed before it, building up in levels. |",
     "   | `corrugation` | raised | textures | built-in | untested | Smooth ridges rise over a crossed base net. |",
+    "   | `step-lace` | layered | curves | built-in | untested | A second decorative family crosses the parallel base lines and holds them together. |",
+    "   | `paired-loops` | layered | loops | self | untested | The second loop family crosses and bonds to the first on the next print plane. |",
+    "   | `scales` | layered | cells | built-in | untested | Tiles are separated by a constant gap and bonded to the carrier underneath. |",
   ].join("\n");
   const rows = [...brief.matchAll(/\| `([^`]+)` \| (flat|layered|raised) \| (\w+) \| (self|auto|built-in) \| (untested|needs-repair) \| ([^|]+) \|/g)];
-  assert.equal(rows.length, 58);
-  assert.equal(DESIGNS.filter(d => d.status === 'ready').length, 58);
+  assert.equal(rows.length, 61);
+  assert.equal(DESIGNS.filter(d => d.status === 'ready').length, 61);
   for (const [, id, shelf, family, support, state, joins] of rows) {
     const card = DESIGNS.find(d => d.id === id);
     assert.deepEqual(validateCard(card), [], id);
@@ -100,6 +103,9 @@ test('all ready cards have the exact ticket metadata', () => {
       'lace-backing': { catalogue: ['M1'], papers: [58, 59] },
       'rings-raised': { papers: [31, 36], notes: ["Luis's construction; not from a paper"] },
       corrugation: { catalogue: ['N2'] },
+      'step-lace': { catalogue: ['M6'], papers: [10, 37] },
+      'paired-loops': { catalogue: ['M4'], papers: [3, 4, 25] },
+      scales: { catalogue: ['M8'], papers: [47] },
     };
     assert.deepEqual(card.sources, sources[id] ?? {});
     assert.ok(Object.hasOwn(FAMILIES, family));
@@ -124,9 +130,11 @@ test('library groups order cards by print state and then name', () => {
   assert.deepEqual(cards.map((card) => card.name), ['Beta', 'Zulu', 'Alpha']);
 });
 
-test('panel order accepts the six-section order and rejects legacy or repeated groups', () => {
+test('panel order accepts six sections and optional Structure editors, and rejects legacy or repeated groups', () => {
   assert.deepEqual(panelOrderErrors([{ kind: 'presets' }, { kind: 'size' }, { kind: 'choice' }, { kind: 'petal' }, { kind: 'choice' },
     { kind: 'sliders' }, { kind: 'switch', key: 'link' }, { kind: 'pattern' }, { kind: 'colour' }, { kind: 'support' }]), []);
+  assert.deepEqual(panelOrderErrors([{kind:'size'},{kind:'choice'},{kind:'draft'},{kind:'sliders'}]),[]);
+  assert.ok(panelOrderErrors([{kind:'size'},{kind:'draft'},{kind:'draft'}]).some(error=>error.includes('draft appears more than once')));
   assert.ok(panelOrderErrors([{ kind: 'shape' }]).some((error) => error.includes('shape')));
   assert.ok(panelOrderErrors([{ kind: 'switch', key: 'colorChange' }]).some((error) => error.includes('colorChange')));
   assert.ok(panelOrderErrors([{ kind: 'pattern' }, { kind: 'sliders' }]).length);

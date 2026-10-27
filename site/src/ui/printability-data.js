@@ -1003,6 +1003,27 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "step-lace",
+    "score": 48.22799015433356,
+    "components": 1,
+    "joints": 160,
+    "reversedCrossings": 0,
+    "separatedCrossings": 2,
+    "longestUnsupported": 7.613995077166777,
+    "maxSlopeDeg": 25.000000000000007,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 160,
+    "moves": 5973,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 3078.686231806477,
+      "afterMm": 517.3521017002422
+    }
+  },
+  {
     "id": "voronoi",
     "score": 60.254252173320346,
     "components": 1,
@@ -1123,6 +1144,24 @@ export const PRINTABILITY = [
     "routing": null
   },
   {
+    "id": "paired-loops",
+    "score": 98.3538631247124,
+    "components": 1,
+    "joints": 1341,
+    "reversedCrossings": 0,
+    "separatedCrossings": 5216,
+    "longestUnsupported": 8.825070514054996,
+    "maxSlopeDeg": 13.653722096602415,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 1341,
+    "moves": 89853,
+    "clearanceFlags": 0,
+    "routing": null
+  },
+  {
     "id": "pillarweave",
     "score": 111.4825385465194,
     "components": 1,
@@ -1199,5 +1238,26 @@ export const PRINTABILITY = [
     "moves": 7138,
     "clearanceFlags": 0,
     "routing": null
+  },
+  {
+    "id": "scales",
+    "score": 245.8100003815027,
+    "components": 1,
+    "joints": 434,
+    "reversedCrossings": 0,
+    "separatedCrossings": 78250,
+    "longestUnsupported": 99.57999999999993,
+    "maxSlopeDeg": 25.000000381502833,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 433,
+    "moves": 367433,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 4941.622583710831,
+      "afterMm": 1100.4578436220786
+    }
   }
 ];

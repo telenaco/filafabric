@@ -435,6 +435,32 @@ input[aria-invalid="true"], select[aria-invalid="true"] { border-color: var(--da
 .ctl .seg.two { margin-top: 6px; }
 
 .patterns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.draft-editor { display: grid; gap: 12px; }
+.draft-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.draft-presets .btn { min-height: 40px; }
+.draft-validation { margin: 0; padding: 8px 10px; background: var(--ok-bg); color: var(--ok-ink); border-left: 3px solid var(--ok-bd); }
+.draft-validation.is-error { background: var(--danger-bg); color: var(--danger-ink); border-color: var(--danger-bd); }
+.draft-grids { display: grid; grid-template-columns: minmax(0,1fr) minmax(220px,1.3fr) minmax(0,1fr); gap: 12px; align-items: start; }
+.draft-grid-wrap { min-width: 0; }
+.draft-grid-wrap h3, .draft-drawdown-wrap h3 { font-size: 13px; line-height: 1.35; margin: 0 0 7px; }
+.draft-cell { min-width: 40px; min-height: 40px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--ink); font-variant-numeric: tabular-nums; }
+.draft-cell:hover, .draft-cell[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.draft-grid-wrap:not(:has(table)) { display: flex; flex-wrap: wrap; gap: 5px; }
+.draft-grid-wrap:not(:has(table)) h3 { flex: 0 0 100%; }
+.draft-matrix { border-collapse: collapse; font-size: 12px; }
+.draft-matrix th { padding: 2px 4px; color: var(--muted); font-weight: 600; }
+.draft-matrix td { padding: 2px; text-align: center; }
+.tieup-cell { min-width: 38px; min-height: 38px; }
+.draft-drawdown-wrap { overflow-x: auto; }
+.draft-drawdown-wrap svg, .draft-cross-section svg { display: block; width: min(100%, 520px); min-width: 180px; height: auto; }
+.draft-drawdown-wrap svg [role="button"] { cursor: crosshair; }
+.draft-cross-section { display: grid; gap: 4px; }
+@media (max-width: 700px) {
+  .draft-grids { grid-template-columns: 1fr; }
+  .draft-matrix { max-width: 100%; }
+  .draft-grid-wrap:not(:has(table)) { gap: 4px; }
+  .draft-cell { min-width: 44px; min-height: 44px; }
+}
 .pattern {
   display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px 8px; min-height: 88px;
   font-size: 12.5px; font-weight: 600; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink-2);

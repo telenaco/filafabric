@@ -1,5 +1,5 @@
 import { layered, VORONOI } from './more-designs.js';
-import { defineControls, r1, withColour } from './structure-controls.js';
+import { defineControls, r1, r2, withColour } from './structure-controls.js';
 import { withPicture, patternField } from '../engine/picture.js';
 import { FIELD_IDS } from '../engine/fields.js';
 import { ringsLayers, RING_LATTICE_IDS } from '../engine/rings.js';
@@ -15,6 +15,9 @@ import { starMetricLayers } from '../engine/star-metric.js';
 import { isohedralLayers, isohedralParameterCount, isohedralMaterialClass } from '../engine/isohedral.js';
 import { climbOverlaps } from '../engine/climb.js';
 import { buildLayeredVerdict } from './verdict.js';
+import { stepLaceLayers } from '../engine/step-lace.js';
+import { pairedLoopsLayers } from '../engine/paired-loops.js';
+import { scalesLayers } from '../engine/scales.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const COLOUR = { kind: 'switch', key: 'colorChange', label: 'Two colours', help: 'Pause after the first layer so you can load a second filament (M600).' };
@@ -142,8 +145,45 @@ const STAR_METRIC=withColour({...STAR_METRIC_BASE,sanitize(raw){
   const base=STAR_METRIC_BASE.sanitize(raw),spans=Array.isArray(raw?.spans)?raw.spans.slice(0,7).map(v=>Math.max(.3,Math.min(1.5,Number(v)||1))):base.spans;
   return {...base,spans:spans.length>=3?spans:base.spans};
 }});
+const STEP_LACE=withColour(defineControls({
+  ranges:{...SIZE,spacing:{min:1.5,max:8,step:.1},tieLength:{min:3,max:20,step:.5},tieDepth:{min:3,max:24,step:.1},petals:{min:4,max:10,step:1}},
+  defaults:{width:100,height:100,spacing:3,tie:'step',tieLength:6,tieDepth:3.3,petals:6,colorChange:false},
+  enums:{tie:['step','hexagon','ripple','petal']},
+  presets:[{id:'step',name:'Step',blurb:'Straight lines tied by zigzag rows',patch:{tie:'step'}},{id:'hexagon',name:'Hexagon',blurb:'A hexagonal tie network',patch:{tie:'hexagon'}},{id:'ripple',name:'Ripple',blurb:'Sine-shaped ties',patch:{tie:'ripple'}},{id:'petal',name:'Petal',blurb:'Rosette ties on a staggered lattice',patch:{tie:'petal'}}],
+  describe:s=>({spacing:`${r1(s.spacing)} mm`,tie:s.tie,tieLength:`${r1(s.tieLength)} mm`,tieDepth:`${r1(s.tieDepth)} mm`}),
+}));
+const PAIRED_LOOPS=withColour(defineControls({
+  ranges:{...SIZE,loopWidth:{min:2,max:10,step:.1},aspect:{min:1.2,max:2.6,step:.05},rowPitch:{min:2,max:15,step:.1},offset:{min:.25,max:.75,step:.05}},
+  defaults:{width:100,height:100,loopWidth:4,aspect:1.8,rowPitch:4.32,offset:.5,colorChange:false},
+  describe:s=>({loopWidth:`${r1(s.loopWidth)} mm`,aspect:`${r1(s.aspect)}× tall`,rowPitch:`${r1(s.rowPitch)} mm`,offset:`${r2(s.offset)} loop`}),
+}));
+const SCALES=withColour(defineControls({
+  ranges:{...SIZE,pitch:{min:4,max:20,step:.1},gap:{min:.4,max:2,step:.05},scaleLayers:{min:1,max:10,step:1},carrierLayers:{min:1,max:3,step:1}},
+  defaults:{width:100,height:100,tile:'hex',pitch:8,gap:.4,scaleLayers:2,carrierLayers:1,carrier:'solid',interlock:false,colorChange:false},
+  enums:{tile:['hex','square','triangle'],carrier:['solid','net']},bools:['interlock'],
+  describe:s=>({tile:s.tile,pitch:`${r1(s.pitch)} mm`,gap:`${r1(s.gap)} mm`,scaleLayers:`${s.scaleLayers} layers`,carrier:s.carrier}),
+}));
 
 export const RESEARCH_DESIGNS = [layered({
+  id:'step-lace',name:'Step, ripple & petal lace',blurb:'Straight lines tied by decorative crossings',about:'Parallel base lines are held together by a second, decorative family: zigzag steps, hexagons, ripples or petals. The ties are the carrier. The design is a fused pseudo-textile, not sliding yarn.',file:'step-lace',c:STEP_LACE,
+  shelf:'layered',family:'curves',support:'built-in',state:'untested',settingsKey:'step-lace',joins:'A second decorative family crosses the parallel base lines and holds them together.',sources:{catalogue:['M6'],papers:[10,37]},
+  sanitize(raw){const s=STEP_LACE.sanitize(raw);return {...s,tieDepth:Math.max(s.spacing,Math.min(3*s.spacing,s.tieDepth)),petals:Math.max(4,Math.min(10,Math.round(s.petals)))};},
+  controls:[{kind:'presets',title:'Start from'},{kind:'size',title:'Size and shape'},{kind:'choice',key:'tie',title:'Tying pattern',options:[{id:'step',label:'Step'},{id:'hexagon',label:'Hexagon'},{id:'ripple',label:'Ripple'},{id:'petal',label:'Petal'}]},{kind:'sliders',title:'Look and feel',items:[{key:'spacing',label:'Line spacing',help:'Distance between parallel base lines.',lo:'Close',hi:'Open',unit:'mm',edit:true},{key:'tieLength',label:'Tie length',help:'Spacing of the decorative ties.',lo:'Short',hi:'Long',unit:'mm',edit:true},{key:'tieDepth',label:'Tie depth',help:'How far the ties reach across the base lines.',lo:'Shallow',hi:'Deep',unit:'mm',edit:true},{key:'petals',label:'Petals',help:'Lobes in each rosette; used for petal ties.',lo:'Four',hi:'Ten',unit:'',edit:true,when:s=>s.tie==='petal'}]},COLOUR],
+  build:(s,boundary)=>{const built=stepLaceLayers(boundary,s);return {layers:built,families:built.families,extra:built.extra};},
+  summary:r=>`${r.baseLines} base lines held by ${r.ties} decorative ties`,
+ }), layered({
+  id:'scales',name:'Scales on a carrier',blurb:'Inset tile islands on a flexible base',about:'Solid tile islands sit on a continuous solid or open-net carrier, with gaps between neighbouring scales. One-material bonded construction; not sliding armour. FlexScale motivates this geometry, but these tiles do not reproduce its interlocking groove.',file:'scales',c:SCALES,
+  shelf:'layered',family:'cells',support:'built-in',state:'untested',settingsKey:'scales',joins:'Tiles are separated by a constant gap and bonded to the carrier underneath.',sources:{catalogue:['M8'],papers:[47]},
+  controls:[{kind:'presets',title:'Start from'},{kind:'size',title:'Size and shape'},{kind:'choice',key:'tile',title:'Scale shape',options:[{id:'hex',label:'Hexagon'},{id:'square',label:'Square'},{id:'triangle',label:'Triangle'}]},{kind:'choice',key:'carrier',title:'Carrier',options:[{id:'solid',label:'Solid'},{id:'net',label:'Open net'}]},{kind:'sliders',title:'Look and feel',items:[{key:'pitch',label:'Tile pitch',lo:'Small',hi:'Large',unit:'mm',edit:true},{key:'gap',label:'Tile gap',lo:'Narrow',hi:'Wide',unit:'mm',edit:true},{key:'carrierLayers',label:'Carrier thickness',lo:'Thin',hi:'Thick',unit:'layers',edit:true},{key:'scaleLayers',label:'Scale height',lo:'Low',hi:'High',unit:'layers',edit:true}]},COLOUR],
+  build:(s,boundary,ctx)=>{const built=scalesLayers(boundary,{...s,bead:ctx?.bead??.45});return {layers:built,families:built.families,extra:built.extra};},
+  summary:r=>`${r.tiles} scales on a ${r.carrier} carrier`,
+ }), layered({
+  id:'paired-loops',name:'Paired loops',blurb:'Two bonded, staggered loop families',about:'Two flat loop rows interleave on separate print planes and bond at their crossings. This is a knit-like bonded lattice, not mobile stitches or sliding yarn. Published knitted structures motivate the proportions; this FDM construction remains untested.',file:'paired-loops',c:PAIRED_LOOPS,
+  shelf:'layered',family:'loops',support:'self',state:'untested',settingsKey:'paired-loops',joins:'The second loop family crosses and bonds to the first on the next print plane.',sources:{catalogue:['M4'],papers:[3,4,25]},
+  controls:[{kind:'presets',title:'Start from'},{kind:'size',title:'Size and shape'},{kind:'sliders',title:'Look and feel',items:[{key:'loopWidth',label:'Loop width',help:'Horizontal size of each closed loop.',lo:'Small',hi:'Large',unit:'mm',edit:true},{key:'aspect',label:'Loop aspect',help:"Beecroft's knit loops were about 1.6–2.4 times as tall as wide.",lo:'Short',hi:'Tall',unit:'×',edit:true},{key:'rowPitch',label:'Row spacing',help:'Centre-to-centre distance between loop rows.',lo:'Close',hi:'Wide',unit:'mm',edit:true},{key:'offset',label:'Row offset',help:'Horizontal offset of the second loop family.',lo:'Quarter',hi:'Three-quarter',unit:'loop',edit:true}]},COLOUR],
+  build:(s,boundary)=>{const built=pairedLoopsLayers(boundary,s);return {layers:built,families:built.families,extra:built.extra};},
+  summary:r=>`${r.loopCountA} loops in each bonded family`,
+ }), layered({
   id: 'rings-flat', name: 'Rings · flat', blurb: 'Overlapping loops in one pass', about: 'One pass of overlapping rings on a staggered or square lattice. The loops overlap rather than meeting at a point, making a flexible sheet whose local contact can be graded by a picture.', file: 'rings-flat', c: RINGS,
   shelf: 'flat', family: 'rings', support: 'self', state: 'untested', settingsKey: 'rings',
   variantGroup:'rings',

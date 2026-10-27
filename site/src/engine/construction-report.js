@@ -252,6 +252,9 @@ export function shelfFromConstruction(report, { layerHeight = 0.2 } = {}) {
 // Provisional measured discrepancies at default 100 × 100 mm, pending human batch review.
 // Carrier cards (Spiral, Bouclé, Turing, Your drawing) are not listed: carrier passes count toward the layered height allowance.
 export const SHELF_EXCEPTIONS = Object.freeze({
+  'step-lace': 'Declared layered as a two-family carrier lace; the default tie crossings lift the toolpath above the two nominal planes, physical validation pending.',
+  'paired-loops': 'Declared layered as a two-plane loop lattice; same-family loop crossings lift parts above the nominal planes, physical validation pending.',
+  scales: 'Declared layered because the tile islands are stacked above a continuous carrier; geometry estimate pending physical validation.',
   auxetic: 'Declared flat as a planar lattice, but two native families cross at 0.400 mm and the measured rule selects layered.',
   'honeycomb-flat': 'Declared flat as a planar cell lattice, but the inherited Auxetic generator uses two native families at 0.400 mm and the measured rule selects layered; physical validation pending.',
   dipweave: 'Declared raised for the dipping technique, but its default warp and weft families measure only 0.400 mm and satisfy layered.',

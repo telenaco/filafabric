@@ -33,7 +33,7 @@ import { generateRelief, reliefPlacements } from '../engine/relief.js';
 import { hatch } from '../engine/layers.js';
 import { generateFringe } from '../engine/fringe.js';
 import { generateSpiral } from '../engine/spiral.js';
-import { generateWeave, WEAVE_BINDINGS, WEAVE_BINDING_IDS } from '../engine/weave.js';
+import { generateWeave, WEAVE_BINDINGS, WEAVE_BINDING_IDS, WEAVE_DRAFT_PRESETS, draftBinding } from '../engine/weave.js';
 import { bindingThumb, thumbFromLayers, rowsThumb } from './thumbs.js';
 import { OPTION_ICONS } from './option-thumbs.js';
 import { MORE_DESIGNS } from './more-designs.js';
@@ -48,7 +48,20 @@ import {
 import { colourMode, colourResult } from '../engine/colour-plan.js';
 import { legacySupport, sanitizeSupport } from '../engine/backing.js';
 
-const WEAVE = WEAVE_CONTROLS(WEAVE_BINDING_IDS);
+const DEFAULT_DRAFT = { preset:'point-twill', ...WEAVE_DRAFT_PRESETS['point-twill'] };
+const sanitizeDraft = (raw) => {
+  const fallback=()=>({preset:DEFAULT_DRAFT.preset,threading:[...DEFAULT_DRAFT.threading],tieup:DEFAULT_DRAFT.tieup.map(row=>[...row]),treadling:[...DEFAULT_DRAFT.treadling]});
+  if(!raw||typeof raw!=='object'||Array.isArray(raw))return fallback();
+  const ints=(value,limit)=>Array.isArray(value)?value.slice(0,limit).map(n=>Number.isInteger(Number(n))?Math.max(0,Math.min(7,Number(n))):0):[];
+  let tieup=Array.isArray(raw.tieup)?raw.tieup.slice(0,8).map(row=>Array.isArray(row)?row.slice(0,8).map(value=>value===true):[]):[];
+  if(!tieup.length)tieup=fallback().tieup;
+  const shafts=tieup.length,treadles=Math.max(1,...tieup.map(row=>row.length));
+  tieup=tieup.map(row=>Array.from({length:treadles},(_,i)=>row[i]===true));
+  const threading=ints(raw.threading,32).map(shaft=>Math.min(shafts-1,shaft)),treadling=ints(raw.treadling,32).map(treadle=>Math.min(treadles-1,treadle));
+  return {preset:['point-twill','block','herringbone','custom'].includes(raw.preset)?raw.preset:'custom',threading:threading.length?threading:fallback().threading.map(shaft=>Math.min(shafts-1,shaft)),tieup,treadling:treadling.length?treadling:fallback().treadling.map(treadle=>Math.min(treadles-1,treadle))};
+};
+const WEAVE_BASE = WEAVE_CONTROLS([...WEAVE_BINDING_IDS,'draft']);
+const WEAVE = { ...WEAVE_BASE, defaults:{...WEAVE_BASE.defaults,draft:sanitizeDraft(DEFAULT_DRAFT)}, sanitize(raw){return {...WEAVE_BASE.sanitize(raw),draft:sanitizeDraft(raw?.draft)};} };
 // a design's pattern as a field: a built-in one or the uploaded picture (picture.js), dark parts reading as more
 const fieldFor = (s, picture, polarity = 'positive') => patternField(s.pattern, { scale: s.patternScale, picture, polarity });
 const sizeOf = (s) => [s.width, s.height];
@@ -209,11 +222,12 @@ export const DESIGNS = [
         key: 'binding',
         title: 'Binding',
         hint: 'Which strand is on top at each crossing. Satin has the fewest lifts.',
-        options: WEAVE_BINDING_IDS.map((id) => ({ id, label: WEAVE_BINDINGS[id].label, hint: WEAVE_BINDINGS[id].hint, thumb: bindingThumb(WEAVE_BINDINGS[id].over) })),
+        options: [...WEAVE_BINDING_IDS.map((id) => ({ id, label: WEAVE_BINDINGS[id].label, hint: WEAVE_BINDINGS[id].hint, thumb: bindingThumb(WEAVE_BINDINGS[id].over) })),{id:'draft',label:'Your draft',hint:'Set the threading, tie-up and treadling yourself',thumb:bindingThumb(draftBinding(WEAVE_DRAFT_PRESETS['point-twill']).over)}],
       },
+      { kind:'draft', title:'Your draft', when:s=>s.binding==='draft' },
       { kind: 'sliders', title: 'Look and feel', items: [{ key: 'pitch', label: 'Line spacing', help: 'Distance between neighbouring warp lines and between neighbouring weft lines.', lo: 'Fine', hi: 'Open', unit: 'mm', edit: true }] },
     ],
-    generate: (machine, material, s, { outline = null } = {}) => generateWeave(machine, material, { ...s, outline }),
+    generate: (machine, material, s, { outline = null } = {}) => generateWeave(machine, material, { ...s, binding:s.binding==='draft'?draftBinding(s.draft):s.binding, outline }),
     verdict: (result) => buildWeaveVerdict(result.stats),
     figure: (result) => ({ value: result.stats.pieces.toLocaleString('en'), unit: '', label: 'Pieces' }),
     summary: (result) => `a ${result.weave.columns} by ${result.weave.rows} weave in ${result.stats.pieces} pieces`,
