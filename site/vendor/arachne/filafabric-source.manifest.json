@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "site/vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "e1d22bce95079d463d8994b2c09765254430266a59a5206ef99d90bd060d4df4",
+  "archiveSha256": "a9cf31f80e0c76f5f1e1f0bbdcb550c8b7e0d866f23f6d0a100de54caf9033bc",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -103,6 +103,11 @@
       "path": "dev/tests/bubbles.test.js",
       "bytes": 2323,
       "sha256": "2ec6e3abb685683e31da9cb19258494542262a6ce6d1fdcfc3946d90682d0257"
+    },
+    {
+      "path": "dev/tests/card-estimates.test.js",
+      "bytes": 2671,
+      "sha256": "6d21728f3b011dfa2a904ee4209fea990ffcf678fa0ac1195a6d00810d4c4b75"
     },
     {
       "path": "dev/tests/card-readouts.test.js",
@@ -1325,6 +1330,11 @@
       "sha256": "76a10fcba55aa096f152a3e7322fcc3f907e034119d185cdbdbc6f6470194997"
     },
     {
+      "path": "dev/tools/estimate-cards.mjs",
+      "bytes": 3566,
+      "sha256": "ed7e3bbb98bdb3df143877780d0119c8310019b9cf6c8ec8ecf3bec946d5a4e8"
+    },
+    {
       "path": "dev/tools/export-demo-prints.mjs",
       "bytes": 7738,
       "sha256": "3ea09de407a4c054230cb19bcbbab777d8de2e4d8eda84e91e7777719d5d902e"
@@ -2300,6 +2310,11 @@
       "sha256": "f3ff685794ffcb8a36d85941af4757430dd0194ad7543d681aeab2740c3f9854"
     },
     {
+      "path": "site/src/ui/card-estimates.js",
+      "bytes": 11835,
+      "sha256": "04cad09cf08ac695c3bc9358fe6fe1be4e8d4d6c16a05b6e484aa13f683865cf"
+    },
+    {
       "path": "site/src/ui/coil-controls.js",
       "bytes": 4275,
       "sha256": "a6c95d15fc6dfb28e05e2f62e94596fd72ca8475190cdf3e41a48f23f7d30b68"
@@ -2323,6 +2338,11 @@
       "path": "site/src/ui/dom.js",
       "bytes": 3616,
       "sha256": "c2dd1066b3dcf6cc6bbec69436c7124e9b0be4458a677a06190a8bd72da1d235"
+    },
+    {
+      "path": "site/src/ui/estimate-line.js",
+      "bytes": 848,
+      "sha256": "b451adc967b834d54b9c46658fe2601b2bb1de858716dc715000a321bd415a18"
     },
     {
       "path": "site/src/ui/export-builder.js",
@@ -2376,8 +2396,8 @@
     },
     {
       "path": "site/src/ui/main.js",
-      "bytes": 133749,
-      "sha256": "88bf952873e281225bbab6448de50c24c838e588cbabe099cd72554c37051193"
+      "bytes": 132854,
+      "sha256": "96563556702e1cedbc5818520f94a4ea5e4f9a529cfaba6a6d931641f7adf195"
     },
     {
       "path": "site/src/ui/more-designs.js",
@@ -2416,8 +2436,8 @@
     },
     {
       "path": "site/src/ui/panels.js",
-      "bytes": 70339,
-      "sha256": "8a1cac4559bd6ff129e1f307a109d44ef80eebf465d22c51bd631ee74e273bc4"
+      "bytes": 68127,
+      "sha256": "81eec52151b8dc7142cf0ffe5df62a151d06a4691818bca335fd6e26ac3a3070"
     },
     {
       "path": "site/src/ui/param-schema.js",
@@ -2506,8 +2526,8 @@
     },
     {
       "path": "site/src/ui/styles.css",
-      "bytes": 59245,
-      "sha256": "dd410ba2959e003d17d38671763a6612d7902096b2935be365b05c3820b3bc6a"
+      "bytes": 58963,
+      "sha256": "d45ef1796890e3e5d97424c70f03bda9976f379090a8f9a580fc4c9d25ea694f"
     },
     {
       "path": "site/src/ui/svg-design.js",

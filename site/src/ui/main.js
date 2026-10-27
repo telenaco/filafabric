@@ -1,4 +1,6 @@
 import { PRINTABILITY } from './printability-data.js';
+import { CARD_ESTIMATES } from './card-estimates.js';
+import { estimateLine } from './estimate-line.js';
 import { validNumber } from './numeric.js';
 import { generate } from '../engine/generate.js';
 import { placeOutline, unflattenRings } from '../engine/outline.js';
@@ -25,8 +27,6 @@ import { searchMachines } from './machine-search.js?v=20261019-printer-setup';
 import { createProfilePicker } from './profile-picker.js';
 import { DESIGNS, designById, isReady, baseDesignSettings } from './designs.js';
 import { THUMBS, shapeThumb, presetThumb } from './thumbs.js';
-import { defaultSection, sideProfile } from '../engine/side-profile.js';
-import { drawSideView } from './sideview.js';
 import { SHELVES, libraryGroups, initialDesignSettings, selectVariant, variantsOf } from './library.js';
 import { regionsFromDrawing, REGION_LIMIT, sanitizeSeam, regionsFingerprint } from '../engine/regions.js';
 import { RegionControls } from './region-controls.js';
@@ -1661,8 +1661,9 @@ function renderTiles() {
     tile.title = `${d.blurb}${assessment ? ` · Estimated printability ${assessment.rank} of ${PRINTABILITY.length}. ${assessment.longestUnsupported.toFixed(1)} mm longest free span; ${assessment.maxSlopeDeg.toFixed(1)}° maximum slope. Default 100 × 100 mm geometry; physical testing pending.` : ''}`;
     const supportLabel = { self: 'Holds itself', auto: '+ backing', 'built-in': 'Built-in carrier' }[d.support];
     const stateLabel = d.state === 'needs-repair' ? 'Needs repair' : d.state === 'untested' ? 'Untested' : '';
+    const estimate = ready ? estimateLine(CARD_ESTIMATES[d.id]) : '';
     const badges = [supportLabel, stateLabel].filter(Boolean).map((text) => `<span class="design-badge" aria-label="${text}">${text}</span>`).join('');
-    tile.innerHTML = `${d.thumb ?? THUMBS[d.id] ?? ''}<span class="design-side-strip" data-side-strip="${ready ? d.id : ''}" aria-hidden="true"></span><span class="design-text"><span class="design-name">${d.name}${planned ? '<span class="soon">Soon</span>' : ''}</span><span class="design-badges">${badges}</span></span>`;
+    tile.innerHTML = `${d.thumb ?? THUMBS[d.id] ?? ''}<span class="design-text"><span class="design-name">${d.name}${planned ? '<span class="soon">Soon</span>' : ''}</span><span class="design-badges">${badges}</span>${estimate ? `<span class="design-estimate" title="What it prints as at its default 100 × 100 mm">${estimate}</span>` : ''}</span>`;
     if (ready) tile.addEventListener('click', () => setDesign(d.id));
     if (d.status === 'preset') tile.addEventListener('click', () => openPresetTile(d));
     return tile;
@@ -1681,22 +1682,6 @@ function renderTiles() {
   $('#design-list').replaceChildren(...['flat', 'layered', 'raised'].map((shelf) => shelfNode(shelf, groups[shelf])));
   $('#experimental-design-list').replaceChildren(...(presets.length ? [el('section', { class: 'library-shelf quick-starts', 'aria-label': 'Quick starts' },
     el('h2', { class: 'family-heading', text: 'Quick starts' }), ...presets.map(makeTile))] : []));
-  const strips = [...document.querySelectorAll('.design-side-strip[data-side-strip]')];
-  const renderStrip = (strip) => {
-    const mod = designById(strip.dataset.sideStrip);
-    if (!mod || strip.dataset.done) return;
-    strip.dataset.done = 'true';
-    try {
-      const settings = { ...mod.defaults(), width: 36, height: 6 };
-      const result = mod.generate(state.machines.get(state.machine), printMaterial(), settings, {});
-      const section = defaultSection(result);
-      strip.innerHTML = section ? drawSideView(sideProfile(result.strands, section), { width: 140, height: 18, compact: true }) : '';
-    } catch { strip.replaceChildren(); }
-  };
-  if ('IntersectionObserver' in window) {
-    const observer = new IntersectionObserver((entries) => entries.forEach((entry) => { if (entry.isIntersecting) { renderStrip(entry.target); observer.unobserve(entry.target); } }));
-    strips.forEach((strip) => observer.observe(strip));
-  } else strips.forEach(renderStrip);
   renderTilePressed();
 }
 

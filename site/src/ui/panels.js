@@ -30,12 +30,12 @@ import { PICTURE } from '../engine/picture.js';
 import { PATTERN_EFFECTS } from '../engine/pattern-effects.js';
 import { SHAPES } from '../engine/shapes.js';
 import { shapeThumb } from './thumbs.js';
-import { defaultSection, sideProfile } from '../engine/side-profile.js';
-import { drawSideView } from './sideview.js';
 import { SHELVES, variantsOf } from './library.js';
 import { BACKING_STYLES } from '../engine/backing.js';
 import { SAMPLERS } from '../engine/squiggle.js';
 import { draftBinding, WEAVE_DRAFT_PRESETS } from '../engine/weave.js';
+import { CARD_ESTIMATES } from './card-estimates.js';
+import { estimateLine } from './estimate-line.js';
 
 const fmt = (n) => String(Math.round(n * 10) / 10);
 
@@ -727,9 +727,11 @@ export class PresetsSection extends OptionSection {
   }
 
   options() {
+    const safe = (text) => String(text).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
     return this.mod.presets.map((p) => ({
       attrs: { 'data-preset': p.id },
-      text: p.name,
+      // what the preset prints as at 100 x 100 mm sits under its name, so the choices can be compared without opening each
+      ...((line) => (line ? { html: `<span>${safe(p.name)}</span><span class="preset-estimate">${line}</span>` } : { text: p.name }))(estimateLine(CARD_ESTIMATES[`${this.mod.id}:${p.id}`])),
       hint: p.blurb,
       picture: this.mod.presetPicture ? () => this.mod.presetPicture(p) : this.host.presetPicture ? () => this.host.presetPicture(this.mod, p) : null,
       pressed: () => (this.mod.presetMatch ? this.mod.presetMatch(this.settings) : null) === p.id,
@@ -1022,7 +1024,6 @@ export class DesignPanel extends Control {
   constructor(host, mod) {
     super(host);
     this.mod = mod;
-    this.side = el('div', { class: 'panel-side-view', 'aria-live': 'polite' });
     this.joins = mod.joins ? el('p', { class: 'panel-joins', text: mod.joins }) : null;
     this.badges = el('div', { class: 'panel-badges', 'aria-label': 'Card status' },
       el('span', { class: 'design-badge', text: ({ self: 'Holds itself', auto: 'Uses a carrier', 'built-in': 'Built-in carrier' })[mod.support] ?? 'Support not set' }),
@@ -1037,7 +1038,7 @@ export class DesignPanel extends Control {
         return button;
       })) : null;
     this.node = el('div', { id: `panel-${mod.id}`, class: 'panel', hidden: true },
-      el('header', { class: 'panel-head' }, el('h1', { class: 'title', text: mod.name }), this.badges, this.side, ...(this.joins ? [this.joins] : []), ...(this.alsoOn ? [this.alsoOn] : []), ...(this.printVariants ? [this.printVariants] : [])));
+      el('header', { class: 'panel-head' }, el('h1', { class: 'title', text: mod.name }), this.badges, ...(this.joins ? [this.joins] : []), ...(this.alsoOn ? [this.alsoOn] : []), ...(this.printVariants ? [this.printVariants] : [])));
     this.sections = [];
     let sliderGroup = 0;
     mod.controls.forEach((spec, index) => {
@@ -1050,10 +1051,6 @@ export class DesignPanel extends Control {
   }
 
   update() {
-    const result = this.host.previewResult?.(this.mod.id);
-    const section = result && defaultSection(result);
-    const profile = section ? sideProfile(result.strands, section) : [];
-    this.side.innerHTML = drawSideView(profile, { width: 360, height: 60, bead: result?.cfg?.t?.extrusion_width ?? 0.45 });
     for (const section of this.sections) section.update();
   }
 
@@ -1123,20 +1120,6 @@ export class PrintSetupCard extends Control {
 /** The sample drawing on the site (samples/), to try or to open and copy: red fills, a blue hole, yellow and green solids, lines. */
 export const SAMPLE_SVG = 'samples/filafabric-sample.svg';
 
-/**
- * What each colour of a drawing does, as the guide in the import card says it (the same for every design; a design that
- * reads a colour its own way adds a line of its own, its `svgNote`). The rules themselves are in engine/drawing.js.
- */
-export const DRAWING_GUIDE = Object.freeze([
-  { colour: 'red', name: 'Red', text: 'Fill with the selected pattern.' },
-  { colour: 'blue', name: 'Blue', text: 'Cut out: leave empty.' },
-  { colour: 'green', name: 'Green', text: 'Fill solid. Thickness follows Solid layers.' },
-  { colour: 'yellow', name: 'Yellow', text: 'Fill solid, like green.' },
-  { colour: 'line', name: 'Other lines', text: 'Print as drawn. Stroke width sets the printed width.' },
-]);
-const GUIDE_FOOT = 'Colours receive these default roles. Select a colour above the preview to change its role, design or line alignment. Distinct shades stay separate; for nested shapes, the innermost colour wins.';
-// red is filled once the pattern is cut to the shapes, which an import does; a design that draws the drawing itself fills it its own way
-const RED_CUT = 'Fill with the pattern when “Fill its shapes” is on.';
 
 /**
  * The SVG import. A drawing comes in once, here, and does three things everywhere in the studio: its lines print first,
@@ -1168,18 +1151,8 @@ export class SvgImportCard extends Control {
     this.sample = el('div', { class: 'svg-sample small muted' },
       el('p', {}, 'or ', this.tryButton),
       el('p', {}, download));
-    // the colour guide: what each colour of a drawing prints as, folded under one line
-    const chip = (colour) => el('span', { class: `svg-chip ${colour}`, 'aria-hidden': 'true' });
-    this.designNote = el('p', { class: 'svg-guide-note', hidden: true });
-    this.redText = el('span', { text: DRAWING_GUIDE[0].text });
-    this.guide = el('details', { class: 'svg-guide small', id: 'svg-guide' },
-      el('summary', {}, el('span', { text: 'How a drawing prints' }), el('span', { class: 'svg-guide-chips' }, ...DRAWING_GUIDE.map((g) => chip(g.colour)))),
-      this.designNote,
-      el('ul', { class: 'svg-guide-list' }, ...DRAWING_GUIDE.map((g, i) => el('li', {}, chip(g.colour),
-        el('span', {}, el('strong', { text: g.name }), ' ', i === 0 ? this.redText : g.text)))),
-      el('p', { class: 'muted', text: GUIDE_FOOT }));
     this.node = el('div', { class: 'svg-layer-control', 'aria-label': 'SVG import' },
-      el('div', { class: 'svg-layer-actions' }, this.pick, this.dropHint, this.remove), this.sample, this.info, this.shapeRow, this.note, this.guide);
+      el('div', { class: 'svg-layer-actions' }, this.pick, this.dropHint, this.remove), this.sample, this.info, this.shapeRow, this.note);
     this.tryButton.addEventListener('click', async () => {
       try {
         const res = await fetch(SAMPLE_SVG);
@@ -1205,12 +1178,8 @@ export class SvgImportCard extends Control {
     const v = s.vector;
     this.info.textContent = v ? `${v.name} · ${fmt(v.width)} × ${fmt(v.height)} mm` : '';
     this.info.hidden = !v;
-    // what each colour does is in the guide below the button
     this.pick.dataset.tip = v ? 'Replace the imported SVG drawing.' : 'Import an SVG drawing at its document size.';
     this.pick.setAttribute('aria-description', this.pick.dataset.tip);
-    this.redText.textContent = s.usesVector ? DRAWING_GUIDE[0].text : RED_CUT;
-    this.designNote.hidden = !s.designNote;
-    this.designNote.textContent = s.designNote ?? '';
     this.remove.hidden = !v;
     this.dropHint.hidden = !!v;
     this.sample.hidden = !!v;
