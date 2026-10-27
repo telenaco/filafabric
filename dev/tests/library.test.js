@@ -72,10 +72,14 @@ test('all ready cards have the exact ticket metadata', () => {
     "   | `step-lace` | layered | curves | built-in | untested | A second decorative family crosses the parallel base lines and holds them together. |",
     "   | `paired-loops` | layered | loops | self | untested | The second loop family crosses and bonds to the first on the next print plane. |",
     "   | `scales` | layered | cells | built-in | untested | Tiles are separated by a constant gap and bonded to the carrier underneath. |",
+    "   | `grid-lifted` | raised | grids | self | untested | Later strands lift over earlier ones at chosen crossings and land after cooling. |",
+    "   | `grid-sliding` | raised | grids | self | untested | Printed channels hold one direction over the other while letting it slide. |",
+    "   | `wave-bridged` | raised | waves | self | untested | The second family rises over the first on rounded bridges at every crossing. |",
+    "   | `colour-exposure` | raised | textures | self | untested | The upper family sits higher where the picture is light, showing more of the lower colour. |",
   ].join("\n");
   const rows = [...brief.matchAll(/\| `([^`]+)` \| (flat|layered|raised) \| (\w+) \| (self|auto|built-in) \| (untested|needs-repair) \| ([^|]+) \|/g)];
-  assert.equal(rows.length, 61);
-  assert.equal(DESIGNS.filter(d => d.status === 'ready').length, 61);
+  assert.equal(rows.length, 65);
+  assert.equal(DESIGNS.filter(d => d.status === 'ready').length, 65);
   for (const [, id, shelf, family, support, state, joins] of rows) {
     const card = DESIGNS.find(d => d.id === id);
     assert.deepEqual(validateCard(card), [], id);
@@ -106,6 +110,10 @@ test('all ready cards have the exact ticket metadata', () => {
       'step-lace': { catalogue: ['M6'], papers: [10, 37] },
       'paired-loops': { catalogue: ['M4'], papers: [3, 4, 25] },
       scales: { catalogue: ['M8'], papers: [47] },
+      'grid-lifted': { papers: [66], catalogue: ['M9'] },
+      'grid-sliding': { papers: [67] },
+      'wave-bridged': { papers: [31] },
+      'colour-exposure': { catalogue: ['N3', 'M2'], papers: [17] },
     };
     assert.deepEqual(card.sources, sources[id] ?? {});
     assert.ok(Object.hasOwn(FAMILIES, family));

@@ -216,7 +216,7 @@ export function bridgeCrossings(strands,{filletRadius=1,lineThickness=.2,layerHe
   for(const event of events)byStrand[event.later].push({...event,start:event.arc-plateau/2-rampLength,flatStart:event.arc-plateau/2,flatEnd:event.arc+plateau/2,end:event.arc+plateau/2+rampLength});
   const out=strands.map((strand,si)=>{
     const total=arcs[si].at(-1),marks=new Set(arcs[si]);
-    for(const event of byStrand[si]){marks.add(Math.max(0,event.start));marks.add(event.flatStart);marks.add(event.arc);marks.add(event.flatEnd);marks.add(Math.min(total,event.end));for(let i=1;i<49;i++){marks.add(event.start+(event.flatStart-event.start)*i/48);marks.add(event.flatEnd+(event.end-event.flatEnd)*i/48);}}
+    for(const event of byStrand[si]){marks.add(Math.max(0,event.start));marks.add(event.flatStart);marks.add(event.arc);marks.add(event.flatEnd);marks.add(Math.min(total,event.end));for(let i=1;i<17;i++){marks.add(event.start+(event.flatStart-event.start)*i/16);marks.add(event.flatEnd+(event.end-event.flatEnd)*i/16);}}
     const pts=[...marks].filter(at=>at>=0&&at<=total).sort((a,b)=>a-b).map(at=>{
       const point=pointAtArc(strand.pts,arcs[si],at);let offset=0,cls;
       for(const event of byStrand[si])if(at>=event.start&&at<=event.end){let w,kind;if(at<event.flatStart){const t=Math.max(0,Math.min(1,(at-event.start)/rampLength));w=.5*(1-Math.cos(Math.PI*t));kind='rising';}else if(at>event.flatEnd){const t=Math.max(0,Math.min(1,(event.end-at)/rampLength));w=.5*(1-Math.cos(Math.PI*t));kind='falling';}else{w=1;kind='unsupported';}const needed=Math.max(0,crossingHeight-event.baseZ);if(w*needed>=offset){offset=w*needed;cls=kind;}}

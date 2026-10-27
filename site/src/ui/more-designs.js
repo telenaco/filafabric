@@ -7,6 +7,7 @@ import { buildLayeredVerdict } from './verdict.js';
 import { thumbFromLayers, optionThumbFromLayers, shapeThumb } from './thumbs.js';
 import { OPTION_ICONS } from './option-thumbs.js';
 import { boundaryFor, layeredResult } from '../engine/layers.js';
+import { acceptIssues } from '../engine/fabric-result.js';
 import { resolveConfig } from '../engine/params.js';
 import { SHAPES } from '../engine/shapes.js';
 import { crosshatchLayers, DIRECTIONS, DIRECTION_IDS } from '../engine/crosshatch.js';
@@ -118,9 +119,11 @@ export function layered(def) {
     overviewLayers: (s, boundary, context) => def.build(s, boundary, context).layers,
     generate: (machine, material, s, { outline = null, vector = null, vectorSize = null, vectorOffset = [0, 0], includeLines = true, picture = null, perimeters = 0, printedBoundary = false } = {}) => {
       // a drawing's lines print as many passes as their width asks for, and a pass is as wide as this filament's bead
-      const bead = resolveConfig(machine, material, { sample_width: s.width, sample_height: s.height }).t.extrusion_width;
+      // a raised card may change what this one result is printed with (a fan, a speed) without touching the profile
+      const printed = def.material ? def.material(s, material) : material;
+      const bead = resolveConfig(machine, printed, { sample_width: s.width, sample_height: s.height }).t.extrusion_width;
       const built = def.build(s, boundaryFor(s.width, s.height, outline), { vector, bead, vectorSize, vectorOffset, includeLines, picture, perimeters, printedBoundary });
-      const result = layeredResult(machine, material, {
+      const result = layeredResult(machine, printed, {
         width: s.width,
         height: s.height,
         layers: built.layers,
@@ -135,6 +138,10 @@ export function layered(def) {
         ramp: def.ramp ?? 1.6,
       });
       if (built.warnings?.length) result.warnings.push(...built.warnings);
+      // what a card's transform left on its `extra` while the strands were built (counts, notes) is only known now
+      for (const [key, value] of Object.entries(built.extra ?? {})) if (key !== 'transform' && result[key] === undefined) result[key] = value;
+      acceptIssues(result, def.accept && ((issue, found) => def.accept(issue, found, s)));
+      if (def.advise) { const advice = def.advise(result, s, printed); result.warnings.push(...advice); }
       return result;
     },
     verdict: (result, s) => (def.verdict ? def.verdict(result, s) : buildLayeredVerdict(result)),
@@ -144,9 +151,12 @@ export function layered(def) {
 }
 
 const CROSSHATCH = defineControls({
-  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, size: { min: 0, max: 2.5, step: 0.25 }, pitch: { min: 0.8, max: 10, step: 0.1 }, bundle:{min:1,max:5,step:1},bundleGap:{min:.1,max:1,step:.05} },
-  defaults: { width: 100, height: 100, directions: '0-90', spacing: 3.5, shape: 'wave', size: 0, pitch: 6, bundle:1,bundleTouch:true,bundleGap:.3,colorChange: false },
-  enums: { directions: DIRECTION_IDS, shape: WAVY },
+  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, size: { min: 0, max: 2.5, step: 0.25 }, pitch: { min: 0.8, max: 10, step: 0.1 }, bundle:{min:1,max:5,step:1},bundleGap:{min:.1,max:1,step:.05},
+    // read only by the raised variants of the grid (Grid · lifted crossings, Grid · sliding channels); the layered grid ignores them
+    lift:{min:.4,max:2,step:.1},liftLength:{min:1,max:8,step:.5},liftFan:{min:0,max:100,step:5},spanLift:{min:.6,max:2,step:.1},channelLift:{min:1.2,max:3,step:.1},legBefore:{min:.8,max:3,step:.1},channelSpeed:{min:1.5,max:6,step:.1} },
+  defaults: { width: 100, height: 100, directions: '0-90', spacing: 3.5, shape: 'wave', size: 0, pitch: 6, bundle:1,bundleTouch:true,bundleGap:.3,colorChange: false,
+    liftWhere:'alternate',lift:1,liftLength:3,liftFan:60,slideMask:'b',spanLift:1,channelLift:2,legBefore:1.2,channelSpeed:3.3 },
+  enums: { directions: DIRECTION_IDS, shape: WAVY, liftWhere:['all','alternate','pattern'], slideMask:['b','a','alternate','pattern'] },
   bools: ['colorChange','bundleTouch'],
     presets: [
     { id: 'square', name: 'Square', blurb: 'Two layers at 90°', patch: { directions: '0-90', size: 0 } },
@@ -163,8 +173,8 @@ const BACKING_LABELS = {
   straight: { label: 'Straight', hint: 'Parallel straight lines' },
 };
 
-export const MORE_DESIGNS = [
-  layered({
+/** The grid card's description, shared by its raised variants (Grid · lifted crossings, Grid · sliding channels). */
+export const GRID_DEF = {
     id: 'crosshatch',
     shelf: 'layered', family: 'grids', support: 'self', state: 'untested',
     joins: "Straight lines in two or three directions fuse where they cross.", sources: { catalogue: ['S2'], papers: [29, 54, 9] },
@@ -221,8 +231,8 @@ export const MORE_DESIGNS = [
       return { ...built, layers: built.layers.map((layer, index) => layer.map((line) => thicknessAlong(line, field, { thin: s.thin, thick: s.thick, layer: index, complement: s.colourMode === 'halftone2' }))) };
     },
     summary: (result) => `a crosshatch of ${result.layerCount} layers with ${result.report.crossings} crossings`,
-  }),
-];
+};
+export const MORE_DESIGNS = [layered(GRID_DEF)];
 
 
 

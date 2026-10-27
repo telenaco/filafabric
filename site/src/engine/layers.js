@@ -308,7 +308,7 @@ export function layersToStrands(layers, { families, source, layerHeight = 0.2, s
     flat = orderStrands(flat, { improve: optimizeTravel });
     let settled=resolveCrossings(flat, { follow: true, lift: layerHeight, strandWidth, ramp }).strands;
     if(transform){const changed=transform(settled,cfg);if(Array.isArray(changed))settled=changed;}
-    if(clearance){const ordered=clearanceOrder(settled,{tipRadius:nozzleTipRadius,coneHalfAngle:nozzleConeHalfAngle,layerHeight,bead:strandWidth});settled=ordered.strands;settled.clearance={split:ordered.split,conflicts:ordered.conflicts};}
+    if(clearance){const ordered=clearanceOrder(settled,{tipRadius:nozzleTipRadius,coneHalfAngle:nozzleConeHalfAngle,layerHeight,bead:strandWidth,...(typeof clearance==="object"?clearance:{})});settled=ordered.strands;settled.clearance={split:ordered.split,conflicts:ordered.conflicts};}
     const out = applyColourPlan(settled, { mode: colorChange ? 'face' : 'one' });
     if(settled.clearance)out.clearance=settled.clearance;
     out.routing = { beforeMm, afterMm: travelDistance(out) };
@@ -327,7 +327,7 @@ export function layersToStrands(layers, { families, source, layerHeight = 0.2, s
     appendPoints(strands, settled);
   });
   if(transform){const changed=transform(strands,cfg);if(Array.isArray(changed))strands.splice(0,strands.length,...changed);}
-  if(clearance){const ordered=clearanceOrder(strands,{tipRadius:nozzleTipRadius,coneHalfAngle:nozzleConeHalfAngle,layerHeight,bead:strandWidth});strands.splice(0,strands.length,...ordered.strands);strands.clearance={split:ordered.split,conflicts:ordered.conflicts};}
+  if(clearance){const ordered=clearanceOrder(strands,{tipRadius:nozzleTipRadius,coneHalfAngle:nozzleConeHalfAngle,layerHeight,bead:strandWidth,...(typeof clearance==="object"?clearance:{})});strands.splice(0,strands.length,...ordered.strands);strands.clearance={split:ordered.split,conflicts:ordered.conflicts};}
   const clearanceMeta=strands.clearance,out=applyColourPlan(strands, { mode: colorChange ? 'face' : 'one' });
   if(clearanceMeta)out.clearance=clearanceMeta;
   return out;
@@ -345,7 +345,7 @@ export function layeredResult(machine, material, { width, height, layers, famili
   if (points > MAX_MOVES) {
     throw new ConfigError([`This layout would need about ${points.toLocaleString('en')} moves; the limit is ${MAX_MOVES.toLocaleString('en')}. Use wider spacing, larger cells or a smaller swatch.`]);
   }
-  const strands = layersToStrands(layers, { families: families ?? extra.families, source, layerHeight: cfg.t.layer_height, strandWidth: cfg.t.extrusion_width, colorChange, ramp, boundary: boundaryFor(width, height, outline), coherent: !planes, inset, optimizeTravel, clearance:!!extra.clearanceOrder, nozzleTipRadius:cfg.t.nozzle_tip_radius, nozzleConeHalfAngle:cfg.t.nozzle_cone_half_angle, transform, cfg });
+  const strands = layersToStrands(layers, { families: families ?? extra.families, source, layerHeight: cfg.t.layer_height, strandWidth: cfg.t.extrusion_width, colorChange, ramp, boundary: boundaryFor(width, height, outline), coherent: !planes, inset, optimizeTravel, clearance:extra.clearanceOrder&&typeof extra.clearanceOrder==="object"?extra.clearanceOrder:!!extra.clearanceOrder, nozzleTipRadius:cfg.t.nozzle_tip_radius, nozzleConeHalfAngle:cfg.t.nozzle_cone_half_angle, transform, cfg });
   const moves = emitStrands(strands, { retraction: cfg.derived.retraction });
   const stats = computeStats(moves, cfg, []);
   stats.loops = 0;

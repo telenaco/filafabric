@@ -180,7 +180,7 @@ export function buildConstructionReport(result, {
   const bundleGroups=new Map();
   strands.filter(s=>Number.isInteger(s.bundle)).forEach(strand=>{const key=`${strand.family}\0${strand.bundle}`;if(!bundleGroups.has(key))bundleGroups.set(key,{family:strand.family,index:strand.bundle,bonded:true,strands:0});const group=bundleGroups.get(key);group.bonded=group.bonded&&Boolean(strand.bonded);group.strands++;});
   const liftedPoints=strands.flatMap(strand=>strand.pts.filter(point=>point.lifted));
-  const channelStrands=strands.filter(strand=>strand.role==='channel');
+  const channelStrands=strands.filter(strand=>strand.role==='channel'&&strand.part!=='foot');
   const raisedFeatures=strands.some(strand=>strand.role==='channel'||strand.pts.some(point=>point.lifted||['rising','falling','unsupported'].includes(point.cls)));
   const zLevels=strands.flatMap(strand=>strand.pts.map(point=>Math.max(0,Number.isFinite(point.level)?point.level:Math.round((point.z??0)/layerHeight))));
   const levelHistogram=zLevels.reduce((hist,level)=>{hist[level]=(hist[level]??0)+1;return hist;},{});
@@ -252,6 +252,7 @@ export function shelfFromConstruction(report, { layerHeight = 0.2 } = {}) {
 // Provisional measured discrepancies at default 100 × 100 mm, pending human batch review.
 // Carrier cards (Spiral, Bouclé, Turing, Your drawing) are not listed: carrier passes count toward the layered height allowance.
 export const SHELF_EXCEPTIONS = Object.freeze({
+  'colour-exposure': 'Declared raised for its height texture, but the upper family rises by at most 0.4 mm, so the measured envelope stays within the layered ceiling.',
   scales: 'Declared layered because the tile islands are stacked above a continuous carrier; geometry estimate pending physical validation.',
   auxetic: 'Declared flat as a planar lattice, but two native families cross at 0.400 mm and the measured rule selects layered.',
   'honeycomb-flat': 'Declared flat as a planar cell lattice, but the inherited Auxetic generator uses two native families at 0.400 mm and the measured rule selects layered; physical validation pending.',

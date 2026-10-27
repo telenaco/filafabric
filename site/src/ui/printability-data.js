@@ -772,6 +772,27 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "grid-lifted",
+    "score": 36.297511183838814,
+    "components": 1,
+    "joints": 1,
+    "reversedCrossings": 0,
+    "separatedCrossings": 406,
+    "longestUnsupported": 7.471428571428987,
+    "maxSlopeDeg": 21.304654040980843,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 1,
+    "moves": 7420,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 139.0455409631488,
+      "afterMm": 139.0455409631488
+    }
+  },
+  {
     "id": "harmonograph",
     "score": 36.587407714873336,
     "components": 1,
@@ -1240,6 +1261,27 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "wave-bridged",
+    "score": 213.20584157602667,
+    "components": 1,
+    "joints": 79,
+    "reversedCrossings": 0,
+    "separatedCrossings": 1603,
+    "longestUnsupported": 94.28576483194517,
+    "maxSlopeDeg": 20.684311912136344,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 79,
+    "moves": 76312,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 310.47983868756603,
+      "afterMm": 310.47983868756603
+    }
+  },
+  {
     "id": "relief",
     "score": 225.10000000000002,
     "components": 1,
@@ -1256,5 +1298,47 @@ export const PRINTABILITY = [
     "moves": 7138,
     "clearanceFlags": 0,
     "routing": null
+  },
+  {
+    "id": "colour-exposure",
+    "score": 253.26969426951172,
+    "components": 6,
+    "joints": 74,
+    "reversedCrossings": 0,
+    "separatedCrossings": 1501,
+    "longestUnsupported": 119.17045142347968,
+    "maxSlopeDeg": 10.978791422552383,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 79,
+    "moves": 21482,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 314.4339519731834,
+      "afterMm": 314.4339519731834
+    }
+  },
+  {
+    "id": "grid-sliding",
+    "score": 5924.798312156686,
+    "components": 2,
+    "joints": 2349,
+    "reversedCrossings": 0,
+    "separatedCrossings": 2378,
+    "longestUnsupported": 2878.6642857142865,
+    "maxSlopeDeg": 49.969740728113244,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 2350,
+    "moves": 12704,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 139.0455409631488,
+      "afterMm": 7876.7794506930695
+    }
   }
 ];

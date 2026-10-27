@@ -26,6 +26,9 @@ import {
 } from './verdict.js';
 import { generateCoil } from '../engine/coil.js';
 import { generateSquiggle, generateSquiggleTextile, SAMPLERS } from '../engine/squiggle.js';
+import { bridgeCrossings } from '../engine/crossings.js';
+import { acceptIssues } from '../engine/fabric-result.js';
+import { clearanceOrder } from '../engine/order.js';
 import { pictureDarkness } from '../engine/picture.js';
 import { loopsClose } from '../engine/shapes.js';
 import { FIELD_IDS, createField } from '../engine/fields.js';
@@ -38,6 +41,7 @@ import { bindingThumb, thumbFromLayers, rowsThumb } from './thumbs.js';
 import { OPTION_ICONS } from './option-thumbs.js';
 import { MORE_DESIGNS } from './more-designs.js';
 import { RESEARCH_DESIGNS } from './research-designs.js';
+import { RAISED_DESIGNS } from './raised-designs.js';
 import { LINE_DESIGNS } from './line-designs.js';
 import { SVG_DESIGNS } from './svg-design.js';
 import { PUBLICATION_DESIGNS } from './pub-designs.js';
@@ -68,22 +72,47 @@ const sizeOf = (s) => [s.width, s.height];
 const setSizeOf = (s, w, h) => { s.width = w; s.height = h; };
 const SCALE_SLIDER = { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false };
 
+// the Wave net and its bridged variant share one settings key, so both carry the bridge radius
+const BRIDGE_SHARED = { defaults: { filletRadius: 1 }, ranges: { filletRadius: { min: 0.4, max: 3, step: 0.1 } } };
+
 const squiggleShapeCards = [
-  { id: 'squiggle', name: 'Wave net', shape: 'wave', family: 'waves', settingsKey: 'wave', joins: 'Two wavy families cross and fuse where they meet.' },
+  { id: 'squiggle', name: 'Wave net', shape: 'wave', family: 'waves', settingsKey: 'wave', joins: 'Two wavy families cross and fuse where they meet.', shared: BRIDGE_SHARED },
   { id: 'square-net', name: 'Square-wave net', shape: 'square', family: 'waves', settingsKey: 'square-net', joins: 'Two square-wave families cross and fuse.' },
   { id: 'honeycomb-layered', name: 'Honeycomb · layered', shape: 'honeycomb', family: 'cells', settingsKey: 'honeycomb', joins: 'Two half-hexagon families meet as cells.' },
   { id: 'figure8-net', name: 'Figure-8 net', shape: 'figure8', family: 'loops', settingsKey: 'figure8-net', joins: 'Two figure-8 families cross and fuse.' },
   { id: 'looped-net', name: 'Looped net', shape: 'looped', family: 'loops', settingsKey: 'looped-net', shelf: 'raised', support: 'built-in', joins: 'Loops circle over themselves and lift over the earlier pass.' },
   { id: 'squiggle-rings', name: 'Squiggle rings (legacy)', shape: 'ring', family: 'rings', settingsKey: 'squiggle-rings', hidden: true, joins: 'Wavy ring families cross.' },
   { id: 'squiggle-zigzag', name: 'Squiggle zigzag (legacy)', shape: 'zigzag', family: 'waves', settingsKey: 'squiggle-zigzag', hidden: true, joins: 'Two zigzag families cross and fuse.' },
+  { id: 'wave-bridged', name: 'Wave net · bridged crossings', shape: 'wave', family: 'waves', settingsKey: 'wave', shelf: 'raised', joins: 'The second family rises over the first on rounded bridges at every crossing.',
+    blurb: 'Rounded bridges where the waves cross', about: "Where the second family crosses the first it rises over it on a rounded bridge instead of fusing flat. The bridge height follows its roundness: line thickness plus half the bridge radius, 0.7 mm at the default 1 mm. From Kim and Lee's continuous textile structures.",
+    file: 'wave-bridged', sources: { papers: [31] }, shared: BRIDGE_SHARED,
+    slider: { key: 'filletRadius', label: 'Bridge roundness', help: 'Radius of each rounded bridge. The crossing height is shown, not set: line thickness + radius / 2.', lo: 'Tight', hi: 'Round', unit: 'mm', edit: true },
+    describe: (s, layerHeight = 0.2) => ({ filletRadius: `${Math.round(s.filletRadius * 10) / 10} mm, crossing height ${Math.round((layerHeight + s.filletRadius / 2) * 100) / 100} mm` }),
+    transform: (s) => (strands, cfg) => {
+      const bridged = bridgeCrossings(strands, { filletRadius: s.filletRadius, lineThickness: cfg.t.layer_height, bead: cfg.t.extrusion_width });
+      return clearanceOrder(bridged.strands, { tipRadius: cfg.t.nozzle_tip_radius, coneHalfAngle: cfg.t.nozzle_cone_half_angle, layerHeight: cfg.t.layer_height, bead: cfg.t.extrusion_width, maxSplits: 8, workBudget: 1.5e5 }).strands;
+    },
+    verdict: (result, settings) => { const v = buildSquiggleVerdict(result.stats, { colorChange: settings.colorChange }); v.body += ` Crossing height h = line thickness + R/2 = ${(result.cfg.t.layer_height + settings.filletRadius / 2).toFixed(2)} mm.`; return v; } },
+  { id: 'colour-exposure', name: 'Colour exposure texture', shape: 'wave', family: 'textures', shelf: 'raised', joins: 'The upper family sits higher where the picture is light, showing more of the lower colour.',
+    blurb: 'The upper colour sits higher or lower with the picture', about: 'Two coloured line families (two-colour halftone) where the upper family follows the picture in both thickness and height, so more or less of the lower colour shows through. The height range is small, 0 to 0.4 mm; calibrate the halftone first.',
+    // where the picture is light the upper family stands above the lower one and touches it less: loose regions are part of the effect
+    accept: (issue, result, s) => /separate fabric regions/.test(issue) && s.exposureHeight > 0,
+    file: 'colour-exposure', settingsKey: 'colour-exposure', sources: { catalogue: ['N3', 'M2'], papers: [17] }, fixedEffect: 'thickness', pattern: 'centerSpot', colourMode: 'halftone2',
+    shared: { defaults: { exposureHeight: 0.2 }, ranges: { exposureHeight: { min: 0, max: 0.4, step: 0.05 } } },
+    slider: { key: 'exposureHeight', label: 'Exposure height', help: 'How much higher the upper family sits where the picture is lightest. Zero makes the plain two-colour halftone Wave net.', lo: 'Flat', hi: 'Raised', unit: 'mm', edit: true },
+    describe: (s) => ({ exposureHeight: `${Math.round(s.exposureHeight * 100) / 100} mm` }),
+    transform: (s, { sampler, width, height }) => s.exposureHeight > 0 ? (strands) => strands.map((strand) => strand.family !== 'L2' ? strand : { ...strand, pts: strand.pts.map((point) => ({ ...point, z: (point.z ?? 0) + s.exposureHeight * (1 - Math.max(0, Math.min(1, sampler(point.x, point.y, width, height)))) })) }) : undefined },
 ];
 
 function squiggleCard(def) {
   const c = SQUIGGLE;
-  const defaults = () => ({ ...c.defaults, shape: def.shape, patternEffect: 'depth', thin: 0.6, thick: 1.8 });
+  const shared = def.shared ?? { defaults: {}, ranges: {} }, effect = def.fixedEffect ?? 'depth';
+  const defaults = () => ({ ...c.defaults, shape: def.shape, patternEffect: effect, thin: 0.6, thick: 1.8, ...(def.pattern ? { pattern: def.pattern } : {}), ...(def.colourMode ? { colourMode: def.colourMode, colorChange: def.colourMode === 'halftone2' } : {}), ...shared.defaults });
   const sanitize = (raw) => {
-    const out = { ...c.sanitize(raw), shape: def.shape, patternEffect: raw?.patternEffect === 'thickness' ? 'thickness' : 'depth' };
-    for (const [key, range] of Object.entries(THICKNESS_RANGES)) {
+    const out = { ...c.sanitize(raw), shape: def.shape, patternEffect: def.fixedEffect ?? (raw?.patternEffect === 'thickness' ? 'thickness' : 'depth') };
+    if (def.colourMode) out.colourMode = raw?.colourMode ?? def.colourMode;
+    if (def.pattern && !(raw && SQ_PATTERNS.includes(raw.pattern))) out.pattern = def.pattern;
+    for (const [key, range] of Object.entries({ ...THICKNESS_RANGES, ...shared.ranges })) {
       const value = Number(raw?.[key]);
       out[key] = Number.isFinite(value) && value >= range.min && value <= range.max ? value : defaults()[key];
     }
@@ -99,6 +128,7 @@ function squiggleCard(def) {
       { key: 'spacing', label: 'Spacing', help: 'Distance between neighbouring lines.', lo: 'Close', hi: 'Open', unit: 'mm', edit: true },
       { key: 'amplitude', label: 'Amplitude', help: 'Side-to-side swing of each line.', lo: 'Shallow', hi: 'Deep', unit: 'mm', edit: true },
       { key: 'wavelength', label: 'Wavelength', help: 'Distance between successive waves.', lo: 'Short', hi: 'Long', unit: 'mm', edit: true },
+      ...(def.slider ? [def.slider] : []),
     ] },
     { kind: 'switch', key: 'colorChange', label: 'Two colours', help: 'Pause after the first layer so you can load a second filament (M600).' },
     { kind: 'pattern', key: 'pattern', title: 'Pattern', picture: 'positive', pictureHint: 'Dark parts of your picture make the waves deeper; lighter parts make them shallower.' },
@@ -106,22 +136,23 @@ function squiggleCard(def) {
   const generate = (machine, material, settings, { outline = null, picture = null } = {}) => {
     const image = settings.pattern === 'image' && picture?.image ? pictureDarkness(picture.image, settings.width, settings.height) : null;
     const sampler = image ?? SAMPLERS[settings.pattern] ?? SAMPLERS.centerSpot;
-    return generateSquiggle(machine, material, { width: settings.width, height: settings.height, mode: settings.mode, shape: def.shape,
+    return acceptIssues(generateSquiggle(machine, material, { width: settings.width, height: settings.height, mode: settings.mode, shape: def.shape,
       spacing: settings.spacing, amplitude: settings.amplitude, wavelength: settings.wavelength, sampler,
-      colorChange: settings.colorChange, outline, patternEffect: settings.patternEffect, thin: settings.thin, thick: settings.thick, colourMode: settings.colourMode });
+      colorChange: settings.colorChange, outline, patternEffect: settings.patternEffect, thin: settings.thin, thick: settings.thick, colourMode: settings.colourMode,
+      transform: def.transform?.(settings, { sampler, width: settings.width, height: settings.height }) }), def.accept && ((issue, found) => def.accept(issue, found, settings)));
   };
   const thumbSettings = { ...defaults(), width: 36, height: 22 };
   const thumbGeometry = generateSquiggleTextile({ ...thumbSettings, strandWidth: 0.4, layerHeight: 0.2 });
   const thumbLayers = [[thumbGeometry.layer1], [thumbGeometry.layer2]];
   return {
-    id: def.id, name: def.name, blurb: 'A two-family textile net made from shaped strands', about: 'Two families of continuous shaped strands meet in a flat mesh. The selected card fixes the strand shape; Structure controls whether the families cross or run in parallel.', file: 'squiggle', status: 'ready',
-    shelf: def.shelf ?? 'layered', family: def.family, support: def.support ?? 'self', state: 'untested', joins: def.joins, sources: {},
+    id: def.id, name: def.name, blurb: def.blurb ?? 'A two-family textile net made from shaped strands', about: def.about ?? 'Two families of continuous shaped strands meet in a flat mesh. The selected card fixes the strand shape; Structure controls whether the families cross or run in parallel.', file: def.file ?? 'squiggle', status: 'ready',
+    shelf: def.shelf ?? 'layered', family: def.family, support: def.support ?? 'self', state: 'untested', joins: def.joins, sources: def.sources ?? {},
     settingsKey: def.settingsKey, shape: def.shape, hidden: !!def.hidden, roles: { base: 'First family', anchored: 'Second family' },
-    defaults, sanitize, ranges: { ...c.ranges, ...THICKNESS_RANGES }, size: sizeOf, setSize: setSizeOf, controls, patterns: [...SQ_PATTERNS], patternEffects: ['depth', 'thickness'],
+    defaults, sanitize, ranges: { ...c.ranges, ...THICKNESS_RANGES, ...shared.ranges }, size: sizeOf, setSize: setSizeOf, controls, patterns: [...SQ_PATTERNS], patternEffects: def.fixedEffect ? [def.fixedEffect] : ['depth', 'thickness'],
     thumb: thumbFromLayers(thumbLayers, thumbSettings.width, thumbSettings.height), generate,
     figure: () => ({ value: '2', unit: '', label: 'Layers' }),
-    describe: (s) => ({ ...c.describe(s), mode: s.mode === 'cross' ? 'Crossed' : 'Parallel' }),
-    verdict: (result, settings) => buildSquiggleVerdict(result.stats, { colorChange: settings.colorChange }),
+    describe: (s) => ({ ...c.describe(s), mode: s.mode === 'cross' ? 'Crossed' : 'Parallel', ...(def.describe ? def.describe(s) : {}) }),
+    verdict: def.verdict ?? ((result, settings) => buildSquiggleVerdict(result.stats, { colorChange: settings.colorChange })),
     summary: () => 'a two-family shaped-strand net',
   };
 }
@@ -362,7 +393,7 @@ export const DESIGNS = [
 ];
 
 // the Drawing & infill card (svgdesign) comes first after the original structures, then the line-algorithm library and the newer line designs
-DESIGNS.push(...BASIC_DESIGNS, ...SVG_DESIGNS, ...MORE_DESIGNS, ...RESEARCH_DESIGNS, ...LINE_DESIGNS, ...PUBLICATION_DESIGNS);
+DESIGNS.push(...BASIC_DESIGNS, ...SVG_DESIGNS, ...MORE_DESIGNS, ...RESEARCH_DESIGNS, ...RAISED_DESIGNS, ...LINE_DESIGNS, ...PUBLICATION_DESIGNS);
 
 const CORRUGATION=withColour(defineControls({
   ranges:{width:{min:10,max:240,step:5},height:{min:10,max:200,step:5},rise:{min:.2,max:1.2,step:.05},wavelength:{min:4,max:30,step:.5},direction:{min:0,max:180,step:1},baseOpenness:{min:.8,max:4,step:.1}},
@@ -425,7 +456,12 @@ DESIGNS.splice(DESIGNS.indexOf(coil) + 1, 0, figure8Rows, coilShapeCard);
 for (const mod of DESIGNS.filter(card => card.status === 'ready')) {
   const c = withColour({ defaults: mod.defaults(), sanitize: mod.sanitize });
   mod.defaults = () => ({ ...c.defaults, layerColours: [] });
-  mod.sanitize = c.sanitize;
+  const opening = colourMode(mod.defaults());
+  mod.sanitize = opening === 'one' ? c.sanitize : (raw) => {
+    const out = c.sanitize(raw);
+    if (!raw || (raw.colourMode === undefined && raw.colorChange === undefined)) { out.colourMode = opening; out.colorChange = ['face', 'halftone2'].includes(opening); }
+    return out;
+  };
   mod.presets = mod.presets?.map(p => ({ ...p, patch: { ...p.patch, ...(typeof p.patch.colorChange === 'boolean' ? { colourMode: p.patch.colorChange ? 'face' : 'one' } : {}) } }));
   mod.colourModes = mod.patternEffects?.includes('thickness') ? ['one', 'face', 'per-layer', 'halftone2'] : ['one', 'face', 'per-layer'];
   if (mod.controls) {

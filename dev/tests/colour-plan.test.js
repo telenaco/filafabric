@@ -39,7 +39,8 @@ test('withColour sanitizes the plan, legacy bool and preview colours', () => {
 
 test('every registry card offers Colour instead of the old boolean switch', () => {
   for (const card of DESIGNS.filter(d=>d.status==='ready')) {
-    assert.equal(card.defaults().colourMode,'one',card.id);
+    // the colour exposure texture is two colours by definition, so it opens on the two-colour halftone
+    assert.equal(card.defaults().colourMode,card.id==='colour-exposure'?'halftone2':'one',card.id);
     if (card.legacyPanel) continue;
     assert.equal(card.controls.filter(c=>c.kind==='colour').length,1,card.id);
     assert.ok(!card.controls.some(c=>c.kind==='switch'&&c.key==='colorChange'),card.id);

@@ -693,6 +693,8 @@ class OptionSection extends Section {
         btn.prepend(slot);
         this.pictures.push({ slot, draw: opt.picture });
       }
+      // an option that cannot be chosen here stays visible, with its reason as the hint
+      if (opt.disabled) btn.disabled = true;
       btn.addEventListener('click', () => { opt.apply(); this.host.change(); });
       this.grid.append(btn);
       return { btn, opt };
@@ -759,6 +761,7 @@ export class ChoiceSection extends OptionSection {
       html: `${opt.thumb ?? ''}<span>${opt.label}</span>`,
       hint: opt.hint,
       picture: opt.thumb ? null : opt.picture ?? null,
+      disabled: !!opt.disabled,
       pressed: () => String(this.settings[key]) === String(opt.value ?? opt.id),
       apply: () => { Object.assign(this.settings, opt.patch ?? {}); this.settings[key] = opt.value ?? opt.id; },
     }));
@@ -829,8 +832,13 @@ export class SizeSection extends Section {
 export class SlidersSection extends Section {
   buildBody() {
     const suffix = this.position.sliderGroup ? `-${this.position.sliderGroup}` : '';
-    this.sliders = this.spec.items.map((def) => new SliderControl(this.host, this.mod.id, def));
-    return el('div', { id: `${this.mod.id}-sliders${suffix}`, class: 'controls' }, ...this.sliders.map((s) => s.node));
+    const main = this.spec.items.filter((def) => !def.advanced).map((def) => new SliderControl(this.host, this.mod.id, def));
+    const extra = this.spec.items.filter((def) => def.advanced).map((def) => new SliderControl(this.host, this.mod.id, def));
+    this.sliders = [...main, ...extra];
+    const body = el('div', { id: `${this.mod.id}-sliders${suffix}`, class: 'controls' }, ...main.map((s) => s.node));
+    // settings most people leave alone sit in a closed drawer under the others
+    if (!extra.length) return body;
+    return [body, el('details', { class: 'advanced-sliders' }, el('summary', { text: 'Advanced' }), el('div', { class: 'controls' }, ...extra.map((s) => s.node)))];
   }
 
   refresh() {

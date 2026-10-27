@@ -57,9 +57,9 @@ The single place to see what is ready, who has it and where it stands. The revie
 | Ticket | Card | Depends on | Size | State | Owner | PR |
 |---|---|---|---|---|---|---|
 | T3.1 | L-25 Lace + backing | T1.8, T2.12 | M | In review (local; built with T2.12) | Codex, reviewed by Claude | [T2.5–T2.14 review](T2_5_to_T2_14_Local_Review.md#t31-built-alongside-t212), no push |
-| T3.2 | L-26 Step, ripple and petal lace | T1.8 | M | In progress (engine/card and focused tests; tie-span acceptance test and full review remain) | Codex | no push |
-| T3.3 | L-27 Paired loops | T2.1 (planes option) | M | In progress (engine/card and connectivity tests; Z-envelope acceptance needs refinement) | Codex | no push |
-| T3.4 | L-28 Scales on a carrier | T1.8 (T2.11 optional) | L | In progress (basic tile/carrier engine and card; exact gap and Z-envelope checks remain) | Codex | no push |
+| T3.2 | L-26 Step, ripple and petal lace | T1.8 | M | Done locally (branch `t3-2-acceptance`): every tying pattern keeps free spans within 1.5 x the tie length; `step-lace-span.test.js` | Claude | no push |
+| T3.3 | L-27 Paired loops | T2.1 (planes option) | M | Done locally (branch `t3-2-acceptance`): every second-family loop crosses at least two below it, one component, Z within two layers | Claude | no push |
+| T3.4 | L-28 Scales on a carrier | T1.8 (T2.11 optional) | L | Done locally (branch `t3-2-acceptance`): true tilings (the hexagons used to overlap), gap equals the setting, tiles on the carrier, Z = (carrier + tile layers) x layer height; default is 1 + 2 layers, the ticket recipe 2 + 4 also fits | Claude | no push |
 | T3.5 | L-19 Woven draft generator | Phase 1 | M | In review (local; draft editor, presets, drawdown/cross-section and engine tests; browser review pending) | Codex | no push |
 
 ## Phase 4: Raised engine
@@ -80,11 +80,11 @@ The single place to see what is ready, who has it and where it stands. The revie
 |---|---|---|---|---|---|---|
 | T5.0 | Strand transform hook | Phase 1 | S | In review (local; no-op and raised-Z regressions pass) | Codex | no push |
 | T5.1 | R-01 Rings · raised | T2.3, T4.6, T5.0 | M | In review (local; settings, level cap, ordering and clearance tests pass) | Codex | no push |
-| T5.2 | R-09 Grid · lifted crossings | T4.3, T5.0 | M | Blocked (paused by Luis: required `all` default fails fabric connectivity/exportability) | | |
-| T5.3 | R-10 Grid · sliding channels | T4.5, T5.0 | M | Blocked (prototype fails connectivity, below-crossing order and slope checks; not in ready catalogue) | | |
-| T5.4 | R-11 Wave net · bridged | T4.4, T5.0 | S | Blocked (prototype leaves disconnected fabric regions; not in ready catalogue) | | |
+| T5.2 | R-09 Grid · lifted crossings | T4.3, T5.0 | M | Done locally (branch `t5-2-raised-cards`): `all` default kept; a grid with every crossing lifted is two unbonded directions by design, so the card accepts that finding (and says so in its verdict) instead of blocking export | Claude | no push |
+| T5.3 | R-10 Grid · sliding channels | T4.5, T5.0 | M | Done locally (branch `t5-2-raised-cards`): channels are cut at the held strand's height so the default prints in a safe order (0 conflicts, under 1 s at 100 mm); mixed masks keep a bounded search and warn; Li's steep legs accepted by design | Claude | no push |
+| T5.4 | R-11 Wave net · bridged | T4.4, T5.0 | S | Done locally (branch `t5-2-raised-cards`): bridges at line thickness + R/2; bridged crossings are unfused by design | Claude | no push |
 | T5.5 | R-12 Corrugation | Phase 1 | M | In review (local; bounded height/slope and supporting-net test pass) | Codex | no push |
-| T5.6 | R-13 Colour exposure | T1.6, T1.7, T8.3 calibration | M | Blocked | | |
+| T5.6 | R-13 Colour exposure | T1.6, T1.7, T8.3 calibration | M | Done locally (branch `t5-2-raised-cards`): software only; the effect depends on measured widths, so T8.3 calibration prints must come first | Claude | no push |
 | T5.7 | Print all variants | T0.7 | M | In review (local; bed layout, one-file export, preview dialog and focused acceptance tests; browser review pending) | Codex | no push |
 
 ## Phase 6: Repairs

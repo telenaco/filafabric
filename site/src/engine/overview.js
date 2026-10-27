@@ -54,7 +54,7 @@ export function rawLayers(input, shape, factor) {
   const layersOf = result => [result.strands.map(s => s.pts)];
   if (input.design === 'spacer') return layersOf(spacerStrands(boundary, { ...s, layers: 1 }));
   if (input.design === 'pillarweave') return layersOf(pillarWeaveStrands(boundary, { ...s, layers: 2 }));
-  if (mod.id === 'squiggle' || mod.settingsKey && ['square-net', 'honeycomb-layered', 'figure8-net', 'looped-net', 'squiggle-rings', 'squiggle-zigzag'].includes(mod.id)) {
+  if (mod.id === 'squiggle' || mod.settingsKey && ['square-net', 'honeycomb-layered', 'figure8-net', 'looped-net', 'squiggle-rings', 'squiggle-zigzag', 'wave-bridged', 'colour-exposure'].includes(mod.id)) {
     return layersOf(generateSquiggleTextile({ ...s, shape: mod.shape, boundary, planCrossings: false,
       sampler: s.pattern === 'image' && input.image ? pictureDarkness(input.image, width, height) : SAMPLERS[s.pattern] ?? SAMPLERS.centerSpot }));
   }

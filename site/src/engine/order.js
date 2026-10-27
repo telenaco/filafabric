@@ -67,10 +67,10 @@ function bestCycleSplit(strands,component,options){
 }
 
 /** Order strands so lower material is deposited before nearby higher material that could strike the nozzle. */
-export function clearanceOrder(input,{tipRadius=.6,coneHalfAngle=30,layerHeight=.2,bead=.45,maxSplits=50}={}){
+export function clearanceOrder(input,{tipRadius=.6,coneHalfAngle=30,layerHeight=.2,bead=.45,maxSplits=50,workBudget=6e6}={}){
   // each trial cut re-checks the whole sheet; heavily overlapping rings made the search run for minutes, so it is bounded by
   // the work done (points re-checked), which gives the same answer on every machine
-  let strands=input.slice(),split=0;const budget={left:6e6};
+  let strands=input.slice(),split=0;const budget={left:workBudget};
   while(true){
     const arcs=conflictsFor(strands,{tipRadius:Number(tipRadius)||0,coneHalfAngle,layerHeight:Number(layerHeight)||.2,bead:Number(bead)||.45}),{order,remaining}=stableOrder(strands,arcs);
     budget.left-=strands.reduce((n,s)=>n+s.pts.length,0);

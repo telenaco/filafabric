@@ -1,0 +1,18 @@
+[
+  {
+    "card": "colour-exposure",
+    "preset": "default",
+    "settingsHash": "3fa765b62f3a",
+    "gcodeSha256": "25a7d048ccefdd41fc5be1a7474f6ecff43727b17453181771588314a4fb1f09",
+    "strands": 28,
+    "moves": 2761,
+    "extrudeMm": 1282.8,
+    "zMin": 0.2,
+    "zMax": 0.5912807272943778,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  }
+]

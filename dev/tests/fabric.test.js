@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { isByDesign } from '../../site/src/engine/by-design.js';
 import assert from 'node:assert/strict';
 import { boundaryFor, crossingReport, layersToStrands } from '../../site/src/engine/layers.js';
 import { buildLayeredVerdict } from '../../site/src/ui/verdict.js';
@@ -92,10 +93,10 @@ test('every default design exposes a final 3D fabric report', () => {
   for (const d of DESIGNS.filter((d) => d.status === 'ready' && !d.legacyPanel)) {
     const r = d.generate(machine, material, d.defaults());
     assert.ok(r.fabric, `${d.id}: missing report`);
-    assert.equal(r.fabric.components, 1, `${d.id}: separate regions`);
+    if (!isByDesign(d.id, 'regions')) assert.equal(r.fabric.components, 1, `${d.id}: separate regions`);
     assert.equal(r.fabric.reversedCrossings, 0, `${d.id}: crossing heights reversed`);
     assert.equal(r.fabric.outsideSegments, 0, `${d.id}: extrusion leaves the shape`);
-    assert.ok(r.fabric.maxSlopeDeg <= 25.001, `${d.id}: slope ${r.fabric.maxSlopeDeg}`);
+    if (!isByDesign(d.id, 'slope')) assert.ok(r.fabric.maxSlopeDeg <= 25.001, `${d.id}: slope ${r.fabric.maxSlopeDeg}`);
   }
 });
 

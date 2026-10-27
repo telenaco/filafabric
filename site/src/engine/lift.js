@@ -40,12 +40,12 @@ export function liftCrossings(strands,{lift=1,length=3,hold=null,mask=null,layer
       for(let i=1;i<6;i++){marks.add(event.start+(event.coreStart-event.start)*i/6);marks.add(event.coreEnd+(event.end-event.coreEnd)*i/6);}
       marks.add(Math.max(0,event.start));marks.add(Math.min(total,event.end));
     }
-    const ordered=[...marks].filter(at=>at>=0&&at<=total).sort((a,b)=>a-b),pts=ordered.map(at=>{
+    const ordered=[...marks].filter(at=>at>=0&&at<=total).sort((a,b)=>a-b).filter((at,i,list)=>i===0||at-list[i-1]>1e-6),pts=ordered.map(at=>{
       const point=pointAtArc(original,arcs,at),cover=byStrand[si].filter(event=>at>=event.start-1e-9&&at<=event.end+1e-9);
       let rise=0,cls=null,lifted=false;
       for(const event of cover){let weight=0,candidateClass='unsupported';if(at<event.coreStart){const t=(at-event.start)/(event.coreStart-event.start);weight=.5*(1-Math.cos(Math.PI*Math.max(0,Math.min(1,t))));candidateClass='rising';}else if(at>event.coreEnd){const t=(event.end-at)/(event.end-event.coreEnd);weight=.5*(1-Math.cos(Math.PI*Math.max(0,Math.min(1,t))));candidateClass='falling';}else weight=1;
         if(event.offset*weight>=rise){rise=event.offset*weight;cls=candidateClass;}
-        if(Math.abs(at-event.arc)<1e-7){point.lifted=true;lifted=true;rise=Math.max(rise,event.offset);cls='unsupported';}
+        if(Math.abs(at-event.arc)<1e-6){point.lifted=true;lifted=true;rise=Math.max(rise,event.offset);cls='unsupported';}
       }
       if(rise>0){point.z+=rise;point.cls=cls;maxLift=Math.max(maxLift,rise);}return point;
     });

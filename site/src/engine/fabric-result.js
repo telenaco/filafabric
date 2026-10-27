@@ -70,3 +70,20 @@ export function finishFabric(result, { boundary = null, flat = false, reinforce 
   result.gcode = writeGcode(result.moves, cfg, { stats: result.stats });
   return refreshConstruction(result);
 }
+
+/**
+ * Drop the geometry findings a design makes on purpose (a sliding grid is held by channels, not fused, so its two directions
+ * are separate regions). `accept(issue, result)` says which findings are part of the design; the rest stay, and the result is
+ * exportable once none are left.
+ * @returns {object} the same result, with its warnings and fabric findings filtered
+ */
+export function acceptIssues(result, accept) {
+  if (typeof accept !== 'function') return result;
+  const keep = (issue) => !accept(issue, result);
+  result.warnings = (result.warnings ?? []).filter(keep);
+  if (result.fabric) {
+    const issues = result.fabric.issues.filter(keep);
+    result.fabric = { ...result.fabric, issues, exportable: result.strands.length > 0 && issues.length === 0 };
+  }
+  return result;
+}
