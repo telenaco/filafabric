@@ -25,11 +25,11 @@ export function strandWidths(cfg) {
 // Roles also differ in lightness, not only hue, so they survive colour-vision differences.
 const PALETTES = {
   light: {
-    base: 0x27366b, anchored: 0x1f8179, lifting: 0xb87400, free: 0xb0316f,
+    base: 0x27366b, anchored: 0x1f8179, lifting: 0xb87400, free: 0xb0316f, channel:0x7047ad,
     centreline: 0x12161e, travel: 0x566074, hop: 0xa04b00, violation: 0xd32f2f, bed: 0xd3d7de, sample: 0x34469a,
   },
   dark: {
-    base: 0x8fa6f5, anchored: 0x4fc3b8, lifting: 0xe8b04a, free: 0xf07ab0,
+    base: 0x8fa6f5, anchored: 0x4fc3b8, lifting: 0xe8b04a, free: 0xf07ab0, channel:0xb59cff,
     centreline: 0xf2f3f0, travel: 0x9aa4b5, hop: 0xffa060, violation: 0xff6b6b, bed: 0x2f3746, sample: 0x7ba3ff,
   },
 };
@@ -133,7 +133,8 @@ export function createPreview(container) {
         const flat = b.cls === 'base' || b.cls === 'supported';
         const flow = flat && b.width > 0 ? Math.round(b.width * 100) / 100 / cfg.t.extrusion_width
           : b.flow !== undefined && Math.abs(b.flow - 1) >= 0.1 ? Math.max(0.25, Math.round(b.flow * 4) / 4) : 1;
-        const key = b.previewColour ? `${ROLE_OF[b.cls]}@${flow}|${b.previewColour}` : flow === 1 ? ROLE_OF[b.cls] : `${ROLE_OF[b.cls]}@${flow}`;
+        const role=b.role==='channel'?'channel':ROLE_OF[b.cls];
+        const key = b.previewColour ? `${role}@${flow}|${b.previewColour}` : flow === 1 ? role : `${role}@${flow}`;
         const bk = (buckets[key] ??= { pos: [], idx: [] });
         bk.pos.push(a.x, a.y, a.z, b.x, b.y, b.z);
         bk.idx.push(i);
@@ -163,7 +164,7 @@ export function createPreview(container) {
       const [role, flowText] = pathKey.split('@');
       const flow = flowText ? Number(flowText) : 1;
       // flat strands widen with flow; strands in the air grow as the square root of the volume
-      const width = widths[role] * (role === 'base' || role === 'anchored' ? flow : Math.sqrt(flow));
+      const width = (widths[role]??widths.anchored) * (role === 'base' || role === 'anchored' ? flow : Math.sqrt(flow));
       const { pos } = buckets[key];
       // thin path line (the exact nozzle route)
       const g = new THREE.BufferGeometry();

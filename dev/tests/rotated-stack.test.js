@@ -35,3 +35,11 @@ test("research presets and settings stay within the paper's documented bounds", 
   assert.ok(card.ranges.layers.min===2&&card.ranges.layers.max===8);
   assert.ok(card.ranges.strand.min===.4&&card.ranges.strand.max===.9);
 });
+
+test('rotated planes support bundles without changing the one-strand default',()=>{
+  const boundary=boundaryFor(40,40),plain=rotatedStackLayers(boundary,{layers:2,turn:90}),explicit=rotatedStackLayers(boundary,{layers:2,turn:90,bundle:1,bundleTouch:false,bundleGap:.8});
+  assert.deepEqual(explicit,plain);
+  const bundled=rotatedStackLayers(boundary,{layers:2,turn:90,bundle:3,bundleTouch:true},{bead:.5});
+  for(const plane of bundled)assert.ok(plane.every(path=>Number.isInteger(path.bundle)&&path.bonded===true));
+  assert.equal(bundled.extra.bundle,3);
+});

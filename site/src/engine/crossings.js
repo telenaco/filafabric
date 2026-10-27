@@ -11,6 +11,7 @@
  */
 
 import { ConfigError } from './params.js';
+import { crossingEvents, pointAtArc } from './lift.js';
 
 /**
  * The most crossings one layout may have. Settings are free to be typed beyond their sliders, so lines may overlap as
@@ -206,6 +207,25 @@ export function resolveCrossings(strands, opts = {}) {
   });
 
   return { strands: out, crossings: found.length, maxLift, maxSlopeDeg: (Math.atan(maxSlope) * 180) / Math.PI };
+}
+
+/** Lift the later strand over each selected crossing using tangent-continuous cosine fillets. */
+export function bridgeCrossings(strands,{filletRadius=1,lineThickness=.2,layerHeight=lineThickness,bead=.45,mask=null}={}){
+  const radius=Math.max(.1,Number(filletRadius)||1),thickness=Math.max(.05,Number(lineThickness)||Number(layerHeight)||.2),crossingHeight=thickness+radius/2,rampLength=Math.max(radius,3.5*crossingHeight),plateau=Math.max(.1,bead+.2),events=crossingEvents(strands,{bead,mask}),byStrand=strands.map(()=>[]);
+  const arcs=strands.map(s=>{const a=[0];for(let i=1;i<s.pts.length;i++)a.push(a.at(-1)+Math.hypot(s.pts[i].x-s.pts[i-1].x,s.pts[i].y-s.pts[i-1].y));return a;});
+  for(const event of events)byStrand[event.later].push({...event,start:event.arc-plateau/2-rampLength,flatStart:event.arc-plateau/2,flatEnd:event.arc+plateau/2,end:event.arc+plateau/2+rampLength});
+  const out=strands.map((strand,si)=>{
+    const total=arcs[si].at(-1),marks=new Set(arcs[si]);
+    for(const event of byStrand[si]){marks.add(Math.max(0,event.start));marks.add(event.flatStart);marks.add(event.arc);marks.add(event.flatEnd);marks.add(Math.min(total,event.end));for(let i=1;i<49;i++){marks.add(event.start+(event.flatStart-event.start)*i/48);marks.add(event.flatEnd+(event.end-event.flatEnd)*i/48);}}
+    const pts=[...marks].filter(at=>at>=0&&at<=total).sort((a,b)=>a-b).map(at=>{
+      const point=pointAtArc(strand.pts,arcs[si],at);let offset=0,cls;
+      for(const event of byStrand[si])if(at>=event.start&&at<=event.end){let w,kind;if(at<event.flatStart){const t=Math.max(0,Math.min(1,(at-event.start)/rampLength));w=.5*(1-Math.cos(Math.PI*t));kind='rising';}else if(at>event.flatEnd){const t=Math.max(0,Math.min(1,(event.end-at)/rampLength));w=.5*(1-Math.cos(Math.PI*t));kind='falling';}else{w=1;kind='unsupported';}const needed=Math.max(0,crossingHeight-event.baseZ);if(w*needed>=offset){offset=w*needed;cls=kind;}}
+      if(offset>0){point.z+=offset;point.cls=cls;}
+      return point;
+    });
+    return {...strand,pts};
+  });
+  return {strands:out,crossings:events.length,events,crossingHeight,filletRadius:radius};
 }
 
 function minZ(pts) {

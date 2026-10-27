@@ -8,7 +8,7 @@ import { writeGcode } from './gcode.js';
 import { PolygonBoundary } from './boundary.js';
 
 /** Shared final pass for every design. Only planar motifs are resettled; pile/relief keep their intended heights. */
-export function finishFabric(result, { boundary = null, flat = false, reinforce = false } = {}) {
+export function finishFabric(result, { boundary = null, flat = false, reinforce = false, transform = null } = {}) {
   const { cfg } = result, { layer_height: layerHeight, extrusion_width: strandWidth } = cfg.t;
   boundary ??= new PolygonBoundary(result.outline ?? [[{ x: 0, y: 0 }, { x: cfg.t.sample_width, y: 0 }, { x: cfg.t.sample_width, y: cfg.t.sample_height }, { x: 0, y: cfg.t.sample_height }]]);
   const classes = new Map();
@@ -52,6 +52,15 @@ export function finishFabric(result, { boundary = null, flat = false, reinforce 
     for (const m of planned.moves) if (m.extrude) { if (!updated.has(m.tag)) updated.set(m.tag, []); updated.get(m.tag).push(m.cls); }
     strands = strands.map((s) => ({ ...s, pts: s.pts.map((p, i) => ({ ...p, cls: s.kind === 'base' ? 'base' : updated.get(s.id)?.[Math.max(0, i - 1)] ?? p.cls })) }));
     fabric = analyzeFabric(strands, { strandWidth, layerHeight, boundary, supportedAt });
+  }
+  if(typeof transform==='function'){
+    const changed=transform(strands,cfg);
+    if(Array.isArray(changed))strands=changed;
+    result.moves=emitStrands(strands,{retraction:cfg.derived.retraction});
+    result.stats={...result.stats,...computeStats(result.moves,cfg,result.placements??[])};
+    if(result.coil)result.stats.loops=result.coil.loops;
+    if(result.spiral)result.stats.loops=result.spiral.rings;
+    fabric=analyzeFabric(strands,{strandWidth,layerHeight,boundary,supportedAt});
   }
   result.strands = strands;
   result.fabric = fabric;

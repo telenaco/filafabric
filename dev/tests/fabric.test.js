@@ -7,6 +7,7 @@ import { findCrossings, resolveCrossings } from '../../site/src/engine/crossings
 import { DESIGNS } from '../../site/src/ui/designs.js';
 import { defaultProfiles } from './helpers.js';
 import { generate } from '../../site/src/engine/generate.js';
+import { generateSquiggle } from '../../site/src/engine/squiggle.js';
 import { PolygonBoundary } from '../../site/src/engine/boundary.js';
 import * as routing from '../../site/src/engine/fabric.js';
 import { sanitizeSquiggle } from '../../site/src/ui/squiggle-controls.js';
@@ -24,6 +25,22 @@ test('two separate crossing-rich islands are not reported as one fabric', () => 
   const report = crossingReport(items, 300);
   assert.equal(report.components, 2);
   assert.notEqual(buildLayeredVerdict({ report, layerCount: 2, stats: { hops: 3 } }).level, 'ok');
+});
+
+test('raised verdicts state lift, channel and climbing counts plainly',()=>{
+  const verdict=buildLayeredVerdict({
+    report:{strands:2,components:1,crossings:4,perCm2:2,between:3,longestUncrossed:2},layerCount:2,stats:{hops:1},
+    construction:{lifted:{crossings:2,total:4},channels:{count:3,along:{x:2,y:1},fused:1},levels:{max:3},z:{max:1.2}},
+  });
+  assert.match(verdict.body,/Lifted crossings: 2 of 4/);
+  assert.match(verdict.body,/Sliding channels: 3; slides along X: 2, along Y: 1; fused: 1/);
+  assert.match(verdict.body,/Builds up to 3 levels \(Z up to 1\.20 mm\)/);
+});
+
+test('Squiggle transform runs on settled strands before emission and leaves defaults unchanged',()=>{
+  const {machine,material}=defaultProfiles(),params={width:20,height:20,spacing:4,amplitude:.8},base=generateSquiggle(machine,material,params),noop=generateSquiggle(machine,material,{...params,transform:strands=>strands}),raised=generateSquiggle(machine,material,{...params,transform:strands=>strands.map(s=>({...s,pts:s.pts.map(p=>({...p,z:p.z+.1}))}))});
+  assert.equal(noop.gcode,base.gcode);
+  assert.ok(Math.abs(Math.min(...raised.moves.filter(m=>m.extrude).map(m=>m.z))-Math.min(...base.moves.filter(m=>m.extrude).map(m=>m.z))-.1)<1e-7);
 });
 
 test('crossings with a vertical gap do not join separate strands', () => {

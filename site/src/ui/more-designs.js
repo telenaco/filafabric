@@ -143,10 +143,10 @@ export function layered(def) {
 }
 
 const CROSSHATCH = defineControls({
-  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, size: { min: 0, max: 2.5, step: 0.25 }, pitch: { min: 0.8, max: 10, step: 0.1 } },
-  defaults: { width: 100, height: 100, directions: '0-90', spacing: 3.5, shape: 'wave', size: 0, pitch: 6, colorChange: false },
+  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, size: { min: 0, max: 2.5, step: 0.25 }, pitch: { min: 0.8, max: 10, step: 0.1 }, bundle:{min:1,max:5,step:1},bundleGap:{min:.1,max:1,step:.05} },
+  defaults: { width: 100, height: 100, directions: '0-90', spacing: 3.5, shape: 'wave', size: 0, pitch: 6, bundle:1,bundleTouch:true,bundleGap:.3,colorChange: false },
   enums: { directions: DIRECTION_IDS, shape: WAVY },
-  bools: ['colorChange'],
+  bools: ['colorChange','bundleTouch'],
     presets: [
     { id: 'square', name: 'Square', blurb: 'Two layers at 90°', patch: { directions: '0-90', size: 0 } },
     { id: 'diagonal', name: 'Diagonal', blurb: 'On the bias', patch: { directions: '45-135', size: 0 } },
@@ -192,8 +192,11 @@ export const MORE_DESIGNS = [
         title: 'Look and feel',
         items: [
           { key: 'spacing', label: 'Line spacing', help: 'Distance between neighbouring lines in a layer.', lo: 'Dense', hi: 'Airy', unit: 'mm', edit: true },
+          { key: 'bundle', label: 'Strands per bundle', help: 'Group parallel strands; 1 preserves the original grid.', lo: 'Single', hi: 'Five', unit: '', edit: true, filenameWhen:s=>Number(s.bundle)>1 },
+          { key: 'bundleGap', label: 'Gap inside bundle', help: 'Used only when bundle neighbours do not touch.', lo: 'Narrow', hi: 'Wide', unit: 'mm', edit: true, when:s=>Number(s.bundle)>1, filenameWhen:s=>Number(s.bundle)>1 },
         ],
       },
+      {kind:'switch',key:'bundleTouch',when:s=>Number(s.bundle)>1,label:'Touch neighbours inside bundles',help:'When on, adjacent strands are 0.9 × bead width apart and fuse.'},
       { kind: 'pattern', key: 'pattern', title: 'Pattern', hint: 'Line thickness carries the dark and light parts of the pattern.', picture: 'positive', pictureHint: 'Dark parts of the picture make the strands thicker.', scale: { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false } },
     ],
     defaults: () => ({ ...CROSSHATCH.defaults, shape: 'looped', size: 0, pattern: 'none', patternScale: 1, patternEffect: 'thickness', thin: 0.6, thick: 1.8 }),
@@ -211,14 +214,16 @@ export const MORE_DESIGNS = [
     ranges: { ...CROSSHATCH.ranges, patternScale: { min: 0.5, max: 2, step: 0.25 }, ...THICKNESS_RANGES },
     patterns: withPicture(['none', ...FIELD_IDS]),
     build: (s, boundary, ctx) => {
-      const built = crosshatchLayers(boundary, { directions: s.directions, spacing: s.spacing, shape: s.shape, size: s.size, pitch: s.pitch });
       const field = patternField(s.pattern, { scale: s.patternScale, picture: ctx?.picture });
+      const built = crosshatchLayers(boundary, { directions: s.directions, spacing: s.spacing, shape: s.shape, size: s.size, pitch: s.pitch,bundle:s.bundle,bundleTouch:s.bundleTouch,bundleGap:s.bundleGap,bead:ctx?.bead??.45,bundleMask:s.pattern==='none'?null:(x,y)=>field?.(x,y)<.5 });
       if (!field) return built;
       return { ...built, layers: built.layers.map((layer, index) => layer.map((line) => thicknessAlong(line, field, { thin: s.thin, thick: s.thick, layer: index, complement: s.colourMode === 'halftone2' }))) };
     },
     summary: (result) => `a crosshatch of ${result.layerCount} layers with ${result.report.crossings} crossings`,
   }),
 ];
+
+
 
 const AUXETIC = defineControls({
   ranges: { ...SIZE, rowPitch: { min: 0.8, max: 10, step: 0.1 }, period: { min: 4, max: 16, step: 0.5 }, amplitude: { min: 0.5, max: 4, step: 0.25 } },
@@ -656,10 +661,10 @@ const TURING = defineControls({
 });
 
 const ROTATED_STACK = defineControls({
-  ranges: { ...SIZE, layers: { min: 2, max: 8, step: 1 }, strand: { min: .4, max: .9, step: .05 }, gapFactor: { min: .5, max: 2, step: .25 } },
-  defaults: { width: 100, height: 100, layers: 3, turn: 90, strand: .45, gapFactor: 1, colorChange: false },
+  ranges: { ...SIZE, layers: { min: 2, max: 8, step: 1 }, strand: { min: .4, max: .9, step: .05 }, gapFactor: { min: .5, max: 2, step: .25 },bundle:{min:1,max:5,step:1},bundleGap:{min:.1,max:1,step:.05} },
+  defaults: { width: 100, height: 100, layers: 3, turn: 90, strand: .45, gapFactor: 1,bundle:1,bundleTouch:true,bundleGap:.3,colorChange: false },
   enums: { turn: STACK_TURNS },
-  bools: ['colorChange'],
+  bools: ['colorChange','bundleTouch'],
   presets: [
     { id: 'wearable', name: "Lu's wearable mesh", blurb: '90° layers with a close, soft gap', patch: { turn: 90, gapFactor: .5, layers: 3 } },
     { id: 'open-60', name: 'Open 60°', blurb: 'Three directions with a wider gap', patch: { turn: 60, gapFactor: 1.5, layers: 3 } },
@@ -682,12 +687,15 @@ MORE_DESIGNS.push(layered({
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
     { kind: 'choice', key: 'turn', title: 'Structure', hint: 'Each printed plane turns from the one below.', options: turnOptions },
-    { kind: 'sliders', title: 'Look and feel', items: [
-      { key: 'layers', label: 'Layers', help: 'Each layer is a separate plane of straight strands.', lo: '2', hi: '8', unit: '', edit: true },
-      { key: 'strand', label: 'Strand thickness', help: 'Sets extrusion width. A thicker strand makes a firmer mesh.', lo: 'Thin', hi: 'Thick', unit: 'mm', edit: true },
-      { key: 'gapFactor', label: 'Gap between strands', help: 'The main softness control. Lu et al. measured lower stiffness with wider gaps in 1.8 mm NinjaFlex meshes.', lo: 'Close', hi: 'Open', unit: '× strand', edit: true },
-    ] },
-    COLOUR,
+      { kind: 'sliders', title: 'Look and feel', items: [
+        { key: 'layers', label: 'Layers', help: 'Each layer is a separate plane of straight strands.', lo: '2', hi: '8', unit: '', edit: true },
+        { key: 'strand', label: 'Strand thickness', help: 'Sets extrusion width. A thicker strand makes a firmer mesh.', lo: 'Thin', hi: 'Thick', unit: 'mm', edit: true },
+        { key: 'gapFactor', label: 'Gap between strands', help: 'The main softness control. Lu et al. measured lower stiffness with wider gaps in 1.8 mm NinjaFlex meshes.', lo: 'Close', hi: 'Open', unit: '× strand', edit: true },
+        { key: 'bundle', label: 'Strands per bundle', help: 'Group parallel strands; 1 preserves the original mesh.', lo: 'Single', hi: 'Five', unit: '', edit: true, filenameWhen:s=>Number(s.bundle)>1 },
+        { key: 'bundleGap', label: 'Gap inside bundle', help: 'Used only when bundle neighbours do not touch.', lo: 'Narrow', hi: 'Wide', unit: 'mm', edit: true, when:s=>Number(s.bundle)>1, filenameWhen:s=>Number(s.bundle)>1 },
+      ] },
+      {kind:'switch',key:'bundleTouch',when:s=>Number(s.bundle)>1,label:'Touch neighbours inside bundles',help:'When on, adjacent strands are 0.9 × bead width apart and fuse.'},
+      COLOUR,
   ],
   build: (s, boundary, ctx) => {
     const built = rotatedStackLayers(boundary, s, { bead: ctx?.bead ?? .45 });
@@ -700,7 +708,7 @@ const MOIRE_BASE = defineControls({
   ranges: { ...SIZE, pitchA: { min: 1.2, max: 6, step: .1 }, pitchDiff: { min: 0, max: 1, step: .02 }, angleDiff: { min: 0, max: 15, step: .5 }, size: { min: 0, max: 2, step: .1 }, patternScale: { min: .5, max: 2, step: .25 } },
   defaults: { width: 100, height: 100, pitchA: 2, pitchDiff: .1, angleDiff: 3, size: 0, shape: 'wave', wavelength: 6, pattern: 'none', patternScale: 1, colorChange: false },
   enums: { shape: ['wave', 'zigzag'], pattern: ['none', ...FIELD_IDS, 'image'] },
-  bools: ['colorChange'],
+  bools: ['colorChange','bundleTouch'],
   presets: [
     { id: 'fine-bands', name: 'Fine bands', blurb: 'Close pitches, gentle angle', patch: { pitchA: 2, pitchDiff: .1, angleDiff: 3, size: 0 } },
     { id: 'wide-bands', name: 'Wide bands', blurb: 'A larger difference between pitches', patch: { pitchA: 2, pitchDiff: .25, angleDiff: 2, size: 0 } },

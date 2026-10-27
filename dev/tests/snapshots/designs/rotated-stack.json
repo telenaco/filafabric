@@ -2,7 +2,7 @@
   {
     "card": "rotated-stack",
     "preset": "default",
-    "settingsHash": "3b117fbe9e2c",
+    "settingsHash": "6a2657220bc3",
     "gcodeSha256": "b205858238a58b10657937f01fc28b1e05c0c2beeb990277803f3d58df19f8bd",
     "strands": 3,
     "moves": 7971,
@@ -19,7 +19,7 @@
   {
     "card": "rotated-stack",
     "preset": "wearable",
-    "settingsHash": "5d3a373dfe37",
+    "settingsHash": "a681b1892a72",
     "gcodeSha256": "d49bece30a65a2610b24029992665e5c2360b32bf57582e02edab552dc9f0c62",
     "strands": 3,
     "moves": 10445,
@@ -36,7 +36,7 @@
   {
     "card": "rotated-stack",
     "preset": "open-60",
-    "settingsHash": "ecb04b20cdc1",
+    "settingsHash": "4e248419a063",
     "gcodeSha256": "2dd2a882d6e8448167944e0485c3095b7f2c518afc25d3c4a8216ff5060f81c1",
     "strands": 3,
     "moves": 6573,
@@ -53,7 +53,7 @@
   {
     "card": "rotated-stack",
     "preset": "fine-45",
-    "settingsHash": "7b1c350e4595",
+    "settingsHash": "1cccb202b1c6",
     "gcodeSha256": "a7de497e90aef3571bfb28504c8699556755d795ca3f482727bc223ca6f27585",
     "strands": 4,
     "moves": 10859,

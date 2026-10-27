@@ -404,6 +404,6 @@ export function generateSquiggle(machine, material, squiggleParams = {}) {
   const gcode = writeGcode(moves, cfg, { stats });
 
   const warnings = moves.length === 0 ? ['The outline is too small for these lines: nothing to print'] : [];
-  return finishFabric({ cfg, strands: res.strands, moves, stats, warnings, gcode, outline }, { flat: true });
+  return finishFabric({ cfg, strands: res.strands, moves, stats, warnings, gcode, outline }, { flat: true, transform:squiggleParams.transform });
 }
 

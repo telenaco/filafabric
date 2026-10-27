@@ -212,7 +212,7 @@ export function buildWeaveVerdict(stats) {
  * @param result  { report, layerCount, stats }
  */
 export function buildLayeredVerdict(result) {
-  if (result.construction?.errors.length) return constructionVerdict(result.construction);
+  if (result.construction?.errors?.length) return constructionVerdict(result.construction);
   const r = result.report;
   if (!r || r.strands === 0) {
     return { ...NONE, level: 'info', title: 'Nothing to print', body: 'These settings leave nothing inside the swatch or outline. Use a larger swatch or finer settings.' };
@@ -228,11 +228,15 @@ export function buildLayeredVerdict(result) {
   }
   const lifts = result.stats.hops === 0 ? 'one unbroken strand with no lifts' : result.stats.hops === 1 ? 'one lift' : `${result.stats.hops} lifts`;
   const between = result.layerCount > 1 ? `, ${r.between.toLocaleString('en')} between layers` : '';
+  const raised=[];
+  if(result.construction?.lifted)raised.push(`Lifted crossings: ${result.construction.lifted.crossings} of ${result.construction.lifted.total} (unbonded where lifted).`);
+  if(result.construction?.channels){const c=result.construction.channels;raised.push(`Sliding channels: ${c.count}; slides along X: ${c.along.x}, along Y: ${c.along.y}; fused: ${c.fused}.`);}
+  if(result.construction?.levels)raised.push(`Builds up to ${result.construction.levels.max} levels (Z up to ${Number(result.construction.z?.max??0).toFixed(2)} mm).`);
   return {
     ...NONE,
     level: 'ok',
     title: 'Ready to print',
-    body: `${r.crossings.toLocaleString('en')} crossings (${r.perCm2.toFixed(1)} per cm²${between}); the longest stretch with nothing crossing it is ${Math.round(r.longestUncrossed)} mm. It prints as ${lifts}.`,
+    body: `${r.crossings.toLocaleString('en')} crossings (${r.perCm2.toFixed(1)} per cm²${between}); the longest stretch with nothing crossing it is ${Math.round(r.longestUncrossed)} mm. It prints as ${lifts}.${raised.length?` ${raised.join(' ')}`:''}`,
   };
 }
 

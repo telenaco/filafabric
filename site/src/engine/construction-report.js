@@ -177,6 +177,13 @@ export function buildConstructionReport(result, {
   const components = geometry?.graph.components === 1 ? 1 : contactGraph(strands, { strandWidth, planar: true }).components;
   const componentsWithoutTies = tieIndices.length
     ? contactGraph(strands.filter((s) => s.role !== 'tie'), { strandWidth, planar: true }).components : components;
+  const bundleGroups=new Map();
+  strands.filter(s=>Number.isInteger(s.bundle)).forEach(strand=>{const key=`${strand.family}\0${strand.bundle}`;if(!bundleGroups.has(key))bundleGroups.set(key,{family:strand.family,index:strand.bundle,bonded:true,strands:0});const group=bundleGroups.get(key);group.bonded=group.bonded&&Boolean(strand.bonded);group.strands++;});
+  const liftedPoints=strands.flatMap(strand=>strand.pts.filter(point=>point.lifted));
+  const channelStrands=strands.filter(strand=>strand.role==='channel');
+  const raisedFeatures=strands.some(strand=>strand.role==='channel'||strand.pts.some(point=>point.lifted||['rising','falling','unsupported'].includes(point.cls)));
+  const zLevels=strands.flatMap(strand=>strand.pts.map(point=>Math.max(0,Number.isFinite(point.level)?point.level:Math.round((point.z??0)/layerHeight))));
+  const levelHistogram=zLevels.reduce((hist,level)=>{hist[level]=(hist[level]??0)+1;return hist;},{});
   phase('graphs');
   const area = areaMm2(boundary, result);
   const warnings = [];
@@ -186,6 +193,10 @@ export function buildConstructionReport(result, {
   if (danglingEnds) warnings.push(`${danglingEnds} loose ends inside the piece.`);
   return {
     families, lostFamilies,
+    ...(bundleGroups.size?{bonding:{bundles:bundleGroups.size,bonded:[...bundleGroups.values()].filter(group=>group.bonded).length,gapped:[...bundleGroups.values()].filter(group=>!group.bonded).length,groups:[...bundleGroups.values()]}}:{}),
+    ...(liftedPoints.length?{lifted:{points:liftedPoints.length,crossings:liftedPoints.length,total:found.length}}:{}),
+    ...(channelStrands.length?{channels:{count:channelStrands.length,along:{x:channelStrands.filter(s=>Math.abs(s.pts.at(-1).x-s.pts[0].x)>=Math.abs(s.pts.at(-1).y-s.pts[0].y)).length,y:channelStrands.filter(s=>Math.abs(s.pts.at(-1).x-s.pts[0].x)<Math.abs(s.pts.at(-1).y-s.pts[0].y)).length},fused:stacks.get('fused')?.count??0}}:{}),
+    ...(raisedFeatures&&max>2*layerHeight+1e-6?{levels:{max:zLevels.reduce((highest,level)=>Math.max(highest,level),0),histogram:levelHistogram}}:{}),
     crossings: {
       total: found.length, perCm2: area ? found.length * 100 / area : 0,
       byPair: [...pairs.values()], byStack: [...stacks.values()],

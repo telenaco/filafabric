@@ -128,6 +128,7 @@ export class SliderControl extends Control {
 
   update() {
     const { def, binding } = this;
+    this.node.hidden = typeof def.when === 'function' ? !def.when(this.host.settings(this.designId)) : false;
     const available = binding.available?.(def.key) !== false;
     this.input.disabled = !available;
     this.readout.disabled = !available;

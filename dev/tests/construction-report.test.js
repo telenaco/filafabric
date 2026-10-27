@@ -84,6 +84,19 @@ test('crossing stacks, valence, tie midpoint and arbitrary family loss are measu
   assert.ok(report.crossings.byStack.some((s)=>s.type==='channel'));
 });
 
+test('raised diagnostics expose marked lifts, channel directions, and height levels',()=>{
+  const strands=[
+    {family:'A',role:'native',pts:[{x:0,y:5,z:.2},{x:10,y:5,z:.2}]},
+    {family:'B',role:'native',pts:[{x:5,y:0,z:.2},{x:5,y:5,z:1.2,lifted:true,cls:'unsupported'},{x:5,y:10,z:.2}]},
+    {family:'channel',role:'channel',pts:[{x:0,y:6,z:.2},{x:0,y:8,z:1.2}]},
+  ];
+  const report=buildConstructionReport({strands},{layerHeight:.2});
+  assert.equal(report.lifted.crossings,1);
+  assert.equal(report.channels.count,1);
+  assert.equal(report.channels.along.y,1);
+  assert.equal(report.levels.max,6);
+});
+
 test('same-winding hole rings use the boundary even-odd area', () => {
   const ring = (a,b) => [{x:a,y:a},{x:b,y:a},{x:b,y:b},{x:a,y:b}];
   const boundary = new PolygonBoundary([ring(0,20),ring(4,16)]);

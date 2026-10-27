@@ -20,7 +20,7 @@ export const THICKNESS_RANGES = Object.freeze({
 export function thicknessAlong(polyline, field, { thin = 0.6, thick = 1.8, overNet = 0.85, layer = 0, maxChangePerMm = 0.25, bead = 0.45, quantise = 0.05, complement = false } = {}) {
   if (!Array.isArray(polyline)) return [];
   let previous = null;
-  return polyline.map((point) => {
+  const result=polyline.map((point) => {
     const sampled = field ? Math.max(0, Math.min(1, field(point.x, point.y))) : 0.5;
     const tone = complement && layer > 0 ? 1 - sampled : sampled;
     let flow = thin + (thick - thin) * tone;
@@ -33,4 +33,6 @@ export function thicknessAlong(polyline, field, { thin = 0.6, thick = 1.8, overN
     previous = { point, flow };
     return { ...point, flow: layer > 0 ? flow * overNet : flow };
   });
+  for(const key of ['family','role','source','bundle','bonded','joints'])if(polyline[key]!==undefined)result[key]=polyline[key];
+  return result;
 }
