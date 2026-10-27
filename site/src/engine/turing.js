@@ -1,7 +1,7 @@
 import { createRng } from './rng.js';
 import { contourLoops } from './spiral.js';
 import { clipPolyline, densify, appendPoints } from './layers.js';
-import { backingStack } from './backing.js';
+import { backingStack, carrierLayers } from './backing.js';
 
 /**
  * Turing stripes: the iso-lines of a Gray-Scott reaction-diffusion field, the same chemistry that makes animal
@@ -89,7 +89,7 @@ function chainLoops(loops, boundary, jog) {
  * @param angle       angle of the hatch laid across it, degrees
  * @param spacing     spacing of the hatch, mm
  */
-export function turingLayers(boundary, { wavelength = 7, seed = 1, angle = 45, spacing = 5, backing = 'straight', backingDepth = 2, backingLength = 10, backingLayers = 'one', whole = true } = {}) {
+export function turingLayers(boundary, { wavelength = 7, seed = 1, angle = 45, spacing = 5, backing = 'straight', backingDepth = 2, backingLength = 10, backingLayers = 'one', whole = true, support = null } = {}) {
   const box = boundary.bbox();
   const field = growField(box, { wavelength, seed });
   let max = 0;
@@ -110,6 +110,6 @@ export function turingLayers(boundary, { wavelength = 7, seed = 1, angle = 45, s
   const loops = max > 0.05 ? contourLoops({ ...field, max }, max / 2).filter((l) => l.length > 8) : [];
   const strands = chainLoops(loops, boundary, wavelength * 1.2);
   const layer1 = strands.flatMap((s) => clipPolyline(s, boundary));
-  const stack = backingStack(boundary, { style: backing, angle, spacing, depth: backingDepth, wavelength: backingLength }, backingLayers);
+  const stack = support ? carrierLayers(boundary, support) : backingStack(boundary, { style: backing, angle, spacing, depth: backingDepth, wavelength: backingLength }, backingLayers);
   return { layers: [layer1, ...stack], extra: { loops: loops.length } };
 }

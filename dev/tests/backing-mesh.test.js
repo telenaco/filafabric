@@ -63,8 +63,8 @@ test('a zero threshold retracts before every travel, mesh and design alike', () 
 
 test('a lace gets the mesh under its whole piece, green body and windows, and keeps its layer order on top', () => {
   const vector = parseSvg(fs.readFileSync(path.join(siteRoot, 'samples', 'lace-sample.svg'), 'utf8'), 'lace-sample.svg');
-  const r = generateDesignExport({ machine, material, design: 'zigzag', settings: designById('zigzag').defaults(), width: vector.width, height: vector.height,
-    vector, outline: vectorPatternRings(vector), shapeOutline: true, solidLayers: 2, extraLayers: 0, brim: 0, backing: {} });
+  const r = addBackingMesh(generateDesignExport({ machine, material, design: 'zigzag', settings: designById('zigzag').defaults(), width: vector.width, height: vector.height,
+    vector, outline: vectorPatternRings(vector), shapeOutline: true, solidLayers: 2, extraLayers: 0, brim: 0 }), {});
   const h = r.cfg.t.layer_height;
   const mesh = r.strands.filter((s) => s.backingMesh);
   const piece = new PolygonBoundary(r.pieceOutline);
@@ -80,7 +80,7 @@ test('a lace gets the mesh under its whole piece, green body and windows, and ke
 test('a raised design stands on its own base: the mesh is left out, and the check says so', () => {
   const r = generateDesignExport({ machine, material, design: 'loop-pile', settings: { sample_width: 30, sample_height: 30 }, width: 30, height: 30, extraLayers: 0, brim: 0, backing: {} });
   assert.equal(r.strands?.some((s) => s.backingMesh) ?? false, false);
-  assert.ok(r.warnings.some((w) => /backing mesh is left out/.test(w)));
+  assert.ok(r.warnings.some((w) => /additional global backing is left out/.test(w)));
 });
 
 test('without a backing nothing changes', () => {

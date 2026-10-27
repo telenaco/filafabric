@@ -47,7 +47,7 @@ test('SupportSection writes nested carrier style and parameters; built-in is rea
   section.styleButtons.find((button) => button.dataset.supportStyle === 'zigzag').dispatch('click');
   const openness = section.fields.openness.input;
   openness.value = '4.2';
-  openness.dispatch('input');
+  openness.dispatch('change');
   assert.equal(settings.support.style, 'zigzag');
   assert.equal(settings.support.openness, 4.2);
   const builtin = new SupportSection(host, { ...mod, support: 'built-in' }, { kind: 'support' }, { index: 0 });

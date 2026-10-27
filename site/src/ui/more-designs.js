@@ -498,7 +498,7 @@ MORE_DESIGNS.push(layered({
     { kind: 'pattern', key: 'pattern', title: 'Grade the dots', hint: 'Only the stipple tour uses it: dots are denser where the pattern is bright.', scale: { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false }, picture: 'positive', pictureHint: 'With the stipple tour, the dots are denser where the picture is dark.' },
     COLOUR,
   ],
-  build: (s, boundary, ctx) => meanderLayers(boundary, { curve: s.curve, cell: s.cell, angle: s.angle, spacing: s.spacing, seed: s.seed, backing: s.backing, backingDepth: s.backingDepth, backingLength: s.backingLength, backingLayers: s.backingLayers, tone: patternField(s.pattern, { scale: s.patternScale, picture: ctx?.picture }) }),
+  build: (s, boundary, ctx) => meanderLayers(boundary, { curve: s.curve, cell: s.cell, angle: s.angle, spacing: s.spacing, seed: s.seed, backing: s.backing, backingDepth: s.backingDepth, backingLength: s.backingLength, backingLayers: s.backingLayers, support: s.support, tone: patternField(s.pattern, { scale: s.patternScale, picture: ctx?.picture }) }),
   summary: (result) => `a meander of ${result.report.crossings} crossings`,
 }));
 
@@ -527,6 +527,10 @@ MORE_DESIGNS.push(layered({
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
+    { kind: 'choice', key: 'second', title: 'Structure', options: [
+      { id: 'one', value: false, label: 'One curve', hint: 'One closed curve crosses itself in diamonds.' },
+      { id: 'two', value: true, label: 'Two curves', hint: 'A second curve with its phase turned crosses the first everywhere.' },
+    ] },
     {
       kind: 'sliders',
       title: 'Look and feel',
@@ -536,10 +540,6 @@ MORE_DESIGNS.push(layered({
         { key: 'phase', label: 'Phase', help: 'Turns the curve: zero is a straight diagonal at the extreme, larger fills the diamond.', lo: 'Squeezed', hi: 'Open', unit: '°', edit: true },
       ],
     },
-    { kind: 'choice', key: 'second', title: 'Structure', options: [
-      { id: 'one', value: false, label: 'One curve', hint: 'One closed curve crosses itself in diamonds.' },
-      { id: 'two', value: true, label: 'Two curves', hint: 'A second curve with its phase turned crosses the first everywhere.' },
-    ] },
     COLOUR,
   ],
   build: (s, boundary) => lissajousLayers(boundary, { a: s.a, b: s.b, phase: s.phase, second: s.second }),
@@ -684,6 +684,6 @@ MORE_DESIGNS.push(layered({
     },
     COLOUR,
   ],
-  build: (s, boundary) => turingLayers(boundary, { wavelength: s.wavelength, seed: s.seed, angle: s.angle, spacing: s.spacing, backing: s.backing, backingDepth: s.backingDepth, backingLength: s.backingLength, backingLayers: s.backingLayers }),
+  build: (s, boundary) => turingLayers(boundary, { wavelength: s.wavelength, seed: s.seed, angle: s.angle, spacing: s.spacing, backing: s.backing, backingDepth: s.backingDepth, backingLength: s.backingLength, backingLayers: s.backingLayers, support: s.support }),
   summary: (result) => `Turing stripes of ${result.loops} loops and ${result.report.crossings} crossings`,
 }));

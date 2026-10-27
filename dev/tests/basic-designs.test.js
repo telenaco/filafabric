@@ -159,15 +159,15 @@ test('the essentials are real, ready cards and come first', () => {
   for (const id of ESSENTIALS) assert.equal(designById(id)?.status, 'ready', id);
 });
 
-test('a hidden card leaves the gallery but still opens: Drawing & infill, for now', () => {
+test('Your drawing is visible; the legacy Halftone card still opens but stays hidden', () => {
   const { essentials, others } = galleryGroups();
   const shown = [...essentials, ...others].map((d) => d.id);
-  assert.equal(designById('svgdesign').hidden, true);
+  assert.equal(designById('svgdesign').hidden, false);
   assert.equal(designById('svgdesign').status, 'ready', 'a link or a saved file still opens it');
-  assert.equal(shown.includes('svgdesign'), false);
+  assert.equal(shown.includes('svgdesign'), true);
   assert.equal(shown.includes('crosshatch'), true);
   assert.equal(designById('halftone').hidden, true);
-  assert.deepEqual(essentials.map((d) => d.id), ESSENTIALS.filter((id) => !['svgdesign', 'halftone'].includes(id)), 'the visible essentials keep their order');
+  assert.deepEqual(essentials.map((d) => d.id), ESSENTIALS.filter((id) => id !== 'halftone'), 'the visible essentials keep their order');
   assert.ok(others.length > 10 && others.every((d) => !ESSENTIALS.includes(d.id)));
   assert.equal(designById('zigzag-mesh'), undefined);
 });
@@ -210,7 +210,7 @@ test('the meander and Turing stripes are held by a gyroid backing unless straigh
   for (const id of ['meander', 'turing']) {
     const card = designById(id);
     assert.equal(card.defaults().backing, 'wave', id);
-    assert.ok(card.controls.some((c) => c.kind === 'choice' && c.key === 'backing'), id);
+    assert.ok(card.controls.some((c) => c.kind === 'support'), id);
     assert.equal(card.sanitize({ backing: 'plaid' }).backing, 'wave');
     assert.equal(card.sanitize({ backing: 'gyroid' }).backing, 'gyroid');
     assert.equal(card.sanitize({ backing: 'straight' }).backing, 'straight');
@@ -244,11 +244,11 @@ test('the backing wave has a depth and a length you set, and a second backing is
   for (const id of ['meander', 'turing']) {
     const card = designById(id);
     const { machine, material } = defaultProfiles();
-    const layers = (s) => card.generate(machine, material, { ...card.defaults(), width: 60, height: 60, ...s }).layerCount;
-    assert.equal(layers({ backingLayers: 'one' }), 2, id + ': the first layer and one backing');
-    assert.equal(layers({ backingLayers: 'two' }), 3, id + ': a third layer');
-    const depthOf = (backingDepth) => JSON.stringify(card.generate(machine, material, { ...card.defaults(), width: 60, height: 60, backingDepth }).strands.slice(-3).map((s) => s.pts.length));
+    const layers = (count) => card.generate(machine, material, { ...card.defaults(), width: 60, height: 60, support: { ...card.defaults().support, layers: count } }).layerCount;
+    assert.equal(layers(1), 2, id + ': the first layer and one backing');
+    assert.equal(layers(2), 3, id + ': a third layer');
+    const depthOf = (depth) => JSON.stringify(card.generate(machine, material, { ...card.defaults(), width: 60, height: 60, support: { ...card.defaults().support, depth } }).strands.slice(-3).map((s) => s.pts.length));
     assert.notEqual(depthOf(1), depthOf(5), id + ': the depth changes the backing');
-    assert.ok(card.controls.some((c) => c.kind === 'sliders' && typeof c.when === 'function'), id + ': wave depth shows only for a wave');
+    assert.equal(card.controls.filter((c) => c.kind === 'support').length, 1, id + ': carrier controls live together');
   }
 });

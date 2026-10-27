@@ -2,7 +2,7 @@
   {
     "card": "turing",
     "preset": "default",
-    "settingsHash": "5056a5d26ba8",
+    "settingsHash": "e2c7505d9a96",
     "gcodeSha256": "877cc2ed80c5e073d1d7fe8a8eba93e0418f20c5ed2198b73fdab82728afcce0",
     "strands": 18,
     "moves": 904,
@@ -19,7 +19,7 @@
   {
     "card": "turing",
     "preset": "fine",
-    "settingsHash": "9d2734d49a5f",
+    "settingsHash": "4a16ddee9531",
     "gcodeSha256": "b3065a9949d7effb21c6e32d74045967e71fc333a9117f708cc38aa2afbd56c6",
     "strands": 20,
     "moves": 1224,
@@ -36,7 +36,7 @@
   {
     "card": "turing",
     "preset": "coral",
-    "settingsHash": "2caa001297a9",
+    "settingsHash": "5cdf21655d42",
     "gcodeSha256": "56bfe98282d42f54ed589823e189994a0a62f912bc72f4bd1634d2cd72a12c2b",
     "strands": 16,
     "moves": 836,
@@ -53,7 +53,7 @@
   {
     "card": "turing",
     "preset": "bold",
-    "settingsHash": "ef5cb0b1e60c",
+    "settingsHash": "cdffade918af",
     "gcodeSha256": "006013961d31761dbab4a76061522c1d054caab7965b16000622a992764b029b",
     "strands": 12,
     "moves": 536,

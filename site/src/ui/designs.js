@@ -44,6 +44,7 @@ import {
   RELIEF_CONTROLS, FRINGE_CONTROLS, BOUCLE_CONTROLS, SPIRAL_CONTROLS, WEAVE_CONTROLS, withColour,
 } from './structure-controls.js';
 import { colourMode, colourResult } from '../engine/colour-plan.js';
+import { legacySupport, sanitizeSupport } from '../engine/backing.js';
 
 const WEAVE = WEAVE_CONTROLS(WEAVE_BINDING_IDS);
 // a design's pattern as a field: a built-in one or the uploaded picture (picture.js), dark parts reading as more
@@ -409,6 +410,42 @@ for (const mod of DESIGNS.filter(card => card.status === 'ready')) {
     };
   }
 }
+
+// Support belongs to the card; a second, global carrier must never be added to it.
+for (const mod of DESIGNS.filter(card => card.status === 'ready')) {
+  if (mod.support === 'built-in' && mod.controls) mod.controls.push({ kind: 'support', title: 'Support', readonly: true });
+  if (mod.support !== 'auto') continue;
+  const drawing = mod.id === 'svgdesign', defaults = mod.defaults, sanitize = mod.sanitize;
+  const fallback = legacySupport(defaults(), drawing);
+  mod.defaults = () => ({ ...defaults(), support: structuredClone(fallback) });
+  mod.sanitize = raw => {
+    const out = sanitize(raw);
+    out.support = raw?.support ? sanitizeSupport(raw.support, legacySupport(out, drawing)) : legacySupport(out, drawing);
+    if (!drawing) Object.assign(out, { backing: out.support.style, spacing: out.support.openness, angle: out.support.angle, backingDepth: out.support.depth, backingLength: out.support.wavelength, backingLayers: out.support.layers === 2 ? 'two' : 'one' });
+    else {
+      Object.assign(out, { backing: out.support.enabled === false ? 'none' : out.support.layers === 2 ? 'two' : 'one', backingArea: out.support.area });
+      for (let k = 1; k <= 2; k++) {
+        const pass = out.support.passes?.[k - 1];
+        Object.assign(out, { [`backing${k}Pattern`]: pass?.pattern ?? (out.support.style === 'straight' ? 'rectilinear' : out.support.style), [`backing${k}Spacing`]: pass?.spacing ?? out.support.openness, [`backing${k}Angle`]: pass?.angle ?? out.support.angle + 90 * (k - 1) });
+      }
+    }
+    return out;
+  };
+  mod.presets = mod.presets?.map(p => ({ ...p, patch: { ...p.patch, support: legacySupport({ ...defaults(), ...p.patch }, drawing) } }));
+  const match = mod.presetMatch;
+  if (match) mod.presetMatch = s => match(mod.sanitize(s));
+  mod.controls = mod.controls.filter(section => !['backing', 'backingLayers', 'backingArea', 'backing1Pattern', 'backing2Pattern'].includes(section.key))
+    .map(section => section.kind === 'sliders' ? { ...section, items: section.items.filter(item => drawing ? !item.key.startsWith('backing') : !['angle', 'spacing', 'backingDepth', 'backingLength'].includes(item.key)) } : section)
+    .filter(section => section.kind !== 'sliders' || section.items.length);
+  mod.controls.push({ kind: 'support', title: 'Support', optional: drawing, area: drawing, hint: 'One carrier, printed after the motif. The existing print order is preserved.' });
+  mod.controls = mod.controls.map(section => section.kind === 'choice' ? { ...section, options: section.options.map(option => option.patch ? { ...option, patch: { ...option.patch, support: legacySupport({ ...defaults(), ...option.patch }, drawing) } } : option) } : section);
+  const generate = mod.generate;
+  mod.generate = (machine, material, s, options) => generate(machine, material, { ...s, support: s.support ? sanitizeSupport(s.support, fallback) : legacySupport({ ...defaults(), ...s }, drawing) }, options);
+}
+
+const drawingCard = DESIGNS.find(card => card.id === 'svgdesign');
+drawingCard.hidden = false;
+drawingCard.name = 'Your drawing';
 
 /**
  * The essentials: the structures to start from, listed first and in this order. Every other card is a variation, an

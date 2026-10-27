@@ -4,6 +4,7 @@ import { windowRings } from './window.js';
 import { finishAtPrintedBoundary } from './fabric.js';
 import { infillLines, INFILL_IDS } from './infill.js';
 import { classifyPaths, interpretDrawing, linePasses } from './drawing.js';
+import { carrierLayers } from './backing.js';
 
 /**
  * Drawing & infill (the card's id is 'svgdesign'): a drawing becomes a printable textile, its red shapes filled with a
@@ -127,15 +128,22 @@ export function svgDesignLayers(boundary, settings, vector = null, { bead = 0.45
 
   const layers = [design];
   const backing = [];
-  const n = countOf(s.backing);
+  const support = s.support;
+  const n = support ? support.enabled === false ? 0 : support.layers : countOf(s.backing);
+  const area = support?.area ?? s.backingArea;
+  const region = areaFor(area);
+  const carrier = support && region ? carrierLayers(region, support) : null;
   for (let k = 1; k <= n; k++) {
-    const pattern = s[`backing${k}Pattern`], spacing = s[`backing${k}Spacing`], angle = s[`backing${k}Angle`];
-    const region = areaFor(s.backingArea);
-    const lines = region && (onlyLayer === null || onlyLayer === k) ? infillLines(pattern, region, { spacing, angle, layer: k }) : [];
-    layers.push(lines);
+    const pass = support?.passes?.[k - 1];
+    const pattern = support ? pass?.pattern ?? (support.style === 'straight' ? 'rectilinear' : support.style) : s[`backing${k}Pattern`];
+    const spacing = support ? pass?.spacing ?? support.openness : s[`backing${k}Spacing`];
+    const angle = support ? pass?.angle ?? support.angle + 90 * (k - 1) : s[`backing${k}Angle`];
+    const lines = region && (onlyLayer === null || onlyLayer === k) ? carrier?.[k - 1] ?? infillLines(pattern, region, { spacing, angle, layer: k }) : [];
+    // Keep existing family IDs for old snapshots; these passes are carriers, not native motifs.
+    layers.push(Object.assign(lines, { family: `L${k + 1}`, role: 'carrier' }));
     backing.push({ pattern, spacing, angle, lines: lines.length });
   }
-  if (s.backingArea === 'shape' && !shape && n > 0) warnings.push('There are no closed shapes, so the backing covers the drawing\'s bounding box instead');
+  if (area === 'shape' && !shape && n > 0) warnings.push('There are no closed shapes, so the backing covers the drawing\'s bounding box instead');
 
   return {
     layers,

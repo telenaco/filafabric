@@ -147,9 +147,14 @@ export function sanitizeState(raw, known) {
       const key = d.settingsKey ?? d.id;
       const source = saved[key] ?? saved[d.id] ?? (d.id === 'loop-pile' ? r.primary : d.id === 'squiggle' ? r.squiggle : undefined);
       const clean = d.sanitize(source);
-      if (source?.support !== undefined) clean.support = sanitizeBacking(source.support);
       designs[key] = clean;
     }
   }
-  return { v: 4, design, machine, material, primary, advanced, squiggle: sanitizeSquiggle(r.squiggle ?? designs.squiggle), designs, outline: sanitizeOutline(r.outline), vector: sanitizeSvgLines(r.vector), print: sanitizePrint(r.print) };
+  const print = sanitizePrint(r.print);
+  const extraBacking = !!print.backing;
+  delete print.backing;
+  const migrationNotes = extraBacking ? [DESIGNS.find(d => d.id === design)?.support === 'self'
+    ? 'This design no longer takes an extra backing; your link is shown without it.'
+    : 'This design now uses one Support carrier instead of an additional global backing.'] : [];
+  return { v: 4, design, machine, material, primary, advanced, squiggle: sanitizeSquiggle(r.squiggle ?? designs.squiggle), designs, outline: sanitizeOutline(r.outline), vector: sanitizeSvgLines(r.vector), print, ...(migrationNotes.length ? { migrationNotes } : {}) };
 }

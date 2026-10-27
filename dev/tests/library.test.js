@@ -6,9 +6,10 @@ import { SHELVES, FAMILIES, validateCard, libraryGroups, variantsOf, variantDefa
 import { layered } from '../../site/src/ui/more-designs.js';
 import { panelOrderErrors } from '../../site/src/ui/panels.js';
 
-const ALLOWED_LEGACY = new Set(['meander', 'harmonograph', 'turing']);
+// every card now follows the panel order; T1.11 asserts that this stays empty
+const ALLOWED_LEGACY = new Set();
 
-test('all 39 ready cards have the exact ticket metadata', () => {
+test('all ready cards have the exact ticket metadata', () => {
   const brief = [
     "   | `loop-pile` | raised | pile | built-in | untested | Raised loops are anchored to an open base mesh. |",
     "   | `squiggle` | layered | waves | self | untested | Two wavy families cross and fuse where they meet. |",

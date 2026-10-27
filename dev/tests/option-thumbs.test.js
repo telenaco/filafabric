@@ -20,7 +20,7 @@ test('every ready choice has a finite illustration in the existing SVG style', (
       choices++;
     }
   }
-  assert.ok(choices >= 131);
+  assert.ok(choices >= 100, 'carrier choices now share one Support section rather than duplicating infill pickers');
 });
 
 function validPicture(svg) {

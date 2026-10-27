@@ -39,12 +39,13 @@ export function relevantKeys(mod, s) {
       else if (s.colourMode && s.colourMode !== 'one') keys.push('colourMode');
       if (s.colourMode !== 'one' && s.layerColours?.length) keys.push('layerColours');
     }
+    else if (c.kind === 'support' && s.support && !c.readonly) keys.push('support');
   }
   return [...new Set(keys)];
 }
 
 /** Keep exact numeric values, including typed precision; a switch that is on is written as "on". */
-export const showValue = (v) => (v === true ? 'on' : String(v));
+export const showValue = (v) => (v === true ? 'on' : v && typeof v === 'object' ? JSON.stringify(v) : String(v));
 
 /** One setting as a token: pitch5, shape-looped, twoColours-on. `label` is the name it goes under. */
 export function settingToken(key, value, label = SHORT[key] ?? key) {
@@ -113,7 +114,7 @@ export function ownName(docName) {
 
 /** Whether every named setting still has the design's default value (a swatch that started from no preset). */
 export function untouched(keys, s, defaults) {
-  return keys.every((k) => s[k] === defaults[k]);
+  return keys.every((k) => s[k] === defaults[k] || s[k] && typeof s[k] === 'object' && JSON.stringify(s[k]) === JSON.stringify(defaults[k]));
 }
 
 /**

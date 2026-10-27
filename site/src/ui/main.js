@@ -15,8 +15,8 @@ import { stateToHash, hashToState, sanitizeState, PRINT_DEFAULTS } from './share
 import { FILAMENT_FIELDS, filamentValue, withFilamentSettings, setFilamentSetting, withoutFilamentSettings } from './filament-settings.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
 import { $, $$, el, icon, ICONS, helpBubble } from './dom.js';
-import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, SectionFold, BackingCard, ColourSection } from './panels.js';
-import { addBackingMesh, BACKING_MESH, BACKING_MESH_LAYERS } from '../engine/backing.js';
+import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, SectionFold, ColourSection, SupportSection } from './panels.js';
+import { BACKING_MESH_LAYERS } from '../engine/backing.js';
 import { layerHeightOptions, defaultLayerHeight, resolveConfig } from '../engine/params.js';
 import { TooltipLayer } from './tooltip.js';
 // versioned with the release in boot.js, so a returning browser never pairs this file with an older printer loader
@@ -301,6 +301,7 @@ function loadState(data) {
   state.outline = clean.outline;
   state.vector = clean.vector;
   state.print = clean.print;
+  if (clean.migrationNotes?.length) toast(clean.migrationNotes.join(' '));
   if (data?.print?.layerHeight === undefined) state.print.layerHeight = defaultLayerHeight(state.machines.get(state.machine));
   normalisePrint();
   if (typeof data?.name === 'string') state.docName = data.name.slice(0, 60);
@@ -366,7 +367,7 @@ function normalisePrint() {
 }
 
 /** The backing mesh under the current design: its settings, or null when it is off or the design stands on its own base. */
-const backingFor = (design = state.design) => (RAISED_DESIGNS.has(design) ? null : state.print.backing ?? null);
+const backingFor = (design = state.design) => (['self', 'auto', 'built-in'].includes(designById(design)?.support) ? null : state.print.backing ?? null);
 
 function layerSetupText() {
   const solid = state.vector && interpretDrawing(state.vector).solids.length ? ` · solids: ${state.print.solidLayers} × ${state.print.layerHeight} mm` : '';
@@ -382,36 +383,11 @@ function patternLayerSetupText() {
   return RAISED_DESIGNS.has(state.design) ? `${state.print.extraLayers} extra backing layers · texture once` : `${mesh ? `${mesh} mesh + ` : ''}${state.print.extraLayers} extra layers`;
 }
 
-// the backing mesh's card, in every flat design's panel: the Zigzag mesh's own sliders, starting from the standard mesh
-const BACKING_CARD = {
-  label: 'Backing mesh',
-  help: 'A zigzag mesh under the whole piece: two layers, printed first, with the design on top.',
-  sliders: [
-    { key: 'backingSpacing', label: 'Line spacing', help: 'Distance between neighbouring lines of the mesh.', lo: 'Dense', hi: 'Open', unit: 'mm', edit: true },
-    { key: 'backingDepth', label: 'Wave depth', help: 'How far each line swings to either side of its centre line.', lo: 'Shallow', hi: 'Deep', unit: 'mm', edit: true },
-    { key: 'backingWavelength', label: 'Wave length', help: 'Length of one full wave, from one peak to the next on the same side.', lo: 'Tight', hi: 'Long', unit: 'mm', edit: true },
-  ],
-  pause: { label: 'Change colour after the backing', help: 'Pause once the mesh is down (M600) so you can load another filament for the design.' },
-};
-const BACKING_KEYS = { backingSpacing: 'spacing', backingDepth: 'depth', backingWavelength: 'wavelength', backingPause: 'pause' };
-const BACKING_RANGES = { backingSpacing: { min: 0.8, max: 10, step: 0.1 }, backingDepth: { min: 0.4, max: 8, step: 0.1 }, backingWavelength: { min: 2, max: 20, step: 0.5 } };
-const BACKING_READOUTS = { backingSpacing: 'mm apart', backingDepth: 'mm each way', backingWavelength: 'mm per wave' };
-// while the mesh is off, its last settings, so switching it on again brings them back
-let backingKept = { ...BACKING_MESH };
-
 const PRINT_BINDING = {
   get: (key) => {
-    if (key === 'backing') return !!state.print.backing;
-    if (key in BACKING_KEYS) return (state.print.backing ?? backingKept)[BACKING_KEYS[key]];
     return state.print[key];
   },
   set: (key, value) => {
-    if (key === 'backing') {
-      if (value) state.print.backing = { ...backingKept };
-      else { if (state.print.backing) backingKept = { ...state.print.backing }; delete state.print.backing; }
-      return;
-    }
-    if (key in BACKING_KEYS) { state.print.backing = { ...(state.print.backing ?? backingKept), [BACKING_KEYS[key]]: value }; return; }
     if (key === 'solidLayers') { state.print.solidLayers = Math.max(1, Math.min(8, Math.round(value))); return; }
     if (['brim', 'meshPerimeters'].includes(key) && value > 50) { toast('Perimeters: enter a count from 0 to 50.'); return; }
     if (key === 'extraLayers') {
@@ -421,14 +397,13 @@ const PRINT_BINDING = {
     state.print[key] = ['extraLayers', 'brim', 'meshPerimeters'].includes(key) ? Math.max(0, Math.round(value)) : value;
   },
   available: (key) => key !== 'extraLayers' || !(state.result?.designId === state.design && state.result.layerPlan?.repeatable === false),
-  range: (key) => PRINT_RANGES[key] ?? BACKING_RANGES[key],
+  range: (key) => PRINT_RANGES[key],
   options: () => layerChoices(),
   note: () => {
     const machine = state.machines.get(state.machine);
     return `${nozzleDiameter()} mm nozzle · ${defaultLayerHeight(machine)} mm ${machine?.print_defaults?.layer_height ? 'from the imported print profile' : 'nozzle-based default'}. Choose another thickness above if needed.`;
   },
   readout: (key) => {
-    if (key in BACKING_READOUTS) return `${Math.round(PRINT_BINDING.get(key) * 10) / 10} ${BACKING_READOUTS[key]}`;
     if (key === 'solidLayers') return `${state.print.solidLayers} ${state.print.solidLayers === 1 ? 'layer' : 'layers'} · ${Number((state.print.solidLayers * state.print.layerHeight).toFixed(3))} mm`;
     if (key === 'extraLayers') return `${state.print.extraLayers} extra`;
     if (['brim', 'meshPerimeters'].includes(key)) return state.print[key] ? `${state.print[key]} ${state.print[key] === 1 ? 'line' : 'lines'}` : 'Off';
@@ -477,15 +452,6 @@ function buildPanels() {
     $('#settings-body').append(panel.node);
     controls.push(panel);
   }
-  // the backing mesh at the end of every flat design's panel (a raised one stands on its own base)
-  for (const mod of DESIGNS) {
-    if (mod.status !== 'ready' || RAISED_DESIGNS.has(mod.id)) continue;
-    const panel = $(`#panel-${mod.id}`);
-    if (!panel) continue;
-    const card = new BackingCard(host, mod.id, BACKING_CARD);
-    panel.append(card.node);
-    controls.push(card);
-  }
   for (const id of ['loop-pile']) {
     const b = BINDINGS[id];
     const size = new SizeControl(host, id);
@@ -502,6 +468,9 @@ function buildPanels() {
   const pileColour = new ColourSection(host, designById('loop-pile'), { kind: 'colour', title: 'Colour' }, { index: 'colour' });
   $('#panel-loop-pile').append(pileColour.node);
   controls.push(pileColour);
+  const pileSupport = new SupportSection(host, designById('loop-pile'), { kind: 'support', title: 'Support', readonly: true }, { index: 'support' });
+  $('#panel-loop-pile').append(pileSupport.node);
+  controls.push(pileSupport);
   // the layers every design shares live in the printer setup
   const layersCard = new PrintSetupCard(host, { thickness: PRINT_THICKNESS, layers: PRINT_LAYERS, solids: PRINT_SOLIDS });
   $('#print-setup').replaceChildren(layersCard.node);
@@ -865,8 +834,6 @@ async function regenerate() {
     });
     // green shapes print solid: on the bed layer by layer with the pattern, or last, on top of it and any extra layers
     if (state.vector) result = applySvgSolids(result, state.vector, { fullWidth: selectedWidth, fullHeight: selectedHeight, layers: state.print.solidLayers, perimeters: state.print.brim, generator: 'arachne' });
-    // the backing mesh goes under all of it
-    result = addBackingMesh(result, backingFor());
     // Offset the selected outline before clipping: a bounded preview must never invent an edge at its crop.
     const pictured = state.design === 'squiggle' && settingsOf(state.design).pattern === 'image' && state.image && !state.vector;
     const fullWidth = pictured ? result.cfg.t.sample_width : selectedWidth;

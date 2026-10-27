@@ -93,7 +93,7 @@ Every registry entry keeps its existing fields (`id`, `name`, `blurb`, `about`, 
 
 **Shelf rule.** The shelf is not a matter of taste. It is checked from the construction report (C4) by `shelfFromConstruction()`, ticket T0.3:
 - **flat:** one native path family, or several that meet without crossing over each other, at the first layer height. Local settling where a strand crosses itself is allowed (up to 2 layer heights).
-- **layered:** two or more native families that cross each other, or a motif with a carrier.
+- **layered:** two or more native families that cross each other, or a motif with a carrier. A carrier pass is a layer of its own, so the allowed height is `(native families + carrier passes + 1) × layer height + 0.05 mm`.
 - **raised:** deliberate height beyond crossing settles and stacked layers.
 
 Deliberate exceptions are listed, with a reason, in `SHELF_EXCEPTIONS`.
@@ -120,7 +120,7 @@ A card's `controls` list must follow this order. Each group may appear at most o
 |---|---|---|
 | 0 | Start from | `presets` (optional) |
 | 1 | Size and shape | `size` |
-| 2 | Structure | `choice` (zero or more) |
+| 2 | Structure | `choice` (zero or more), `petal` (optional metric editor) |
 | 3 | Look and feel | `sliders` (one), optionally followed by a `switch` that belongs to it (for example Link in Bubbles) |
 | 4 | Pattern | `pattern` (optional) |
 | 5 | Colour | `colour` (new kind; replaces `switch key=colorChange`) |
@@ -370,6 +370,8 @@ export function buildRegions(machine, material, vector, regions, { seam, generat
   "gcodeSha256": "…", "strands": 12, "moves": 3456, "extrudeMm": 1234.5,
   "zMin": 0.2, "zMax": 0.6, "families": ["L1", "L2"], "ties": 3 }
 ```
+
+`families` is `[]` when T0.0 first records the snapshots (strands carry no `family` yet). T0.2 adds the tags and may change **only** the `families` field of every snapshot; every other field, including `gcodeSha256`, must stay identical.
 
 `dev/tests/design-snapshots.test.js` regenerates them and compares. Run `npm run snapshots` to update after an intended change, and explain every changed snapshot in the PR.
 

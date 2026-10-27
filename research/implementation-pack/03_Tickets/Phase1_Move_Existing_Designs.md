@@ -318,6 +318,12 @@ Plan references:
 - Meander, Turing and Your drawing show one Support section.
 - Built-in cards say they carry their own.
 
+**Implementation notes (26 October 2026, from the local review: [T1_8_Local_Review.md](../04_Review/T1_8_Local_Review.md)).**
+- `support` is the canonical setting; the old `backing*` keys are derived from it on every `sanitize`, and an old link's keys build `support`. Output is unchanged (the G-code hashes in the snapshots are identical; only `settingsHash` changed).
+- Only `order: 'motif-first'` is accepted until the two orders have been compared on swatches.
+- `addBackingMesh` stays in `backing.js` but nothing calls it. On a self-supporting card an old global backing is dropped with a note; on the three carrier cards it becomes a two-layer zigzag carrier.
+- Your drawing's Support section also has a carrier on/off switch and a *Carrier covers* choice (swatch, shapes, drawing's box).
+
 ---
 
 ## T1.9 Look and feel labels and help text

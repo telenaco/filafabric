@@ -12,7 +12,6 @@
 //       PresetsSection, SizeSection, ShapeSection, ChoiceSection, SwitchSection, SlidersSection, PatternSection
 //     DesignPanel         one design's whole panel, built from the `controls` its registry entry describes
 //     SvgImportCard       the single place a drawing comes in: its lines, and optionally its shape as the outline
-//     BackingCard         the backing mesh under a flat design, shared by every design through the print setup
 //
 // The panel does not know the studio. It is given a `host`, an object with these methods:
 //   binding(id)          { get(key), set(key, value), range(key), readout(key), size: { ranges, get(), set(w, h, preset) } }
@@ -830,26 +829,35 @@ export class ColourSection extends Section {
 export class SupportSection extends Section {
   buildBody() {
     if (this.mod.support === 'built-in' || this.spec.readonly) return el('p', { class: 'group-hint', text: 'This design prints its own carrier.' });
+    const changed = () => { delete this.support.passes; this.host.change(); };
+    this.enabled = this.spec.optional ? el('input', { type: 'checkbox', 'aria-label': 'Use a carrier' }) : null;
+    this.enabled?.addEventListener('change', () => { this.support.enabled = this.enabled.checked; this.host.change(); });
+    this.area = this.spec.area ? el('select', { 'aria-label': 'Carrier covers' }, ...[['swatch', 'The whole swatch'], ['shape', 'The shapes only'], ['box', "The drawing’s box"]].map(([value, text]) => el('option', { value, text }))) : null;
+    this.area?.addEventListener('change', () => { this.support.area = this.area.value; this.host.change(); });
     const options = (this.spec.styles ?? BACKING_STYLES).concat((this.spec.styles ?? BACKING_STYLES).includes('zigzag') ? [] : ['zigzag']);
     this.styleButtons = options.map((style) => {
       const button = el('button', { type: 'button', class: 'pattern', 'aria-pressed': 'false', 'data-support-style': style, text: style[0].toUpperCase() + style.slice(1) });
-      button.addEventListener('click', () => { this.support.style = style; this.host.change(); });
+      button.addEventListener('click', () => { this.support.style = style; changed(); });
       return button;
     });
     this.styleGrid = el('div', { class: 'patterns support-styles', role: 'group', 'aria-label': 'Carrier style' }, ...this.styleButtons);
     this.fields = {};
     const ranges = this.spec.ranges ?? {};
-    const defaults = { openness: 3.7, depth: 2, wavelength: 6, layers: 2, angle: 0 };
+    const defaults = { openness: 5, depth: 2, wavelength: 10, layers: 1, angle: 45 };
     const controls = Object.entries(defaults).map(([key, fallback]) => {
-      const range = ranges[key] ?? (key === 'layers' ? { min: 1, max: 2, step: 1 } : { min: key === 'angle' ? -180 : 0, max: key === 'angle' ? 180 : 20, step: key === 'angle' ? 1 : 0.1 });
+      const range = ranges[key] ?? (key === 'layers' ? { min: 1, max: 2, step: 1 } : key === 'angle' ? { min: -180, max: 180, step: 1 } : { min: key === 'depth' ? 0 : .5, max: key === 'depth' ? 20 : key === 'wavelength' ? 100 : 50, step: .1 });
       const input = el('input', { type: 'number', min: range.min, max: range.max, step: range.step, 'data-support-key': key, 'aria-label': ({ openness: 'Openness', depth: 'Depth', wavelength: 'Wavelength', layers: 'Carrier layers', angle: 'Angle' })[key] });
-      input.addEventListener('input', () => { const value = Number(input.value); if (Number.isFinite(value)) { this.support[key] = value; this.host.nudge?.(); } });
-      input.addEventListener('change', () => this.host.commit?.());
+      input.addEventListener('change', () => {
+        const value = Number(input.value);
+        if (input.value === '' || !Number.isFinite(value) || value < range.min || value > range.max || key === 'layers' && !Number.isInteger(value)) { input.value = String(this.support[key] ?? fallback); this.host.toast?.(`Enter ${range.min} to ${range.max} for ${key}.`); return; }
+        this.support[key] = value; changed();
+      });
       this.fields[key] = { input, fallback };
       return el('label', { class: 'support-field' }, el('span', { text: ({ openness: 'Openness (mm)', depth: 'Depth (mm)', wavelength: 'Wavelength (mm)', layers: 'Layers', angle: 'Angle (°)' })[key] }), input);
     });
     this.controls = el('div', { class: 'support-controls' }, ...controls);
-    return [this.hint(), this.styleGrid, this.controls];
+    this.savedNote = el('p', { class: 'group-hint small', text: 'Saved custom carrier patterns are preserved until you change the style or dimensions.' });
+    return [this.hint(), this.enabled ? el('label', { class: 'support-enabled' }, this.enabled, el('span', { text: 'Use a carrier' })) : null, this.area ? el('label', { class: 'support-field' }, el('span', { text: 'Carrier covers' }), this.area) : null, this.styleGrid, this.controls, this.savedNote];
   }
 
   get support() {
@@ -860,6 +868,10 @@ export class SupportSection extends Section {
   refresh() {
     if (!this.styleButtons) return;
     const value = this.support;
+    if (this.enabled) this.enabled.checked = value.enabled !== false;
+    if (this.area) this.area.value = value.area ?? 'swatch';
+    this.styleGrid.hidden = this.controls.hidden = value.enabled === false;
+    this.savedNote.hidden = !value.passes?.length || value.enabled === false;
     for (const button of this.styleButtons) button.setAttribute('aria-pressed', String(button.dataset.supportStyle === (value.style ?? 'straight')));
     for (const [key, { input, fallback }] of Object.entries(this.fields)) input.value = String(value[key] ?? fallback);
   }
@@ -998,40 +1010,6 @@ export class PrintSetupCard extends Control {
 
   redraw() {
     this.fold?.update();
-  }
-}
-
-/**
- * The backing mesh: the same card at the end of every flat design's panel. A switch, and while it is on the mesh's three
- * sliders and a filament-change pause after it. Its settings are kept in the print setup (the host's 'print' binding,
- * keys backing, backingSpacing, backingDepth, backingWavelength, backingPause), so they are shared by every design.
- * @param defs { label, help, sliders: slider descriptions, pause: { label, help } }
- */
-export class BackingCard extends Control {
-  constructor(host, designId, defs) {
-    super(host);
-    const switchRow = (input, { label, help }) => el('label', { class: 'switch-row' }, input, el('span', {}, el('strong', { text: label }), el('small', { text: help })));
-    this.toggle = el('input', { type: 'checkbox', role: 'switch', 'data-switch': `${designId}:backing` });
-    this.toggle.addEventListener('change', () => { this.binding.set('backing', this.toggle.checked); this.host.change(); });
-    this.pause = el('input', { type: 'checkbox', role: 'switch', 'data-switch': `${designId}:backingPause` });
-    this.pause.addEventListener('change', () => { this.binding.set('backingPause', this.pause.checked); this.host.change(); });
-    // the sliders read and write the print setup; their ids carry the design, as one card is in every panel
-    const print = { ...host, binding: () => host.binding('print') };
-    this.sliders = defs.sliders.map((def) => new SliderControl(print, `backing-${designId}`, def));
-    this.body = el('div', { class: 'controls backing-body', hidden: true }, ...this.sliders.map((s) => s.node), switchRow(this.pause, defs.pause));
-    this.node = el('section', { class: 'group untitled backing-card' }, switchRow(this.toggle, defs), this.body);
-  }
-
-  get binding() {
-    return this.host.binding('print');
-  }
-
-  update() {
-    const on = !!this.binding.get('backing');
-    this.toggle.checked = on;
-    this.body.hidden = !on;
-    this.pause.checked = !!this.binding.get('backingPause');
-    if (on) for (const s of this.sliders) s.update();
   }
 }
 

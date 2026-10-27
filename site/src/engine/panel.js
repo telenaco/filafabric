@@ -77,7 +77,7 @@ function textureResult(options, repeat, offsetX = 0, offsetY = 0) {
   if (design === 'squiggle') return generateSquiggle(machine, material, { ...settings, width: tileWidth, height: tileHeight, sampler: settings.pattern === 'image' && options.image ? createImageSampler(options.image, options.width ?? repeat, options.height ?? repeat, { yUp: true }) : SAMPLERS[settings.pattern] ?? SAMPLERS.centerSpot, colorChange: false });
   const d = DESIGNS.find((d) => d.id === design && d.status === 'ready');
   if (!d) throw new ConfigError(['Choose a supported fabric design.']);
-  try { return d.generate(machine, material, { ...d.defaults(), ...settings, width: tileWidth, height: tileHeight, colorChange: false, colourMode: 'one', layerColours: [] }, {
+  try { return d.generate(machine, material, d.sanitize({ ...settings, width: tileWidth, height: tileHeight, colorChange: false, colourMode: 'one', layerColours: [] }), {
     vector: options.vector,
     vectorSize: options.vectorSize ?? [options.width ?? repeat, options.height ?? repeat],
     vectorOffset: options.vectorOffset ?? [offsetX, offsetY],

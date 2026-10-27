@@ -1,5 +1,5 @@
 import { hatch, layersToStrands } from './layers.js';
-import { infillLines } from './infill.js';
+import { infillLines, INFILL_IDS } from './infill.js';
 import { waveLines } from './wavegrid.js';
 import { PolygonBoundary } from './boundary.js';
 import { emitStrands } from './emit.js';
@@ -35,7 +35,53 @@ export const BACKING_LAYER_COUNTS = Object.freeze(['one', 'two']);
 export function backingLines(boundary, { style = 'straight', angle = 45, spacing = 5, depth = 2, wavelength = 10, layer = 1 } = {}) {
   if (style === 'gyroid') return infillLines('gyroid', boundary, { spacing, angle, layer });
   if (style === 'wave') return waveLines(boundary, { angle, spacing, amplitude: depth, wavelength, shape: 'sine', phase: 0.25 * (layer - 1) });
+  if (style === 'zigzag') return waveLines(boundary, { angle, spacing, amplitude: depth, wavelength, shape: 'triangle', phase: 0.25 * (layer - 1) });
   return hatch(boundary, { angle, spacing });
+}
+
+export const SUPPORT_STYLES = Object.freeze([...BACKING_STYLES, 'zigzag']);
+const finite = (value, min, max, fallback) => value !== null && value !== '' && Number.isFinite(Number(value)) && Number(value) >= min && Number(value) <= max ? Number(value) : fallback;
+
+/** Read the native legacy carrier, not an additional global backing. */
+export function legacySupport(settings = {}, drawing = false) {
+  const style = drawing ? settings.backing1Pattern : settings.backing;
+  return sanitizeSupport({
+    style: SUPPORT_STYLES.includes(style) ? style : 'straight',
+    openness: drawing ? settings.backing1Spacing ?? 4 : settings.spacing ?? 5,
+    depth: settings.backingDepth ?? 2, wavelength: settings.backingLength ?? 10,
+    layers: settings.backing === 'two' || settings.backingLayers === 'two' ? 2 : 1,
+    angle: drawing ? settings.backing1Angle ?? 0 : settings.angle ?? 45,
+    order: 'motif-first',
+    ...(drawing ? { enabled: settings.backing !== 'none', area: settings.backingArea ?? 'swatch', passes: [1, 2].map(k => ({ pattern: settings[`backing${k}Pattern`] ?? (k === 1 ? 'gyroid' : 'triangles'), spacing: settings[`backing${k}Spacing`] ?? (k === 1 ? 4 : 6), angle: settings[`backing${k}Angle`] ?? (k === 1 ? 0 : 15) })) } : {}),
+  });
+}
+
+/** Canonical, bounded support state. Legacy custom SVG passes remain data, never arbitrary code. */
+export function sanitizeSupport(raw, fallback = {}) {
+  const s = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const out = {
+    style: SUPPORT_STYLES.includes(s.style) ? s.style : fallback.style ?? 'straight',
+    openness: finite(s.openness ?? s.spacing, .5, 50, fallback.openness ?? 5),
+    depth: finite(s.depth, 0, 20, fallback.depth ?? 2),
+    wavelength: finite(s.wavelength, .5, 100, fallback.wavelength ?? 10),
+    layers: s.layers === 1 || s.layers === 2 ? s.layers : fallback.layers ?? 1,
+    angle: finite(s.angle, -180, 180, fallback.angle ?? 45),
+    // Only the existing order (the motif first, its carrier above it) is built. 'carrier-first' is not offered until the two
+    // orders have been compared on printed swatches, so a saved value can never promise an order that does not print.
+    order: 'motif-first',
+  };
+  if ('enabled' in s || 'enabled' in fallback) out.enabled = typeof s.enabled === 'boolean' ? s.enabled : fallback.enabled !== false;
+  if ('area' in s || 'area' in fallback) out.area = ['swatch', 'shape', 'box'].includes(s.area) ? s.area : fallback.area ?? 'swatch';
+  if (Array.isArray(s.passes)) out.passes = s.passes.slice(0, 2).map(pass => ({ pattern: INFILL_IDS.includes(pass?.pattern) ? pass.pattern : 'rectilinear', spacing: finite(pass?.spacing, .5, 50, out.openness), angle: finite(pass?.angle, -180, 180, out.angle) }));
+  return out;
+}
+
+/** One carrier source, at most two passes; second pass turns 90 degrees. */
+export function carrierLayers(boundary, support) {
+  const s = sanitizeSupport(support);
+  if (s.enabled === false) return [];
+  if (s.passes?.length) return s.passes.slice(0, s.layers).map((pass, k) => Object.assign(infillLines(pass.pattern, boundary, { spacing: pass.spacing, angle: pass.angle, layer: k + 1 }), { family: `carrier-${k + 1}`, role: 'carrier' }));
+  return backingStack(boundary, { style: s.style, spacing: s.openness, depth: s.depth, wavelength: s.wavelength, angle: s.angle }, s.layers === 2 ? 'two' : 'one');
 }
 
 /**

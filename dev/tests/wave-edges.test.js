@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateDesignExport } from '../../site/src/engine/design-export.js';
 import { waveLines } from '../../site/src/engine/wavegrid.js';
+import { carrierLayers } from '../../site/src/engine/backing.js';
 import { boundaryFor } from '../../site/src/engine/layers.js';
 import { designById } from '../../site/src/ui/designs.js';
 import { defaultProfiles } from './helpers.js';
@@ -47,9 +48,20 @@ test('the zigzag mesh meets the top and bottom edges as it meets the sides', () 
   sameOnEverySide(edgeOpenings(sample(r.strands.map((s) => s.pts)), 100, 50), 'zigzag mesh');
 });
 
-test('the backing mesh meets every edge the same way too', () => {
-  const r = generateDesignExport({ machine, material, design: 'coil', settings: designById('coil').defaults(), width: 80, height: 60, extraLayers: 0, brim: 0, backing: {} });
-  sameOnEverySide(edgeOpenings(sample(r.strands.filter((s) => s.backingMesh).map((s) => s.pts)), 80, 60), 'backing mesh');
+// The old global backing mesh (two anti-phase zigzags in one direction) is gone; a Support carrier with two layers has its
+// second layer turned 90°, so its edges are not all alike, but none may leave a gap wider than half the line spacing.
+test('a two-layer Support carrier leaves no edge gap wider than half its line spacing', () => {
+  const b = boundaryFor(80, 60);
+  for (const style of ['zigzag', 'wave', 'straight']) {
+    for (const angle of [0, 45]) {
+      const support = { style, openness: 4, depth: 2, wavelength: 8, layers: 2, angle };
+      const lines = carrierLayers(b, support).flat();
+      const openings = edgeOpenings(sample(lines), 80, 60);
+      for (const [edge, gap] of Object.entries(openings)) {
+        assert.ok(gap <= support.openness / 2 + 0.25, `${style} at ${angle}°: ${edge} edge leaves a ${gap.toFixed(2)} mm gap`);
+      }
+    }
+  }
 });
 
 test('the lanes lie half a spacing in from the top and bottom, so a piece above or below carries the pattern on', () => {

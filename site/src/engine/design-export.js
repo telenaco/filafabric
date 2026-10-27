@@ -12,7 +12,6 @@ import { applySvgSolids, solidOnly, withoutPattern } from './svg-solids.js';
 import { composeSvgLines } from './svg-lines.js';
 import { stackLayers, addExtraLayers, nativeLayerInfo } from './stack.js';
 import { applyBrim } from './brim.js';
-import { addBackingMesh } from './backing.js';
 import { rotateDesignInput } from './rotate-design.js';
 import { prepareAdaptiveSolids } from './adaptive-solids.js';
 import { colourResult } from './colour-plan.js';
@@ -42,7 +41,7 @@ export function generateDesignBase(input) {
       : SAMPLERS[settings.pattern] ?? SAMPLERS.centerSpot;
     result = generateSquiggle(machine, material, { ...settings, width, height, sampler, outline });
   } else {
-    result = mod.generate(machine, material, { ...mod.defaults(), ...settings, width, height }, {
+    result = mod.generate(machine, material, mod.sanitize({ ...settings, width, height }), {
       outline: mod.outline === false ? null : outline,
       vector: mod.usesVector || mod.vectorGuides ? vector : null,
       vectorSize: input.vectorSize ?? [width, height],
@@ -90,10 +89,12 @@ export function generateDesignExport(input) {
       rotatedResult: () => generateDesignBase(rotateDesignInput(input)), colorChange: !!input.settings?.colorChange,
     });
   }
-  // a backing mesh goes under everything the design and the drawing lay down; the brim goes round it on the bed
-  result = addBackingMesh(withSolids(result, input), input.backing);
+  result = withSolids(result, input);
+  if (input.backing) result.warnings = [...result.warnings, designById(input.design).support === 'self'
+    ? 'This design no longer takes an extra backing; your link is shown without it.'
+    : 'This design uses its own Support carrier; an additional global backing is left out.'];
   // a solid already prints its own edge pass: an all-solid piece takes no brim over it
-  result = applyBrim(result, { count: solidOnly(input.vector) && !input.backing ? 0 : input.meshPerimeters ?? input.perimeters ?? input.brim ?? 2, label: input.perimeters !== undefined ? 'Perimeters' : 'Brim', requestedCount: input.perimeters });
+  result = applyBrim(result, { count: solidOnly(input.vector) ? 0 : input.meshPerimeters ?? input.perimeters ?? input.brim ?? 2, label: input.perimeters !== undefined ? 'Perimeters' : 'Brim', requestedCount: input.perimeters });
   return assertConstructionExportable(refreshConstruction(colourResult(result, input.settings, { record: true })));
 }
 

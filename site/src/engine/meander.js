@@ -1,5 +1,5 @@
 import { clipPolyline } from './layers.js';
-import { backingStack } from './backing.js';
+import { backingStack, carrierLayers } from './backing.js';
 import { createRng } from './rng.js';
 import { sites } from './voronoi.js';
 import { ConfigError } from './params.js';
@@ -271,8 +271,8 @@ export function curveOrder(curve, size, cell) {
  */
 export const MAX_TOUR_POINTS = 1500;
 
-export function meanderLayers(boundary, { curve = 'hilbert', cell = 6, angle = 45, spacing = 5, seed = 1, tone = null, backing = 'straight', backingDepth = 2, backingLength = 10, backingLayers = 'one' } = {}) {
-  const stack = () => backingStack(boundary, { style: backing, angle, spacing, depth: backingDepth, wavelength: backingLength }, backingLayers);
+export function meanderLayers(boundary, { curve = 'hilbert', cell = 6, angle = 45, spacing = 5, seed = 1, tone = null, backing = 'straight', backingDepth = 2, backingLength = 10, backingLayers = 'one', support = null } = {}) {
+  const stack = () => support ? carrierLayers(boundary, support) : backingStack(boundary, { style: backing, angle, spacing, depth: backingDepth, wavelength: backingLength }, backingLayers);
   if (!CURVES[curve]) throw new Error(`Unknown meander curve: ${curve}`);
   const box = boundary.bbox();
   if (curve === 'tsp') {

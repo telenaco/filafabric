@@ -175,7 +175,7 @@ export const SVG_DESIGNS = [
     figure: (result) => ({ value: result.report.perCm2.toFixed(1), unit: 'per cm²', label: 'Crossings' }),
     summary: (result) => {
       const d = result.svgDesign;
-      const back = d.backing.length ? ` with ${d.backing.length === 1 ? 'one backing layer' : 'two backing layers'} (${d.backing.map((b) => INFILL_PATTERNS[b.pattern].label).join(', ')})` : '';
+      const back = d.backing.length ? ` with ${d.backing.length === 1 ? 'one backing layer' : 'two backing layers'} (${d.backing.map((b) => INFILL_PATTERNS[b.pattern]?.label ?? b.pattern).join(', ')})` : '';
       const what = d.mode === 'outline' ? 'printed as lines' : d.mode === 'fill' ? `filled with ${INFILL_PATTERNS[d.designPattern].label}` : `lined and filled with ${INFILL_PATTERNS[d.designPattern].label}`;
       return `${d.sample ? 'the sample drawing' : d.name} ${what}${back}, ${result.report.crossings} crossings`;
     },

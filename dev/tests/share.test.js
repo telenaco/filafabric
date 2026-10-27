@@ -114,7 +114,7 @@ test('v3 settings and colour choice migrate into v4 card records', () => {
   assert.equal(s.v, 4);
   assert.equal(s.designs['loop-pile'].pileHeight, 4);
   assert.equal(s.designs.wave.colorChange, true);
-  assert.equal(s.designs.meander.support.spacing, 3.7);
+  assert.equal(s.designs.meander.support.openness, 3.7);
   assert.equal(s.squiggle.colorChange, false);
 });
 

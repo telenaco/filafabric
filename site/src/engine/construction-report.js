@@ -232,21 +232,20 @@ export function shelfFromConstruction(report, { layerHeight = 0.2 } = {}) {
   const density = report.crossings.total ? cross / report.crossings.total * report.crossings.perCm2 : 0;
   if (!report.carrier.passes && (native.size === 1 || density < 1)
     && report.z.max <= 2 * layerHeight + 0.05) return 'flat';
+  // a carrier pass is a layer of its own, so it raises the height a layered result may reach
   if ((native.size >= 2 && cross > 0 || report.carrier.passes)
-    && report.z.max <= (native.size + 1) * layerHeight + 0.05) return 'layered';
+    && report.z.max <= (native.size + report.carrier.passes + 1) * layerHeight + 0.05) return 'layered';
   return 'raised';
 }
 
 // Provisional measured discrepancies at default 100 × 100 mm, pending human batch review.
+// Carrier cards (Spiral, Bouclé, Turing, Your drawing) are not listed: carrier passes count toward the layered height allowance.
 export const SHELF_EXCEPTIONS = Object.freeze({
-  spiral: 'Declared layered for its carrier construction, but the measured 0.687 mm envelope exceeds the one-native-family 0.450 mm layered ceiling.',
-  boucle: 'Declared layered for its carrier construction, but the measured 0.594 mm envelope exceeds the one-native-family 0.450 mm layered ceiling.',
   auxetic: 'Declared flat as a planar lattice, but two native families cross at 0.400 mm and the measured rule selects layered.',
   'honeycomb-flat': 'Declared flat as a planar cell lattice, but the inherited Auxetic generator uses two native families at 0.400 mm and the measured rule selects layered; physical validation pending.',
   dipweave: 'Declared raised for the dipping technique, but its default warp and weft families measure only 0.400 mm and satisfy layered.',
   harmonograph: 'Declared flat as drawn curves, but its two crossing native families at 0.400 mm satisfy layered.',
   voronoi: 'Declared layered as a cellular mesh, but the measured 0.800 mm envelope exceeds the two-native-family 0.650 mm layered ceiling.',
-  turing: 'Declared layered for its carrier construction, but the measured 0.578 mm envelope exceeds the one-native-family 0.450 mm layered ceiling.',
   spirograph: 'Declared layered as overlapping curves, but its measured 0.656 mm envelope exceeds the two-native-family 0.650 mm layered ceiling.',
   starlattice: 'Declared flat as a planar lattice, but its two crossing native families at 0.400 mm satisfy layered.',
   'looped-net': 'Declared raised for its over-under self-crossing strand, but its current measured default envelope is only 0.400 mm and the general rule classifies it as layered; geometry estimates are not physical qualification.',

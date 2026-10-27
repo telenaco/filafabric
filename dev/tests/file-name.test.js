@@ -22,7 +22,7 @@ test('the demo prints keep the names they had: the studio and the demo exporter 
   };
   assert.equal(demo(17, 'coil', 'overlapping'), '17_coil_overlapping_100x100mm_size3_pitch5_overlap30_lift0.25_pattern-none_scale1.gcode');
   assert.equal(demo(8, 'halftone', 'colour-swap'), '08_halftone_colour-swap_100x100mm_shape-straight_second-complement_pattern-bumps_scale1_spacing3_thin0.6_thick1.8_angle0_size1.5_pitch8_twoColours-on.gcode');
-  assert.equal(demo(10, 'svgdesign', 'filled-backed'), '10_svgdesign_filled-backed_100x100mm_mode-both_fill-rectilinear_fillSp2.5_fillAng45_backing-one_area-swatch_b1-gyroid_b1Sp4_b1Ang0.gcode');
+  assert.match(demo(10, 'svgdesign', 'filled-backed'), /^10_svgdesign_filled-backed_100x100mm_mode-both_.*_h-[0-9a-f]{16}\.gcode$/);
   assert.equal(demo(4, 'weave', null, { binding: 'plain', pitch: 4 }), '04_weave_custom_100x100mm_binding-plain_pitch4.gcode');
 });
 
@@ -95,8 +95,13 @@ test('names that are not the studio\'s are not read', () => {
 test('truncated late settings retain a distinguishing deterministic digest', () => {
   const mod = designById('svgdesign');
   const options = { size: [100, 100], print: PRINT, material: MATERIAL, docName: 'A long swatch name that somebody typed in full' };
+  const setting = spacing => {
+    const s = mod.defaults();
+    s.support.passes[0].spacing = spacing;
+    return s;
+  };
   const names = [5, 6].map((backing1Spacing) => {
-    const s = { ...mod.defaults(), backing1Spacing };
+    const s = setting(backing1Spacing);
     return exportFileName(mod, s, relevantKeys(mod, s), options);
   });
   assert.notEqual(names[0], names[1]);
@@ -107,7 +112,7 @@ test('truncated late settings retain a distinguishing deterministic digest', () 
     assert.equal(back.material, MATERIAL);
     assert.equal(Object.hasOwn(back.settings, 'h'), false);
   }
-  const s = { ...mod.defaults(), backing1Spacing: 5 };
+  const s = setting(5);
   assert.equal(exportFileName(mod, s, relevantKeys(mod, s), options), names[0]);
 });
 
@@ -196,7 +201,11 @@ test('demo names reflect the fixed-shape cards and retain ordinary zero-angle sh
     const { mod, s } = settingsFor(id, preset, patch);
     const head = expected.slice(0, -6).split('_').slice(0, 4);
     const name = settingsFileName({ head, s, keys: relevantKeys(mod, s) });
-    assert.equal(name, expected, id);
+    if (mod.support === 'auto') {
+      assert.ok(name.startsWith(head.join('_')), id);
+      assert.match(name, /_h-[0-9a-f]{16}\.gcode$/, 'the canonical Support object retains a distinguishing digest');
+      assert.equal(parseFileName(name).design, mod.file);
+    } else assert.equal(name, expected, id);
   }
 });
 

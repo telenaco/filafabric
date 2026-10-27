@@ -48,6 +48,15 @@ test('currentness rejects edited, deleted and newly staged source before any com
   assert.equal(verifySourceSnapshot(f.root).files, 3);
 });
 
+test('licence and notice files in any folder are archived with the same canonical line endings as other text', t => {
+  const f = fixture(t);
+  f.write('site/vendor/three/LICENSE', 'MIT\r\nCopyright\r\n');
+  f.git('add', '--', 'site/vendor/three/LICENSE');
+  createSourceSnapshot(f.root);
+  assert.equal(decodeArchive(f.read(archivePath)).find(entry => entry.path === 'site/vendor/three/LICENSE').data.toString(), 'MIT\nCopyright\n');
+  assert.equal(verifySourceSnapshot(f.root).current, true);
+});
+
 test('archive and manifest are reproducible across text line endings and modification times', t => {
   const f = fixture(t); createSourceSnapshot(f.root);
   const archive = f.read(archivePath), manifest = f.read(manifestPath);

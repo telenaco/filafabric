@@ -53,6 +53,7 @@
  * | (hidden) | `squiggle-rings`, `squiggle-zigzag`, `coil-shapes`, `halftone` | legacy only | open old links exactly (T1.2, T1.3, T1.4, T1.5) |
  */
 import { DESIGNS } from './designs.js';
+import { sanitizeSupport } from '../engine/backing.js';
 
 /** Old IDs and setting variants that can be routed to a currently implemented card. */
 export const MIGRATIONS = Object.freeze([
@@ -72,11 +73,13 @@ export function migrateState(raw) {
     migrated.primary = convertColour(raw.primary);
     migrated.squiggle = convertColour(raw.squiggle);
     for (const [id, settings] of Object.entries(migrated.designs)) migrated.designs[id] = convertColour(settings);
-    const backing = raw.print?.backing;
-    if (backing) for (const card of DESIGNS.filter((d) => d.status === 'ready' && d.support === 'auto')) {
-      migrated.designs[card.id] = { ...(migrated.designs[card.id] ?? {}), support: backing };
-    }
     migrated.v = 4;
+  }
+  // Old global meshes are folded into one carrier on auto cards, never appended to one.
+  const backing = raw.print?.backing;
+  if (backing) for (const card of DESIGNS.filter(d => d.status === 'ready' && d.support === 'auto')) {
+    const key = card.settingsKey ?? card.id, current = migrated.designs[key] ?? migrated.designs[card.id] ?? {};
+    if (!current.support) migrated.designs[key] = { ...current, support: sanitizeSupport({ ...(typeof backing === 'object' ? backing : {}), style: 'zigzag', layers: 2, angle: 0, openness: typeof backing === 'object' ? backing.spacing ?? 3.7 : 3.7, wavelength: typeof backing === 'object' ? backing.wavelength ?? 6 : 6, order: 'motif-first' }) };
   }
   if (migrated.design === 'squiggle') {
     let source = migrated.designs.wave ?? migrated.designs.squiggle ?? migrated.squiggle ?? {};
