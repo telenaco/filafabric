@@ -57,7 +57,7 @@ test('the shipped config is well formed and uses the full iteration count', () =
 
 test('the page loads the studio only through the gate', () => {
   const html = fs.readFileSync(path.join(siteRoot, 'index.html'), 'utf8');
-  assert.match(html, /<body class="locked">/);
+  assert.match(html, /<body class="[^"]*\blocked\b[^"]*">/);
   const bootSrc = html.match(/<script type="module" src="([^"]+)"/)?.[1];
   const bootUrl = new URL(bootSrc, 'http://localhost/');
   assert.equal(bootUrl.pathname, '/src/boot.js');

@@ -1,0 +1,70 @@
+[
+  {
+    "card": "web",
+    "preset": "default",
+    "settingsHash": "e0b1a804b01f",
+    "gcodeSha256": "22a1944e75e02b65d54715632bd2e43cb29d1dd0bd70531df97c7ee062461da2",
+    "strands": 21,
+    "moves": 2487,
+    "extrudeMm": 761.2,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2",
+      "ties"
+    ],
+    "ties": 1
+  },
+  {
+    "card": "web",
+    "preset": "spiderweb",
+    "settingsHash": "e0b1a804b01f",
+    "gcodeSha256": "22a1944e75e02b65d54715632bd2e43cb29d1dd0bd70531df97c7ee062461da2",
+    "strands": 21,
+    "moves": 2487,
+    "extrudeMm": 761.2,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2",
+      "ties"
+    ],
+    "ties": 1
+  },
+  {
+    "card": "web",
+    "preset": "toothed",
+    "settingsHash": "da7e98e08a00",
+    "gcodeSha256": "0b7c396c1705b3558b3a271519159271dc835f52aec29739cce07af9c684d4e8",
+    "strands": 23,
+    "moves": 2190,
+    "extrudeMm": 725.3,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2",
+      "ties"
+    ],
+    "ties": 3
+  },
+  {
+    "card": "web",
+    "preset": "wide",
+    "settingsHash": "ad64b3eb211d",
+    "gcodeSha256": "27df0090ec40bb4172f379f08286ece2f5863e7a185321ef310ac80262a26173",
+    "strands": 12,
+    "moves": 1328,
+    "extrudeMm": 421.5,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2",
+      "ties"
+    ],
+    "ties": 1
+  }
+]

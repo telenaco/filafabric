@@ -1,7 +1,9 @@
 import { createRng } from './rng.js';
 import { contourLoops } from './spiral.js';
 import { clipPolyline, densify, appendPoints } from './layers.js';
-import { backingStack } from './backing.js';
+import { backingStack, carrierLayers } from './backing.js';
+import { attachMotifs, cellSeed } from './repair-geometry.js';
+import { ConfigError } from './params.js';
 
 /**
  * Turing stripes: the iso-lines of a Gray-Scott reaction-diffusion field, the same chemistry that makes animal
@@ -14,7 +16,7 @@ import { backingStack } from './backing.js';
 const DU = 0.16, DV = 0.08, FEED = 0.037, KILL = 0.06;
 
 /** Grows the field: returns { data, nx, ny, cell } with v in about 0..0.5, over a grid with a border of bare cells. */
-export function growField(box, { wavelength = 7, seed = 1, steps = 3500 } = {}) {
+export function growField(box, { wavelength = 7, seed = 1, steps = 3500, legacy=false } = {}) {
   const w = box.maxX - box.minX, h = box.maxY - box.minY;
   // about nine cells per wavelength; never more than 150 cells on a side
   const cell = Math.max(wavelength / 9, Math.max(w, h) / 150);
@@ -23,12 +25,26 @@ export function growField(box, { wavelength = 7, seed = 1, steps = 3500 } = {}) 
   let u = new Float32Array(nx * ny).fill(1);
   let v = new Float32Array(nx * ny);
   const specks = Math.max(6, Math.round((nx * ny) / 200));
-  for (let k = 0; k < specks; k++) {
+  for (let k = 0; legacy && k < specks; k++) {
     const cx = 4 + Math.floor(rng.next() * (nx - 8)), cy = 4 + Math.floor(rng.next() * (ny - 8));
     for (let dy = -2; dy <= 2; dy++) {
       for (let dx = -2; dx <= 2; dx++) {
         u[(cy + dy) * nx + cx + dx] = 0.5;
         v[(cy + dy) * nx + cx + dx] = 0.25 + 0.05 * rng.next();
+      }
+    }
+  }
+  if(!legacy){
+    // Gray–Scott specks need a contiguous nucleus; isolated single cells diffuse away.
+    // Anchor nuclei to coarse world-grid cells, not to the cropped outline or iteration order.
+    const originX=Math.floor(box.minX/cell)-2,originY=Math.floor(box.minY/cell)-2,stride=12;
+    for(let gy=Math.floor(originY/stride);gy<=Math.floor((originY+ny)/stride);gy++)for(let gx=Math.floor(originX/stride);gx<=Math.floor((originX+nx)/stride);gx++){
+      const random=createRng(cellSeed(seed,gx,gy));
+      const cx=gx*stride+3+Math.floor(random.next()*6)-originX,cy=gy*stride+3+Math.floor(random.next()*6)-originY;
+      for(let dy=-2;dy<=2;dy++)for(let dx=-2;dx<=2;dx++){
+        const x=cx+dx,y=cy+dy;
+        if(x<1||x>=nx-1||y<1||y>=ny-1)continue;
+        u[y*nx+x]=.5;v[y*nx+x]=.25+.05*random.next();
       }
     }
   }
@@ -89,9 +105,9 @@ function chainLoops(loops, boundary, jog) {
  * @param angle       angle of the hatch laid across it, degrees
  * @param spacing     spacing of the hatch, mm
  */
-export function turingLayers(boundary, { wavelength = 7, seed = 1, angle = 45, spacing = 5, backing = 'straight', backingDepth = 2, backingLength = 10, backingLayers = 'one', whole = true } = {}) {
+export function turingLayers(boundary, { wavelength = 7, seed = 1, angle = 45, spacing = 5, backing = 'straight', backingDepth = 2, backingLength = 10, backingLayers = 'one', whole = true, support = null, bead=.45, legacy=false } = {}) {
   const box = boundary.bbox();
-  const field = growField(box, { wavelength, seed });
+  const field = growField(box, { wavelength, seed, legacy });
   let max = 0;
   for (const value of field.data) if (value > max) max = value;
   if (whole && max > 0) {
@@ -110,6 +126,9 @@ export function turingLayers(boundary, { wavelength = 7, seed = 1, angle = 45, s
   const loops = max > 0.05 ? contourLoops({ ...field, max }, max / 2).filter((l) => l.length > 8) : [];
   const strands = chainLoops(loops, boundary, wavelength * 1.2);
   const layer1 = strands.flatMap((s) => clipPolyline(s, boundary));
-  const stack = backingStack(boundary, { style: backing, angle, spacing, depth: backingDepth, wavelength: backingLength }, backingLayers);
-  return { layers: [layer1, ...stack], extra: { loops: loops.length } };
+  const stack = support ? carrierLayers(boundary, support) : backingStack(boundary, { style: backing, angle, spacing, depth: backingDepth, wavelength: backingLength }, backingLayers);
+  if(legacy)return {layers:[layer1,...stack],extra:{loops:loops.length}};
+  const attached=attachMotifs(layer1,stack,boundary,{bead,reach:Math.max(wavelength,spacing)*4,merge:true});
+  if(attached.unattached)throw new ConfigError([`${attached.unattached} long Turing fragments cannot reach two carrier contacts inside the outline. Use a denser or crossed two-layer Support carrier.`]);
+  return {layers:[attached.paths,...stack],extra:{loops:loops.length,attachment:{dropped:attached.dropped,extended:attached.extended,unattached:attached.unattached}},warnings:attached.dropped||attached.extended?[`Carrier attachment: ${attached.dropped} stripe fragments dropped, ${attached.extended} extended.`]:[]};
 }

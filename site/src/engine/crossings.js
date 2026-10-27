@@ -11,6 +11,7 @@
  */
 
 import { ConfigError } from './params.js';
+import { crossingEvents, pointAtArc } from './lift.js';
 
 /**
  * The most crossings one layout may have. Settings are free to be typed beyond their sliders, so lines may overlap as
@@ -88,6 +89,29 @@ export function findCrossings(strands, { strandWidth = 0.5, cell = 1, mergeDista
     }
   });
 
+  // Designed joints, looked up by position: a crossing beside a joint that both strands declare is a join, not an
+  // over-under. Searching every joint of both strands for each crossing is quadratic on a sheet of joined fill lines.
+  const jointReach = Math.max(strandWidth, .5);
+  const jointIndex = strands.map((s) => {
+    if (!s.joints?.length) return null;
+    const byCell = new Map();
+    for (const j of s.joints) {
+      const key = cellKey(Math.floor(j.x / jointReach), Math.floor(j.y / jointReach));
+      if (byCell.has(key)) byCell.get(key).push(j);
+      else byCell.set(key, [j]);
+    }
+    return byCell;
+  });
+  const jointsAt = (si, x, y) => {
+    const near = [], index = jointIndex[si];
+    if (!index) return near;
+    const ix = Math.floor(x / jointReach), iy = Math.floor(y / jointReach);
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
+      for (const j of index.get(cellKey(ix + dx, iy + dy)) ?? []) if (Math.hypot(x - j.x, y - j.y) <= jointReach) near.push(j);
+    }
+    return near;
+  };
+
   // every crossing once, with its position along both strands
   const found = [];
   const recent = new Map();
@@ -103,6 +127,9 @@ export function findCrossings(strands, { strandWidth = 0.5, cell = 1, mergeDista
         const pb = strands[B.si].pts[B.i], qb = strands[B.si].pts[B.i + 1];
         const hit = intersect(pa.x, pa.y, qa.x, qa.y, pb.x, pb.y, qb.x, qb.y);
         if (!hit) continue;
+        const x = pa.x + hit[0] * (qa.x - pa.x), y = pa.y + hit[0] * (qa.y - pa.y);
+        const jointsNearA = jointsAt(A.si, x, y);
+        if (jointsNearA.length && jointsAt(B.si, x, y).some((jb) => jointsNearA.some((ja) => ja.id === jb.id))) continue;
         const arcA = arcs[A.si][A.i] + hit[0] * (arcs[A.si][A.i + 1] - arcs[A.si][A.i]);
         const arcB = arcs[B.si][B.i] + hit[1] * (arcs[B.si][B.i + 1] - arcs[B.si][B.i]);
         if (A.si === B.si && Math.abs(arcB - arcA) < minArc) continue;
@@ -120,7 +147,7 @@ export function findCrossings(strands, { strandWidth = 0.5, cell = 1, mergeDista
         const da = Math.atan2(qa.y - pa.y, qa.x - pa.x), db = Math.atan2(qb.y - pb.y, qb.x - pb.x);
         let angle = Math.abs(((da - db) * 180) / Math.PI) % 180;
         if (angle > 90) angle = 180 - angle;
-        const c = { sa: A.si, sb: B.si, arcA, arcB, x: pa.x + hit[0] * (qa.x - pa.x), y: pa.y + hit[0] * (qa.y - pa.y), angle };
+        const c = { sa: A.si, sb: B.si, arcA, arcB, x, y, angle };
         if (near) near.push(c);
         else recent.set(key, [c]);
         found.push(c);
@@ -180,6 +207,25 @@ export function resolveCrossings(strands, opts = {}) {
   });
 
   return { strands: out, crossings: found.length, maxLift, maxSlopeDeg: (Math.atan(maxSlope) * 180) / Math.PI };
+}
+
+/** Lift the later strand over each selected crossing using tangent-continuous cosine fillets. */
+export function bridgeCrossings(strands,{filletRadius=1,lineThickness=.2,layerHeight=lineThickness,bead=.45,mask=null}={}){
+  const radius=Math.max(.1,Number(filletRadius)||1),thickness=Math.max(.05,Number(lineThickness)||Number(layerHeight)||.2),crossingHeight=thickness+radius/2,rampLength=Math.max(radius,3.5*crossingHeight),plateau=Math.max(.1,bead+.2),events=crossingEvents(strands,{bead,mask}),byStrand=strands.map(()=>[]);
+  const arcs=strands.map(s=>{const a=[0];for(let i=1;i<s.pts.length;i++)a.push(a.at(-1)+Math.hypot(s.pts[i].x-s.pts[i-1].x,s.pts[i].y-s.pts[i-1].y));return a;});
+  for(const event of events)byStrand[event.later].push({...event,start:event.arc-plateau/2-rampLength,flatStart:event.arc-plateau/2,flatEnd:event.arc+plateau/2,end:event.arc+plateau/2+rampLength});
+  const out=strands.map((strand,si)=>{
+    const total=arcs[si].at(-1),marks=new Set(arcs[si]);
+    for(const event of byStrand[si]){marks.add(Math.max(0,event.start));marks.add(event.flatStart);marks.add(event.arc);marks.add(event.flatEnd);marks.add(Math.min(total,event.end));for(let i=1;i<17;i++){marks.add(event.start+(event.flatStart-event.start)*i/16);marks.add(event.flatEnd+(event.end-event.flatEnd)*i/16);}}
+    const pts=[...marks].filter(at=>at>=0&&at<=total).sort((a,b)=>a-b).map(at=>{
+      const point=pointAtArc(strand.pts,arcs[si],at);let offset=0,cls;
+      for(const event of byStrand[si])if(at>=event.start&&at<=event.end){let w,kind;if(at<event.flatStart){const t=Math.max(0,Math.min(1,(at-event.start)/rampLength));w=.5*(1-Math.cos(Math.PI*t));kind='rising';}else if(at>event.flatEnd){const t=Math.max(0,Math.min(1,(event.end-at)/rampLength));w=.5*(1-Math.cos(Math.PI*t));kind='falling';}else{w=1;kind='unsupported';}const needed=Math.max(0,crossingHeight-event.baseZ);if(w*needed>=offset){offset=w*needed;cls=kind;}}
+      if(offset>0){point.z+=offset;point.cls=cls;}
+      return point;
+    });
+    return {...strand,pts};
+  });
+  return {strands:out,crossings:events.length,events,crossingHeight,filletRadius:radius};
 }
 
 function minZ(pts) {

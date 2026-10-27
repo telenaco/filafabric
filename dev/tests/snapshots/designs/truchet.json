@@ -1,0 +1,70 @@
+[
+  {
+    "card": "truchet",
+    "preset": "default",
+    "settingsHash": "9b3e4506e737",
+    "gcodeSha256": "2b2ebd2a363b9ffe5366ec19789261fdb5b89e157517b3bf6cc811618aff9e4f",
+    "strands": 35,
+    "moves": 1587,
+    "extrudeMm": 874.3,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2",
+      "border"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "truchet",
+    "preset": "arcs",
+    "settingsHash": "9b3e4506e737",
+    "gcodeSha256": "2b2ebd2a363b9ffe5366ec19789261fdb5b89e157517b3bf6cc811618aff9e4f",
+    "strands": 35,
+    "moves": 1587,
+    "extrudeMm": 874.3,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2",
+      "border"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "truchet",
+    "preset": "diagonals",
+    "settingsHash": "d7e9b8f5c11c",
+    "gcodeSha256": "c98742729d03c0c2fb56d65c18374f8370d92d49b8a64d6054441d4aa35ef01b",
+    "strands": 28,
+    "moves": 2008,
+    "extrudeMm": 815.1,
+    "zMin": 0.2,
+    "zMax": 0.6000000000000001,
+    "families": [
+      "L1",
+      "L2",
+      "border"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "truchet",
+    "preset": "big-arcs",
+    "settingsHash": "03bd0e75429e",
+    "gcodeSha256": "328d52b4d68fce963cacdb3bdd03d589527d099837f3a878262bdae1be3cb5cb",
+    "strands": 21,
+    "moves": 773,
+    "extrudeMm": 597,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2",
+      "border"
+    ],
+    "ties": 0
+  }
+]

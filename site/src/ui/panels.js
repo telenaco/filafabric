@@ -12,7 +12,6 @@
 //       PresetsSection, SizeSection, ShapeSection, ChoiceSection, SwitchSection, SlidersSection, PatternSection
 //     DesignPanel         one design's whole panel, built from the `controls` its registry entry describes
 //     SvgImportCard       the single place a drawing comes in: its lines, and optionally its shape as the outline
-//     BackingCard         the backing mesh under a flat design, shared by every design through the print setup
 //
 // The panel does not know the studio. It is given a `host`, an object with these methods:
 //   binding(id)          { get(key), set(key, value), range(key), readout(key), size: { ranges, get(), set(w, h, preset) } }
@@ -24,12 +23,19 @@
 //   toast(message)       say something briefly
 //   vectorSize()         [w, h] of the imported SVG, or null when none is imported
 //   svg()                what the import card shows, see SvgImportCard
-import { el, helpBubble } from './dom.js';
+import { el, svgEl, helpBubble } from './dom.js';
 import { validNumber } from './numeric.js';
 import { FIELDS, createField } from '../engine/fields.js';
 import { PICTURE } from '../engine/picture.js';
+import { PATTERN_EFFECTS } from '../engine/pattern-effects.js';
 import { SHAPES } from '../engine/shapes.js';
 import { shapeThumb } from './thumbs.js';
+import { defaultSection, sideProfile } from '../engine/side-profile.js';
+import { drawSideView } from './sideview.js';
+import { SHELVES, variantsOf } from './library.js';
+import { BACKING_STYLES } from '../engine/backing.js';
+import { SAMPLERS } from '../engine/squiggle.js';
+import { draftBinding, WEAVE_DRAFT_PRESETS } from '../engine/weave.js';
 
 const fmt = (n) => String(Math.round(n * 10) / 10);
 
@@ -123,6 +129,7 @@ export class SliderControl extends Control {
 
   update() {
     const { def, binding } = this;
+    this.node.hidden = typeof def.when === 'function' ? !def.when(this.host.settings(this.designId)) : false;
     const available = binding.available?.(def.key) !== false;
     this.input.disabled = !available;
     this.readout.disabled = !available;
@@ -250,7 +257,8 @@ function drawFieldThumb(canvas, field) {
     for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(10 + i * 14, 24, 5, 0, Math.PI * 2); ctx.stroke(); }
     return;
   }
-  const sampler = createField(field);
+  const sampler = FIELDS[field] ? createField(field) : SAMPLERS[field];
+  if (!sampler) return;
   const cells = 24;
   ctx.fillStyle = accent;
   for (let j = 0; j < cells; j++) {
@@ -456,8 +464,9 @@ export class PatternPicker extends Control {
     this.buttons = patterns.map((field) => {
       const canvas = el('canvas', { class: 'pattern-thumb', 'data-field': field, 'aria-hidden': 'true' });
       const picture = field === PICTURE;
-      const label = picture ? 'Your picture' : field === 'none' ? 'Plain' : FIELDS[field].label;
-      const title = picture ? (pictureHint || 'Use a picture of your own as the pattern') : field === 'none' ? 'Every loop the same' : FIELDS[field].hint;
+      const special = { uniform: ['Even', 'Every strand has the same shape.'], gradientX: ['Across', 'The pattern changes from left to right.'], gradientY: ['Down', 'The pattern changes from bottom to top.'], centerSpot: ['Centre spot', 'The pattern is strongest at the centre.'], waves: ['Waves', 'A repeating wave field across the fabric.'] }[field];
+      const label = picture ? 'Your picture' : field === 'none' ? 'Plain' : FIELDS[field]?.label ?? special?.[0] ?? field;
+      const title = picture ? (pictureHint || 'Use a picture of your own as the pattern') : field === 'none' ? 'Every loop the same' : FIELDS[field]?.hint ?? special?.[1] ?? '';
       const btn = el('button', { type: 'button', class: 'pattern', 'data-choice': `${designId}:${key}:${field}`, 'aria-pressed': 'false', title }, canvas, el('span', { text: label }));
       btn.addEventListener('click', () => {
         if (picture && !host.picture?.()) { this.fileInput.click(); return; }
@@ -603,6 +612,63 @@ export class Section extends Control {
   }
 }
 
+/** Loom draft editor: repeatable threading, tie-up and treadling with a live drawdown and row cross-section. */
+export class DraftSection extends Section {
+  buildBody() {
+    this.body=el('div',{class:'draft-editor'});
+    this.presetButtons=el('div',{class:'draft-presets','role':'group','aria-label':'Draft presets'});
+    for(const [id,label] of [['point-twill','Point twill'],['block','Block weave'],['herringbone','Herringbone'],['custom','Custom']]){
+      const button=el('button',{type:'button',class:'btn small',text:label,'data-draft-preset':id});
+      button.addEventListener('click',()=>this.applyPreset(id));this.presetButtons.append(button);
+    }
+    this.validation=el('p',{class:'draft-validation small','aria-live':'polite',role:'status'});
+    this.grids=el('div',{class:'draft-grids'});
+    this.threading=el('div',{class:'draft-grid-wrap'});this.tieup=el('div',{class:'draft-grid-wrap'});this.treadling=el('div',{class:'draft-grid-wrap'});
+    this.drawdown=el('div',{class:'draft-drawdown-wrap'});this.crossSection=el('div',{class:'draft-cross-section'});
+    this.grids.append(this.threading,this.tieup,this.treadling);
+    this.body.append(this.presetButtons,this.validation,this.grids,this.drawdown,this.crossSection);
+    return this.body;
+  }
+
+  applyPreset(id){
+    const draft=WEAVE_DRAFT_PRESETS[id];if(draft)this.settings.draft={preset:id,...structuredClone(draft)};else this.settings.draft={...this.settings.draft,preset:'custom'};
+    this.host.change();
+  }
+
+  refresh(){
+    const draft=this.settings.draft;
+    for(const button of this.presetButtons.querySelectorAll('[data-draft-preset]'))button.setAttribute('aria-pressed',String(button.dataset.draftPreset===draft.preset));
+    const shafts=Math.max(1,draft.tieup.length),treadles=Math.max(1,...draft.tieup.map(row=>row.length));
+    this.threading.replaceChildren(el('h3',{text:'Threading · shaft for each warp'}),...draft.threading.map((shaft,index)=>{
+      const button=el('button',{type:'button',class:'draft-cell',text:String(shaft+1),title:`Warp ${index+1}: shaft ${shaft+1}`,'aria-label':`Warp ${index+1}, shaft ${shaft+1}`});
+      button.addEventListener('click',()=>{draft.threading[index]=(shaft+1)%shafts;draft.preset='custom';this.host.change();});return button;
+    }));
+    this.tieup.replaceChildren(el('h3',{text:'Tie-up · shafts × treadles'}));
+    const table=el('table',{class:'draft-matrix','aria-label':'Tie-up matrix'}),head=el('tr',{},el('th',{text:'Shaft'}),...Array.from({length:treadles},(_,j)=>el('th',{text:`T${j+1}`})));table.append(el('thead',{},head));
+    const tbody=el('tbody');draft.tieup.forEach((row,i)=>{const tr=el('tr',{},el('th',{scope:'row',text:`S${i+1}`}));for(let j=0;j<treadles;j++){const active=!!row[j],button=el('button',{type:'button',class:'draft-cell tieup-cell',text:active?'●':'—','aria-pressed':String(active),'aria-label':`Shaft ${i+1}, treadle ${j+1}, ${active?'tied':'not tied'}`});button.addEventListener('click',()=>{row[j]=!row[j];draft.preset='custom';this.host.change();});tr.append(el('td',{},button));}tbody.append(tr);});table.append(tbody);this.tieup.append(table);
+    this.treadling.replaceChildren(el('h3',{text:'Treadling · treadle for each pick'}),...draft.treadling.map((treadle,index)=>{const button=el('button',{type:'button',class:'draft-cell',text:String(treadle+1),title:`Pick ${index+1}: treadle ${treadle+1}`,'aria-label':`Pick ${index+1}, treadle ${treadle+1}`});button.addEventListener('click',()=>{draft.treadling[index]=(treadle+1)%treadles;draft.preset='custom';this.host.change();});return button;}));
+    let binding,error='';try{binding=draftBinding(draft);}catch(exception){error=exception.message;}
+    if(error){this.validation.textContent=error;this.validation.classList.add('is-error');this.drawdown.replaceChildren();this.crossSection.replaceChildren();return;}
+    this.validation.classList.remove('is-error');
+    const columns=Math.min(24,Math.max(1,draft.threading.length)),rows=Math.min(24,Math.max(1,draft.treadling.length));
+    let longest=0;for(let i=0;i<draft.threading.length;i++)for(const over of [true,false]){let run=0;for(let j=0;j<draft.treadling.length*2;j++){if(binding.over(i,j)===over){run++;longest=Math.max(longest,run);}else run=0;}}
+    this.validation.textContent=longest>4?`Long floats (${longest} crossings) sag and snag.`:'Draft is bound in both directions; no float exceeds four crossings.';
+    const svg=svgEl('svg',{viewBox:`0 0 ${columns*18} ${rows*18}`,role:'img','aria-label':'Live weave drawdown; raised cells mean warp is over weft'});
+    const cross=this.crossSection;
+    const paintCross=(pick)=>{
+      const strip=svgEl('svg',{viewBox:`0 0 ${columns*18} 54`,role:'img','aria-label':`Cross-section at pick ${pick+1}`});
+      for(let i=0;i<columns;i++){
+        const over=binding.over(i,pick),x=i*18;
+        strip.append(svgEl('rect',{x,y:over?30:8,width:17,height:9,rx:1,fill:'var(--ink, #333)',opacity:'.55'}));
+        strip.append(svgEl('rect',{x,y:over?8:30,width:17,height:9,rx:1,fill:'var(--accent, #8d5137)'}));
+      }
+      cross.replaceChildren(el('span',{class:'small muted',text:`Cross-section · pick ${pick+1} · dark weft, accent warp`}),strip);
+    };
+    for(let j=0;j<rows;j++)for(let i=0;i<columns;i++){const over=binding.over(i,j),rect=svgEl('rect',{x:i*18,y:j*18,width:17,height:17,rx:1,fill:over?'var(--accent, #8d5137)':'var(--ink, #333)',opacity:over?'.9':'.48',tabindex:0,role:'button','aria-label':`Warp ${i+1}, pick ${j+1}: ${over?'warp over':'weft over'}`});rect.addEventListener('pointerenter',()=>paintCross(j));rect.addEventListener('focus',()=>paintCross(j));svg.append(rect);}
+    this.drawdown.replaceChildren(el('h3',{text:'Drawdown · select or hover a pick for its cross-section'}),svg);paintCross(0);
+  }
+}
+
 /** A grid of option buttons, one of which is pressed. Subclasses say what the options are. */
 class OptionSection extends Section {
   /** @returns [{ attrs, html?, text?, hint, pressed(), apply() }] */
@@ -627,6 +693,8 @@ class OptionSection extends Section {
         btn.prepend(slot);
         this.pictures.push({ slot, draw: opt.picture });
       }
+      // an option that cannot be chosen here stays visible, with its reason as the hint
+      if (opt.disabled) btn.disabled = true;
       btn.addEventListener('click', () => { opt.apply(); this.host.change(); });
       this.grid.append(btn);
       return { btn, opt };
@@ -693,9 +761,44 @@ export class ChoiceSection extends OptionSection {
       html: `${opt.thumb ?? ''}<span>${opt.label}</span>`,
       hint: opt.hint,
       picture: opt.thumb ? null : opt.picture ?? null,
-      pressed: () => String(this.settings[key]) === opt.id,
-      apply: () => { Object.assign(this.settings, opt.patch ?? {}); this.settings[key] = opt.id; },
+      disabled: !!opt.disabled,
+      pressed: () => String(this.settings[key]) === String(opt.value ?? opt.id),
+      apply: () => { Object.assign(this.settings, opt.patch ?? {}); this.settings[key] = opt.value ?? opt.id; },
     }));
+  }
+}
+
+/** A small editable polar petal; pointer and keyboard edits update one metric span at a time. */
+export class PetalSection extends Section {
+  buildBody(){
+    this.svg=svgEl('svg',{viewBox:'0 0 240 180',class:'petal-editor',role:'group','aria-label':this.spec.hint??'Edit petal metric'});
+    this.rays=[];this.handles=[];
+    this.svg.addEventListener('pointerdown',event=>{const target=event.target.closest('[data-handle]');if(target){target.setPointerCapture(event.pointerId);this.dragIndex=Number(target.dataset.handle);this.drag(event);}});
+    this.svg.addEventListener('pointermove',event=>{if(this.dragIndex!==undefined)this.drag(event);});
+    this.svg.addEventListener('pointerup',()=>{this.dragIndex=undefined;this.host.commit?.();});
+    // returned for the section to hold: `this.node` is the section itself, and appending it to itself throws
+    return el('div',{class:'petal-control'},this.hint(),this.svg);
+  }
+  get values(){const value=this.settings[this.spec.key];return Array.isArray(value)?value.slice(0,7):[1,.6,1];}
+  update(){
+    const values=this.values,n=values.length,cx=120,cy=90,maximum=1.5,points=[];
+    for(let i=0;i<n*2;i++){
+      const angle=Math.PI*2*i/(n*2),sector=i%(n*2),idx=Math.floor(sector/2),t=(sector%2)*.5;
+      const radius=values[idx]*(1-t)+(values[(idx+1)%n]??values[idx])*t;
+      points.push(`${cx+radius/maximum*68*Math.cos(angle)},${cy+radius/maximum*68*Math.sin(angle)}`);
+    }
+    this.svg.replaceChildren(svgEl('polygon',{points:points.join(' '),class:'petal-shape'}));
+    this.handles=values.map((value,index)=>{
+      const angle=2*Math.PI*index/n,x=cx+value/maximum*68*Math.cos(angle),y=cy+value/maximum*68*Math.sin(angle);
+      const circle=svgEl('circle',{cx:x,cy:y,r:9,class:'petal-handle',tabindex:'0',role:'slider','aria-label':`Petal span ${index+1}`,'aria-valuemin':'.3','aria-valuemax':'1.5','aria-valuenow':value,'data-handle':index});
+      circle.addEventListener('keydown',event=>{if(!['ArrowUp','ArrowRight','ArrowDown','ArrowLeft'].includes(event.key))return;event.preventDefault();const next=this.values;next[index]=Math.max(.3,Math.min(1.5,Math.round((next[index]+(['ArrowUp','ArrowRight'].includes(event.key)?0.05:-0.05))*20)/20));this.settings[this.spec.key]=next;this.host.change();});
+      this.svg.append(circle);return circle;
+    });
+  }
+  drag(event){
+    const rect=this.svg.getBoundingClientRect(),x=(event.clientX-rect.left)/rect.width*240-120,y=(event.clientY-rect.top)/rect.height*180-90;
+    const index=this.dragIndex,angle=2*Math.PI*index/this.values.length,radial=(x*Math.cos(angle)+y*Math.sin(angle))/68*1.5;
+    const next=this.values;next[index]=Math.max(.3,Math.min(1.5,Math.round(radial*20)/20));this.settings[this.spec.key]=next;this.host.nudge();this.update();
   }
 }
 
@@ -729,8 +832,13 @@ export class SizeSection extends Section {
 export class SlidersSection extends Section {
   buildBody() {
     const suffix = this.position.sliderGroup ? `-${this.position.sliderGroup}` : '';
-    this.sliders = this.spec.items.map((def) => new SliderControl(this.host, this.mod.id, def));
-    return el('div', { id: `${this.mod.id}-sliders${suffix}`, class: 'controls' }, ...this.sliders.map((s) => s.node));
+    const main = this.spec.items.filter((def) => !def.advanced).map((def) => new SliderControl(this.host, this.mod.id, def));
+    const extra = this.spec.items.filter((def) => def.advanced).map((def) => new SliderControl(this.host, this.mod.id, def));
+    this.sliders = [...main, ...extra];
+    const body = el('div', { id: `${this.mod.id}-sliders${suffix}`, class: 'controls' }, ...main.map((s) => s.node));
+    // settings most people leave alone sit in a closed drawer under the others
+    if (!extra.length) return body;
+    return [body, el('details', { class: 'advanced-sliders' }, el('summary', { text: 'Advanced' }), el('div', { class: 'controls' }, ...extra.map((s) => s.node)))];
   }
 
   refresh() {
@@ -742,16 +850,156 @@ export class SlidersSection extends Section {
 export class PatternSection extends Section {
   buildBody() {
     this.picker = new PatternPicker(this.host, this.mod.id, this.spec.key, this.mod.patterns, this.titleId, { scale: this.spec.scale ?? null, pictureHint: this.spec.pictureHint ?? '' });
-    return [this.hint(), this.picker.node];
+    this.effects = this.mod.patternEffects ?? [];
+    this.effectPicker = this.effects.length > 1 ? el('div', { class: 'patterns pattern-effects', role: 'group', 'aria-label': 'Pattern effect' },
+      ...this.effects.map((effect) => {
+        const def = PATTERN_EFFECTS[effect];
+        const button = el('button', { type: 'button', class: 'pattern', 'data-pattern-effect': effect, title: def?.hint ?? '' }, el('span', { text: def?.label ?? effect }));
+        button.addEventListener('click', () => { this.settings.patternEffect = effect; this.host.change(); });
+        return button;
+      })) : null;
+    this.effectButtons = [...(this.effectPicker?.querySelectorAll('[data-pattern-effect]') ?? [])];
+    this.thickness = this.effects.includes('thickness') ? ['thin', 'thick'].map((key) => new SliderControl(this.host, this.mod.id, {
+      key, label: key === 'thin' ? 'Thinnest' : 'Thickest', help: 'Extrusion flow multiplier at the light and dark ends of the pattern.',
+      lo: key === 'thin' ? 'Lighter' : 'Thinner', hi: key === 'thin' ? 'Heavier' : 'Thicker', unit: '×', edit: true,
+    })) : [];
+    this.thicknessNode = el('div', { class: 'controls pattern-thickness' }, ...this.thickness.map((control) => control.node));
+    return [this.hint(), this.picker.node, this.effectPicker, this.thicknessNode];
   }
 
   refresh() {
     this.picker.update();
+    const effect = this.settings.patternEffect ?? this.effects[0];
+    for (const button of this.effectButtons) button.setAttribute('aria-pressed', String(button.dataset.patternEffect === effect));
+    this.thicknessNode.hidden = effect !== 'thickness';
+    if (!this.thicknessNode.hidden) for (const control of this.thickness) control.update();
   }
 
   redraw() {
     this.picker.redraw();
   }
+}
+
+const COLOUR_MODES = Object.freeze({
+  one: { label: 'One colour', hint: 'The whole piece in one filament.' },
+  face: { label: 'Face colour', hint: 'The first layer, the side on the bed, in its own colour. Pauses once to change filament.' },
+  'per-layer': { label: 'Colour per layer', hint: 'Choose a colour for every layer. Pauses before each change.' },
+  halftone2: { label: 'Two-colour halftone', hint: 'Each line family in its own colour, so the picture shows in two tones.' },
+});
+
+/** Colour mode and optional per-layer preview colours for a card. */
+export class ColourSection extends Section {
+  buildBody() {
+    this.modes = this.mod.colourModes ?? Object.keys(COLOUR_MODES).filter((mode) => mode !== 'halftone2');
+    this.buttons = this.modes.map((mode) => {
+      const option = COLOUR_MODES[mode];
+      const button = el('button', { type: 'button', class: 'pattern', 'aria-pressed': 'false', 'data-colour-mode': mode, title: option?.hint ?? '' }, el('span', { text: option?.label ?? mode }));
+      button.addEventListener('click', () => {
+        this.settings.colourMode = mode;
+        this.settings.colorChange = mode === 'face' || mode === 'halftone2';
+        if (mode === 'halftone2') this.settings.patternEffect = 'thickness';
+        this.host.change();
+      });
+      return { mode, button };
+    });
+    this.grid = el('div', { class: 'patterns colour-modes', role: 'group', 'aria-label': 'Colour mode' }, ...this.buttons.map((entry) => entry.button));
+    this.colours = el('div', { class: 'layer-colours' });
+    return [this.hint(), this.grid, this.colours];
+  }
+
+  refresh() {
+    const mode = this.settings.colourMode ?? 'one';
+    for (const { mode: option, button } of this.buttons) button.setAttribute('aria-pressed', String(mode === option));
+    this.colours.replaceChildren();
+    if (mode === 'one') return;
+    const count = mode === 'per-layer' ? Math.min(256, Math.max(1, Number(this.spec.layerCount?.(this.settings) ?? this.host.layerCount?.(this.mod.id) ?? this.settings.layerColours?.length ?? 2))) : 2;
+    const colours = Array.isArray(this.settings.layerColours) ? [...this.settings.layerColours] : [];
+    while (colours.length < count) colours.push(colours.length % 2 ? '#222222' : '#f2e6d8');
+    this.settings.layerColours = colours;
+    for (let i = 0; i < count; i++) {
+      const input = el('input', { type: 'color', value: colours[i], 'aria-label': `Layer ${i + 1} colour` });
+      input.value = /^#[\da-f]{6}$/i.test(colours[i]) ? colours[i] : '#8ea5ff';
+      input.addEventListener('input', () => { this.settings.layerColours[i] = input.value; });
+      input.addEventListener('change', () => { this.settings.layerColours[i] = input.value; this.host.change(); });
+      this.colours.append(el('label', { class: 'layer-colour' }, el('span', { text: `Layer ${i + 1}` }), input));
+    }
+  }
+}
+
+/** A card's carrier settings; built-in carriers are explanatory and read-only. */
+export class SupportSection extends Section {
+  buildBody() {
+    if (this.mod.support === 'built-in' || this.spec.readonly) return el('p', { class: 'group-hint', text: 'This design prints its own carrier.' });
+    const changed = () => { delete this.support.passes; this.host.change(); };
+    this.enabled = this.spec.optional ? el('input', { type: 'checkbox', 'aria-label': 'Use a carrier' }) : null;
+    this.enabled?.addEventListener('change', () => { this.support.enabled = this.enabled.checked; this.host.change(); });
+    this.area = this.spec.area ? el('select', { 'aria-label': 'Carrier covers' }, ...[['swatch', 'The whole swatch'], ['shape', 'The shapes only'], ['box', "The drawing’s box"]].map(([value, text]) => el('option', { value, text }))) : null;
+    this.area?.addEventListener('change', () => { this.support.area = this.area.value; this.host.change(); });
+    const options = (this.spec.styles ?? BACKING_STYLES).concat((this.spec.styles ?? BACKING_STYLES).includes('zigzag') ? [] : ['zigzag']);
+    this.styleButtons = options.map((style) => {
+      const button = el('button', { type: 'button', class: 'pattern', 'aria-pressed': 'false', 'data-support-style': style, text: style[0].toUpperCase() + style.slice(1) });
+      button.addEventListener('click', () => { this.support.style = style; changed(); });
+      return button;
+    });
+    this.styleGrid = el('div', { class: 'patterns support-styles', role: 'group', 'aria-label': 'Carrier style' }, ...this.styleButtons);
+    this.fields = {};
+    const ranges = this.spec.ranges ?? {};
+    const defaults = { openness: 5, depth: 2, wavelength: 10, layers: 1, angle: 45 };
+    const controls = Object.entries(defaults).map(([key, fallback]) => {
+      const range = ranges[key] ?? (key === 'layers' ? { min: 1, max: 2, step: 1 } : key === 'angle' ? { min: -180, max: 180, step: 1 } : { min: key === 'depth' ? 0 : .5, max: key === 'depth' ? 20 : key === 'wavelength' ? 100 : 50, step: .1 });
+      const input = el('input', { type: 'number', min: range.min, max: range.max, step: range.step, 'data-support-key': key, 'aria-label': ({ openness: 'Openness', depth: 'Depth', wavelength: 'Wavelength', layers: 'Carrier layers', angle: 'Angle' })[key] });
+      input.addEventListener('change', () => {
+        const value = Number(input.value);
+        if (input.value === '' || !Number.isFinite(value) || value < range.min || value > range.max || key === 'layers' && !Number.isInteger(value)) { input.value = String(this.support[key] ?? fallback); this.host.toast?.(`Enter ${range.min} to ${range.max} for ${key}.`); return; }
+        this.support[key] = value; changed();
+      });
+      this.fields[key] = { input, fallback };
+      return el('label', { class: 'support-field' }, el('span', { text: ({ openness: 'Openness (mm)', depth: 'Depth (mm)', wavelength: 'Wavelength (mm)', layers: 'Layers', angle: 'Angle (°)' })[key] }), input);
+    });
+    this.controls = el('div', { class: 'support-controls' }, ...controls);
+    this.savedNote = el('p', { class: 'group-hint small', text: 'Saved custom carrier patterns are preserved until you change the style or dimensions.' });
+    return [this.hint(), this.enabled ? el('label', { class: 'support-enabled' }, this.enabled, el('span', { text: 'Use a carrier' })) : null, this.area ? el('label', { class: 'support-field' }, el('span', { text: 'Carrier covers' }), this.area) : null, this.styleGrid, this.controls, this.savedNote];
+  }
+
+  get support() {
+    if (!this.settings.support || typeof this.settings.support !== 'object') this.settings.support = {};
+    return this.settings.support;
+  }
+
+  refresh() {
+    if (!this.styleButtons) return;
+    const value = this.support;
+    if (this.enabled) this.enabled.checked = value.enabled !== false;
+    if (this.area) this.area.value = value.area ?? 'swatch';
+    this.styleGrid.hidden = this.controls.hidden = value.enabled === false;
+    this.savedNote.hidden = !value.passes?.length || value.enabled === false;
+    for (const button of this.styleButtons) button.setAttribute('aria-pressed', String(button.dataset.supportStyle === (value.style ?? 'straight')));
+    for (const [key, { input, fallback }] of Object.entries(this.fields)) input.value = String(value[key] ?? fallback);
+  }
+}
+
+/** Returns panel-template contract violations for one card's controls list. */
+export function panelOrderErrors(controls = []) {
+  const errors = [];
+  const groups = { presets: 0, size: 1, choice: 2, petal: 2, draft: 2, sliders: 3, switch: 3, pattern: 4, colour: 5, support: 6 };
+  let last = -1;
+  const seen = new Set();
+  let slidersSeen = false;
+  for (const [index, spec] of controls.entries()) {
+    if (!spec || typeof spec !== 'object') { errors.push(`Control ${index + 1} is not a section.`); continue; }
+    if (spec.kind === 'shape') { errors.push('The shape section is not allowed on library cards.'); continue; }
+    if (spec.kind === 'switch' && spec.key === 'colorChange') { errors.push('Use the colour section instead of the colorChange switch.'); continue; }
+    const group = groups[spec.kind];
+    if (group === undefined) { errors.push(`Unknown section kind: ${spec.kind}.`); continue; }
+    if (group < last) errors.push(`${spec.kind} is out of panel order.`);
+    if (spec.kind !== 'choice' && seen.has(spec.kind)) errors.push(`${spec.kind} appears more than once.`);
+    if (spec.kind === 'switch' && !slidersSeen) errors.push('A switch must immediately follow the sliders section.');
+    if (spec.kind === 'sliders') slidersSeen = true;
+    else if (spec.kind !== 'switch' && group > 3) slidersSeen = false;
+    seen.add(spec.kind);
+    last = Math.max(last, group);
+  }
+  return errors;
 }
 
 /** What a section is called in a design's `controls` list, and the class that draws it. */
@@ -760,9 +1008,13 @@ export const SECTION_TYPES = {
   size: SizeSection,
   shape: ShapeSection,
   choice: ChoiceSection,
+  petal: PetalSection,
   switch: SwitchSection,
   sliders: SlidersSection,
   pattern: PatternSection,
+  colour: ColourSection,
+  support: SupportSection,
+  draft: DraftSection,
 };
 
 /** One design's whole panel: its name, then its sections in the order its registry entry lists them. */
@@ -770,8 +1022,22 @@ export class DesignPanel extends Control {
   constructor(host, mod) {
     super(host);
     this.mod = mod;
+    this.side = el('div', { class: 'panel-side-view', 'aria-live': 'polite' });
+    this.joins = mod.joins ? el('p', { class: 'panel-joins', text: mod.joins }) : null;
+    this.badges = el('div', { class: 'panel-badges', 'aria-label': 'Card status' },
+      el('span', { class: 'design-badge', text: ({ self: 'Holds itself', auto: 'Uses a carrier', 'built-in': 'Built-in carrier' })[mod.support] ?? 'Support not set' }),
+      el('span', { class: `design-badge state-${mod.state ?? 'untested'}`, text: ({ tested: 'Tested', untested: 'Untested', 'needs-repair': 'Needs repair' })[mod.state] ?? 'Untested' }));
+    const variants = variantsOf(mod.id).filter((card) => card.id !== mod.id);
+    this.printVariants = variants.length ? el('button', { type: 'button', class: 'btn small', text: 'Print all variants', title: 'Place each variant on one bed for a side-by-side comparison' }) : null;
+    this.printVariants?.addEventListener('click', () => this.host.printVariants?.(mod.id));
+    this.alsoOn = variants.length ? el('nav', { class: 'variant-links', 'aria-label': 'Also on' },
+      el('span', { class: 'small muted', text: 'Also on:' }), ...variants.map((card) => {
+        const button = el('button', { type: 'button', class: 'link small', text: SHELVES[card.shelf].label });
+        button.addEventListener('click', () => this.host.switchDesign?.(card.id));
+        return button;
+      })) : null;
     this.node = el('div', { id: `panel-${mod.id}`, class: 'panel', hidden: true },
-      el('header', { class: 'panel-head' }, el('h1', { class: 'title', text: mod.name })));
+      el('header', { class: 'panel-head' }, el('h1', { class: 'title', text: mod.name }), this.badges, this.side, ...(this.joins ? [this.joins] : []), ...(this.alsoOn ? [this.alsoOn] : []), ...(this.printVariants ? [this.printVariants] : [])));
     this.sections = [];
     let sliderGroup = 0;
     mod.controls.forEach((spec, index) => {
@@ -784,6 +1050,10 @@ export class DesignPanel extends Control {
   }
 
   update() {
+    const result = this.host.previewResult?.(this.mod.id);
+    const section = result && defaultSection(result);
+    const profile = section ? sideProfile(result.strands, section) : [];
+    this.side.innerHTML = drawSideView(profile, { width: 360, height: 60, bead: result?.cfg?.t?.extrusion_width ?? 0.45 });
     for (const section of this.sections) section.update();
   }
 
@@ -848,40 +1118,6 @@ export class PrintSetupCard extends Control {
   }
 }
 
-/**
- * The backing mesh: the same card at the end of every flat design's panel. A switch, and while it is on the mesh's three
- * sliders and a filament-change pause after it. Its settings are kept in the print setup (the host's 'print' binding,
- * keys backing, backingSpacing, backingDepth, backingWavelength, backingPause), so they are shared by every design.
- * @param defs { label, help, sliders: slider descriptions, pause: { label, help } }
- */
-export class BackingCard extends Control {
-  constructor(host, designId, defs) {
-    super(host);
-    const switchRow = (input, { label, help }) => el('label', { class: 'switch-row' }, input, el('span', {}, el('strong', { text: label }), el('small', { text: help })));
-    this.toggle = el('input', { type: 'checkbox', role: 'switch', 'data-switch': `${designId}:backing` });
-    this.toggle.addEventListener('change', () => { this.binding.set('backing', this.toggle.checked); this.host.change(); });
-    this.pause = el('input', { type: 'checkbox', role: 'switch', 'data-switch': `${designId}:backingPause` });
-    this.pause.addEventListener('change', () => { this.binding.set('backingPause', this.pause.checked); this.host.change(); });
-    // the sliders read and write the print setup; their ids carry the design, as one card is in every panel
-    const print = { ...host, binding: () => host.binding('print') };
-    this.sliders = defs.sliders.map((def) => new SliderControl(print, `backing-${designId}`, def));
-    this.body = el('div', { class: 'controls backing-body', hidden: true }, ...this.sliders.map((s) => s.node), switchRow(this.pause, defs.pause));
-    this.node = el('section', { class: 'group untitled backing-card' }, switchRow(this.toggle, defs), this.body);
-  }
-
-  get binding() {
-    return this.host.binding('print');
-  }
-
-  update() {
-    const on = !!this.binding.get('backing');
-    this.toggle.checked = on;
-    this.body.hidden = !on;
-    this.pause.checked = !!this.binding.get('backingPause');
-    if (on) for (const s of this.sliders) s.update();
-  }
-}
-
 /* ---------- the one place a drawing comes in ---------- */
 
 /** The sample drawing on the site (samples/), to try or to open and copy: red fills, a blue hole, yellow and green solids, lines. */
@@ -895,9 +1131,10 @@ export const DRAWING_GUIDE = Object.freeze([
   { colour: 'red', name: 'Red', text: 'Fill with the selected pattern.' },
   { colour: 'blue', name: 'Blue', text: 'Cut out: leave empty.' },
   { colour: 'green', name: 'Green', text: 'Fill solid. Thickness follows Solid layers.' },
+  { colour: 'yellow', name: 'Yellow', text: 'Fill solid, like green.' },
   { colour: 'line', name: 'Other lines', text: 'Print as drawn. Stroke width sets the printed width.' },
 ]);
-const GUIDE_FOOT = 'Use pure RGB colours. For nested shapes, the innermost colour wins.';
+const GUIDE_FOOT = 'Colours receive these default roles. Select a colour above the preview to change its role, design or line alignment. Distinct shades stay separate; for nested shapes, the innermost colour wins.';
 // red is filled once the pattern is cut to the shapes, which an import does; a design that draws the drawing itself fills it its own way
 const RED_CUT = 'Fill with the pattern when “Fill its shapes” is on.';
 

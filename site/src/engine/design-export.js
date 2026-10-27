@@ -1,4 +1,5 @@
 import { validatePerimeters } from './solid-perimeters.js';
+import { refreshConstruction, assertConstructionExportable } from './construction-report.js';
 import { designById } from '../ui/designs.js';
 import { generate } from './generate.js';
 import { generateSquiggle, SAMPLERS, createImageSampler } from './squiggle.js';
@@ -8,12 +9,16 @@ import { resolveConfig, ConfigError } from './params.js';
 import { bedFitErrors, PreflightError } from './gcode.js';
 import { applySvgGuides } from './svg-guides.js';
 import { applySvgSolids, solidOnly, withoutPattern } from './svg-solids.js';
-import { composeSvgLines } from './svg-lines.js';
+import { composeSvgLines, vectorPatternRings } from './svg-lines.js';
 import { stackLayers, addExtraLayers, nativeLayerInfo } from './stack.js';
 import { applyBrim } from './brim.js';
-import { addBackingMesh } from './backing.js';
 import { rotateDesignInput } from './rotate-design.js';
 import { prepareAdaptiveSolids } from './adaptive-solids.js';
+import { colourResult } from './colour-plan.js';
+import { buildRegions, regionsFromDrawing } from './regions.js';
+import { fingerprint } from '../ui/swatch.js';
+import { clipStrands } from './fabric.js';
+import { PolygonBoundary } from './boundary.js';
 
 /** Generate the selected design once at its complete size, independently of the preview window. */
 export function generateDesignBase(input) {
@@ -35,12 +40,9 @@ export function generateDesignBase(input) {
       outline, liftAt: field ? (x, y) => 0.3 + 0.7 * field(x, y) : null,
     });
   } else if (design === 'squiggle') {
-    const sampler = settings.pattern === 'image' && input.image
-      ? pictureDarkness(input.image, pieceWidth, pieceHeight, { offsetX, offsetY })
-      : SAMPLERS[settings.pattern] ?? SAMPLERS.centerSpot;
-    result = generateSquiggle(machine, material, { ...settings, width, height, sampler, outline });
+    result = mod.generate(machine, material, mod.sanitize({...settings,width,height}), {outline,picture});
   } else {
-    result = mod.generate(machine, material, { ...mod.defaults(), ...settings, width, height }, {
+    result = mod.generate(machine, material, mod.sanitize({ ...settings, width, height }), {
       outline: mod.outline === false ? null : outline,
       vector: mod.usesVector || mod.vectorGuides ? vector : null,
       vectorSize: input.vectorSize ?? [width, height],
@@ -60,7 +62,7 @@ export function generateDesignBase(input) {
     result = composeSvgLines(result, vector, { fullWidth, fullHeight, offsetX, offsetY, clipLines: !input.shapeOutline && !result.guideCount, perimeters: input.perimeters ?? 0, meshPerimeters: input.meshPerimeters });
     result.documentSize = [vector.width, vector.height];
   }
-  return result;
+  return colourResult(result, settings);
 }
 
 /** The drawing's green shapes, printed solid on top of everything the design and its extra layers have laid down. */
@@ -71,12 +73,38 @@ function withSolids(result, input) {
 }
 
 /** Browser and async callers initialize WASM explicitly before entering the synchronous geometry pipeline. */
-export async function generateDesignExportAsync(input) {
+export async function generateDesignExportAsync(input, { progress = () => {} } = {}) {
   if (input.solidGenerator === 'arachne' && input.vector && input.perimeters > 0) await prepareAdaptiveSolids();
-  return generateDesignExport(input);
+  return generateDesignExport(input, { progress });
 }
 
-export function generateDesignExport(input) {
+export function generateDesignExport(input, { progress = () => {} } = {}) {
+  if (input.vector && input.regions?.length && !input.regionBuild) {
+    const defaults=regionsFromDrawing(input.vector,{currentCard:input.design,currentSettings:input.studySettings??input.settings});
+    const patterns=input.regions.filter(r=>r.role==='pattern');
+    const unchanged=patterns.length===1&&patterns[0].card===input.design&&fingerprint(patterns[0].settings)===fingerprint(input.studySettings??input.settings)
+      && defaults.length===input.regions.length&&defaults.every((r,i)=>r.key===input.regions[i].key&&r.role===input.regions[i].role&&input.regions[i].enabled!==false&&(input.regions[i].lineAlign??'centre')==='centre');
+    if(unchanged){
+      const outline=input.shapeOutline?vectorPatternRings(input.vector,{scaleX:input.width/input.vector.width,scaleY:input.height/input.vector.height}):input.outline;
+      const result=generateDesignExport({...input,regions:null,outline:outline?.length?outline:null});
+      result.regions=input.regions.map(r=>({id:r.id,hex:r.hex,role:r.role,card:r.card,settingsHash:fingerprint(r.settings??{})}));
+      result.gcode=result.gcode.replace('; BODY START',result.regions.map(r=>`; region ${r.hex??r.id}: ${r.role} ${r.card??''} settings ${r.settingsHash}`).join('\n')+'\n; BODY START');
+      return result;
+    }
+    return buildRegions(input.machine, input.material, input.vector, input.regions, {
+      seam: input.seam, width: input.width, height: input.height, solidCount: input.solidLayers ?? 1, extraLayers:input.extraLayers??0, progress,
+      generate: (design, settings, outline) => {
+        const mod = designById(design);
+        const own = mod.sanitize({ ...settings, width: input.width, height: input.height });
+        const regionInput = { ...input, design, settings: design === 'loop-pile' ? { ...input.settings, ...own } : own,
+          pilePattern: own.pattern, pilePatternScale: own.patternScale, outline, vector: mod.usesVector ? {
+            name: input.vector.name, width:input.width, height:input.height, paths:outline.map(ring=>[...ring,ring[0]]),
+            styles:outline.map(()=>({color:'red',hex:'#ff0000',width:input.material?.extrusion_width??.45})),
+          } : null, regions:null, regionBuild:true, shapeOutline:false, meshPerimeters:0, perimeters:0, brim:0 };
+        return generateDesignExport(regionInput);
+      },
+    });
+  }
   let result = generateDesignBase(input);
   if (input.extraLayers === undefined && input.layers !== undefined) {
     // Older programmatic exporters retain their explicitly requested whole-copy behavior.
@@ -88,14 +116,19 @@ export function generateDesignExport(input) {
       rotatedResult: () => generateDesignBase(rotateDesignInput(input)), colorChange: !!input.settings?.colorChange,
     });
   }
-  // a backing mesh goes under everything the design and the drawing lay down; the brim goes round it on the bed
-  result = addBackingMesh(withSolids(result, input), input.backing);
+  result = withSolids(result, input);
+  if (input.backing) result.warnings = [...result.warnings, designById(input.design).support === 'self'
+    ? 'This design no longer takes an extra backing; your link is shown without it.'
+    : 'This design uses its own Support carrier; an additional global backing is left out.'];
   // a solid already prints its own edge pass: an all-solid piece takes no brim over it
-  return applyBrim(result, { count: solidOnly(input.vector) && !input.backing ? 0 : input.meshPerimeters ?? input.perimeters ?? input.brim ?? 2, label: input.perimeters !== undefined ? 'Perimeters' : 'Brim', requestedCount: input.perimeters });
+  result = applyBrim(result, { count: solidOnly(input.vector) ? 0 : input.meshPerimeters ?? input.perimeters ?? input.brim ?? 2, label: input.perimeters !== undefined ? 'Perimeters' : 'Brim', requestedCount: input.perimeters });
+  if (input.regionBuild && input.outline) result.strands = clipStrands(result.strands, new PolygonBoundary(input.outline), 0);
+  result = refreshConstruction(colourResult(result, input.settings, { record: true }));
+  return input.regionBuild ? result : assertConstructionExportable(result);
 }
 
 /** The UI only needs printable output and summary data; geometry remains inside the worker. */
 export function compactDesignExport(result) {
   const { moveStartSec, ...stats } = result.stats;
-  return { gcode: result.gcode, cfg: result.cfg, stats, moveCount: result.moves.length, fabric: result.fabric, warnings: result.warnings ?? [], layerPlan: result.layerPlan };
+  return { gcode: result.gcode, cfg: result.cfg, stats, moveCount: result.moves.length, fabric: result.fabric, construction: result.construction, warnings: result.warnings ?? [], layerPlan: result.layerPlan };
 }

@@ -9,6 +9,7 @@ import { createField, FIELD_IDS } from './fields.js';
 import { shapeAt, shapeStep } from './shapes.js';
 import { resolveCrossings } from './crossings.js';
 import { finishFabric } from './fabric-result.js';
+import { thicknessAlong } from './pattern-effects.js';
 
 /**
  * Squiggle Textile Generator
@@ -213,16 +214,24 @@ export function generateSquiggleTextile({
   strandWidth = 0.45,
   sampler = SAMPLERS.centerSpot,
   colorChange = false,
+  patternEffect = 'depth',
+  thicknessComplement = false,
+  thin = 0.6,
+  thick = 1.8,
   boundary = null,
   whole = true,
   planCrossings = true,
+  bundle = 1,
+  bundleTouch = true,
+  bundleGap = .3,
+  widthMaps = null,
 }) {
   const z1 = layerHeight;
   const z2 = layerHeight * 2;
   const minAmp = 0.15 * amplitude;
   const ampRange = 0.85 * amplitude;
   const baseFreq = 1 / Math.max(0.5, wavelength);
-  const tone = (x, y) => clamp(sampler(x, y, width, height), 0, 1);
+  const tone = (x, y) => patternEffect === 'thickness' ? 0.5 : clamp(sampler(x, y, width, height), 0, 1);
   // whole repeats (repeats.js): a wave of frequency f over a lane `span` long is made a whole number of waves long
   const wholeFreq = (f, span) => (whole && span > 0 ? Math.max(1, Math.round(f * span)) / span : f);
 
@@ -334,7 +343,7 @@ export function generateSquiggleTextile({
     layer2 = settle(layer2, 'l2-');
   }
 
-  const strands = [
+  let strands = [
     // both layers keep the row-by-row order they were laid in (fill.js), so the print order does not wander
     ...layer1.map((pts, i) => ({ kind: 'base', layer: 0, id: i === 0 ? 'squiggle-l1' : `squiggle-l1-${i + 1}`, pts, lift: 0, name: 'Layer 1 (Base Squiggle)', rowOrder: i })),
     ...layer2.map((pts, i) => ({
@@ -349,6 +358,23 @@ export function generateSquiggleTextile({
     })),
   ];
 
+  const bundleCount=Math.max(1,Math.min(5,Math.round(Number(bundle)||1)));
+  if(bundleCount>1){
+    strands=strands.flatMap((strand,index)=>Array.from({length:bundleCount},(_,j)=>{
+      const pts=strand.pts.map((p,k,points)=>{
+        const a=points[Math.max(0,k-1)],b=points[Math.min(points.length-1,k+1)],length=Math.hypot(b.x-a.x,b.y-a.y)||1;
+        const bonded=patternEffect==='bonding'?sampler(p.x,p.y,width,height)>=.5:bundleTouch;
+        const pitch=bonded?.9*strandWidth:strandWidth+Math.max(0,Number(bundleGap)||0),offset=(j-(bundleCount-1)/2)*pitch;
+        return {...p,x:p.x-(b.y-a.y)/length*offset,y:p.y+(b.x-a.x)/length*offset};
+      });
+      return {...strand,id:`${strand.id}-bundle-${j+1}`,bundle:index,bonded:bundleTouch,pts};
+    }));
+  }
+
+  if (patternEffect === 'thickness') {
+    for (const strand of strands) strand.pts = thicknessAlong(strand.pts,
+      (x, y) => sampler(x, y, width, height), { thin, thick, layer: strand.layer, overNet: 0.85, bead: strandWidth, complement: thicknessComplement, widthMaps });
+  }
   return { layer1: layer1.flat(), layer2: layer2.flat(), strands };
 }
 
@@ -382,6 +408,12 @@ export function generateSquiggle(machine, material, squiggleParams = {}) {
     layerHeight: cfg.t.layer_height,
     sampler: squiggleParams.sampler ?? SAMPLERS.centerSpot,
     colorChange: squiggleParams.colorChange ?? false,
+    patternEffect: squiggleParams.patternEffect ?? 'depth',
+    thicknessComplement: squiggleParams.thicknessComplement ?? squiggleParams.colourMode === 'halftone2',
+    thin: squiggleParams.thin ?? 0.6,
+    thick: squiggleParams.thick ?? 1.8,
+    bundle:squiggleParams.bundle??1,bundleTouch:squiggleParams.bundleTouch!==false,bundleGap:squiggleParams.bundleGap??.3,
+    widthMaps:material.flow.width_maps??null,
   });
 
   const moves = emitStrands(res.strands);
@@ -391,6 +423,6 @@ export function generateSquiggle(machine, material, squiggleParams = {}) {
   const gcode = writeGcode(moves, cfg, { stats });
 
   const warnings = moves.length === 0 ? ['The outline is too small for these lines: nothing to print'] : [];
-  return finishFabric({ cfg, strands: res.strands, moves, stats, warnings, gcode, outline }, { flat: true });
+  return finishFabric({ cfg, strands: res.strands, moves, stats, warnings, gcode, outline }, { flat: true, transform:squiggleParams.transform });
 }
 

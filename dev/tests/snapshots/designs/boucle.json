@@ -1,0 +1,72 @@
+[
+  {
+    "card": "boucle",
+    "preset": "default",
+    "settingsHash": "302336e84436",
+    "gcodeSha256": "4c5be3bcd06e5b10fe2618e72f4f12472f73a0b8837c944cd1d2df8793b86a7d",
+    "strands": 29,
+    "moves": 2069,
+    "extrudeMm": 867.5,
+    "zMin": 0.2,
+    "zMax": 0.5831350042967423,
+    "families": [
+      "L1",
+      "carrier-1",
+      "carrier-2",
+      "ties"
+    ],
+    "ties": 2
+  },
+  {
+    "card": "boucle",
+    "preset": "picot-trim",
+    "settingsHash": "7d0f7eb3db19",
+    "gcodeSha256": "54a4298c4e3939f0b728093e01091787f80fdb42cbc6e5db4f23d6e6cecfb356",
+    "strands": 30,
+    "moves": 1996,
+    "extrudeMm": 848.5,
+    "zMin": 0.2,
+    "zMax": 0.576337684194582,
+    "families": [
+      "L1",
+      "carrier-1",
+      "carrier-2",
+      "ties"
+    ],
+    "ties": 2
+  },
+  {
+    "card": "boucle",
+    "preset": "boucle",
+    "settingsHash": "d315951a6a27",
+    "gcodeSha256": "56b0696e45acfccf6c4c523a370c5af396ef76dbb48b2f827ec020760e5db872",
+    "strands": 22,
+    "moves": 2053,
+    "extrudeMm": 869.9,
+    "zMin": 0.2,
+    "zMax": 0.5066545585577982,
+    "families": [
+      "L1",
+      "carrier-1",
+      "carrier-2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "boucle",
+    "preset": "curls",
+    "settingsHash": "e73be987a3f5",
+    "gcodeSha256": "5b2439cf5eac55a93871f881cd1d385e0fcf388e00b42d5869c5b0b9766be8ac",
+    "strands": 26,
+    "moves": 2437,
+    "extrudeMm": 1074.7,
+    "zMin": 0.2,
+    "zMax": 0.4622714633488713,
+    "families": [
+      "L1",
+      "carrier-1",
+      "carrier-2"
+    ],
+    "ties": 0
+  }
+]

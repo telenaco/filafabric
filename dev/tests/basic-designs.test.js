@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { waveLines, waveValue, WAVE_SHAPES } from '../../site/src/engine/wavegrid.js';
 import { generateCoilTextile } from '../../site/src/engine/coil.js';
 import { backingLines, backingStack } from '../../site/src/engine/backing.js';
@@ -9,9 +10,26 @@ import { findCrossings } from '../../site/src/engine/crossings.js';
 import { fitCells } from '../../site/src/engine/repeats.js';
 import { DESIGNS, ESSENTIALS, designById, galleryGroups } from '../../site/src/ui/designs.js';
 import { defaultProfiles } from './helpers.js';
+import { generateDesignExport } from '../../site/src/engine/design-export.js';
 
 const box = boundaryFor(60, 60);
 const flat = (lines) => lines.flatMap((pts) => pts);
+
+test('plain Zigzag differs from the legacy Squiggle zigzag in both structures', () => {
+  const profiles = defaultProfiles();
+  const hash = (result) => createHash('sha256').update(result.gcode).digest('hex');
+  const hashes = {};
+  for (const mode of ['parallel', 'cross']) {
+    const plain = { ...designById('zigzag').defaults(), width: 60, height: 50, mode };
+    const legacy = { ...designById('squiggle-zigzag').defaults(), width: 60, height: 50, mode,
+      spacing: plain.spacing, amplitude: plain.depth, wavelength: plain.wavelength, pattern: 'uniform' };
+    hashes[mode] = [
+      hash(generateDesignExport({ ...profiles, design: 'zigzag', settings: plain, width: 60, height: 50, brim: 0 })),
+      hash(generateDesignExport({ ...profiles, design: 'squiggle-zigzag', settings: legacy, width: 60, height: 50, brim: 0 })),
+    ];
+    assert.notEqual(...hashes[mode], `${mode} G-code unexpectedly matches`);
+  }
+});
 
 test('the three waves swing between -1 and 1 and a half-wave on is the mirror of the wave', () => {
   for (const shape of WAVE_SHAPES) {
@@ -68,7 +86,7 @@ test('Zigzag mesh: two layers that cross each other, side by side or crossed', (
   const card = designById('zigzag');
   const { machine, material } = defaultProfiles();
   assert.ok(card && card.status === 'ready');
-  assert.equal(card.controls.some((c) => c.kind === 'pattern'), false, 'no patterns');
+  assert.equal(card.controls.some((c) => c.kind === 'pattern'), true, 'pattern controls live on the card');
   assert.equal(card.controls.some((c) => c.kind === 'shape'), false, 'no strand shapes');
   assert.equal(card.controls.some((c) => c.key === 'direction'), false, 'which way it lies on the plate is not a choice');
   for (const mode of ['parallel', 'cross']) {
@@ -128,35 +146,34 @@ test('a single layer of zigzag rows that meet is the Coil with a zigzag shape: n
   }
   const card = designById('coil');
   const preset = card.presets.find((p) => p.id === 'zigzag-cells');
-  assert.ok(preset, 'the Coil offers it as a preset');
-  assert.equal(preset.patch.shape, 'zigzag');
+  assert.equal(preset, undefined, 'the Coil no longer offers zigzag cells');
   assert.equal(designById('zigzag-single'), undefined, 'no separate single-layer card');
 });
 
 test('the essentials are real, ready cards and come first', () => {
   assert.deepEqual([...ESSENTIALS], ['zigzag', 'squiggle', 'coil', 'starlattice', 'dipweave', 'halftone', 'meander', 'turing', 'svgdesign', 'bubbles', 'voronoi']);
-  // Crosshatch & isogrid is kept in the code and left out of the list
-  assert.equal(designById('crosshatch').hidden, true);
+  // Crosshatch & isogrid is now in the library; the old Halftone entry remains a hidden compatibility card.
+  assert.equal(designById('crosshatch').hidden, false);
   assert.equal(designById('crosshatch').status, 'ready');
   assert.equal(ESSENTIALS.includes('crosshatch'), false);
   for (const id of ESSENTIALS) assert.equal(designById(id)?.status, 'ready', id);
 });
 
-test('a hidden card leaves the gallery but still opens: Drawing & infill, for now', () => {
+test('Your drawing is visible; the legacy Halftone card still opens but stays hidden', () => {
   const { essentials, others } = galleryGroups();
   const shown = [...essentials, ...others].map((d) => d.id);
-  assert.equal(designById('svgdesign').hidden, true);
+  assert.equal(designById('svgdesign').hidden, false);
   assert.equal(designById('svgdesign').status, 'ready', 'a link or a saved file still opens it');
-  assert.equal(shown.includes('svgdesign'), false);
-  assert.equal(shown.includes('crosshatch'), false);
-  assert.deepEqual(essentials.map((d) => d.id), ESSENTIALS.filter((id) => id !== 'svgdesign'), 'the other essentials keep their order');
+  assert.equal(shown.includes('svgdesign'), true);
+  assert.equal(shown.includes('crosshatch'), true);
+  assert.equal(designById('halftone').hidden, true);
+  assert.deepEqual(essentials.map((d) => d.id), ESSENTIALS.filter((id) => id !== 'halftone'), 'the visible essentials keep their order');
   assert.ok(others.length > 10 && others.every((d) => !ESSENTIALS.includes(d.id)));
-  assert.equal(designById('zigzag-mesh').name, 'Advanced zigzag mesh');
-  assert.equal(designById('zigzag-mesh').status, 'preset');
+  assert.equal(designById('zigzag-mesh'), undefined);
 });
 
 test('where a Start-from row only repeated a choice, the choice carries the companions and the row is gone', () => {
-  for (const id of ['meander', 'starlattice', 'conformal', 'truchet', 'parquet', 'flowlines', 'crosshatch', 'auxetic']) {
+  for (const id of ['meander', 'starlattice', 'conformal', 'truchet', 'parquet', 'flowlines', 'crosshatch']) {
     const card = designById(id);
     assert.equal(card.controls.some((c) => c.kind === 'presets'), false, `${id} still has a Start-from row`);
     assert.ok(card.presets.length > 0, `${id} keeps its presets for tests and saved settings`);
@@ -168,7 +185,7 @@ test('where a Start-from row only repeated a choice, the choice carries the comp
   assert.equal(meander.options.find((o) => o.id === 'tsp').patch.pattern, 'noise');
   assert.equal(meander.options.find((o) => o.id === 'gosper').patch.angle, 60);
   // the cards that kept their recipes still have the row
-  for (const id of ['coil', 'halftone', 'svgdesign', 'spacer']) assert.equal(designById(id).controls.some((c) => c.kind === 'presets'), true, id);
+  for (const id of ['coil', 'halftone', 'svgdesign', 'spacer', 'auxetic']) assert.equal(designById(id).controls.some((c) => c.kind === 'presets'), true, id);
 });
 
 test('the meander and Turing stripes are held by a gyroid backing unless straight lines are asked for', () => {
@@ -193,7 +210,7 @@ test('the meander and Turing stripes are held by a gyroid backing unless straigh
   for (const id of ['meander', 'turing']) {
     const card = designById(id);
     assert.equal(card.defaults().backing, 'wave', id);
-    assert.ok(card.controls.some((c) => c.kind === 'choice' && c.key === 'backing'), id);
+    assert.ok(card.controls.some((c) => c.kind === 'support'), id);
     assert.equal(card.sanitize({ backing: 'plaid' }).backing, 'wave');
     assert.equal(card.sanitize({ backing: 'gyroid' }).backing, 'gyroid');
     assert.equal(card.sanitize({ backing: 'straight' }).backing, 'straight');
@@ -203,7 +220,7 @@ test('the meander and Turing stripes are held by a gyroid backing unless straigh
 test('every tile has a card or a preset target, and the list can be built from the registry', () => {
   const ids = new Set(DESIGNS.map((d) => d.id));
   for (const id of ESSENTIALS) assert.ok(ids.has(id));
-  assert.ok(DESIGNS.some((d) => d.id === 'zigzag-mesh' && d.opens.design === 'squiggle'));
+  assert.equal(DESIGNS.some((d) => d.id === 'zigzag-mesh'), false);
 });
 
 test('the backing wave has a depth and a length you set, and a second backing is a third layer', () => {
@@ -227,11 +244,11 @@ test('the backing wave has a depth and a length you set, and a second backing is
   for (const id of ['meander', 'turing']) {
     const card = designById(id);
     const { machine, material } = defaultProfiles();
-    const layers = (s) => card.generate(machine, material, { ...card.defaults(), width: 60, height: 60, ...s }).layerCount;
-    assert.equal(layers({ backingLayers: 'one' }), 2, id + ': the first layer and one backing');
-    assert.equal(layers({ backingLayers: 'two' }), 3, id + ': a third layer');
-    const depthOf = (backingDepth) => JSON.stringify(card.generate(machine, material, { ...card.defaults(), width: 60, height: 60, backingDepth }).strands.slice(-3).map((s) => s.pts.length));
+    const layers = (count) => card.generate(machine, material, { ...card.defaults(), width: 60, height: 60, support: { ...card.defaults().support, layers: count } }).layerCount;
+    assert.equal(layers(1), 2, id + ': the first layer and one backing');
+    assert.equal(layers(2), 3, id + ': a third layer');
+    const depthOf = (depth) => JSON.stringify(card.generate(machine, material, { ...card.defaults(), width: 60, height: 60, support: { ...card.defaults().support, depth } }).strands.slice(-3).map((s) => s.pts.length));
     assert.notEqual(depthOf(1), depthOf(5), id + ': the depth changes the backing');
-    assert.ok(card.controls.some((c) => c.kind === 'sliders' && typeof c.when === 'function'), id + ': wave depth shows only for a wave');
+    assert.equal(card.controls.filter((c) => c.kind === 'support').length, 1, id + ': carrier controls live together');
   }
 });

@@ -168,7 +168,7 @@ test('colour and width come from attributes, a style attribute, a style sheet an
     <path d="M0 18L10 18" fill="none" stroke="#e8001c"/>
   `));
   const got = v.styles.map((s) => [s.color, +s.width.toFixed(3)]);
-  assert.deepEqual(got, [['red', 0.4], ['blue', 0.4], ['blue', 0.5], ['red', 3], ['red', 0.1], ['red', 0], ['other', 1]]);
+  assert.deepEqual(got, [['red', 0.4], ['blue', 0.4], ['blue', 0.5], ['red', 3], ['red', 0.1], ['red', 0], ['red', 1]]);
 });
 
 test('what is hidden or only defined, and what is neither filled nor stroked, is not read', () => {
@@ -253,10 +253,18 @@ test('the reader is tolerant of an Inkscape or Illustrator file and strict about
 test('a saved drawing keeps its colours only when they line up with its paths', () => {
   const raw = { name: 'x', width: 10, height: 10, paths: [[{ x: 0, y: 0 }, { x: 5, y: 5 }]] };
   assert.deepEqual(sanitizeSvgLines({ ...raw, styles: [{ color: 'red', width: 1.23456 }] }).styles, [{ color: 'red', width: 1.235 }]);
+  assert.deepEqual(sanitizeSvgLines({ ...raw, styles: [{ color: 'red', hex: '#E53935', width: 1 }] }).styles, [{ color: 'red', hex: '#e53935', width: 1 }]);
+  assert.deepEqual(sanitizeSvgLines({ ...raw, styles: [{ color: 'red', hex: 'invalid', width: 1 }] }).styles, [{ color: 'red', width: 1 }]);
   assert.equal(sanitizeSvgLines({ ...raw, styles: [] }).styles, undefined);
   assert.equal(sanitizeSvgLines({ ...raw, styles: [{ color: 'purple', width: 1 }] }).styles, undefined);
   assert.equal(sanitizeSvgLines({ ...raw, styles: [{ color: 'red', width: -1 }] }).styles, undefined);
   assert.equal('styles' in sanitizeSvgLines(raw), false, 'an older drawing is unchanged');
+});
+
+test('SVG import retains exact RGB paint while semantic reds remain one class', () => {
+  const v = parseSvg(svg(`<g color="#123456"><path d="M0 0L5 0" fill="none" stroke="#e53935"/><path d="M0 1L5 1" fill="none" stroke="#cc3322"/><path d="M0 2L5 2" fill="none" stroke="rgb(200, 40, 30)"/><path d="M0 3L5 3" fill="none" stroke="red"/><path d="M0 4L5 4" fill="none" stroke="#ff4433"/><path d="M0 5L5 5" fill="none" stroke="currentColor"/></g>`));
+  assert.deepEqual(v.styles.map((s) => s.color), ['red', 'red', 'red', 'red', 'red', 'other']);
+  assert.deepEqual(v.styles.map((s) => s.hex), ['#e53935', '#cc3322', '#c8281e', '#ff0000', '#ff4433', '#123456']);
 });
 
 /* ---------- through the studio ---------- */

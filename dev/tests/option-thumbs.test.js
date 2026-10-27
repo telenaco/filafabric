@@ -20,7 +20,7 @@ test('every ready choice has a finite illustration in the existing SVG style', (
       choices++;
     }
   }
-  assert.ok(choices >= 131);
+  assert.ok(choices >= 100, 'carrier choices now share one Support section rather than duplicating infill pickers');
 });
 
 function validPicture(svg) {
@@ -37,7 +37,7 @@ function validPicture(svg) {
   }
 }
 
-test('all 24 previously missing presets have finite, bounded, distinct pictures from their generated geometry', () => {
+test('every remaining preset has finite, bounded, distinct pictures from its generated geometry', () => {
   assert.equal(typeof thumbs.presetThumb, 'function');
   let count = 0;
   for (const id of ids) {
@@ -50,7 +50,8 @@ test('all 24 previously missing presets have finite, bounded, distinct pictures 
     });
     assert.equal(new Set(pictures).size, pictures.length, `${id}: visibly different preset geometry`);
   }
-  assert.equal(count, 24);
+  assert.equal(count, ids.reduce((n, id) => n + designById(id).presets.length, 0));
+  assert.ok(count >= 23, 'the former zigzag Coil preset is now a separate card');
 });
 
 test('preset fallback is lazy and preserves a module’s own picture factory', () => {

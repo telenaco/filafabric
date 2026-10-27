@@ -1,0 +1,70 @@
+[
+  {
+    "card": "rotating-squares",
+    "preset": "default",
+    "settingsHash": "576e526f5398",
+    "gcodeSha256": "82abfaf922d7be56b55f9ad0441fc656ae4e53175626207812a6f957bf4c4cf7",
+    "strands": 47,
+    "moves": 381,
+    "extrudeMm": 525.9,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "border",
+      "necks",
+      "squares"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "rotating-squares",
+    "preset": "soft-open",
+    "settingsHash": "576e526f5398",
+    "gcodeSha256": "82abfaf922d7be56b55f9ad0441fc656ae4e53175626207812a6f957bf4c4cf7",
+    "strands": 47,
+    "moves": 381,
+    "extrudeMm": 525.9,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "border",
+      "necks",
+      "squares"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "rotating-squares",
+    "preset": "broad",
+    "settingsHash": "5f84278b7980",
+    "gcodeSha256": "a3d159fbbd42e1035ca62dd491bb50a830381ed52b1bb13eeb3a132ef2298f98",
+    "strands": 13,
+    "moves": 126,
+    "extrudeMm": 319.7,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "border",
+      "necks",
+      "squares"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "rotating-squares",
+    "preset": "closed",
+    "settingsHash": "1ffc96b4d401",
+    "gcodeSha256": "b6a8fba1914ae0644141171a3612f90ef36fd20dbd02b4b9339ea0050a370940",
+    "strands": 42,
+    "moves": 371,
+    "extrudeMm": 597.4,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "border",
+      "necks",
+      "squares"
+    ],
+    "ties": 0
+  }
+]

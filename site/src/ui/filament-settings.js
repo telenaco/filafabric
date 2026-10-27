@@ -1,3 +1,4 @@
+import { sanitizeWidthMaps } from '../engine/width-maps.js';
 // The filament's temperatures and retraction, changeable in the printer setup. Each comes from the filament profile until
 // it is changed; a change is kept in the print setup (and so in links, saved files and undo) and only what differs from
 // the profile is stored. Choosing another filament starts again from its own values.
@@ -69,6 +70,7 @@ export function filamentValue(material, print, key, machine = null) {
 export function withFilamentSettings(material, print, machine = null) {
   let out = material;
   for (const f of FILAMENT_FIELDS) if (inRange(f, print?.[f.key]) && print[f.key] !== f.get(material, machine)) out = f.put(out, print[f.key], machine);
+  if(Object.hasOwn(print??{},'widthMaps'))out={...out,flow:{...out.flow,width_maps:sanitizeWidthMaps(print.widthMaps)}};
   return out;
 }
 
@@ -85,6 +87,7 @@ export function setFilamentSetting(print, material, key, value, machine = null) 
 export function sanitizeFilamentSettings(raw) {
   const out = {};
   if (!raw || typeof raw !== 'object') return out;
+  if(Object.hasOwn(raw,'widthMaps')){try{out.widthMaps=sanitizeWidthMaps(raw.widthMaps);}catch{/* Ignore malformed calibration, never manufacture measurements. */}}
   for (const f of FILAMENT_FIELDS) {
     const r = raw[f.key];
     const v = typeof r === 'number' || (typeof r === 'string' && r.trim() !== '') ? Number(r) : NaN;
@@ -97,5 +100,6 @@ export function sanitizeFilamentSettings(raw) {
 export function withoutFilamentSettings(print) {
   const out = { ...print };
   for (const f of FILAMENT_FIELDS) delete out[f.key];
+  delete out.widthMaps;
   return out;
 }

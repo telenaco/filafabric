@@ -25,11 +25,11 @@ export function strandWidths(cfg) {
 // Roles also differ in lightness, not only hue, so they survive colour-vision differences.
 const PALETTES = {
   light: {
-    base: 0x27366b, anchored: 0x1f8179, lifting: 0xb87400, free: 0xb0316f,
+    base: 0x27366b, anchored: 0x1f8179, lifting: 0xb87400, free: 0xb0316f, channel:0x7047ad,
     centreline: 0x12161e, travel: 0x566074, hop: 0xa04b00, violation: 0xd32f2f, bed: 0xd3d7de, sample: 0x34469a,
   },
   dark: {
-    base: 0x8fa6f5, anchored: 0x4fc3b8, lifting: 0xe8b04a, free: 0xf07ab0,
+    base: 0x8fa6f5, anchored: 0x4fc3b8, lifting: 0xe8b04a, free: 0xf07ab0, channel:0xb59cff,
     centreline: 0xf2f3f0, travel: 0x9aa4b5, hop: 0xffa060, violation: 0xff6b6b, bed: 0x2f3746, sample: 0x7ba3ff,
   },
 };
@@ -126,14 +126,25 @@ export function createPreview(container) {
     const hops = { pos: [], idx: [] };
     const viol = { pos: [], idx: [] };
     for (let i = 1; i < moves.length; i++) {
-      const a = moves[i - 1], b = moves[i];
+      let a = moves[i - 1], b = moves[i];
+      if(result.sampleWindow){
+        const [w,h]=result.sampleWindow,dx=b.x-a.x,dy=b.y-a.y;let lo=0,hi=1,rejected=false;
+        for(const [p,q] of [[-dx,a.x],[dx,w-a.x],[-dy,a.y],[dy,h-a.y]]){
+          if(Math.abs(p)<1e-12){if(q<0)rejected=true;continue;}
+          const t=q/p;if(p<0)lo=Math.max(lo,t);else hi=Math.min(hi,t);
+        }
+        if(rejected||hi<lo)continue;
+        const mix=t=>({...b,x:a.x+dx*t,y:a.y+dy*t,z:a.z+(b.z-a.z)*t});
+        const end=mix(hi),start=mix(lo);a=start;b=end;
+      }
       if (b.extrude) {
         // Adaptive flat widths describe physical geometry; E flow is an area ratio, not a width ratio.
         // Bucket physical width to 0.01 mm; ordinary air-flow previews retain their existing quarter steps.
         const flat = b.cls === 'base' || b.cls === 'supported';
         const flow = flat && b.width > 0 ? Math.round(b.width * 100) / 100 / cfg.t.extrusion_width
           : b.flow !== undefined && Math.abs(b.flow - 1) >= 0.1 ? Math.max(0.25, Math.round(b.flow * 4) / 4) : 1;
-        const key = flow === 1 ? ROLE_OF[b.cls] : `${ROLE_OF[b.cls]}@${flow}`;
+        const role=b.role==='channel'?'channel':ROLE_OF[b.cls];
+        const key = b.previewColour ? `${role}@${flow}|${b.previewColour}` : flow === 1 ? role : `${role}@${flow}`;
         const bk = (buckets[key] ??= { pos: [], idx: [] });
         bk.pos.push(a.x, a.y, a.z, b.x, b.y, b.z);
         bk.idx.push(i);
@@ -147,7 +158,7 @@ export function createPreview(container) {
     state.buckets = { ...buckets, travel, hops, viol };
     const [documentWidth, documentHeight] = result.documentSize ?? [cfg.t.sample_width, cfg.t.sample_height];
     const ext = { minX: 0, minY: 0, maxX: documentWidth, maxY: documentHeight };
-    for (const m of moves) {
+    for (const m of result.sampleWindow?[]:moves) {
       if (!m.extrude) continue;
       if (m.x < ext.minX) ext.minX = m.x;
       if (m.x > ext.maxX) ext.maxX = m.x;
@@ -159,20 +170,21 @@ export function createPreview(container) {
     const centreline = state.layers.strand;
     const widths = strandWidths(cfg);
     for (const key of Object.keys(buckets)) {
-      const [role, flowText] = key.split('@');
+      const [pathKey, previewColour] = key.split('|');
+      const [role, flowText] = pathKey.split('@');
       const flow = flowText ? Number(flowText) : 1;
       // flat strands widen with flow; strands in the air grow as the square root of the volume
-      const width = widths[role] * (role === 'base' || role === 'anchored' ? flow : Math.sqrt(flow));
+      const width = (widths[role]??widths.anchored) * (role === 'base' || role === 'anchored' ? flow : Math.sqrt(flow));
       const { pos } = buckets[key];
       // thin path line (the exact nozzle route)
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      const thin = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: centreline ? pal.centreline : pal[role] }));
+      const thin = new THREE.LineSegments(g, new THREE.LineBasicMaterial({ color: centreline ? pal.centreline : previewColour ?? pal[role] }));
       state.thin[key] = add(thin);
       // strand at true width, in millimetres
       const sg = new LineSegmentsGeometry();
       if (pos.length) sg.setPositions(pos);
-      const sm = new LineMaterial({ color: pal[role], linewidth: width, worldUnits: true });
+      const sm = new LineMaterial({ color: previewColour ?? pal[role], linewidth: width, worldUnits: true });
       materials.push(sm);
       state.fat[key] = add(new LineSegments2(sg, sm));
     }
@@ -215,6 +227,11 @@ export function createPreview(container) {
       }
     } else {
       add(rectangle(0, 0, cfg.t.sample_width, cfg.t.sample_height, pal.sample));
+    }
+    for(const path of result.excludedPaths??[]){
+      const geometry=new THREE.BufferGeometry().setFromPoints(path.map(p=>new THREE.Vector3(p.x,p.y,.01)));
+      const line=add(new THREE.Line(geometry,new THREE.LineDashedMaterial({color:pal.sample,transparent:true,opacity:.35,dashSize:1,gapSize:1})));
+      line.computeLineDistances();
     }
     resize();
   }

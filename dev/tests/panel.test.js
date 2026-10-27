@@ -6,6 +6,75 @@ import { defaultProfiles } from './helpers.js';
 import { exportPanel } from '../../site/src/engine/panel.js';
 import { DESIGNS } from '../../site/src/ui/designs.js';
 import { toTextile } from '../../site/src/ui/controls.js';
+import { ColourSection, SupportSection, PetalSection } from '../../site/src/ui/panels.js';
+
+class TestNode {
+  constructor(tag) { this.tagName = tag.toUpperCase(); this.children = []; this.attributes = {}; this.dataset = {}; this.listeners = {}; this.hidden = false; this.classList = { add() {} }; }
+  contains(node) { return node === this || this.children.some((child) => child.contains?.(node)); }
+  // as in a browser: a node cannot be appended to itself or to anything inside it
+  append(...nodes) {
+    for (const node of nodes) if (node.contains?.(this)) throw new Error('HierarchyRequestError: the new child element contains the parent');
+    this.children.push(...nodes);
+  }
+  replaceChildren(...nodes) { this.children = nodes; }
+  setAttribute(key, value) { this.attributes[key] = String(value); if (key.startsWith('data-')) this.dataset[key.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = String(value); }
+  addEventListener(type, fn) { (this.listeners[type] ??= []).push(fn); }
+  dispatch(type) { for (const fn of this.listeners[type] ?? []) fn({ target: this }); }
+}
+
+function panelFixture(t) {
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  globalThis.document = { createElement: (tag) => new TestNode(tag), createElementNS: (ns, tag) => Object.assign(new TestNode(tag), { namespace: ns }) };
+  t.after(() => { if (previous) Object.defineProperty(globalThis, 'document', previous); else delete globalThis.document; });
+  const settings = {};
+  const host = { settings: () => settings, change() {}, nudge() {}, commit() {} };
+  const mod = { id: 'fixture', support: 'auto' };
+  return { settings, host, mod };
+}
+
+test('ColourSection changes colour mode and stores accessible per-layer swatches', (t) => {
+  const { settings, host, mod } = panelFixture(t);
+  const section = new ColourSection(host, mod, { kind: 'colour', layerCount: () => 2 }, { index: 0 });
+  section.buttons.find(({ mode }) => mode === 'per-layer').button.dispatch('click');
+  section.update();
+  assert.equal(settings.colourMode, 'per-layer');
+  assert.equal(section.colours.children.length, 2);
+  const swatch = section.colours.children[0].children[1];
+  assert.equal(swatch.attributes['aria-label'], 'Layer 1 colour');
+  swatch.value = '#123456';
+  swatch.dispatch('input');
+  assert.equal(settings.layerColours[0], '#123456');
+});
+
+test('SupportSection writes nested carrier style and parameters; built-in is read-only', (t) => {
+  const { settings, host, mod } = panelFixture(t);
+  const section = new SupportSection(host, mod, { kind: 'support' }, { index: 0 });
+  section.styleButtons.find((button) => button.dataset.supportStyle === 'zigzag').dispatch('click');
+  const openness = section.fields.openness.input;
+  openness.value = '4.2';
+  openness.dispatch('change');
+  assert.equal(settings.support.style, 'zigzag');
+  assert.equal(settings.support.openness, 4.2);
+  const builtin = new SupportSection(host, { ...mod, support: 'built-in' }, { kind: 'support' }, { index: 0 });
+  assert.match(builtin.node.children[0].textContent, /prints its own carrier/);
+  assert.equal(builtin.fields, undefined);
+});
+
+// PetalSection once replaced its own section element with the control it returned, so the section was appended to itself
+// and the whole studio failed to start as soon as the Star-metric card was registered.
+test('PetalSection builds inside its own section element and draws one handle per span', (t) => {
+  const { settings, host, mod } = panelFixture(t);
+  settings.petals = [1, 0.6, 1];
+  const section = new PetalSection(host, mod, { kind: 'petal', key: 'petals', hint: 'Edit the petal.' }, { index: 0 });
+  assert.equal(section.node.tagName, 'SECTION', 'the section element is not replaced by its control');
+  assert.equal(section.node.children.at(-1).tagName, 'DIV');
+  section.update();
+  assert.equal(section.handles.length, 3);
+  // a plain createElement('svg') makes an HTML element the browser never draws: the editor sat at zero height
+  const svgNs = 'http://www.w3.org/2000/svg';
+  assert.equal(section.svg.namespace, svgNs);
+  assert.ok(section.svg.children.every((child) => child.namespace === svgNs), 'the shape and the handles are SVG too');
+});
 
 test('streaming prints a single full-outline brim before backing, and records its setting', async () => {
   const { machine, material } = defaultProfiles();
@@ -31,7 +100,7 @@ test('every design exports bounded texture sections with the appropriate row pre
     const r = await exportPanel({ machine, material, design: d.id, settings, width: 60, height: 60, repeat: 30 }, { write: async (s) => { text += s; } });
     assert.equal(r.sections, 4, d.id);
     assert.match(text, /BODY END/, d.id);
-    assert.match(text, ['loop-pile', 'relief', 'fringe'].includes(d.id) ? /texture section 1; origin 0,30/ : /texture section 1; origin 0,0/, d.id);
+    assert.match(text, ['loop-pile', 'relief', 'fringe', 'corrugation'].includes(d.id) ? /texture section 1; origin 0,30/ : /texture section 1; origin 0,0/, d.id);
   }
 });
 

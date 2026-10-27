@@ -38,6 +38,8 @@ const CONFORMAL = defineControls({
 
 LINE_DESIGNS.push(layered({
   id: 'conformal',
+  shelf: 'layered', family: 'fields', support: 'self', state: 'untested',
+  joins: "A square grid bent round holes; its two directions cross.", sources: {},
   optimizeTravel: true,
   name: 'Conformal mesh',
   blurb: 'A square grid that bends round holes and poles',
@@ -88,6 +90,8 @@ const SUNFLOWER = defineControls({
 
 LINE_DESIGNS.push(layered({
   id: 'sunflower',
+  shelf: 'layered', family: 'radial', support: 'self', state: 'untested',
+  joins: "Two seed spirals wind opposite ways and meet at the seeds.", sources: {},
   optimizeTravel: true,
   name: 'Sunflower',
   blurb: 'Two families of seed spirals, one each way',
@@ -127,6 +131,8 @@ const ROSETTE = defineControls({
 
 LINE_DESIGNS.push(layered({
   id: 'rosette',
+  shelf: 'layered', family: 'radial', support: 'self', state: 'untested',
+  joins: "Two wavy spirals in opposite phase cross.", sources: {},
   name: 'Rosette',
   blurb: 'Guilloché: two wavy spirals in opposite phase',
   about: 'The parallel squiggle mesh wrapped round a centre, like guilloché engraving. Each layer is one continuous spiral that swings in and out a whole number of times per turn, so every turn stays in step with the next; the second spiral runs half a turn further out and swings the opposite way, so it crosses the turns on both sides. The swing never drops below the depth that guarantees those crossings. For round pieces: hats, cups, yokes.',
@@ -167,7 +173,9 @@ const FLOW = defineControls({
 });
 
 LINE_DESIGNS.push(layered({
-  id: 'flowlines',
+  id: 'flowlines', patternEffects: ['direction'],
+  shelf: 'layered', family: 'fields', support: 'self', state: 'untested',
+  joins: "Lines along a flow, crossed at 90 degrees.", sources: {},
   optimizeTravel: true,
   name: 'Flow lines',
   blurb: 'Evenly spaced lines along a flow, crossed at 90°',
@@ -211,7 +219,9 @@ const BUBBLES = defineControls({
 });
 
 LINE_DESIGNS.push(layered({
-  id: 'bubbles',
+  id: 'bubbles', patternEffects: ['size'],
+  shelf: 'layered', family: 'rings', support: 'self', state: 'untested',
+  joins: "Packed rings held by a ring in every gap.", sources: {},
   optimizeTravel: true,
   name: 'Bubbles',
   blurb: 'Packed rings, held by a ring in every gap',
@@ -239,7 +249,7 @@ LINE_DESIGNS.push(layered({
 }));
 
 const PARQUET = defineControls({
-  ranges: { ...SIZE, block: { min: 0.8, max: 20, step: 0.1 }, ratio: { min: 2, max: 4, step: 1 }, spacing: { min: 0.8, max: 5, step: 0.1 }, turn: { min: 0, max: 90, step: 15 } },
+  ranges: { ...SIZE, block: { min: 1.35, max: 20, step: 0.1 }, ratio: { min: 2, max: 4, step: 1 }, spacing: { min: 0.8, max: 5, step: 0.1 }, turn: { min: 0, max: 90, step: 15 } },
   defaults: { width: 100, height: 100, tiling: 'herringbone', block: 8, ratio: 2, spacing: 2, turn: 45, colorChange: false },
   enums: { tiling: TILING_IDS },
   bools: ['colorChange'],
@@ -254,6 +264,8 @@ const PARQUET = defineControls({
 
 LINE_DESIGNS.push(layered({
   id: 'parquet',
+  shelf: 'layered', family: 'tiles', support: 'self', state: 'needs-repair',
+  joins: "Block turnarounds meet a designed seam family. Print validation is still pending.", sources: {},
   optimizeTravel: true,
   name: 'Parquet',
   blurb: 'Blocks of 90° mesh, each turned from the next',
@@ -269,7 +281,7 @@ LINE_DESIGNS.push(layered({
       kind: 'sliders',
       title: 'Look and feel',
       items: [
-        { key: 'block', label: 'Block size', help: 'The side of a block, or the width of a plank or band.', lo: 'Small', hi: 'Large', unit: 'mm', edit: true },
+        { key: 'block', label: 'Block size', help: 'The side of a block, or the width of a plank or band. Must span at least three extrusion bead widths; smaller blocks are rejected, not silently resized.', lo: 'Small', hi: 'Large', unit: 'mm', edit: true },
         { key: 'ratio', label: 'Plank length', help: 'Herringbone only: how many widths long each plank is.', lo: '2', hi: '4', unit: '', edit: false },
         { key: 'spacing', label: 'Line spacing', help: 'Distance between neighbouring lines within a block.', lo: 'Dense', hi: 'Open', unit: 'mm', edit: true },
         { key: 'turn', label: 'Turn', help: 'Turns the whole floor.', lo: '0°', hi: '90°', unit: '°', edit: true },
@@ -277,7 +289,7 @@ LINE_DESIGNS.push(layered({
     },
     COLOUR,
   ],
-  build: (s, boundary) => parquetLayers(boundary, { tiling: s.tiling, block: s.block, ratio: s.ratio, spacing: s.spacing, turn: s.turn }),
+  build: (s, boundary, ctx) => parquetLayers(boundary, { tiling: s.tiling, block: s.block, ratio: s.ratio, spacing: s.spacing, turn: s.turn, bead:ctx?.bead??.45 }),
   summary: (result) => `a ${TILINGS[result.tiling]?.label.toLowerCase() ?? 'parquet'} of ${result.report.crossings} crossings`,
 }));
 
@@ -297,6 +309,8 @@ const SPIRO = defineControls({
 
 LINE_DESIGNS.push(layered({
   id: 'spirograph',
+  shelf: 'layered', family: 'radial', support: 'self', state: 'untested',
+  joins: "Two rings of curls, half a ring apart, cross.", sources: {},
   optimizeTravel: true,
   name: 'Spirograph',
   blurb: 'Rings of curls, the next layer half a ring out',
@@ -337,7 +351,9 @@ const STAR = defineControls({
 });
 
 LINE_DESIGNS.push(layered({
-  id: 'starlattice',
+  id: 'starlattice', patternEffects: ['size'],
+  shelf: 'flat', family: 'lattices', support: 'self', state: 'untested',
+  joins: "Star straps in non-crossing families meet at the tile edges.", sources: { catalogue: ['S3'], papers: [30, 31] },
   optimizeTravel: true,
   name: 'Star lattice',
   blurb: 'Islamic star patterns, one family of straps per layer',

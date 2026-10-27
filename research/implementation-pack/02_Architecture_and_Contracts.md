@@ -93,7 +93,7 @@ Every registry entry keeps its existing fields (`id`, `name`, `blurb`, `about`, 
 
 **Shelf rule.** The shelf is not a matter of taste. It is checked from the construction report (C4) by `shelfFromConstruction()`, ticket T0.3:
 - **flat:** one native path family, or several that meet without crossing over each other, at the first layer height. Local settling where a strand crosses itself is allowed (up to 2 layer heights).
-- **layered:** two or more native families that cross each other, or a motif with a carrier.
+- **layered:** two or more native families that cross each other, or a motif with a carrier. A carrier pass is a layer of its own, so the allowed height is `(native families + carrier passes + 1) × layer height + 0.05 mm`.
 - **raised:** deliberate height beyond crossing settles and stacked layers.
 
 Deliberate exceptions are listed, with a reason, in `SHELF_EXCEPTIONS`.
@@ -120,7 +120,7 @@ A card's `controls` list must follow this order. Each group may appear at most o
 |---|---|---|
 | 0 | Start from | `presets` (optional) |
 | 1 | Size and shape | `size` |
-| 2 | Structure | `choice` (zero or more) |
+| 2 | Structure | `choice` (zero or more), `petal` (optional metric editor), `draft` (optional weave draft editor) |
 | 3 | Look and feel | `sliders` (one), optionally followed by a `switch` that belongs to it (for example Link in Bubbles) |
 | 4 | Pattern | `pattern` (optional) |
 | 5 | Colour | `colour` (new kind; replaces `switch key=colorChange`) |
@@ -336,7 +336,8 @@ The formulas are in T7.1.
  * @property {'pattern' | 'hole' | 'solid' | 'line'} role
  * @property {string} [card]       card id when role is 'pattern'
  * @property {object} [settings]   that card's settings
- * @property {'centre' | 'inside' | 'outside'} [lineAlign]   for role 'line'
+ * @property {'centre' | 'inside' | 'outside' | 'left' | 'right'} [lineAlign]   for role 'line'
+ * @property {number} [passSpacing] fraction of bead width, 0.6–1.0
  */
 // site/src/engine/regions.js
 export function regionsFromDrawing(vector, { currentCard, currentSettings }) {}   // default roles = today's meaning
@@ -353,6 +354,8 @@ export function buildRegions(machine, material, vector, regions, { seam, generat
   designs: { [settingsKey]: settings },   // squiggle and loop-pile move in here; state.squiggle and state.primary go
   outline, vector, print,
   regions: Region[] | null                 // Phase 7
+  seam: { enabled: boolean, width: number } // width in bead widths, 1–3
+  geometryRevision: 2                     // older seeded repair cards open hidden legacy generators
 }
 ```
 
@@ -360,6 +363,10 @@ export function buildRegions(machine, material, vector, regions, { seam, generat
 - Old design IDs map through the `legacy` field of C1, for example `squiggle` + `{ shape: 'ring' }` → `rings-layered`.
 - `colorChange` → `colourMode`; `backing` → `support`.
 - Swatch codes and file names (`site/src/ui/file-name.js`) keep encoding the card ID plus a short settings hash. Old codes still parse.
+
+Local integration notes: region `id`, `key` and `pathIndices` identify UI selections, but saved path membership is never trusted: the sanitizer derives it again from exact drawing colours. Old class-only drawings retain deterministic class keys. A drawing with more than 16 colours is rejected explicitly, not silently truncated. Multi-region filenames use `regions-<hash>`; settings files and share links include the drawing and all region settings (oversized links are refused in favour of a settings file).
+
+Measured thickness tables are optional `material.flow.width_maps = { bed, overNet }`, with 2–32 increasing `{flow, width}` pairs per supplied table. `print.widthMaps` holds a local override. The tables contain measurements only: no defaults are fabricated. The thickness effect interpolates flow for the target width, using the appropriate bed/over-net table and clamping outside its measured range; without a table the existing estimate is retained. Material profile downloads retain these measurements.
 
 ### C13. Output snapshots
 
@@ -370,6 +377,8 @@ export function buildRegions(machine, material, vector, regions, { seam, generat
   "gcodeSha256": "…", "strands": 12, "moves": 3456, "extrudeMm": 1234.5,
   "zMin": 0.2, "zMax": 0.6, "families": ["L1", "L2"], "ties": 3 }
 ```
+
+`families` is `[]` when T0.0 first records the snapshots (strands carry no `family` yet). T0.2 adds the tags and may change **only** the `families` field of every snapshot; every other field, including `gcodeSha256`, must stay identical.
 
 `dev/tests/design-snapshots.test.js` regenerates them and compares. Run `npm run snapshots` to update after an intended change, and explain every changed snapshot in the PR.
 

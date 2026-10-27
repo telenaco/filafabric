@@ -7,10 +7,12 @@ import { emitStrands } from './emit.js';
 import { resolveCrossings, findCrossings } from './crossings.js';
 import { lanePoints } from './shapes.js';
 import { fitLanes } from './repeats.js';
+import { clearanceOrder } from './order.js';
 import { MAX_MOVES } from './tiler.js';
 import { contactGraph, clipStrands, connectStrands, orderStrands, travelDistance, simplifyStrands, safePoint, segmentInside } from './fabric.js';
 import { finishFabric } from './fabric-result.js';
 import { joinStrokes } from './travel.js';
+import { applyColourPlan } from './colour-plan.js';
 
 /**
  * Helpers shared by every design that is a few layers of plotted lines: ordered layers of polylines in mm in, moves,
@@ -77,7 +79,20 @@ const rotate = (p, c, s) => ({ x: p.x * c - p.y * s, y: p.x * s + p.y * c });
  * `whole` (repeats.js): the lanes fill the outline from edge to edge at the nearest spacing that fits, a wavy line kept a
  * full swing in from the edge, and each wavy line is whole periods from end to end.
  */
-export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = null, size = 0, pitch = 4, inset = 0.3, anchor = null, maxJog = null, keepInside = 0, whole = true } = {}) {
+export function hatch(boundary, { angle = 0, spacing = 3, offset = 0, shape = null, size = 0, pitch = 4, inset = 0.3, anchor = null, maxJog = null, keepInside = 0, whole = true, bundle = 1, bundleTouch = true, bundleGap = .3, bundleMask = null, bead = .45 } = {}) {
+  const bundleCount=Math.max(1,Math.min(5,Math.round(Number(bundle)||1)));
+  if(bundleCount>1){
+    const a=angle*Math.PI/180,c=Math.cos(a),s=Math.sin(a),turned=new PolygonBoundary(boundary.rings.map(ring=>ring.map(p=>rotate(p,c,-s)))),box=turned.bbox(),edge=inset+.2,internal=bundleTouch?.9*bead:bead+Math.max(0,Number(bundleGap)||0),reach=(bundleCount-1)*internal/2,centres=fitLanes(box.minY+edge+reach,box.maxY-edge-reach,spacing),out=[];
+    for(let bi=0;bi<centres.length;bi++){
+      const centre=centres[bi],origin=rotate({x:(box.minX+box.maxX)/2,y:centre},c,s),bonded=typeof bundleMask==='function'?Boolean(bundleMask(origin.x,origin.y)):Boolean(bundleTouch);
+      for(let j=0;j<bundleCount;j++){
+        const lane=centre+(j-(bundleCount-1)/2)*internal,anchorPoint=rotate({x:(box.minX+box.maxX)/2,y:lane},c,s);
+        const lines=hatch(boundary,{angle,spacing:Math.max(box.maxX-box.minX,box.maxY-box.minY)*4+1,offset:0,shape,size,pitch,inset,anchor:anchorPoint,maxJog,keepInside,whole,bundle:1,bead});
+        for(const path of lines){path.bundle=bi;path.bonded=bonded;out.push(path);}
+      }
+    }
+    return out;
+  }
   const a = (angle * Math.PI) / 180;
   const c = Math.cos(a), s = Math.sin(a);
   const turned = new PolygonBoundary(boundary.rings.map((ring) => ring.map((p) => rotate(p, c, -s))));
@@ -181,7 +196,7 @@ export function chainRowStrands(strands, boundary, { maxJog = 6, inset = 0 } = {
   const out = [];
   for (const strand of strands) {
     const previous = out.at(-1), a = previous?.pts.at(-1), b = strand.pts[0];
-    const ordered = Number.isFinite(strand.rowOrder) && strand.rowOrder === previous?.rowOrder && strand.layer === previous?.layer;
+    const ordered = Number.isFinite(strand.rowOrder) && strand.rowOrder === previous?.rowOrder && strand.layer === previous?.layer && strand.family === previous?.family && strand.role === previous?.role && strand.source === previous?.source;
     const d = a ? Math.hypot(b.x - a.x, b.y - a.y) : Infinity;
     if (!ordered || d > maxJog || (d < 1e-8 && Math.abs(b.z - a.z) > 1e-8) || !segmentInside(a, b, boundary, inset)) {
       out.push({ ...strand, pts: [...strand.pts] }); continue;
@@ -275,9 +290,10 @@ export function crossingReport(items, areaMm2, strandWidth = 0.45) {
  * Layers of polylines to strands: layer k at (k + 1) layer heights, a self-crossing strand lifts over its own earlier
  * pass, and the first strand of every layer after the first can pause for a filament change.
  */
-export function layersToStrands(layers, { layerHeight = 0.2, strandWidth = 0.45, colorChange = false, ramp = 1.6, boundary = null, coherent = false, inset = strandWidth / 2, optimizeTravel = false } = {}) {
+export function layersToStrands(layers, { families, source, layerHeight = 0.2, strandWidth = 0.45, colorChange = false, ramp = 1.6, boundary = null, coherent = false, inset = strandWidth / 2, optimizeTravel = false, nozzleTipRadius = .6, nozzleConeHalfAngle = 30, clearance = false, transform = null, cfg = null } = {}) {
+  const provenance = (p, k) => ({ family: p.family ?? layers[k].family ?? families?.[k] ?? `L${k + 1}`, role: p.role ?? layers[k].role ?? 'native', source: p.source ?? layers[k].source ?? source, ...(p.bundle !== undefined ? { bundle:p.bundle, bonded:Boolean(p.bonded) } : {}) });
   if (coherent) {
-    let flat = layers.flatMap((list, k) => list.filter((p) => p.length >= 2).map((p, i) => ({ id: `l${k + 1}-${i + 1}`, layer: k, kind: k ? 'supported' : 'base', name: `Layer ${k + 1}`, pauseBefore: colorChange && k > 0 && i === 0, ...(Number.isFinite(p.rowOrder) ? { rowOrder: p.rowOrder } : {}), pts: p.map((q) => ({ x: q.x, y: q.y, z: layerHeight, ...(q.flow !== undefined ? { flow: q.flow } : {}) })) })));
+    let flat = layers.flatMap((list, k) => list.filter((p) => p.length >= 2).map((p, i) => ({ ...provenance(p, k), id: `l${k + 1}-${i + 1}`, layer: k, kind: k ? 'supported' : 'base', name: `Layer ${k + 1}`, ...(Number.isFinite(p.rowOrder) ? { rowOrder: p.rowOrder } : {}), ...(p.joints?.length ? { joints: p.joints } : {}), pts: p.map((q) => ({ x: q.x, y: q.y, z: layerHeight, ...(q.flow !== undefined ? { flow: q.flow } : {}) })) })));
     flat = simplifyStrands(flat);
     if (boundary) flat = clipStrands(flat, boundary, inset);
     if (boundary) flat = connectStrands(flat, boundary, { strandWidth }).strands;
@@ -290,7 +306,11 @@ export function layersToStrands(layers, { layerHeight = 0.2, strandWidth = 0.45,
       flat = [...rowed, ...joinStrokes(flat.filter((s) => !Number.isFinite(s.rowOrder)), { within: strandWidth * 1.1, allow: boundary ? (p, q) => segmentInside(p, q, boundary) : null })];
     }
     flat = orderStrands(flat, { improve: optimizeTravel });
-    const out = resolveCrossings(flat, { follow: true, lift: layerHeight, strandWidth, ramp }).strands;
+    let settled=resolveCrossings(flat, { follow: true, lift: layerHeight, strandWidth, ramp }).strands;
+    if(transform){const changed=transform(settled,cfg);if(Array.isArray(changed))settled=changed;}
+    if(clearance){const ordered=clearanceOrder(settled,{tipRadius:nozzleTipRadius,coneHalfAngle:nozzleConeHalfAngle,layerHeight,bead:strandWidth,...(typeof clearance==="object"?clearance:{})});settled=ordered.strands;settled.clearance={split:ordered.split,conflicts:ordered.conflicts};}
+    const out = applyColourPlan(settled, { mode: colorChange ? 'face' : 'one' });
+    if(settled.clearance)out.clearance=settled.clearance;
     out.routing = { beforeMm, afterMm: travelDistance(out) };
     return out;
   }
@@ -298,23 +318,26 @@ export function layersToStrands(layers, { layerHeight = 0.2, strandWidth = 0.45,
   layers.forEach((polylines, k) => {
     const flat = polylines
       .filter((p) => p.length >= 2)
-      .map((p, i) => ({ id: `l${k + 1}-${i + 1}`, layer: k, kind: k === 0 ? 'base' : 'supported', name: `Layer ${k + 1}`, pts: p.map((q) => ({ x: q.x, y: q.y, z: layerHeight * (k + 1) })) }));
+      .map((p, i) => ({ ...provenance(p, k), id: `l${k + 1}-${i + 1}`, layer: k, kind: k === 0 ? 'base' : 'supported', name: `Layer ${k + 1}`, pts: p.map((q) => ({ x: q.x, y: q.y, z: layerHeight * (k + 1), ...(q.flow !== undefined ? { flow: q.flow } : {}) })) }));
     // a strand crosses its own earlier pass in the layer: lift over it by a little more than a layer
     const settled = resolveCrossings(flat, { lift: layerHeight * 1.25, strandWidth, ramp }).strands;
     settled.forEach((s, i) => {
       s.pts = s.pts.map(({ cls, ...p }) => p); // the layer keeps its own colour role
-      if (colorChange && k > 0 && i === 0) s.pauseBefore = true;
     });
     appendPoints(strands, settled);
   });
-  return strands;
+  if(transform){const changed=transform(strands,cfg);if(Array.isArray(changed))strands.splice(0,strands.length,...changed);}
+  if(clearance){const ordered=clearanceOrder(strands,{tipRadius:nozzleTipRadius,coneHalfAngle:nozzleConeHalfAngle,layerHeight,bead:strandWidth,...(typeof clearance==="object"?clearance:{})});strands.splice(0,strands.length,...ordered.strands);strands.clearance={split:ordered.split,conflicts:ordered.conflicts};}
+  const clearanceMeta=strands.clearance,out=applyColourPlan(strands, { mode: colorChange ? 'face' : 'one' });
+  if(clearanceMeta)out.clearance=clearanceMeta;
+  return out;
 }
 
 /**
  * End to end for a layered design: machine, material and layers of polylines in, moves, stats, G-code and report out.
  * @param layers  array of layers, each an array of polylines of { x, y } in mm
  */
-export function layeredResult(machine, material, { width, height, layers, colorChange = false, outline = null, extra = {}, ramp = 1.6, inset, optimizeTravel = false }) {
+export function layeredResult(machine, material, { width, height, layers, families, source, colorChange = false, outline = null, extra = {}, ramp = 1.6, inset, optimizeTravel = false, planes = false, transform = extra.transform ?? null }) {
   const cfg = resolveConfig(machine, material, { sample_width: width, sample_height: height });
   const fit = bedFitErrors(cfg);
   if (fit.length > 0) throw new PreflightError(fit);
@@ -322,7 +345,7 @@ export function layeredResult(machine, material, { width, height, layers, colorC
   if (points > MAX_MOVES) {
     throw new ConfigError([`This layout would need about ${points.toLocaleString('en')} moves; the limit is ${MAX_MOVES.toLocaleString('en')}. Use wider spacing, larger cells or a smaller swatch.`]);
   }
-  const strands = layersToStrands(layers, { layerHeight: cfg.t.layer_height, strandWidth: cfg.t.extrusion_width, colorChange, ramp, boundary: boundaryFor(width, height, outline), coherent: true, inset, optimizeTravel });
+  const strands = layersToStrands(layers, { families: families ?? extra.families, source, layerHeight: cfg.t.layer_height, strandWidth: cfg.t.extrusion_width, colorChange, ramp, boundary: boundaryFor(width, height, outline), coherent: !planes, inset, optimizeTravel, clearance:extra.clearanceOrder&&typeof extra.clearanceOrder==="object"?extra.clearanceOrder:!!extra.clearanceOrder, nozzleTipRadius:cfg.t.nozzle_tip_radius, nozzleConeHalfAngle:cfg.t.nozzle_cone_half_angle, transform, cfg });
   const moves = emitStrands(strands, { retraction: cfg.derived.retraction });
   const stats = computeStats(moves, cfg, []);
   stats.loops = 0;
@@ -334,5 +357,11 @@ export function layeredResult(machine, material, { width, height, layers, colorC
   const gcode = writeGcode(moves, cfg, { stats });
   const warnings = [];
   if (moves.length === 0) warnings.push('Nothing to print: the outline is too small for these settings');
-  return finishFabric({ cfg, strands, moves, stats, warnings, gcode, outline, report, routing: strands.routing, ...extra });
+  const intendedFamilies = [...new Set(layers.flatMap((list, k) => {
+    if (list.role === 'carrier') return [];
+    const native = list.filter((p) => !['carrier', 'tie'].includes(p.role));
+    return native.length ? native.map((p) => p.family ?? list.family ?? families?.[k] ?? extra.families?.[k] ?? `L${k + 1}`) : !list.length ? [list.family ?? families?.[k] ?? extra.families?.[k] ?? `L${k + 1}`] : [];
+  }))];
+  const { transform: _transform, ...publicExtra } = extra;
+  return finishFabric({ cfg, strands, moves, stats, warnings, gcode, outline, report, routing: strands.routing, ...(strands.clearance?{clearance: {...strands.clearance}}:{}), ...publicExtra, intendedFamilies });
 }

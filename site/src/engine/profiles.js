@@ -1,3 +1,4 @@
+import { sanitizeWidthMaps } from './width-maps.js';
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
 
 function need(errors, cond, message) {
@@ -64,6 +65,7 @@ export function validateMaterial(m) {
   need(errors, isNum(t.print) && t.print > 0 && t.print <= 300, 'temperature.print must be in 1-300');
   need(errors, isNum(m.bed_temperature) && m.bed_temperature >= 0 && m.bed_temperature <= 120, 'bed_temperature must be in 0-120');
   const f = m.flow || {};
+  if(f.width_maps!=null){try{sanitizeWidthMaps(f.width_maps);}catch(error){errors.push(`flow.width_maps: ${error.message}`);}}
   need(errors, isNum(f.multiplier) && f.multiplier > 0, 'flow.multiplier must be > 0');
   need(errors, isNum(f.max_volumetric_speed_nominal) && f.max_volumetric_speed_nominal > 0, 'flow.max_volumetric_speed_nominal must be > 0');
   need(errors, isNum(f.foam_expansion) && f.foam_expansion >= 1, 'flow.foam_expansion must be >= 1');

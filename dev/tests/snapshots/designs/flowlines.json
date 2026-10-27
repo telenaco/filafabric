@@ -1,0 +1,82 @@
+[
+  {
+    "card": "flowlines",
+    "preset": "default",
+    "settingsHash": "72eaccba4d13",
+    "gcodeSha256": "9ee89f0e35073056b724d6f2c47b66ecdbdea01e99c11b6fee70cdaeb8f1c3fa",
+    "strands": 21,
+    "moves": 1189,
+    "extrudeMm": 830,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "flowlines",
+    "preset": "ripples",
+    "settingsHash": "72eaccba4d13",
+    "gcodeSha256": "9ee89f0e35073056b724d6f2c47b66ecdbdea01e99c11b6fee70cdaeb8f1c3fa",
+    "strands": 21,
+    "moves": 1189,
+    "extrudeMm": 830,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "flowlines",
+    "preset": "whirlpool",
+    "settingsHash": "802dc8025398",
+    "gcodeSha256": "c7fe06c5b2a5081c4015431f523d7e9136b3218fe87e3d001a229dcfa113c999",
+    "strands": 24,
+    "moves": 1371,
+    "extrudeMm": 924.9,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "flowlines",
+    "preset": "eddies",
+    "settingsHash": "718dce4f6979",
+    "gcodeSha256": "8231f2d75aab3468a664ca91b38f563ca223c087b93eb7b1c45595c0c8eb5563",
+    "strands": 21,
+    "moves": 2049,
+    "extrudeMm": 929.9,
+    "zMin": 0.2,
+    "zMax": 0.5989281918477325,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "flowlines",
+    "preset": "marble",
+    "settingsHash": "f5495ac64d73",
+    "gcodeSha256": "ba4218cd75a7baa770c13c063985b8b9c4721e2dedd5b56d1635e1a3cc49d6d6",
+    "strands": 27,
+    "moves": 1256,
+    "extrudeMm": 850.8,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  }
+]

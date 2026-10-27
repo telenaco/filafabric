@@ -1,0 +1,19 @@
+[
+  {
+    "card": "scales",
+    "preset": "default",
+    "settingsHash": "d7d97d3ea950",
+    "gcodeSha256": "ec0e951d262d7e4be7bc5d0ac77fbf7129ebdc09a1ff64c3bf0d63019b1cce70",
+    "strands": 43,
+    "moves": 1992,
+    "extrudeMm": 8172.2,
+    "zMin": 0.2,
+    "zMax": 0.6000000000000001,
+    "families": [
+      "carrier",
+      "scales-1",
+      "scales-2"
+    ],
+    "ties": 0
+  }
+]

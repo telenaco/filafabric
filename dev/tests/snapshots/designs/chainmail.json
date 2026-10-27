@@ -1,0 +1,66 @@
+[
+  {
+    "card": "chainmail",
+    "preset": "default",
+    "settingsHash": "93fcb0be715d",
+    "gcodeSha256": "2fb40d227b9a95d33b807e8e1d2e532860fe34bdec35979bc188d5647a4ce088",
+    "strands": 2,
+    "moves": 4231,
+    "extrudeMm": 1722.7,
+    "zMin": 0.2,
+    "zMax": 0.6464212463713261,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "chainmail",
+    "preset": "mail",
+    "settingsHash": "93fcb0be715d",
+    "gcodeSha256": "2fb40d227b9a95d33b807e8e1d2e532860fe34bdec35979bc188d5647a4ce088",
+    "strands": 2,
+    "moves": 4231,
+    "extrudeMm": 1722.7,
+    "zMin": 0.2,
+    "zMax": 0.6464212463713261,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "chainmail",
+    "preset": "fine",
+    "settingsHash": "49925a91e2c3",
+    "gcodeSha256": "e62beac983e499deba989a29e1607200d600ac48756d800f0fcdeafa6af63980",
+    "strands": 2,
+    "moves": 9180,
+    "extrudeMm": 2978.2,
+    "zMin": 0.2,
+    "zMax": 0.680805514053058,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "chainmail",
+    "preset": "loose",
+    "settingsHash": "1055de06bce2",
+    "gcodeSha256": "73a17d13b43a3437cd56a493c651104553456159a8a478fd1794f21562532ffe",
+    "strands": 2,
+    "moves": 2271,
+    "extrudeMm": 1050.7,
+    "zMin": 0.2,
+    "zMax": 0.6186652731944586,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  }
+]

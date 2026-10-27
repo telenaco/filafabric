@@ -1,0 +1,148 @@
+[
+  {
+    "card": "meander",
+    "preset": "default",
+    "settingsHash": "b6844c3b4f31",
+    "gcodeSha256": "ffdbc1f4430d647e57eb7abe2e9385794183f11ad6d455695fcefd72fb44ca92",
+    "strands": 12,
+    "moves": 887,
+    "extrudeMm": 583.8,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "carrier-1",
+      "motif"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "meander",
+    "preset": "hilbert",
+    "settingsHash": "b6844c3b4f31",
+    "gcodeSha256": "ffdbc1f4430d647e57eb7abe2e9385794183f11ad6d455695fcefd72fb44ca92",
+    "strands": 12,
+    "moves": 887,
+    "extrudeMm": 583.8,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "carrier-1",
+      "motif"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "meander",
+    "preset": "peano",
+    "settingsHash": "148269c99062",
+    "gcodeSha256": "586aa23db2bced44847fadc0c1ecb940a9559b2a3fb20187ee9e4bb9fbfcd780",
+    "strands": 12,
+    "moves": 858,
+    "extrudeMm": 606.7,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "carrier-1",
+      "motif"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "meander",
+    "preset": "maze",
+    "settingsHash": "ceb4c4949d84",
+    "gcodeSha256": "7ae364a0f9c1a3cb27bb8ef259b0ef0bbd3834166980222f1c0ac588e0bbd353",
+    "strands": 12,
+    "moves": 788,
+    "extrudeMm": 598.9,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "carrier-1",
+      "motif"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "meander",
+    "preset": "stipple",
+    "settingsHash": "c65369f181a2",
+    "gcodeSha256": "375c9d4ece209b450c3b51f5392e395d2e721f0775778aba3b23ac9a68d5c6f8",
+    "strands": 16,
+    "moves": 713,
+    "extrudeMm": 478,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "carrier-1",
+      "motif",
+      "ties"
+    ],
+    "ties": 4
+  },
+  {
+    "card": "meander",
+    "preset": "moore",
+    "settingsHash": "3d9e0148c989",
+    "gcodeSha256": "fc6f9eb773cad188467a3d546f419ff524ae0bd76def07572f5291cf9a13150c",
+    "strands": 12,
+    "moves": 888,
+    "extrudeMm": 582.5,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "carrier-1",
+      "motif"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "meander",
+    "preset": "sierpinski",
+    "settingsHash": "83515ff43f51",
+    "gcodeSha256": "35bed79c939799ec61c81169dbdf81c094d384461c8c45c60a25527ac9c6cb35",
+    "strands": 14,
+    "moves": 966,
+    "extrudeMm": 552.1,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "carrier-1",
+      "motif"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "meander",
+    "preset": "flowsnake",
+    "settingsHash": "41528c86d74a",
+    "gcodeSha256": "c51d3e66f6d7bde4f65d912b1a89aa5d50398e4c96b4748ab46a40e310745793",
+    "strands": 24,
+    "moves": 1320,
+    "extrudeMm": 813.8,
+    "zMin": 0.2,
+    "zMax": 0.4309309825591031,
+    "families": [
+      "carrier-1",
+      "motif"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "meander",
+    "preset": "open",
+    "settingsHash": "c0a55b67cc14",
+    "gcodeSha256": "9dabc1bc45c518f3a0773ba5a5efebc7e627da2bc494f1e5312abfb579551605",
+    "strands": 12,
+    "moves": 490,
+    "extrudeMm": 353.8,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "carrier-1",
+      "motif",
+      "ties"
+    ],
+    "ties": 2
+  }
+]

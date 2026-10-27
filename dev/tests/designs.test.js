@@ -2,27 +2,25 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as selection from '../../site/src/ui/designs.js';
 
-test('opening Squiggle from its Zigzag tile restores the base variant and retains custom controls', () => {
-  assert.equal(typeof selection.baseDesignSettings, 'function');
-  const original = { ...selection.DESIGNS.find((d) => d.id === 'squiggle').defaults(), shape: 'zigzag', mode: 'parallel', width: 80, height: 65, spacing: 0.8, amplitude: 6 };
-  const selected = selection.baseDesignSettings('squiggle', original);
-  assert.equal(selected.shape, 'wave');
-  assert.equal(selected.mode, 'cross');
+test('each Squiggle card fixes its own strand shape while retaining user settings', () => {
+  const card = selection.DESIGNS.find((d) => d.id === 'squiggle-zigzag');
+  const original = { ...card.defaults(), shape: 'wave', mode: 'parallel', width: 80, height: 65, spacing: 0.8, amplitude: 6 };
+  const selected = card.sanitize(original);
+  assert.equal(selected.shape, 'zigzag');
+  assert.equal(selected.mode, 'parallel');
   assert.equal(selected.width, 80);
   assert.equal(selected.height, 65);
   assert.equal(selected.spacing, 0.8);
   assert.equal(selected.amplitude, 6);
-  assert.equal(original.shape, 'zigzag', 'selection does not mutate saved settings');
-  const custom = { ...original, shape: 'ring' };
-  assert.deepEqual(selection.baseDesignSettings('squiggle', custom), custom, 'unrelated custom variants are preserved');
+  assert.equal(original.shape, 'wave', 'sanitizing does not mutate saved settings');
 });
 import { DESIGNS, designById, READY_IDS, isReady } from '../../site/src/ui/designs.js';
 import { defaultProfiles } from './helpers.js';
 
 test('loop pile and squiggle come first and are ready', () => {
   assert.deepEqual(READY_IDS.slice(0, 2), ['loop-pile', 'squiggle']);
-  assert.equal(designById('loop-pile').legacy, true);
-  assert.equal(designById('squiggle').legacy, true);
+  assert.equal(designById('loop-pile').legacyPanel, true);
+  assert.equal(designById('squiggle').legacyPanel, undefined);
 });
 
 test('every module is complete', () => {
@@ -61,19 +59,19 @@ test('planned and preset tiles are not loadable designs, unknown ids are not rea
 
 test('the library holds every structure of the catalogue, all of them ready', () => {
   const ready = DESIGNS.filter((d) => d.status === 'ready').map((d) => d.id);
-  assert.deepEqual(ready.slice(0, 8), ['loop-pile', 'squiggle', 'coil', 'weave', 'spiral', 'boucle', 'relief', 'fringe']);
+  assert.deepEqual(ready.slice(0, 8), ['loop-pile', 'squiggle', 'square-net', 'honeycomb-layered', 'figure8-net', 'looped-net', 'squiggle-rings', 'squiggle-zigzag']);
   assert.deepEqual(DESIGNS.filter((d) => d.status === 'planned'), []);
 });
 
 test('every newer design describes itself completely, so the studio needs no per-design code', () => {
-  for (const d of DESIGNS.filter((x) => x.status === 'ready' && !x.legacy)) {
+  for (const d of DESIGNS.filter((x) => x.status === 'ready' && !x.legacyPanel)) {
     for (const k of ['about', 'ranges', 'size', 'setSize', 'describe', 'controls', 'generate', 'verdict', 'figure', 'summary']) assert.ok(d[k], `${d.id}.${k}`);
     const s = d.defaults();
     const [w, h] = d.size(s);
     assert.ok(w > 0 && h > 0);
     d.setSize(s, 60, 40);
     assert.deepEqual(d.size(s), [60, 40]);
-    for (const c of d.controls) assert.ok(['presets', 'size', 'shape', 'choice', 'sliders', 'pattern', 'switch'].includes(c.kind), `${d.id} control ${c.kind}`);
+    for (const c of d.controls) assert.ok(['presets', 'size', 'shape', 'choice', 'petal', 'draft', 'sliders', 'pattern', 'switch', 'colour', 'support'].includes(c.kind), `${d.id} control ${c.kind}`);
     for (const c of d.controls.filter((x) => x.kind === 'sliders')) {
       for (const item of c.items) assert.ok(d.ranges[item.key], `${d.id} slider ${item.key} has a range`);
     }
@@ -83,7 +81,7 @@ test('every newer design describes itself completely, so the studio needs no per
 
 test('every newer design prints its defaults (at the full default size), and again from every preset, with a verdict and a figure', () => {
   const { machine, material } = defaultProfiles();
-  for (const d of DESIGNS.filter((x) => x.status === 'ready' && !x.legacy)) {
+  for (const d of DESIGNS.filter((x) => x.status === 'ready' && !x.legacyPanel)) {
     // presets on a smaller swatch, to keep the suite quick; the defaults as the studio opens them
     const presets = (d.presets ?? []).map((p) => {
       const s = d.sanitize({ ...d.defaults(), ...p.patch });

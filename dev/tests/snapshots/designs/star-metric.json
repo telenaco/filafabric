@@ -1,0 +1,66 @@
+[
+  {
+    "card": "star-metric",
+    "preset": "default",
+    "settingsHash": "e976385c55f0",
+    "gcodeSha256": "819d13298875706839dda0d2c8d0647c74df7744726e409e381c759dbb59e21f",
+    "strands": 26,
+    "moves": 995,
+    "extrudeMm": 456.8,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "border",
+      "walls"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "star-metric",
+    "preset": "tri-petal",
+    "settingsHash": "e976385c55f0",
+    "gcodeSha256": "819d13298875706839dda0d2c8d0647c74df7744726e409e381c759dbb59e21f",
+    "strands": 26,
+    "moves": 995,
+    "extrudeMm": 456.8,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "border",
+      "walls"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "star-metric",
+    "preset": "square-petal",
+    "settingsHash": "3af7cb3a7fdb",
+    "gcodeSha256": "61cd7b48c58162e5b6ccccad1a4861df20e7532ef4ab1e20cdf2484f47389862",
+    "strands": 8,
+    "moves": 704,
+    "extrudeMm": 373.5,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "border",
+      "walls"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "star-metric",
+    "preset": "hex-petal",
+    "settingsHash": "d565e92950d4",
+    "gcodeSha256": "565311627832c11538e7ffb27a37ee1ebb7044830bdc7f1d5a3c5e45e56a1169",
+    "strands": 49,
+    "moves": 1587,
+    "extrudeMm": 602.3,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "border",
+      "walls"
+    ],
+    "ties": 0
+  }
+]

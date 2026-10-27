@@ -1,0 +1,62 @@
+[
+  {
+    "card": "spiral-cells",
+    "preset": "default",
+    "settingsHash": "7b43b39f2ebc",
+    "gcodeSha256": "af3f222ac0dff4254e644dd11d056168789d987e9bf99a0f09ea2cf4a1fc1562",
+    "strands": 30,
+    "moves": 607,
+    "extrudeMm": 239.6,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "arms"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "spiral-cells",
+    "preset": "balanced",
+    "settingsHash": "7b43b39f2ebc",
+    "gcodeSha256": "af3f222ac0dff4254e644dd11d056168789d987e9bf99a0f09ea2cf4a1fc1562",
+    "strands": 30,
+    "moves": 607,
+    "extrudeMm": 239.6,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "arms"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "spiral-cells",
+    "preset": "tight",
+    "settingsHash": "be08814f618e",
+    "gcodeSha256": "50c2a4a3dd5b5e200e4950ccbf4c8dc3559e9af79e12112f0ccb3aa6cf56472d",
+    "strands": 30,
+    "moves": 679,
+    "extrudeMm": 299,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "arms"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "spiral-cells",
+    "preset": "reverse",
+    "settingsHash": "0ece61145030",
+    "gcodeSha256": "4690b58045d49576be50854ed567dd01f04a1b3d3d73a05fd4d7c8a4479c4d01",
+    "strands": 30,
+    "moves": 607,
+    "extrudeMm": 239.6,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "arms"
+    ],
+    "ties": 0
+  }
+]

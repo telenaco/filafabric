@@ -8,10 +8,15 @@ import { PolygonBoundary } from './boundary.js';
 import { MAX_MOVES } from './tiler.js';
 import { plan } from './planner.js';
 import { segmentContact } from './fabric.js';
+import { applyColourPlan } from './colour-plan.js';
 
 const minimumZ = (s) => s.pts.reduce((z, p) => Math.min(z, p.z), Infinity);
 const maximumZ = (s) => s.pts.reduce((z, p) => Math.max(z, p.z), -Infinity);
 const raisedDesign = (r) => !!(r.placements?.length || r.fringe || r.relief || r.spacer || r.pillarWeave);
+// A designed joint is coplanar only within its own printed pass. Reusing its ID
+// across copies would hide real crossings with previously printed material.
+const copiedJoints = (strand, pass) => strand.joints?.length
+  ? { joints: strand.joints.map(joint=>({...joint,id:`${joint.id}~${pass}`})) } : {};
 
 /** Backing passes only: exclude the actual raised loops, pillar rings and upper net. */
 function backingGroups(result) {
@@ -36,7 +41,7 @@ function nativeGroups(result) {
   const body = (result.strands ?? []).filter((s) => !s.brim && !s.fixed);
   const groups = new Map(), ties = [];
   for (const s of body) {
-    if (s.name === 'Structural tie') { ties.push(s); continue; }
+    if (s.role === 'tie') { ties.push(s); continue; }
     const key = s.layer ?? s.name ?? (s.kind === 'base' ? `base-${Math.round(minimumZ(s) * 1e6)}` : 'pattern');
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(s);
@@ -81,7 +86,7 @@ function reinforceBacking(result, count, info) {
   const extras = [], sequence = [];
   for (let k=0;k<count;k++) {
     const index = (phase+k)%groups.length;
-    for (const s of groups[index]) extras.push({ ...s, id: `${s.id}~backing-${k+1}`, extraLayer: k+1,
+    for (const s of groups[index]) extras.push({ ...s, ...copiedJoints(s,`backing-${k+1}`), id: `${s.id}~backing-${k+1}`, extraLayer: k+1,
       sourceLayer: index, name: `Extra backing ${k+1}`, kind: 'base', pauseBefore: false,
       pts: s.pts.map((p)=>({...p,z:floor+k*h,cls:'base'})) });
     sequence.push(index);
@@ -136,10 +141,12 @@ export function addExtraLayers(result, count = 0, { rotatedResult = null, colorC
       turned = nativeGroups(r)[0];
       if (!turned?.length) throw new ConfigError(['No rotated pattern fits this outline. Use wider spacing or a larger outline.']);
       // The alternate is generated on H × W with an inversely rotated boundary, then turned back to W × H.
-      turned = turned.map((s) => ({ ...s, pts: s.pts.map((p) => ({ ...p, x: width - p.y, y: p.x })) }));
+      turned = turned.map((s) => ({ ...s, family: `${s.family}-r`, pts: s.pts.map((p) => ({ ...p, x: width - p.y, y: p.x })),
+        ...(s.joints?.length?{joints:s.joints.map(p=>({...p,x:width-p.y,y:p.x}))}:{}) }));
     } else {
       if (Math.abs(width - height) > 1e-7) throw new ConfigError(['A rectangular single-layer pattern needs a regenerated 90-degree pass to cover its full outline.']);
-      turned = groups[0].map((s) => ({ ...s, pts: s.pts.map((p) => ({ ...p, x: width - p.y, y: p.x })) }));
+      turned = groups[0].map((s) => ({ ...s, family: `${s.family}-r`, pts: s.pts.map((p) => ({ ...p, x: width - p.y, y: p.x })),
+        ...(s.joints?.length?{joints:s.joints.map(p=>({...p,x:width-p.y,y:p.x}))}:{}) }));
     }
   }
   let projectedPoints = pointCount;
@@ -148,7 +155,7 @@ export function addExtraLayers(result, count = 0, { rotatedResult = null, colorC
     projectedPoints += source.reduce((n, s) => n + s.pts.length + 4, 0);
   }
   if (projectedPoints > MAX_MOVES) throw new ConfigError(['These extra layers would exceed the move limit. Use fewer extra layers, wider spacing or a smaller sample.']);
-  const all = [...original], pause = colorChange || original.some((s) => s.pauseBefore);
+  const all = [...original];
   for (let k = 0; k < count; k++) {
     const index = k % groups.length, rotation = groups.length === 1 && k % 2 === 0 ? 90 : 0;
     const source = rotation ? turned : groups[index];
@@ -157,19 +164,30 @@ export function addExtraLayers(result, count = 0, { rotatedResult = null, colorC
     const rise = (Math.floor(k / groups.length) + 1) * h;
     for (let i = 0; i < source.length; i++) {
       const s = source[i];
-      all.push({ ...s, id: `${s.id}~extra-${k + 1}`, extraLayer: k + 1, sourceLayer: index, rotation,
-        layer: info.nativeLayers + k, kind: 'supported', name: `Extra layer ${k + 1}`, pauseBefore: pause && i === 0,
+      all.push({ ...s, ...copiedJoints(s,`extra-${k+1}`), id: `${s.id}~extra-${k + 1}`, extraLayer: k + 1, sourceLayer: index, rotation,
+        layer: info.nativeLayers + k, kind: 'supported', name: `Extra layer ${k + 1}`, pauseBefore: false,
         pts: s.pts.map((p) => ({ ...p, z: p.z + rise, cls: 'supported' })) });
     }
     layerPlan.sequence.push(index); layerPlan.rotations.push(rotation);
   }
   if (all.reduce((n, s) => n + s.pts.length + 4, 0) > MAX_MOVES) throw new ConfigError(['These extra layers exceed the move limit. Use fewer extra layers or wider spacing.']);
-  const settled = resolveCrossings(all, { follow: true, preserve: true, lift: h, strandWidth: bead });
-  const strands = settled.strands, moves = emitStrands(strands, { retraction: cfg.derived.retraction });
+  let settled = resolveCrossings(all, { follow: true, preserve: true, lift: h, strandWidth: bead });
+  const colours = { mode: colorChange ? 'face' : result.colourPlan?.mode ?? (original.some(s => s.pauseBefore) ? 'face' : 'one'), layerColours: result.colourPlan?.layerColours };
+  let strands = applyColourPlan(settled.strands, colours);
+  const boundary = new PolygonBoundary(result.outline ?? [[{ x: 0, y: 0 }, { x: width, y: 0 }, { x: width, y: height }, { x: 0, y: height }]]);
+  let fabric = analyzeFabric(strands, { strandWidth: bead, layerHeight: h, boundary });
+  if (fabric.reversedCrossings) {
+    // Re-inserting exact crossing knots can reveal a near-collinear crossing that
+    // wasn't present in the source segments. Validate and settle the emitted geometry,
+    // not just its source; never download an inverted extra-layer toolpath.
+    settled = resolveCrossings(strands, { follow: true, preserve: true, lift: h, strandWidth: bead });
+    strands = applyColourPlan(settled.strands, colours);
+    fabric = analyzeFabric(strands, { strandWidth: bead, layerHeight: h, boundary });
+    if (fabric.reversedCrossings) throw new ConfigError(['These extra layers cannot be printed in a safe crossing order. Change the layer count or pattern settings.']);
+  }
+  const moves = emitStrands(strands, { retraction: cfg.derived.retraction });
   if (moves.length > MAX_MOVES) throw new ConfigError(['The extra-layer crossing paths exceed the move limit. Use fewer extra layers or wider spacing.']);
   const stats = { ...result.stats, ...computeStats(moves, cfg, []), loops: result.stats.loops, crossings: settled.crossings };
-  const boundary = new PolygonBoundary(result.outline ?? [[{ x: 0, y: 0 }, { x: width, y: 0 }, { x: width, y: height }, { x: 0, y: height }]]);
-  const fabric = analyzeFabric(strands, { strandWidth: bead, layerHeight: h, boundary });
   const warnings = [...(result.warnings ?? []).filter((w) => !(result.fabric?.issues ?? []).includes(w)), ...fabric.issues];
   const comments = [...originalNotes(result), `Layers: ${info.nativeLayers} original + ${count} extra = ${layerPlan.totalLayers}; ${groups.length === 1 ? 'single-layer pattern alternates 0/90 degrees' : 'original pattern passes repeat in order'}; SVG base prints once`];
   return { ...result, strands, moves, stats, fabric, warnings, layerPlan, stack: { extraLayers: count, nativeLayers: info.nativeLayers },
@@ -199,7 +217,7 @@ export function stackStrands(strands, count, { layerHeight = 0.2, strandWidth = 
   const all = [];
   for (let k = 0; k < copies; k++) {
     for (const s of strands) {
-      all.push({ ...s, id: `${s.id}~${k + 1}`, copy: k, pts: s.pts.map((p) => ({ ...p, z: p.z + k * layerHeight })) });
+      all.push({ ...s, ...copiedJoints(s,`copy-${k+1}`), id: `${s.id}~${k + 1}`, copy: k, pts: s.pts.map((p) => ({ ...p, z: p.z + k * layerHeight })) });
     }
   }
   const settled = resolveCrossings(all, { follow: true, preserve: true, lift: layerHeight, strandWidth }).strands;

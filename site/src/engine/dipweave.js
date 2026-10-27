@@ -12,6 +12,8 @@ export const MIN_DIP_PITCH = 2.5; // mm between lines: the least that lets the n
 export function dipweaveLayers(boundary, { warpPitch = 3.5, weftPitch = 3.5 } = {}) {
   const warp = hatch(boundary, { angle: 90, spacing: warpPitch });
   const weft = hatch(boundary, { angle: 0, spacing: weftPitch, offset: 0.25 });
+  for (const path of warp) { path.family = 'warp'; path.role = 'native'; }
+  for (const path of weft) { path.family = 'weft'; path.role = 'native'; }
   // one layer: the weft comes after the warp, so crossings lift the weft over it
   return { layers: [[...warp, ...weft]], extra: { warpPitch, weftPitch } };
 }

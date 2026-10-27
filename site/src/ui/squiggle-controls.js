@@ -12,6 +12,7 @@ export const SQ_RANGES = Object.freeze({
 
 import { SHAPE_IDS } from '../engine/shapes.js';
 import { FIELD_IDS } from '../engine/fields.js';
+import { defineControls } from './structure-controls.js';
 
 export const SQ_MODES = Object.freeze(['cross', 'parallel']);
 
@@ -51,6 +52,15 @@ export function sanitizeSquiggle(raw) {
   if (typeof raw.colorChange === 'boolean') out.colorChange = raw.colorChange;
   return out;
 }
+
+/** The registry-facing controls record used by the library cards. */
+export const SQUIGGLE = defineControls({
+  ranges: SQ_RANGES,
+  defaults: SQUIGGLE_DEFAULTS,
+  enums: { mode: SQ_MODES, shape: SQ_SHAPES, pattern: SQ_PATTERNS },
+  bools: ['colorChange'],
+  describe: describeSquiggle,
+});
 
 /** Plain-language read-outs shown beside the sliders. */
 export function describeSquiggle(s) {

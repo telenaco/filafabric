@@ -116,7 +116,7 @@ test('an existing prime macro and later modal changes are both normalized', () =
 test('SVG design preview crops a full-size drawing without shrinking its coordinates', () => {
   const { machine, material } = defaultProfiles(), d = DESIGNS.find((d) => d.id === 'svgdesign');
   const vector = { name: 'wide.svg', width: 1000, height: 1000, paths: [[{ x: 10, y: 20 }, { x: 900, y: 20 }], [{ x: 700, y: 700 }, { x: 900, y: 700 }]] };
-  const r = d.generate(machine, material, { ...d.defaults(), width: 100, height: 100, mode: 'outline', backing: 'none' }, { vector, vectorSize: [1000, 1000] });
+  const r = d.generate(machine, material, d.sanitize({ width: 100, height: 100, mode: 'outline', backing: 'none' }), { vector, vectorSize: [1000, 1000] });
   assert.equal(r.svgDesign.sample, false);
   assert.ok(r.strands.length > 0);
   assert.ok(r.strands.every((s) => s.pts.every((p) => Math.abs(p.y - 20) < 1e-7)));
@@ -127,7 +127,7 @@ test('SVG design panel exports the actual document once instead of sample hearts
   const { machine, material } = defaultProfiles(), d = DESIGNS.find((d) => d.id === 'svgdesign');
   const vector = { name: 'single-line.svg', width: 60, height: 30, paths: [[{ x: 2, y: 7 }, { x: 58, y: 7 }]] };
   let text = '';
-  const r = await exportPanel({ machine, material, design: 'svgdesign', settings: { ...d.defaults(), mode: 'outline', backing: 'none' }, brim: 0, width: 60, height: 30, repeat: 30, vector }, { write: async (s) => { text += s; } });
+  const r = await exportPanel({ machine, material, design: 'svgdesign', settings: d.sanitize({ mode: 'outline', backing: 'none' }), brim: 0, width: 60, height: 30, repeat: 30, vector }, { write: async (s) => { text += s; } });
   assert.equal(r.sections, 2);
   const sections = text.slice(text.indexOf('; texture section 1'), text.indexOf('; BODY END'));
   assert.doesNotMatch(sections, /\bE\d/, 'no sample geometry in either texture section');

@@ -1,0 +1,65 @@
+[
+  {
+    "card": "kirigami",
+    "preset": "default",
+    "settingsHash": "0af6ecd4f8ff",
+    "gcodeSha256": "812b4f32663f5f500ecfbcd55aa2fdd8a29b40e6d3d27a7a1f556499cbcd83a9",
+    "strands": 386,
+    "moves": 20947,
+    "extrudeMm": 6354.7,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "fill-0",
+      "fill-90"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "kirigami",
+    "preset": "robust-two-pass",
+    "settingsHash": "0af6ecd4f8ff",
+    "gcodeSha256": "812b4f32663f5f500ecfbcd55aa2fdd8a29b40e6d3d27a7a1f556499cbcd83a9",
+    "strands": 386,
+    "moves": 20947,
+    "extrudeMm": 6354.7,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "fill-0",
+      "fill-90"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "kirigami",
+    "preset": "single-pass",
+    "settingsHash": "92b2572a1efe",
+    "gcodeSha256": "3635e90d2e2366066890b8e32b74ca539b382ba9142eb9bfc2fb2455ae1bfd52",
+    "strands": 99,
+    "moves": 12892,
+    "extrudeMm": 3157.8,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "fill-0"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "kirigami",
+    "preset": "open",
+    "settingsHash": "8322e9baddae",
+    "gcodeSha256": "c9cc532a553641317aba83ac3b6a86cfc219a9d36b8efae4ef214a26794d1dcd",
+    "strands": 265,
+    "moves": 23359,
+    "extrudeMm": 6468.4,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "fill-0",
+      "fill-90"
+    ],
+    "ties": 0
+  }
+]

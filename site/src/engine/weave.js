@@ -43,6 +43,26 @@ export const WEAVE_BINDINGS = Object.freeze({
 
 export const WEAVE_BINDING_IDS = Object.freeze(Object.keys(WEAVE_BINDINGS));
 
+/** Starter drafts use zero-based shaft and treadle ids and can be edited without changing the named binding cards. */
+export const WEAVE_DRAFT_PRESETS = Object.freeze({
+  'point-twill': Object.freeze({ threading:Object.freeze([0,1,2,3,2,1]), tieup:Object.freeze([[true,false,false,true],[true,true,false,false],[false,true,true,false],[false,false,true,true]].map(Object.freeze)), treadling:Object.freeze([0,1,2,3]) }),
+  block: Object.freeze({ threading:Object.freeze([0,0,1,1]), tieup:Object.freeze([[true,false],[false,true]].map(Object.freeze)), treadling:Object.freeze([0,1]) }),
+  herringbone: Object.freeze({ threading:Object.freeze([0,1,2,3,2,1]), tieup:Object.freeze([[true,false,false,true],[true,true,false,false],[false,true,true,false],[false,false,true,true]].map(Object.freeze)), treadling:Object.freeze([0,1,2,3]) }),
+});
+
+/** Turn a finite shaft/treadle draft into a checked repeating weave binding. */
+export function draftBinding({threading,tieup,treadling}={}){
+  const fail=message=>{throw new ConfigError([message]);};
+  if(!Array.isArray(threading)||!threading.length||threading.length>32||threading.some(n=>!Number.isInteger(n)||n<0||n>7))fail('Threading must contain 1–32 shaft numbers from 0 to 7.');
+  if(!Array.isArray(treadling)||!treadling.length||treadling.length>32||treadling.some(n=>!Number.isInteger(n)||n<0||n>7))fail('Treadling must contain 1–32 treadle numbers from 0 to 7.');
+  if(!Array.isArray(tieup)||!tieup.length||tieup.length>8||tieup.some(row=>!Array.isArray(row)||!row.length||row.length>8||row.some(value=>typeof value!=='boolean')))fail('Tie-up must be a boolean matrix of at most 8 shafts by 8 treadles.');
+  if(threading.some(shaft=>shaft>=tieup.length)||treadling.some(treadle=>tieup.some(row=>treadle>=row.length)))fail('Threading and treadling refer to a shaft or treadle missing from the tie-up.');
+  const over=(i,j)=>tieup[threading[((i%threading.length)+threading.length)%threading.length]][treadling[((j%treadling.length)+treadling.length)%treadling.length]];
+  for(let i=0;i<threading.length;i++){const values=treadling.map((_,j)=>over(i,j));if(!values.includes(true)||!values.includes(false))fail(`Warp ${i+1} is never both over and under; the draft would leave a flap.`);}
+  for(let j=0;j<treadling.length;j++){const values=threading.map((_,i)=>over(i,j));if(!values.includes(true)||!values.includes(false))fail(`Weft ${j+1} is never both over and under; the draft would leave a flap.`);}
+  return Object.freeze({id:'draft',label:'Your draft',hint:'Your repeating threading, tie-up and treadling',over});
+}
+
 export const MAX_PIECES = 12000;
 const STEP = 0.5;
 const smooth = (t) => {
@@ -99,7 +119,7 @@ function linePieces({ axis, c, from, to, crossings, z1, z2, ramp }) {
  *          then all upper pieces), each piece a strand so there is a lift between them
  */
 export function generateWeaveTextile({ width, height, pitch = 4, binding = 'plain', layerHeight = 0.2, strandWidth = 0.45, boundary = null, whole = true }) {
-  const spec = WEAVE_BINDINGS[binding];
+  const spec = typeof binding==='object'&&typeof binding.over==='function'?binding:WEAVE_BINDINGS[binding];
   if (!spec) throw new Error(`Unknown weave binding: ${binding}`);
   const warnings = [];
   const z1 = layerHeight;
@@ -125,6 +145,8 @@ export function generateWeaveTextile({ width, height, pitch = 4, binding = 'plai
   const pieces = []; // { level, pts, order }
   let crossings = 0;
   let order = 0;
+  let longFloat=false;
+  const checkFloats=marks=>{let run=0,last=null;for(const mark of marks){if(mark.level===last)run++;else{run=1;last=mark.level;}if(run>4)longFloat=true;}};
   for (let i = 0; i < columns; i++) {
     for (const [a, b] of warpSpans(i)) {
       const marks = [];
@@ -132,6 +154,7 @@ export function generateWeaveTextile({ width, height, pitch = 4, binding = 'plai
         if (y(j) > a && y(j) < b && inside(x(i), y(j))) marks.push({ t: y(j), level: spec.over(i, j) ? 1 : 2 });
       }
       crossings += marks.length;
+      checkFloats(marks);
       for (const p of linePieces({ axis: 'x', c: x(i), from: a, to: b, crossings: marks, z1, z2, ramp })) pieces.push({ ...p, order: order++ });
     }
   }
@@ -141,6 +164,7 @@ export function generateWeaveTextile({ width, height, pitch = 4, binding = 'plai
       for (let i = 0; i < columns; i++) {
         if (x(i) > a && x(i) < b && inside(x(i), y(j))) marks.push({ t: x(i), level: spec.over(i, j) ? 2 : 1 });
       }
+      checkFloats(marks);
       for (const p of linePieces({ axis: 'y', c: y(j), from: a, to: b, crossings: marks, z1, z2, ramp })) pieces.push({ ...p, order: order++ });
     }
   }
@@ -172,11 +196,12 @@ export function generateWeaveTextile({ width, height, pitch = 4, binding = 'plai
       const piece = left.splice(pick, 1)[0];
       const pts = reverse ? piece.pts.slice().reverse() : piece.pts;
       at = pts[pts.length - 1];
-      strands.push({ id: `w${id++}`, kind: level === 1 ? 'base' : 'supported', name: level === 1 ? 'Lower strands' : 'Upper strands', pts });
+      strands.push({ id: `w${id++}`, family: `L${level}`, role: 'native', kind: level === 1 ? 'base' : 'supported', name: level === 1 ? 'Lower strands' : 'Upper strands', pts });
     }
   }
   if (strandWidth > pitch - 0.5) warnings.push('The strands are almost as wide as the pitch, so neighbouring lines will touch');
-  return { strands, crossings, pieces: pieces.length, columns, rows, warnings };
+  if(longFloat)warnings.push('Long floats sag and snag (more than four crossings).');
+  return { strands, crossings, pieces: pieces.length, columns, rows, warnings:[...new Set(warnings)] };
 }
 
 /**

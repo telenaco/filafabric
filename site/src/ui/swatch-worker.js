@@ -3,7 +3,7 @@ import { generateDesignExportAsync, compactDesignExport } from '../engine/design
 self.onmessage = async ({ data }) => {
   if (data.type !== 'start') return;
   try {
-    const result = await generateDesignExportAsync(data.input);
+    const result = await generateDesignExportAsync(data.input, { progress: p => self.postMessage({ type:'progress', ...p }) });
     self.postMessage({ type: 'done', result: data.preview ? result : compactDesignExport(result) });
   } catch (error) {
     self.postMessage({ type: 'error', name: error.name, message: error.message });

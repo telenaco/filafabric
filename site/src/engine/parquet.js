@@ -1,7 +1,9 @@
-import { clipPolyline, chainPolylines, densify } from './layers.js';
+import { clipPolyline, densify } from './layers.js';
 import { orderLines } from './flowlines.js';
 import { ConfigError } from './params.js';
 import { fitCount, fitPeriod } from './repeats.js';
+import { nativeBorders } from './repair-geometry.js';
+import { findCrossings } from './crossings.js';
 
 /**
  * Parquet: the floor is cut into blocks or planks, and in every block the first layer runs one way and the second
@@ -68,7 +70,7 @@ export function tiles(tiling, box, { block = 8, ratio = 2, whole = false } = {})
 function serpentine(t, dir, spacing) {
   const len = dir === 'x' ? t.w : t.h, wide = dir === 'x' ? t.h : t.w;
   const n = Math.max(1, Math.round(wide / spacing));
-  const gap = wide / n, inset = Math.min(0.25 * gap, 0.5);
+  const gap = wide / n, inset = 0;
   const pts = [];
   for (let k = 0; k < n; k++) {
     const across = (k + 0.5) * gap;
@@ -88,7 +90,8 @@ function serpentine(t, dir, spacing) {
  *                 chevron points that meet the side edges. A herringbone meets any straight edge at a slant, so its
  *                 planks are cut there whatever their size.
  */
-export function parquetLayers(boundary, { tiling = 'herringbone', block = 8, ratio = 2, spacing = 2, turn = null, whole = true } = {}) {
+export function parquetLayers(boundary, { tiling = 'herringbone', block = 8, ratio = 2, spacing = 2, turn = null, whole = true, bead=.45 } = {}) {
+  if(block<3*bead)throw new ConfigError([`Parquet blocks must be at least ${(3*bead).toFixed(2)} mm: each short serpentine run needs three bead widths for a reliable joint.`]);
   const t = TILINGS[tiling];
   if (!t) throw new Error(`Unknown tiling: ${tiling}`);
   const a = ((turn ?? t.turn) * Math.PI) / 180, c = Math.cos(a), s = Math.sin(a);
@@ -101,7 +104,7 @@ export function parquetLayers(boundary, { tiling = 'herringbone', block = 8, rat
     minY: Math.min(...corners.map((p) => p.y)), maxY: Math.max(...corners.map((p) => p.y)),
   };
 
-  let families;
+  let families, seams=[];
   if (tiling === 'chevron') {
     // zigzags whose runs slant at 45° and turn at every band edge; the second layer is the same zigzag upside down,
     // so in every band the two slant opposite ways
@@ -124,10 +127,34 @@ export function parquetLayers(boundary, { tiling = 'herringbone', block = 8, rat
   } else {
     const list = tiles(tiling, box, { block, ratio, whole: square });
     families = [list.map((q) => serpentine(q, q.along, spacing)), list.map((q) => serpentine(q, q.along === 'x' ? 'y' : 'x', spacing))];
+    const seen=new Set();
+    for(const q of list){
+      const ring=[{x:q.x,y:q.y},{x:q.x+q.w,y:q.y},{x:q.x+q.w,y:q.y+q.h},{x:q.x,y:q.y+q.h}];
+      for(let i=0;i<4;i++){
+        const a=ring[i],b=ring[(i+1)%4],key=[a,b].map(p=>`${p.x.toFixed(5)},${p.y.toFixed(5)}`).sort().join('|');
+        if(seen.has(key))continue;seen.add(key);
+        // The overlap extends beyond the corner into the neighbouring block's turnarounds.
+        const length=Math.hypot(b.x-a.x,b.y-a.y),ux=(b.x-a.x)/length,uy=(b.y-a.y)/length;
+        seams.push([{x:a.x-ux*bead,y:a.y-uy*bead},{x:b.x+ux*bead,y:b.y+uy*bead}]);
+      }
+    }
   }
   const layers = families.map((family) => {
     const pieces = family.flatMap((pts) => clipPolyline(pts.map(fromFloor), boundary));
-    return chainPolylines(orderLines(pieces), boundary, 1.6 * spacing);
+    // The designed seams join blocks; diagonal travel-saving connectors would add
+    // unintended crossings and raise this two-plane mesh into a ridged structure.
+    return orderLines(pieces);
   });
-  return { layers, extra: { tiling } };
+  const seamPaths=seams.flatMap(path=>clipPolyline(path.map(fromFloor),boundary,.01)).map(path=>Object.assign(path,{family:'seams',role:'native'}));
+  layers[0].push(...seamPaths,...nativeBorders(boundary,bead,'seams'));
+  // Neighbouring block turnarounds and seams are designed fused junctions within
+  // each plane, not over-under crossings. Keep the two pattern planes distinct.
+  layers.forEach((paths,layer)=>{
+    for(const crossing of findCrossings(paths.map(pts=>({pts})),{strandWidth:bead}).found){
+      const first=paths[crossing.sa],second=paths[crossing.sb];
+      const joint={id:`parquet:${layer}:${crossing.x.toFixed(6)},${crossing.y.toFixed(6)}`,x:crossing.x,y:crossing.y};
+      (first.joints??=[]).push(joint);(second.joints??=[]).push(joint);
+    }
+  });
+  return { layers, families:['L1','L2','seams'], extra: { tiling, families:['L1','L2','seams'] } };
 }

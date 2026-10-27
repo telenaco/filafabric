@@ -1,0 +1,66 @@
+[
+  {
+    "card": "honeycomb-flat",
+    "preset": "default",
+    "settingsHash": "7c9596a96472",
+    "gcodeSha256": "9d6998189fd9e29688c9f015406d8e98b453c9cb63b0ae3e72b2d0dd3e1f8723",
+    "strands": 10,
+    "moves": 403,
+    "extrudeMm": 406.4,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "honeycomb-flat",
+    "preset": "honeycomb",
+    "settingsHash": "fbdebebd5a89",
+    "gcodeSha256": "6f3df8b9512ca2ad148fa2506f8710ba347a20a273785c85abee87dd8776454f",
+    "strands": 10,
+    "moves": 403,
+    "extrudeMm": 398,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "honeycomb-flat",
+    "preset": "re-entrant",
+    "settingsHash": "7c9596a96472",
+    "gcodeSha256": "9d6998189fd9e29688c9f015406d8e98b453c9cb63b0ae3e72b2d0dd3e1f8723",
+    "strands": 10,
+    "moves": 403,
+    "extrudeMm": 406.4,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "honeycomb-flat",
+    "preset": "deep-auxetic",
+    "settingsHash": "60f3f80e0274",
+    "gcodeSha256": "30a2efec74a11da9232ad256b390b4b8b423255b01db2c830fe84b3c0d2706fc",
+    "strands": 9,
+    "moves": 373,
+    "extrudeMm": 379.3,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  }
+]

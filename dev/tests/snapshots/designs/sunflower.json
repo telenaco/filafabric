@@ -1,0 +1,68 @@
+[
+  {
+    "card": "sunflower",
+    "preset": "default",
+    "settingsHash": "4313f36fb40e",
+    "gcodeSha256": "97a22ba0d95db919254ca07a49014ccc1d54028dc7b1ff9e82b2430af6590cdc",
+    "strands": 43,
+    "moves": 714,
+    "extrudeMm": 570.3,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2",
+      "ties"
+    ],
+    "ties": 1
+  },
+  {
+    "card": "sunflower",
+    "preset": "sunflower",
+    "settingsHash": "4313f36fb40e",
+    "gcodeSha256": "97a22ba0d95db919254ca07a49014ccc1d54028dc7b1ff9e82b2430af6590cdc",
+    "strands": 43,
+    "moves": 714,
+    "extrudeMm": 570.3,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2",
+      "ties"
+    ],
+    "ties": 1
+  },
+  {
+    "card": "sunflower",
+    "preset": "fine",
+    "settingsHash": "191348be0f41",
+    "gcodeSha256": "7d7ec876da280bdd3b60c9a43b2510691e2efca269f05ac624bafd489791bd9b",
+    "strands": 51,
+    "moves": 815,
+    "extrudeMm": 780.7,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "sunflower",
+    "preset": "open",
+    "settingsHash": "09c969cd37d7",
+    "gcodeSha256": "2058aa911ffb2d6448f482e3fb84d16fe77fddc2490563d86b74725850449aec",
+    "strands": 24,
+    "moves": 480,
+    "extrudeMm": 299.5,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  }
+]

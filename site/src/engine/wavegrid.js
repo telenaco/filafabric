@@ -73,7 +73,7 @@ const rotate = (p, c, s) => ({ x: p.x * c - p.y * s, y: p.x * s + p.y * c });
  * @returns lines (arrays of { x, y }) clipped to the boundary and joined end to end, lane after lane, wherever the
  *          boundary allows it
  */
-export function waveLines(boundary, { angle = 0, spacing = 3, amplitude = 1, wavelength = 6, shape = 'sine', phase = 0, laneShift = 0, offset = 0, inset = 0.3, whole = true, clearance = 0 } = {}) {
+export function waveLines(boundary, { angle = 0, spacing = 3, amplitude = 1, wavelength = 6, shape = 'sine', phase = 0, laneShift = 0, offset = 0, inset = 0.3, whole = true, clearance = 0, depthAt = null } = {}) {
   if (!WAVE_SHAPES.includes(shape)) throw new Error(`Unknown wave shape: ${shape}`);
   const a = (angle * Math.PI) / 180;
   const c = Math.cos(a), s = Math.sin(a);
@@ -102,7 +102,12 @@ export function waveLines(boundary, { angle = 0, spacing = 3, amplitude = 1, wav
     // A wave can enter a slanted edge before its centre lane does. Generate its whole X extent, then clip the wave.
     const from = box.minX - wavelength, to = box.maxX + wavelength;
     const start = phase + k * laneShift + (from - box.minX) / wavelength;
-    const raw = lanePoints(shape, from, to, y, amplitude, wavelength, start);
+    const raw = lanePoints(shape, from, to, y, amplitude, wavelength, start).map((p) => {
+      if (!depthAt) return p;
+      const world = rotate(p, c, s);
+      const tone = Math.max(0, Math.min(1, depthAt(world.x, world.y)));
+      return { ...p, y: y + (p.y - y) * (0.15 + 0.85 * tone) };
+    });
     // Apply printable bead clearance before chaining. Clipping it afterwards cuts off every edge turnaround.
     const pieces = clearance > 0
       ? clipStrands([{ pts: raw.map((p) => ({ ...p, z: 0 })) }], turned, clearance).map((s) => s.pts.map(({ x, y }) => ({ x, y })))

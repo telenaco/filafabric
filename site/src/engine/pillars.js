@@ -131,7 +131,7 @@ export function spacerStrands(boundary, { pitch = 5, layers = 8, radius = 1, eve
     const all = lines(z, onBed);
     // the second direction rides over the first at every crossing, as a plain net does
     const order = [...all.filter((l) => l.axis === 'x'), ...all.filter((l) => l.axis === 'y')]
-      .map((l, i) => ({ id: `${base}-${i}`, kind: onBed ? 'base' : 'supported', name: onBed ? 'Bottom net' : 'Top net', pts: l.pts }));
+      .map((l, i) => ({ id: `${base}-${i}`, family: base, role: 'native', kind: onBed ? 'base' : 'supported', name: onBed ? 'Bottom net' : 'Top net', pts: l.pts }));
     return resolveCrossings(order, { follow: true, lift: layerHeight, strandWidth }).strands;
   };
 
@@ -146,7 +146,7 @@ export function spacerStrands(boundary, { pitch = 5, layers = 8, radius = 1, eve
   for (let k = 0; k < layers; k++) {
     const z = (k + 2) * layerHeight;
     for (const p of nearestOrder(nodes, at)) {
-      strands.push({ id: `pillar-${k}-${strands.length}`, kind: 'supported', name: 'Pillars', layer: k + 1, pts: ringPoints(p.x, p.y, radius, z) });
+      strands.push({ id: `pillar-${k}-${strands.length}`, family: 'pillars', role: 'native', kind: 'supported', name: 'Pillars', layer: k + 1, pts: ringPoints(p.x, p.y, radius, z) });
       at = p;
     }
   }
@@ -214,7 +214,7 @@ export function pillarWeaveStrands(boundary, { pitch = 4.8, layers = 6, radius =
   for (let k = 0; k < layers; k++) {
     const z = (k + 1) * layerHeight;
     for (const p of nearestOrder(pillars, at)) {
-      strands.push({ id: `pillar-${k}-${strands.length}`, kind: k === 0 ? 'base' : 'supported', name: 'Pillars', layer: 2 * k, pts: ringPoints(p.x, p.y, radius, z) });
+      strands.push({ id: `pillar-${k}-${strands.length}`, family: 'pillars', role: 'native', kind: k === 0 ? 'base' : 'supported', name: 'Pillars', layer: 2 * k, pts: ringPoints(p.x, p.y, radius, z) });
       at = p;
     }
     chains.forEach((chain, ci) => {
@@ -224,7 +224,7 @@ export function pillarWeaveStrands(boundary, { pitch = 4.8, layers = 6, radius =
         if (pts.length) appendPoints(pts, densify([pts[pts.length - 1], run[0]], STEP).slice(1).map((p) => ({ ...p, z })));
         appendPoints(pts, run, pts.length ? 1 : 0);
       }
-      if (pts.length >= 2) strands.push({ id: `fibre-${k}-${ci}`, kind: k === 0 ? 'base' : 'supported', name: 'Fibre', layer: 2 * k + 1, pts });
+      if (pts.length >= 2) strands.push({ id: `fibre-${k}-${ci}`, family: 'fibre', role: 'native', kind: k === 0 ? 'base' : 'supported', name: 'Fibre', layer: 2 * k + 1, pts });
       at = pts.at(-1) ?? at;
     });
   }
@@ -253,7 +253,8 @@ function finish(machine, material, params, build, extraKey) {
   const warnings = [];
   if (built.pillars === 0) warnings.push('No pillar fits: the swatch is smaller than one pitch');
   const gcode = writeGcode(moves, cfg, { stats });
-  return finishFabric({ cfg, strands: built.strands, moves, stats, warnings, gcode, outline, report, layerCount: Math.round(params.layers ?? 1) + 2, [extraKey]: { pillars: built.pillars, rings: built.rings, layers: Math.max(1, Math.round(params.layers ?? 1)) } }, { boundary });
+  const intendedFamilies = extraKey === 'spacer' ? ['bottom', 'pillars', 'top'] : ['pillars', 'fibre'];
+  return finishFabric({ cfg, strands: built.strands, intendedFamilies, moves, stats, warnings, gcode, outline, report, layerCount: Math.round(params.layers ?? 1) + 2, [extraKey]: { pillars: built.pillars, rings: built.rings, layers: Math.max(1, Math.round(params.layers ?? 1)) } }, { boundary });
 }
 
 /** End to end: machine, material and spacer-net settings in, moves, stats, G-code and report out. */

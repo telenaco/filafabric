@@ -77,7 +77,7 @@ function textureResult(options, repeat, offsetX = 0, offsetY = 0) {
   if (design === 'squiggle') return generateSquiggle(machine, material, { ...settings, width: tileWidth, height: tileHeight, sampler: settings.pattern === 'image' && options.image ? createImageSampler(options.image, options.width ?? repeat, options.height ?? repeat, { yUp: true }) : SAMPLERS[settings.pattern] ?? SAMPLERS.centerSpot, colorChange: false });
   const d = DESIGNS.find((d) => d.id === design && d.status === 'ready');
   if (!d) throw new ConfigError(['Choose a supported fabric design.']);
-  try { return d.generate(machine, material, { ...d.defaults(), ...settings, width: tileWidth, height: tileHeight, colorChange: false }, {
+  try { return d.generate(machine, material, d.sanitize({ ...settings, width: tileWidth, height: tileHeight, colorChange: false, colourMode: 'one', layerColours: [] }), {
     vector: options.vector,
     vectorSize: options.vectorSize ?? [options.width ?? repeat, options.height ?? repeat],
     vectorOffset: options.vectorOffset ?? [offsetX, offsetY],
@@ -185,7 +185,7 @@ export async function exportPanel(options, { write, progress = () => {}, signal 
     }
   };
   check();
-  const exportedSettings = { ...(options.settings ?? {}), colorChange: false };
+  const exportedSettings = { ...(options.settings ?? {}), colorChange: false, colourMode: 'one', layerColours: [] };
   await add(writer.header({ comments: [`Garment panel ${width} x ${height} mm; ${options.design}; repeat ${repeat} mm`, 'Continuous crossed backing; texture repeats in sections; physical swatch qualification required', `settings ${JSON.stringify(exportedSettings)}`, `studio settings ${JSON.stringify({ design: options.design, settings: { ...(options.studySettings ?? exportedSettings), colorChange: false }, width, height, repeat, backingSpacing, print, material: material.id })}`] }));
   await emit(brimStrands);
   let basis = backingLines(boundary, backingSpacing, h, vector ? h : 0, shapeOutline ? 0 : bead);

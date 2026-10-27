@@ -1,0 +1,70 @@
+[
+  {
+    "card": "turing",
+    "preset": "default",
+    "settingsHash": "e2c7505d9a96",
+    "gcodeSha256": "23fc41c24ef875860751427c54d16cb711e9448e3b3821f48c7204338fc0b9cb",
+    "strands": 17,
+    "moves": 849,
+    "extrudeMm": 565.9,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "carrier-1",
+      "motif",
+      "ties"
+    ],
+    "ties": 4
+  },
+  {
+    "card": "turing",
+    "preset": "fine",
+    "settingsHash": "4a16ddee9531",
+    "gcodeSha256": "952f8a83f68848168955407141fc1e18917be0c82128a48575440991c24acb46",
+    "strands": 20,
+    "moves": 1237,
+    "extrudeMm": 723.3,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "carrier-1",
+      "motif",
+      "ties"
+    ],
+    "ties": 3
+  },
+  {
+    "card": "turing",
+    "preset": "coral",
+    "settingsHash": "5cdf21655d42",
+    "gcodeSha256": "64e29f82daf8234ac202a95e2ff9a3bfff3d21edd65a360b0485b3c4d35dde43",
+    "strands": 15,
+    "moves": 835,
+    "extrudeMm": 544.1,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "carrier-1",
+      "motif",
+      "ties"
+    ],
+    "ties": 3
+  },
+  {
+    "card": "turing",
+    "preset": "bold",
+    "settingsHash": "cdffade918af",
+    "gcodeSha256": "6d0aa0e53dcd967923163765614d753c048dae39737069eee8866d3d15513654",
+    "strands": 12,
+    "moves": 543,
+    "extrudeMm": 363.1,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "carrier-1",
+      "motif",
+      "ties"
+    ],
+    "ties": 4
+  }
+]

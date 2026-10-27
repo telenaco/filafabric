@@ -1,4 +1,5 @@
 import { plan } from './planner.js';
+import { refreshConstruction } from './construction-report.js';
 import { clipStrands, connectStrands, gridStrands, analyzeFabric, orderStrands, travelDistance, simplifyStrands, segmentContact } from './fabric.js';
 import { resolveCrossings } from './crossings.js';
 import { emitStrands } from './emit.js';
@@ -7,15 +8,17 @@ import { writeGcode } from './gcode.js';
 import { PolygonBoundary } from './boundary.js';
 
 /** Shared final pass for every design. Only planar motifs are resettled; pile/relief keep their intended heights. */
-export function finishFabric(result, { boundary = null, flat = false, reinforce = false } = {}) {
+export function finishFabric(result, { boundary = null, flat = false, reinforce = false, transform = null } = {}) {
   const { cfg } = result, { layer_height: layerHeight, extrusion_width: strandWidth } = cfg.t;
   boundary ??= new PolygonBoundary(result.outline ?? [[{ x: 0, y: 0 }, { x: cfg.t.sample_width, y: 0 }, { x: cfg.t.sample_width, y: cfg.t.sample_height }, { x: 0, y: cfg.t.sample_height }]]);
   const classes = new Map();
   for (const m of result.moves) if (m.extrude) { if (!classes.has(m.tag)) classes.set(m.tag, []); classes.get(m.tag).push(m.cls); }
   let strands = result.strands ?? [
-    ...(result.base ? (result.base.strands ?? [result.base.points]).map((pts, i) => ({ id: `base-${i}`, kind: 'base', pts })) : []),
-    ...(result.placements ?? []).map((p) => ({ id: p.id, kind: 'supported', pts: p.points.map((q, i) => ({ ...q, z: cfg.derived.loopBaseZ + q.z, cls: classes.get(p.id)?.[Math.max(0, i - 1)] ?? 'supported' })) })),
+    ...(result.base ? (result.base.strands ?? [result.base.points]).map((pts, i) => ({ id: `base-${i}`, family: 'carrier-base', role: 'carrier', kind: 'base', pts })) : []),
+    ...(result.placements ?? []).map((p) => ({ id: p.id, family: 'motif', role: 'native', kind: 'supported', pts: p.points.map((q, i) => ({ ...q, z: cfg.derived.loopBaseZ + q.z, cls: classes.get(p.id)?.[Math.max(0, i - 1)] ?? 'supported' })) })),
   ];
+  // Older and raised generators enter here without layered provenance. Normalize metadata only.
+  strands = strands.map((s) => ({ ...s, family: s.family ?? (s.role === 'tie' ? 'ties' : `L${(s.layer ?? 0) + 1}`), role: s.role ?? 'native' }));
   let ties = 0, backing = 0;
   if (flat) {
     strands = clipStrands(simplifyStrands(strands.map((s) => ({ ...s, pts: s.pts.map(({ cls, ...p }) => ({ ...p, z: layerHeight })) }))), boundary, strandWidth / 2);
@@ -23,7 +26,7 @@ export function finishFabric(result, { boundary = null, flat = false, reinforce 
     const repaired = connectStrands(strands, boundary, { strandWidth }); strands = repaired.strands; ties = repaired.ties;
     const lastLayer = Math.max(0, ...strands.map((s) => s.layer ?? 0)) + 1;
     const beforeMm = travelDistance(strands);
-    strands = orderStrands(strands.map((s) => ({ ...s, layer: s.name === 'Structural tie' ? lastLayer : s.layer })));
+    strands = orderStrands(strands.map((s) => ({ ...s, layer: s.role === 'tie' ? lastLayer : s.layer })));
     result.routing = { beforeMm, afterMm: travelDistance(strands) };
     strands = resolveCrossings(strands, { follow: true, lift: layerHeight, strandWidth }).strands;
     result.moves = emitStrands(strands, { retraction: cfg.derived.retraction });
@@ -50,11 +53,37 @@ export function finishFabric(result, { boundary = null, flat = false, reinforce 
     strands = strands.map((s) => ({ ...s, pts: s.pts.map((p, i) => ({ ...p, cls: s.kind === 'base' ? 'base' : updated.get(s.id)?.[Math.max(0, i - 1)] ?? p.cls })) }));
     fabric = analyzeFabric(strands, { strandWidth, layerHeight, boundary, supportedAt });
   }
+  if(typeof transform==='function'){
+    const changed=transform(strands,cfg);
+    if(Array.isArray(changed))strands=changed;
+    result.moves=emitStrands(strands,{retraction:cfg.derived.retraction});
+    result.stats={...result.stats,...computeStats(result.moves,cfg,result.placements??[])};
+    if(result.coil)result.stats.loops=result.coil.loops;
+    if(result.spiral)result.stats.loops=result.spiral.rings;
+    fabric=analyzeFabric(strands,{strandWidth,layerHeight,boundary,supportedAt});
+  }
   result.strands = strands;
   result.fabric = fabric;
   result.repairs = { ties, backing };
   result.warnings = [...(result.warnings ?? []), ...fabric.issues];
   if (result.report) result.report = { ...result.report, components: fabric.components };
   result.gcode = writeGcode(result.moves, cfg, { stats: result.stats });
+  return refreshConstruction(result);
+}
+
+/**
+ * Drop the geometry findings a design makes on purpose (a sliding grid is held by channels, not fused, so its two directions
+ * are separate regions). `accept(issue, result)` says which findings are part of the design; the rest stay, and the result is
+ * exportable once none are left.
+ * @returns {object} the same result, with its warnings and fabric findings filtered
+ */
+export function acceptIssues(result, accept) {
+  if (typeof accept !== 'function') return result;
+  const keep = (issue) => !accept(issue, result);
+  result.warnings = (result.warnings ?? []).filter(keep);
+  if (result.fabric) {
+    const issues = result.fabric.issues.filter(keep);
+    result.fabric = { ...result.fabric, issues, exportable: result.strands.length > 0 && issues.length === 0 };
+  }
   return result;
 }

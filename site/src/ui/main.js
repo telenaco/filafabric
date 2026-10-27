@@ -1,33 +1,39 @@
 import { PRINTABILITY } from './printability-data.js';
 import { validNumber } from './numeric.js';
 import { generate } from '../engine/generate.js';
-import { generateSquiggle, SAMPLERS, createImageSampler, minCrossingAmplitude } from '../engine/squiggle.js';
 import { placeOutline, unflattenRings } from '../engine/outline.js';
 import { createPreview, ROLES } from './preview.js';
 import { createOverview } from './overview.js';
-import { useWholeOverview, canSimplifyPreview } from '../engine/overview.js';
+import { useWholeOverview, canSimplifyPreview, packLines } from '../engine/overview.js';
 import { bedSizeLimits, printSizeProblem } from './bed-size.js';
 import { PrintEstimates, printTimeSeconds } from './print-estimates.js';
 import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airStrandMm, fitAspect, pileLiftFactor } from './controls.js';
-import { SQ_RANGES, SQUIGGLE_DEFAULTS, describeSquiggle, sizeForAspect } from './squiggle-controls.js';
-import { PICTURE, withPicture, pictureDarkness } from '../engine/picture.js';
-import { buildVerdict, buildSquiggleVerdict, formatMinutes } from './verdict.js';
+import { PICTURE, withPicture } from '../engine/picture.js';
+import { buildVerdict, buildSquiggleVerdict, formatMinutes, constructionVerdict } from './verdict.js';
+import { refreshConstruction, assertConstructionExportable } from '../engine/construction-report.js';
 import { stateToHash, hashToState, sanitizeState, PRINT_DEFAULTS } from './share.js';
 import { FILAMENT_FIELDS, filamentValue, withFilamentSettings, setFilamentSetting, withoutFilamentSettings } from './filament-settings.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
 import { $, $$, el, icon, ICONS, helpBubble } from './dom.js';
-import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, SectionFold, BackingCard } from './panels.js';
-import { addBackingMesh, BACKING_MESH, BACKING_MESH_LAYERS } from '../engine/backing.js';
+import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, SectionFold, ColourSection, SupportSection } from './panels.js';
+import { BACKING_MESH_LAYERS } from '../engine/backing.js';
 import { layerHeightOptions, defaultLayerHeight, resolveConfig } from '../engine/params.js';
 import { TooltipLayer } from './tooltip.js';
 // versioned with the release in boot.js, so a returning browser never pairs this file with an older printer loader
 import { ProfileStore } from './profile-store.js?v=20261019-printer-setup';
 import { searchMachines } from './machine-search.js?v=20261019-printer-setup';
 import { createProfilePicker } from './profile-picker.js';
-import { DESIGNS, designById, isReady, baseDesignSettings, galleryGroups } from './designs.js';
+import { DESIGNS, designById, isReady, baseDesignSettings } from './designs.js';
 import { THUMBS, shapeThumb, presetThumb } from './thumbs.js';
-import { swatchCode } from './swatch.js';
-import { exportFileName, relevantKeys } from './file-name.js';
+import { defaultSection, sideProfile } from '../engine/side-profile.js';
+import { drawSideView } from './sideview.js';
+import { SHELVES, libraryGroups, initialDesignSettings, selectVariant, variantsOf } from './library.js';
+import { regionsFromDrawing, REGION_LIMIT, sanitizeSeam, regionsFingerprint } from '../engine/regions.js';
+import { RegionControls } from './region-controls.js';
+import { bindSwatchLab, swatchRecord } from './swatch-lab.js';
+import { sanitizeWidthMaps } from '../engine/width-maps.js';
+import { swatchCode, fingerprint } from './swatch.js';
+import { exportFileName, relevantKeys, variantsFileName } from './file-name.js';
 import { FIELDS, FIELD_IDS, createField } from '../engine/fields.js';
 import { SHAPES, SHAPE_IDS } from '../engine/shapes.js';
 import { readSvgLines } from './svg-lines.js';
@@ -37,7 +43,9 @@ import { applySvgSolids, solidOnly, withoutPattern } from '../engine/svg-solids.
 import { prepareAdaptiveSolids } from '../engine/adaptive-solids.js';
 import { summariseDrawing, describeDrawing, interpretDrawing } from '../engine/drawing.js';
 import { addExtraLayers, nativeLayerInfo } from '../engine/stack.js';
+import { colourResult, strandLayer } from '../engine/colour-plan.js';
 import { generateDesignBase, compactDesignExport } from '../engine/design-export.js';
+import { combineVariantResults, planVariantLayout } from '../engine/variant-export.js';
 import { rotateDesignInput } from '../engine/rotate-design.js';
 import { applyBrim } from '../engine/brim.js';
 import { boundaryFor } from '../engine/layers.js';
@@ -60,17 +68,12 @@ const PAUSE_ICON = 'M4 3h3.5v12H4zM10.5 3H14v12h-3.5z';
 const ROLE_HEIGHT = { base: 2, anchored: 3, lifting: 3, free: 5 };
 
 const LOOP_SLIDERS = [
-  { key: 'pileHeight', label: 'Pile height', help: 'How far the loops rise above the base.', lo: 'Flat', hi: 'Plush', unit: 'mm', edit: true },
+  { key: 'pileHeight', label: 'Height', help: 'How high a loop rises over the layer below.', lo: 'Flat', hi: 'Plush', unit: 'mm', edit: true },
   { key: 'loopSize', label: 'Loop size', help: 'Width and length of each loop, kept in proportion.', lo: 'Small', hi: 'Large' },
   { key: 'airFlow', label: 'Strand thickness', help: 'Extra flow where the loops are in the air, for thicker, sturdier strands.', lo: 'Thin', hi: 'Thick', unit: '%', edit: true },
   { key: 'loopSpacing', label: 'Loop spacing', help: 'Distance between neighbouring loops in a row.', lo: 'Packed', hi: 'Open', unit: 'mm', edit: true },
   { key: 'baseGap', label: 'Base openness', help: 'Gap between the lines of the backing mesh.', lo: 'Firm', hi: 'Airy', unit: 'mm', edit: true },
   { key: 'variation', label: 'Natural variation', help: 'Random wobble in each loop\'s size, height and angle.', lo: 'Even', hi: 'Wild', unit: '%', edit: true },
-];
-const SQ_SLIDERS = [
-  { key: 'spacing', label: 'Line spacing', help: 'Distance between neighbouring wavy lines.', lo: 'Dense', hi: 'Airy', unit: 'mm', edit: true },
-  { key: 'amplitude', label: 'Wave depth', help: 'How far each line swings to the side.', lo: 'Subtle', hi: 'Deep', unit: 'mm', edit: true },
-  { key: 'wavelength', label: 'Wave length', help: 'Length of one full wave.', lo: 'Tight', hi: 'Stretched', unit: 'mm', edit: true },
 ];
 const PATTERN_SCALE = { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false };
 // plainest first: the first one leaves every wave the same, the last ones need a picture
@@ -113,28 +116,6 @@ const BINDINGS = {
       },
     },
   },
-  squiggle: {
-    sliders: SQ_SLIDERS,
-    host: '#sq-sliders',
-    get: (key) => state.squiggle[key],
-    set: (key, value) => { state.squiggle[key] = value; },
-    range: (key) => SQ_RANGES[key],
-    readout: (key) => {
-      const text = describeSquiggle(state.squiggle)[key];
-      const floor = parallelDepth();
-      if (key === 'amplitude' && floor !== null && state.squiggle.amplitude < floor) return `${text} · raised to ${floor.toFixed(2)} mm`;
-      return text;
-    },
-    size: {
-      host: '#sq-size',
-      ranges: { w: SQ_RANGES.width, h: SQ_RANGES.height },
-      get: () => [state.squiggle.width, state.squiggle.height],
-      set: (w, h) => {
-        state.squiggle.width = w;
-        state.squiggle.height = h;
-      },
-    },
-  },
 };
 
 const state = {
@@ -145,13 +126,15 @@ const state = {
   design: 'zigzag',
   primary: { ...PRIMARY_DEFAULTS },
   advanced: {},
-  squiggle: { ...SQUIGGLE_DEFAULTS },
   // settings of every design newer than the loop pile and squiggle, by design id
-  designs: Object.fromEntries(DESIGNS.filter((d) => d.status === 'ready' && !d.legacy).map((d) => [d.id, d.defaults()])),
+  designs: initialDesignSettings(DESIGNS),
   image: null, // { data: ImageData, name, px: [w, h], thumb: canvas }: stays on this computer, never in a link
   imageBoxOpen: false,
   outline: null, // { name, rings (flat, unit box), rotation }: shared by every design, travels in links
   vector: null,
+  regions: null,
+  seam: sanitizeSeam(),
+  selectedRegion: null,
   print: { ...PRINT_DEFAULTS }, // layer thickness and extra fabric or backing passes, shared across designs
   docName: 'Untitled swatch',
   result: null,
@@ -174,7 +157,7 @@ function bindingFor(mod) {
   const items = mod.controls.filter((c) => c.kind === 'sliders').flatMap((c) => c.items);
   const scale = mod.controls.find((c) => c.kind === 'pattern')?.scale;
   const sliders = scale ? [...items, scale] : items;
-  const own = () => state.designs[mod.id];
+   const own = () => state.designs[mod.settingsKey ?? mod.id];
   // each sliders group has its own host: the first keeps the plain id
   const groups = mod.controls.filter((c) => c.kind === 'sliders').map((c, k) => ({ host: `#${mod.id}-sliders${k ? `-${k}` : ''}`, items: c.items }));
   return {
@@ -188,7 +171,7 @@ function bindingFor(mod) {
     readout: (key) => {
       const def = sliders.find((d) => d.key === key);
       const d = mod.describe(own());
-      return def.readout ? def.readout(d) : d[key];
+       return def?.readout ? def.readout(d) : d[key] ?? `${own()[key]}${['thin', 'thick'].includes(key) ? '×' : ''}`;
     },
     size: {
       host: `#${mod.id}-size`,
@@ -199,7 +182,7 @@ function bindingFor(mod) {
     },
   };
 }
-for (const mod of DESIGNS) if (mod.status === 'ready' && !mod.legacy) BINDINGS[mod.id] = bindingFor(mod);
+for (const mod of DESIGNS) if (mod.status === 'ready' && !mod.legacyPanel) BINDINGS[mod.id] = bindingFor(mod);
 
 let preview = null;
 let overview = null;
@@ -218,6 +201,8 @@ let lastFrame = 0;
 const undoLog = { stack: [], cursor: -1 };
 const diagnosticLog = new DiagnosticLog();
 let feedback = null;
+let regionUI = null;
+let regionUIKey = '';
 const openAdvancedGroups = new Set();
 
 /* ---------- storage ---------- */
@@ -255,24 +240,27 @@ function known() {
 
 function snapshot() {
   return {
-    v: 3,
+    v: 4,
+    geometryRevision: 2,
     sampleDefaults: 100,
     design: state.design,
     machine: state.machine,
     material: state.material,
     primary: state.primary,
     advanced: state.advanced,
-    squiggle: state.squiggle,
     designs: state.designs,
     outline: state.outline,
     vector: state.vector,
+    regions: state.regions,
+    seam: state.seam,
     print: state.print,
     name: state.docName,
   };
 }
 
-function toast(message) {
+function toast(message, { kind = 'info' } = {}) {
   const t = $('#toast');
+  t.dataset.kind = kind;
   t.textContent = message;
   t.hidden = false;
   clearTimeout(toast.timer);
@@ -293,8 +281,9 @@ const grams = (g) => (g < 1 ? g.toFixed(2) : g.toFixed(1));
 
 /* ---------- history (undo / redo) ---------- */
 function snapshotKey() {
+  if (state.regions?.length) return JSON.stringify({ m:state.machine, t:state.material, a:state.advanced, v:state.vector, r:state.regions, s:state.seam, y:state.print });
   // the layer setup is part of what is saved and undone, like everything else that changes the print
-  return JSON.stringify({ d: state.design, m: state.machine, t: state.material, p: state.primary, a: state.advanced, s: state.squiggle, g: state.designs, o: state.outline, v: state.vector, y: state.print });
+  return JSON.stringify({ d: state.design, m: state.machine, t: state.material, p: state.primary, a: state.advanced, g: state.designs, o: state.outline, v: state.vector, y: state.print });
 }
 
 function commit() {
@@ -317,17 +306,23 @@ function commit() {
 /** Load sanitized settings into the state. Returns true when a picture pattern had to be replaced. */
 function loadState(data) {
   const clean = sanitizeState(data, known());
+  const loadedRegions=clean.regions??(clean.vector?regionsFromDrawing(clean.vector,{currentCard:clean.design,currentSettings:clean.design==='loop-pile'?clean.primary:clean.designs[designById(clean.design).settingsKey??clean.design]}):null);
+  if(loadedRegions?.length>REGION_LIMIT)throw new Error(`This saved drawing has more than ${REGION_LIMIT} colour regions. Reduce its colours before loading it.`);
   const designChanged = clean.design !== state.design;
   state.design = clean.design;
   state.machine = clean.machine;
   state.material = clean.material;
   state.primary = clean.primary;
   state.advanced = clean.advanced;
-  state.squiggle = clean.squiggle;
   state.designs = clean.designs;
   state.outline = clean.outline;
   state.vector = clean.vector;
+  state.regions = loadedRegions;
+  state.seam = clean.seam;
+  state.selectedRegion = null;
+  if (state.regions?.length) selectRegion(state.regions.find(r=>r.role==='pattern')?.id ?? state.regions[0].id, { quiet:true });
   state.print = clean.print;
+  if (clean.migrationNotes?.length) toast(clean.migrationNotes.join(' '), { kind:'warning' });
   if (data?.print?.layerHeight === undefined) state.print.layerHeight = defaultLayerHeight(state.machines.get(state.machine));
   normalisePrint();
   if (typeof data?.name === 'string') state.docName = data.name.slice(0, 60);
@@ -393,7 +388,7 @@ function normalisePrint() {
 }
 
 /** The backing mesh under the current design: its settings, or null when it is off or the design stands on its own base. */
-const backingFor = (design = state.design) => (RAISED_DESIGNS.has(design) ? null : state.print.backing ?? null);
+const backingFor = (design = state.design) => (['self', 'auto', 'built-in'].includes(designById(design)?.support) ? null : state.print.backing ?? null);
 
 function layerSetupText() {
   const solid = state.vector && interpretDrawing(state.vector).solids.length ? ` · solids: ${state.print.solidLayers} × ${state.print.layerHeight} mm` : '';
@@ -401,6 +396,7 @@ function layerSetupText() {
 }
 
 function patternLayerSetupText() {
+  if(state.regions?.length)return `${state.regions.filter(r=>r.enabled!==false).length} regions${state.result?.layerPlan?.totalLayers?` · ${state.result.layerPlan.totalLayers} layer groups`:''}`;
   const plan = state.result?.designId === state.design ? state.result.layerPlan : null;
   if (plan?.mode === 'backing' && plan.repeatable) return `${plan.backingLayers} backing + ${state.print.extraLayers} extra = ${plan.backingLayers + state.print.extraLayers} · texture once`;
   if (plan && !plan.repeatable) return plan.nativeLayers === null ? 'Original raised structure' : `${plan.nativeLayers} original · SVG only`;
@@ -409,36 +405,11 @@ function patternLayerSetupText() {
   return RAISED_DESIGNS.has(state.design) ? `${state.print.extraLayers} extra backing layers · texture once` : `${mesh ? `${mesh} mesh + ` : ''}${state.print.extraLayers} extra layers`;
 }
 
-// the backing mesh's card, in every flat design's panel: the Zigzag mesh's own sliders, starting from the standard mesh
-const BACKING_CARD = {
-  label: 'Backing mesh',
-  help: 'A zigzag mesh under the whole piece: two layers, printed first, with the design on top.',
-  sliders: [
-    { key: 'backingSpacing', label: 'Line spacing', help: 'Distance between neighbouring lines of the mesh.', lo: 'Dense', hi: 'Open', unit: 'mm', edit: true },
-    { key: 'backingDepth', label: 'Wave depth', help: 'How far each line swings to either side of its centre line.', lo: 'Shallow', hi: 'Deep', unit: 'mm', edit: true },
-    { key: 'backingWavelength', label: 'Wave length', help: 'Length of one full wave, from one peak to the next on the same side.', lo: 'Tight', hi: 'Long', unit: 'mm', edit: true },
-  ],
-  pause: { label: 'Change colour after the backing', help: 'Pause once the mesh is down (M600) so you can load another filament for the design.' },
-};
-const BACKING_KEYS = { backingSpacing: 'spacing', backingDepth: 'depth', backingWavelength: 'wavelength', backingPause: 'pause' };
-const BACKING_RANGES = { backingSpacing: { min: 0.8, max: 10, step: 0.1 }, backingDepth: { min: 0.4, max: 8, step: 0.1 }, backingWavelength: { min: 2, max: 20, step: 0.5 } };
-const BACKING_READOUTS = { backingSpacing: 'mm apart', backingDepth: 'mm each way', backingWavelength: 'mm per wave' };
-// while the mesh is off, its last settings, so switching it on again brings them back
-let backingKept = { ...BACKING_MESH };
-
 const PRINT_BINDING = {
   get: (key) => {
-    if (key === 'backing') return !!state.print.backing;
-    if (key in BACKING_KEYS) return (state.print.backing ?? backingKept)[BACKING_KEYS[key]];
     return state.print[key];
   },
   set: (key, value) => {
-    if (key === 'backing') {
-      if (value) state.print.backing = { ...backingKept };
-      else { if (state.print.backing) backingKept = { ...state.print.backing }; delete state.print.backing; }
-      return;
-    }
-    if (key in BACKING_KEYS) { state.print.backing = { ...(state.print.backing ?? backingKept), [BACKING_KEYS[key]]: value }; return; }
     if (key === 'solidLayers') { state.print.solidLayers = Math.max(1, Math.min(8, Math.round(value))); return; }
     if (['brim', 'meshPerimeters'].includes(key) && value > 50) { toast('Perimeters: enter a count from 0 to 50.'); return; }
     if (key === 'extraLayers') {
@@ -448,14 +419,13 @@ const PRINT_BINDING = {
     state.print[key] = ['extraLayers', 'brim', 'meshPerimeters'].includes(key) ? Math.max(0, Math.round(value)) : value;
   },
   available: (key) => key !== 'extraLayers' || !(state.result?.designId === state.design && state.result.layerPlan?.repeatable === false),
-  range: (key) => PRINT_RANGES[key] ?? BACKING_RANGES[key],
+  range: (key) => PRINT_RANGES[key],
   options: () => layerChoices(),
   note: () => {
     const machine = state.machines.get(state.machine);
     return `${nozzleDiameter()} mm nozzle · ${defaultLayerHeight(machine)} mm ${machine?.print_defaults?.layer_height ? 'from the imported print profile' : 'nozzle-based default'}. Choose another thickness above if needed.`;
   },
   readout: (key) => {
-    if (key in BACKING_READOUTS) return `${Math.round(PRINT_BINDING.get(key) * 10) / 10} ${BACKING_READOUTS[key]}`;
     if (key === 'solidLayers') return `${state.print.solidLayers} ${state.print.solidLayers === 1 ? 'layer' : 'layers'} · ${Number((state.print.solidLayers * state.print.layerHeight).toFixed(3))} mm`;
     if (key === 'extraLayers') return `${state.print.extraLayers} extra`;
     if (['brim', 'meshPerimeters'].includes(key)) return state.print[key] ? `${state.print[key]} ${state.print[key] === 1 ? 'line' : 'lines'}` : 'Off';
@@ -474,6 +444,10 @@ const host = {
   binding: (id) => (id === 'print' ? PRINT_BINDING : BINDINGS[id]),
   settings: (id) => settingsOf(id),
   presetPicture: (mod, preset) => presetThumb(mod, preset, { machine: state.machines.get(state.machine), material: printMaterial() }),
+  previewResult: (id) => state.design === id && state.resultKey === snapshotKey() ? state.result : null,
+  layerCount: (id) => id === state.design && state.result?.strands?.length ? Math.max(...state.result.strands.map(strandLayer)) + 1 : 2,
+  switchDesign: (id) => setDesign(id, { fromVariant: true }),
+  printVariants: (id) => { void exportAllVariants(id); },
   change: () => afterDesignChange(),
   nudge: () => afterControl(),
   sizeChanged: () => { renderControls(); schedule(); },
@@ -496,21 +470,12 @@ function renderControls() {
 /** The panels of every design, and the sliders and size of the two older ones, mounted into their own markup. */
 function buildPanels() {
   for (const mod of DESIGNS) {
-    if (mod.status !== 'ready' || mod.legacy) continue;
+    if (mod.status !== 'ready' || mod.legacyPanel) continue;
     const panel = new DesignPanel(host, mod);
     $('#settings-body').append(panel.node);
     controls.push(panel);
   }
-  // the backing mesh at the end of every flat design's panel (a raised one stands on its own base)
-  for (const mod of DESIGNS) {
-    if (mod.status !== 'ready' || RAISED_DESIGNS.has(mod.id)) continue;
-    const panel = $(`#panel-${mod.id}`);
-    if (!panel) continue;
-    const card = new BackingCard(host, mod.id, BACKING_CARD);
-    panel.append(card.node);
-    controls.push(card);
-  }
-  for (const id of ['loop-pile', 'squiggle']) {
+  for (const id of ['loop-pile']) {
     const b = BINDINGS[id];
     const size = new SizeControl(host, id);
     $(b.size.host).replaceChildren(size.node);
@@ -523,6 +488,12 @@ function buildPanels() {
   controls.push(picker);
   const pilePatterns = new SectionFold(host, $('#lp-pattern').closest('section'), { id: 'lp-pattern-section' });
   controls.push(pilePatterns);
+  const pileColour = new ColourSection(host, designById('loop-pile'), { kind: 'colour', title: 'Colour' }, { index: 'colour' });
+  $('#panel-loop-pile').append(pileColour.node);
+  controls.push(pileColour);
+  const pileSupport = new SupportSection(host, designById('loop-pile'), { kind: 'support', title: 'Support', readonly: true }, { index: 'support' });
+  $('#panel-loop-pile').append(pileSupport.node);
+  controls.push(pileSupport);
   // the layers every design shares live in the printer setup
   const layersCard = new PrintSetupCard(host, { thickness: PRINT_THICKNESS, layers: PRINT_LAYERS, solids: PRINT_SOLIDS });
   $('#print-setup').replaceChildren(layersCard.node);
@@ -564,7 +535,7 @@ function svgSituation() {
     usesVector: !!mod.usesVector,
     // a design that reads a colour its own way says so in the colour guide
     designNote: mod.svgNote ?? null,
-    allowsOutline: true,
+    allowsOutline: !state.regions?.length,
     hasShapes: !!(v && shapesOf(v)),
     outlineOn: registered,
     // Only detailed 3D may show a sample; the lightweight 2D view always shows the complete document.
@@ -584,7 +555,12 @@ async function importSvg(file) {
   try {
     const drawing = await readSvgLines(file);
     previewChoice = 'auto';
+    const regions = regionsFromDrawing(drawing, { currentCard:state.design, currentSettings:settingsOf(state.design) });
+    if(regions.length>REGION_LIMIT)throw new Error(`The drawing has ${regions.length} colours; reduce it to ${REGION_LIMIT} or fewer. Nothing was imported.`);
     state.vector = drawing;
+    state.regions = regions;
+    state.seam = sanitizeSeam();
+    selectRegion(regions.find(r=>r.role==='pattern')?.id ?? regions[0]?.id, { quiet:true });
     state.outline = shapesOf(drawing); // red contains the pattern and blue cuts it away on import
     followVectorSize();
     state.docName = file.name.replace(/\.svg$/i, '').slice(0, 60);
@@ -602,6 +578,8 @@ async function importSvg(file) {
 
 function removeSvg() {
   state.vector = null;
+  state.regions = null;
+  state.selectedRegion = null;
   if (state.outline?.page) state.outline = null; // its shapes went with it
   syncControls();
   schedule();
@@ -615,9 +593,84 @@ function setShapeOutline(on) {
   commit();
 }
 
+/* ---------- drawing regions ---------- */
+const selectedRegion = () => state.regions?.find(region=>region.id===state.selectedRegion) ?? null;
+const requiresApply = () => (state.regions?.filter(region=>region.enabled!==false&&region.role==='pattern').length ?? 0)>1;
+
+function captureRegionSettings() {
+  const region=selectedRegion();
+  if(region?.role==='pattern'&&region.card===state.design) region.settings=structuredClone(settingsOf(state.design));
+}
+
+function selectRegion(id, { quiet=false } = {}) {
+  captureRegionSettings();
+  state.selectedRegion=id??null;
+  const region=selectedRegion();
+  if(region?.role==='pattern'){
+    const mod=designById(region.card);
+    if(mod){
+      state.design=mod.id;
+      const own=mod.sanitize(region.settings);
+      mod.setSize?.(own,state.vector.width,state.vector.height);
+      if(mod.id==='loop-pile'){own.customWidth=state.vector.width;own.customHeight=state.vector.height;own.swatch='custom';state.primary=own;}
+      else state.designs[mod.settingsKey??mod.id]=own;
+      region.settings=structuredClone(own);
+    }
+  }
+  if(!quiet){showDesign();syncControls();renderRegions(true);if(matchMedia('(max-width: 900px)').matches&&id)$('#region-header').scrollIntoView({block:'start',behavior:'instant'});}
+}
+
+function regionCard(id,cardId) {
+  captureRegionSettings();
+  const region=state.regions?.find(r=>r.id===id),card=designById(cardId);
+  if(!region||!card||card.status!=='ready')return;
+  const oldCard=region.card;
+  const previous=designById(oldCard),shared=oldCard===cardId||previous?.settingsKey&&previous.settingsKey===card.settingsKey;
+  region.role='pattern';region.card=cardId;region.settings=card.sanitize(shared?region.settings:card.defaults());
+  state.selectedRegion=null;
+  selectRegion(id);schedule();commit();
+}
+
+function changeRegion(id,patch) {
+  captureRegionSettings();
+  if(!id)state.seam=sanitizeSeam(patch.seam);
+  else {
+    const region=state.regions.find(r=>r.id===id);if(!region)return;
+    Object.assign(region,patch);
+    if(region.role==='pattern'&&!region.card){region.card=state.design;region.settings=structuredClone(settingsOf(state.design));}
+    state.selectedRegion=null;selectRegion(id);
+  }
+  schedule();commit();showDesign();renderRegions(true);
+}
+
+function renderRegions(force=false) {
+  if(!regionUI) {
+    regionUI=new RegionControls({bar:$('#colour-bar'),header:$('#region-header'),cards:DESIGNS,select:selectRegion,change:changeRegion,useCard:regionCard,close:()=>selectRegion(null)});
+  }
+  const key=JSON.stringify([state.regions?.map(({settings,...r})=>r),state.selectedRegion,state.seam]);
+  if(force||key!==regionUIKey){regionUI.update(state.regions,state.selectedRegion,state.seam);regionUIKey=key;}
+  const multi=requiresApply(),keyNow=snapshotKey(),applied=readyGcode?.key===keyNow||state.resultKey===keyNow;
+  const button=$('#btn-apply');
+  button.disabled=exporting||!!previewBuild||!!currentPrintSizeProblem()||!isReady(state.design);
+  button.textContent=previewBuild?'Applying…':applied?'Applied':multi?'Apply whole piece':'Apply';
+  button.classList.toggle('has-changes',!applied);
+  button.title=applied?'The current settings are applied.':'Build all enabled regions with these settings.';
+  $('#apply-status').hidden=!state.regions?.length;
+  if(state.regions?.length&&!previewBuild)$('#apply-status').textContent=applied?'Whole piece is current. Export is ready.':multi?'Settings changed. Apply the whole piece before exporting.':'Updating the whole piece…';
+}
+
+async function applyPiece() {
+  if(previewBuild||exporting)return;
+  captureRegionSettings();
+  clearTimeout(genTimer);genTimer=null;
+  overviewActive=false;overview.cancel();renderPreviewMode();
+  previewAtSelectedSize(exportOptions());renderRegions();
+}
+
 /* ---------- generation ---------- */
 let genTimer = null;
 function schedule() {
+  captureRegionSettings();
   if (readyGcode && readyGcode.key !== snapshotKey()) readyGcode = null; // made for settings that are no longer these
   fixJob?.controller.abort(); // the settings changed under the search: what it would fix is gone
   previewBuild?.controller.abort();
@@ -648,7 +701,8 @@ function exportOptions(width = null, height = null) {
   return {
     machine: state.machines.get(state.machine), material: printMaterial(), design: state.design,
     width, height, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : settingsOf(state.design),
-    studySettings: { ...settingsOf(state.design) }, outline: placedOutline(width, height),
+    studySettings: { ...settingsOf(state.design) }, outline: state.regions?.length ? null : placedOutline(width, height),
+    regions: state.regions, seam: state.seam,
     vector: state.vector, shapeOutline: !!state.outline?.page, solidLayers: state.print.solidLayers, solidGenerator: 'arachne', extraLayers: state.print.extraLayers, legacyCopies: state.print.legacyCopies, brim: state.print.brim, perimeters: state.print.brim, meshPerimeters: state.print.meshPerimeters, backing: backingFor(),
     image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale,
     panelSize: size,
@@ -668,8 +722,25 @@ function showGenerated(result, key) {
   state.error = null;
   const [width, height] = BINDINGS[state.design].size.get();
   printEstimates.put(key, result, width, height);
-  preview.update(result);
+  preview.update(regionPreviewResult(result));
   applyScrub();
+  if(state.regions?.length) readyGcode = {key,result};
+}
+
+function regionPreviewResult(result) {
+  if(!state.regions?.length||previewChoice!=='sample')return result;
+  const w=Math.min(100,result.cfg.t.sample_width),h=Math.min(100,result.cfg.t.sample_height);
+  return {...result,sampleWindow:[w,h],documentSize:[w,h],outline:null,excludedPaths:[]};
+}
+
+function showRegionOverview() {
+  overviewActive=true;renderPreviewMode();
+  const current=state.resultKey===snapshotKey()?state.result:null;
+  const width=state.vector.width,height=state.vector.height;
+  const source=state.regions.filter(r=>r.enabled===false).flatMap(r=>r.pathIndices.map(i=>({pts:state.vector.paths[i],color:'other'})));
+  overview.setResult({width,height,rings:current?.outline??[[{x:0,y:0},{x:width,y:0},{x:width,y:height},{x:0,y:height}]],source,packed:packLines(current?.strands??[]),strandWidth:current?.cfg.t.extrusion_width??.45,shapeOnly:!current});
+  overviewStatus=current?'Whole colour-region piece at true scale.':'Region outlines only — Apply to build the whole piece.';
+  renderPreviewMode();render();
 }
 
 /** Full ordinary-size designs build off the UI thread; obsolete slider jobs are terminated. */
@@ -678,7 +749,7 @@ function previewAtSelectedSize(input, { estimateOnly = false } = {}) {
   const key = snapshotKey(), controller = new AbortController();
   const job = { key, controller, promise: null, estimateOnly };
   previewBuild = job;
-  job.promise = buildSwatch(input, { signal: controller.signal, preview: !estimateOnly }).then((result) => {
+  job.promise = buildSwatch(input, { signal: controller.signal, preview: !estimateOnly, progress:p=>{ if(state.regions?.length) { $('#apply-status').hidden=false; $('#apply-status').textContent=p.message; } } }).then((result) => {
     if (previewBuild === job && snapshotKey() === key) {
       if (estimateOnly) { printEstimates.put(key, result, input.width, input.height); readyGcode = { key, result }; }
       else showGenerated(result, key);
@@ -689,7 +760,7 @@ function previewAtSelectedSize(input, { estimateOnly = false } = {}) {
       if (!estimateOnly && previewChoice === 'auto' && canSimplifyPreview(error)) {
         previewBuild = null;
         showWholeOverview(input);
-        toast('3D could not finish for this piece, so it shows the 2D drawing. Print settings are unchanged.');
+        toast('3D could not finish for this piece, so it shows the 2D drawing. Print settings are unchanged.', { kind:'warning' });
         return null;
       }
       state.error = error;
@@ -701,13 +772,6 @@ function previewAtSelectedSize(input, { estimateOnly = false } = {}) {
   });
   void job.promise.catch(() => {});
   renderBusy();
-}
-
-/** The tone of the squiggle pattern across the swatch as it is previewed (a window at most 100 mm across). */
-function squiggleSampler(width = state.squiggle.width, height = state.squiggle.height) {
-  const s = state.squiggle;
-  if (s.pattern === 'image' && state.image) return pictureDarkness(state.image.data, width, height);
-  return SAMPLERS[s.pattern] ?? SAMPLERS.centerSpot;
 }
 
 /**
@@ -730,13 +794,6 @@ function placedOutline(width, height, fullWidth = width, fullHeight = height) {
   }
   const placed = placeOutline(rings, { rotation: o.rotation, width: fullWidth, height: fullHeight });
   return width === fullWidth && height === fullHeight ? placed : windowRings(placed, width, height);
-}
-
-/** In parallel mode, the least wave depth that still lets each line cross its neighbours (mm). */
-function parallelDepth() {
-  const s = state.squiggle;
-  if (s.mode !== 'parallel') return null;
-  return minCrossingAmplitude(s.height / Math.max(2, Math.floor(s.height / s.spacing)));
 }
 
 /**
@@ -775,6 +832,24 @@ function renderFilamentSettings() {
         el('span', { class: 'field-heading' }, el('label', { for: input.id, text: `${f.label} (${f.unit})` }), f.help && helpBubble(f.label, f.help)), input);
       (['firstLayerTemp', 'nozzleTemp'].includes(f.key) ? basic : advancedFields).append(row);
     }
+    const maps=el('details',{class:'width-maps'},el('summary',{text:'Measured thickness maps'}),el('p',{class:'small muted',text:'Enter measured flow,width pairs (one pair per line). Keep separate tables for beads on the bed and beads over another net. Leave empty until printed and measured. Tables clamp rather than extrapolate outside the measured range.'}));
+    for(const [key,label] of [['bed','On the bed'],['overNet','Over another net']]){
+      const field=el('textarea',{id:`width-map-${key}`,rows:4,'aria-label':`${label}: measured flow and width in mm`,placeholder:'flow, measured width (mm)'});
+      field.addEventListener('change',()=>{
+        try{
+          const value={};
+          for(const table of ['bed','overNet']){
+            const text=$(`#width-map-${table}`).value.trim();
+            if(text)value[table]=text.split(/\r?\n/).filter(line=>line.trim()).map(line=>{const [flow,width,...extra]=line.trim().split(/[,;\s]+/);if(extra.length||!flow||!width)throw new Error('Use exactly two numbers per row: flow, measured width.');return {flow:Number(flow),width:Number(width)};});
+          }
+          state.print.widthMaps=sanitizeWidthMaps(value);field.removeAttribute('aria-invalid');schedule();commit();renderFilamentSettings();
+        }catch(error){field.setAttribute('aria-invalid','true');toast(error.message);}
+      });
+      maps.append(el('label',{class:'field-row stacked'},el('span',{text:label}),field));
+    }
+    const save=el('button',{type:'button',class:'btn',text:'Save filament profile with measurements'});
+    save.addEventListener('click',()=>download(`${state.material}-calibration.json`,new Blob([JSON.stringify(printMaterial(),null,2)],{type:'application/json'})));
+    maps.append(save);advancedFields.append(maps);
     box.append(basic, advanced);
     $('#filament-reset').addEventListener('click', () => {
       state.print = withoutFilamentSettings(state.print);
@@ -793,7 +868,11 @@ function renderFilamentSettings() {
       : 'Using the filament default');
     if (value !== own) changed.push(f);
   }
-  $('#filament-reset').disabled = !changed.length;
+  for(const key of ['bed','overNet']){
+    const field=$(`#width-map-${key}`),maps=Object.hasOwn(state.print,'widthMaps')?state.print.widthMaps:material.flow.width_maps;
+    if(field&&document.activeElement!==field&&!field.hasAttribute('aria-invalid'))field.value=(maps?.[key]??[]).map(row=>`${row.flow}, ${row.width}`).join('\n');
+  }
+  $('#filament-reset').disabled = !changed.length&&!Object.hasOwn(state.print,'widthMaps');
   const advancedChanges = changed.filter(f => !['firstLayerTemp', 'nozzleTemp'].includes(f.key)).length;
   const badge = $('#filament-advanced-changes');
   badge.hidden = !advancedChanges;
@@ -852,6 +931,17 @@ async function regenerate() {
     const mod = designById(state.design);
     followVectorSize();
     const [selectedWidth, selectedHeight] = BINDINGS[state.design].size.get();
+    if (state.regions?.length && previewChoice==='overview') { showRegionOverview(); return; }
+    if (requiresApply()) {
+      overviewActive=false;renderPreviewMode();
+      if(state.resultKey===snapshotKey())preview.update(regionPreviewResult(state.result));
+      renderBusy(); render(); return;
+    }
+    if (state.regions?.length) {
+      if(currentPrintSizeProblem())throw new Error(currentPrintSizeProblem());
+      overviewActive=false; overview.cancel(); renderPreviewMode();
+      previewAtSelectedSize(exportOptions(selectedWidth,selectedHeight)); return;
+    }
     if (useWholeOverview(selectedWidth, selectedHeight, machine, previewChoice) || previewChoice !== 'sample' && currentPrintSizeProblem()) {
       showWholeOverview(exportOptions(selectedWidth, selectedHeight));
       return;
@@ -871,29 +961,11 @@ async function regenerate() {
     // 3D sample is a bounded corner of a large piece. 2D is the default for pieces larger than the bed (above).
     // Imported drawings keep their full scale within the explicitly labelled sample.
     const cap = state.vector && Math.max(state.vector.width, state.vector.height) <= 250 && state.vector.width <= machine.bed.width && state.vector.height <= machine.bed.depth ? 250 : 100;
-    if (!mod.legacy) {
-      const own = state.designs[mod.id];
+    if (!mod.legacyPanel) {
+      const own = state.designs[mod.settingsKey ?? mod.id];
       const [w, h] = mod.size(own);
       const previewState = { ...own, width: Math.min(w, cap), height: Math.min(h, cap) };
       result = mod.generate(machine, material, previewState, { outline: mod.outline === false ? null : placedOutline(previewState.width, previewState.height, w, h), vector: mod.usesVector || mod.vectorGuides ? state.vector : null, vectorSize: [w, h], includeLines: !state.vector, picture: pictureFor(w, h), perimeters: state.print.meshPerimeters, printedBoundary: !!state.vector && !!state.outline?.page });
-    } else if (state.design === 'squiggle') {
-      const s = state.squiggle;
-      // a picture is shown whole: the preview is the whole swatch at the shape it has, shrunk to fit the window
-      const shrink = s.pattern === 'image' && state.image && !state.vector ? Math.min(1, cap / Math.max(s.width, s.height)) : null;
-      const pw = shrink ? Math.max(10, Math.round(s.width * shrink)) : Math.min(s.width, cap);
-      const ph = shrink ? Math.max(10, Math.round(s.height * shrink)) : Math.min(s.height, cap);
-      result = generateSquiggle(machine, material, {
-        width: pw,
-        height: ph,
-        mode: s.mode,
-        shape: s.shape,
-        spacing: s.spacing,
-        amplitude: s.amplitude,
-        wavelength: s.wavelength,
-        sampler: squiggleSampler(pw, ph),
-        colorChange: s.colorChange,
-        outline: placedOutline(pw, ph, shrink ? pw : s.width, shrink ? ph : s.height),
-      });
     } else {
       const [w, h] = sampleSize(state.primary);
       const textile = toTextile(state.primary, state.advanced);
@@ -918,10 +990,8 @@ async function regenerate() {
     });
     // green shapes print solid: on the bed layer by layer with the pattern, or last, on top of it and any extra layers
     if (state.vector) result = applySvgSolids(result, state.vector, { fullWidth: selectedWidth, fullHeight: selectedHeight, layers: state.print.solidLayers, perimeters: state.print.brim, generator: 'arachne' });
-    // the backing mesh goes under all of it
-    result = addBackingMesh(result, backingFor());
     // Offset the selected outline before clipping: a bounded preview must never invent an edge at its crop.
-    const pictured = state.design === 'squiggle' && state.squiggle.pattern === 'image' && state.image && !state.vector;
+    const pictured = state.design === 'squiggle' && settingsOf(state.design).pattern === 'image' && state.image && !state.vector;
     const fullWidth = pictured ? result.cfg.t.sample_width : selectedWidth;
     const fullHeight = pictured ? result.cfg.t.sample_height : selectedHeight;
     let brimOutline = result.outline;
@@ -931,7 +1001,7 @@ async function regenerate() {
     }
     result = applyBrim(result, { count: allSolid && !backingFor() ? 0 : state.print.meshPerimeters, outline: brimOutline, fullWidth, fullHeight, label: 'Perimeters', requestedCount: state.print.brim });
     if (state.vector && result.cfg.t.sample_width === selectedWidth && result.cfg.t.sample_height === selectedHeight) result.documentSize = [state.vector.width, state.vector.height];
-    showGenerated(result, snapshotKey());
+    showGenerated(refreshConstruction(colourResult(result, settingsOf(state.design))), snapshotKey());
   } catch (e) {
     if (previewChoice === 'auto' && canSimplifyPreview(e)) {
       try { showWholeOverview(exportOptions()); return; } catch { /* invalid document dimensions still report normally */ }
@@ -972,7 +1042,9 @@ function renderErrors() {
     const sampled = t && (t.sample_width !== w || t.sample_height !== h);
     $('#canvas-note').hidden = !sampled;
     if (sampled) $('#canvas-note').textContent = `3D sample: a ${t.sample_width} × ${t.sample_height} mm corner · Export makes the whole ${w} × ${h} mm`;
-    $('#canvas-wrap').classList.remove('dimmed');
+    const stale=state.regions?.length&&state.resultKey!==snapshotKey()&&!!state.result;
+    if(stale){$('#canvas-note').hidden=false;$('#canvas-note').textContent='Settings changed — showing the last applied piece';}
+    $('#canvas-wrap').classList.toggle('dimmed',!!stale);
     return;
   }
   const raw = Array.isArray(state.error.errors) ? state.error.errors : [String(state.error.message || state.error)];
@@ -1015,7 +1087,7 @@ const FIXES = [
 
 /** The setting to change, named as the panel names it, for the first warning text it matches. */
 function adviceFor(mod, text) {
-  if (!mod || mod.legacy) return '';
+  if (!mod || mod.legacyPanel) return '';
   const labels = new Map();
   for (const c of mod.controls ?? []) if (c.kind === 'sliders') for (const item of c.items) labels.set(item.key, item.label);
   for (const fix of FIXES) {
@@ -1029,20 +1101,26 @@ function adviceFor(mod, text) {
 /** The geometry check, or null when there is nothing to say: it only speaks up for a problem, and says what to change. */
 function currentVerdict() {
   if (!state.result || state.error) return null;
+  const construction = constructionVerdict(state.result.construction);
+  if (construction?.blocked) return construction;
+  if(state.regions?.length) {
+    const notes=[...(state.result.warnings??[]),...(state.result.construction?.warnings??[])];
+    return notes.length?{level:'heads-up',title:'Whole-piece construction',body:[...new Set(notes)].join(' '),action:null}:null;
+  }
   const fabric = state.result.fabric;
   const mod = designById(state.design);
   if (fabric && !fabric.exportable) {
     const advice = adviceFor(mod, fabric.issues.join('. '));
     const fix = fabric.issues.length > 0 && !!BINDINGS[state.design]?.sliders?.length;
-    return {
+    return constructionVerdict(state.result.construction, {
       level: 'heads-up', title: 'Check the geometry', fix,
       body: `${describeFabric(fabric)}${advice}${fix ? ' Fix it tries small changes to the settings and keeps the first one that clears this.' : ''} You can also export it as it is: it prints as drawn.`,
       action: null,
-    };
+    });
   }
-  const verdict = !mod.legacy ? mod.verdict(state.result, state.designs[mod.id]) : state.design === 'squiggle'
-    ? buildSquiggleVerdict(state.result.stats, { colorChange: state.squiggle.colorChange })
+  const baseVerdict = !mod.legacyPanel ? (mod.verdict?.(state.result, settingsOf(state.design)) ?? buildSquiggleVerdict(state.result.stats, { colorChange: settingsOf(state.design).colorChange }))
     : buildVerdict(state.result.stats, { roomy: state.primary.roomy });
+  const verdict = constructionVerdict(state.result.construction, baseVerdict);
   if (verdict.level === 'ready' || verdict.level === 'ok') return null;
   return { ...verdict, body: verdict.body + adviceFor(mod, `${verdict.title} ${verdict.body}`) };
 }
@@ -1120,13 +1198,13 @@ function renderCheck() {
   box.replaceChildren(...children);
 }
 
-/** The crossing report of a layered design, as Details rows. */
+/** The crossing report, shown only when Details is opened. */
 function reportItems(r, item) {
   return [
     item('Crossings', `${r.crossings.toLocaleString('en')} (${r.perCm2.toFixed(1)} per cm²)`),
-    item('Between layers', r.between.toLocaleString('en')),
-    item('Smallest usual angle', r.crossings ? `${Math.round(r.minAngle)}°` : 'none'),
-    item('Longest uncrossed', `${Math.round(r.longestUncrossed)} mm`),
+    ...(Number.isFinite(r.between) ? [item('Between layers', r.between.toLocaleString('en'))] : []),
+    ...(Number.isFinite(r.minAngle) ? [item('Smallest usual angle', r.crossings ? `${Math.round(r.minAngle)}°` : 'none')] : []),
+    ...(Number.isFinite(r.longestUncrossed) ? [item('Longest uncrossed', `${Math.round(r.longestUncrossed)} mm`)] : []),
   ];
 }
 
@@ -1151,10 +1229,10 @@ function renderFigures() {
     if (estimate) host.append(fig(minutes(estimate), 'min', `${scope} motion estimate`),
       fig(grams(estimate.filamentGrams ?? 0), 'g', `${scope} filament`));
     const info = generating ? `Generating the G-code for the whole ${w} × ${h} mm piece, the same work Export does. You can keep looking; the time appears when it is done.`
-      : estimate?.full ? `From the G-code for the whole ${w} × ${h} mm piece${readyGcode?.key === key ? ', which is ready: Export saves it straight away' : ''}. Includes acceleration and startup motion; heating, homing and bed levelling are extra.`
+      : estimate?.full ? null
         : estimate ? `From a ${estimate.width} × ${estimate.height} mm 3D sample only, not the whole ${w} × ${h} mm piece.`
           : `The 2D view is a drawing, so it has no print time. Time and filament come from the G-code for the whole ${w} × ${h} mm piece.`;
-    host.append(el('p', { class: 'estimate-info small muted', text: problem && !estimate?.full ? `${info} ${problem}` : info }));
+    if (info) host.append(el('p', { class: 'estimate-info small muted', text: problem && !estimate?.full ? `${info} ${problem}` : info }));
     if (!estimate?.full) {
       const generate = el('button', { type: 'button', id: 'calculate-full-estimate', class: 'btn', text: generating ? 'Generating G-code…' : 'Generate G-code for time and filament', disabled: generating || !!previewBuild || !!problem });
       generate.title = problem || 'Works out the whole toolpath in the background: the same work as Export, which then saves it without waiting. You can stop it.';
@@ -1165,11 +1243,10 @@ function renderFigures() {
     $('#details').hidden = true;
     return;
   }
-  if (!state.result) { host.replaceChildren(); toggle.hidden = true; return; }
+  if (!state.result) { host.replaceChildren(); toggle.hidden = true; $('#details').hidden = true; return; }
   toggle.hidden = false;
   const { stats, cfg } = state.result;
   const t = cfg.t;
-  const isSq = state.design === 'squiggle';
   const selected = BINDINGS[state.design].size.get();
   const sampled = t.sample_width !== selected[0] || t.sample_height !== selected[1];
   const mod = designById(state.design);
@@ -1177,19 +1254,17 @@ function renderFigures() {
   host.replaceChildren(
     fig(minutes(stats), 'min', sampled ? 'Preview motion estimate' : 'Motion estimate'),
     fig(grams(stats.filamentGrams), 'g', sampled ? 'Preview filament' : 'Filament'),
-    !mod.legacy
+    state.regions?.length ? fig(String(state.regions.filter(r=>r.enabled!==false).length), '', 'Regions') : !mod.legacyPanel
       ? (() => { const f = mod.figure(state.result); return fig(f.value, f.unit, f.label); })()
-      : isSq ? fig('2', '', 'Layers') : fig(stats.loops.toLocaleString('en'), '', 'Loops'),
+      : fig(stats.loops.toLocaleString('en'), '', 'Loops'),
   );
-  host.append(el('p',{class:'estimate-info small muted',text:printTimeSeconds(stats)===null ? 'Motion estimate unavailable: this file contains motion the timing model cannot predict.' : 'Includes acceleration and startup motion. Heating, homing, bed levelling and manual pauses are extra.'}));
   toggle.textContent = state.details ? 'Hide details' : 'Details';
   toggle.setAttribute('aria-expanded', String(state.details));
-
-  const d = $('#details');
-  d.hidden = !state.details;
+  const details = $('#details');
+  details.hidden = !state.details;
   if (state.details) {
-    const item = (k, v) => el('div', {}, el('div', { class: 'k', text: k }), el('div', { class: 'v', text: v }));
-    d.replaceChildren(
+    const item = (label, value) => el('div', {}, el('div', { class:'k', text:label }), el('div', { class:'v', text:value }));
+    details.replaceChildren(
       item('Preview size', `${t.sample_width} × ${t.sample_height} mm`),
       item('Design code', currentSwatch()),
       item('Filament length', `${Math.round(stats.filamentMm).toLocaleString('en')} mm`),
@@ -1201,10 +1276,9 @@ function renderFigures() {
       item('G-code moves', stats.moves.toLocaleString('en')),
       item('Steepest slope', `${stats.maxSlopeDeg.toFixed(1)}°`),
       ...(state.result.report ? reportItems(state.result.report, item) : []),
-      el('p', { class: 'note', text: 'Motion time uses acceleration, axis limits and classic jerk with bounded lookahead. Print-order playback keeps the commanded-motion clock. Short print runs and long travels can contribute to blobs and strings.' })
     );
   }
-  const what = !mod.legacy ? mod.summary(state.result) : isSq ? 'a two-layer squiggle mesh' : `${stats.loops} loops`;
+  const what = state.regions?.length ? 'the whole colour-region piece' : !mod.legacyPanel ? mod.summary(state.result) : `${stats.loops} loops`;
   $('#preview').setAttribute('aria-label', `3D preview: ${what} on a ${t.sample_width} by ${t.sample_height} millimetre swatch, ${printTimeSeconds(stats)===null ? 'motion estimate unavailable' : `about ${minutes(stats)} minutes of modeled motion`}.`);
 }
 
@@ -1223,11 +1297,12 @@ function renderExport() {
   // Export can build a selected design independently of its bounded or pending preview.
   const problem = currentPrintSizeProblem();
   const invalidDraft = ['w', 'h'].some(axis => $(`#${state.design}-${axis}`)?.getAttribute('aria-invalid') === 'true');
-  btn.disabled = exporting || !!problem || invalidDraft || (!overviewActive && !!state.print.legacyCopies) || !(ok || isReady(state.design));
+  btn.disabled = exporting || !!state.result?.construction?.errors.length || !!problem || invalidDraft || (!overviewActive && !!state.print.legacyCopies) || !(ok || isReady(state.design));
+  if(requiresApply()&&readyGcode?.key!==snapshotKey()&&state.resultKey!==snapshotKey())btn.disabled=true;
   btn.title = readyGcode?.key === snapshotKey() ? 'The G-code for these settings is ready: Export saves it straight away.' : '';
   $('#print-fit-warning').hidden = !problem;
   $('#print-fit-message').textContent = problem;
-  $('#btn-panel').hidden = designById(state.design).panel === false;
+  $('#btn-panel').hidden = !!state.regions?.length || designById(state.design).panel === false;
 }
 
 function printOverhang(id = state.design) {
@@ -1279,36 +1354,6 @@ function renderSliders() {
   for (const btn of $$('[data-edge]')) btn.setAttribute('aria-pressed', String((btn.dataset.edge === 'every') === state.primary.edgeLoops));
 }
 
-function renderSquiggleChoices() {
-  const s = state.squiggle;
-  const floor = parallelDepth();
-  $('#sq-mode-note').textContent = floor === null
-    ? 'Layer 1 runs in columns and layer 2 in rows, so the two cross everywhere.'
-    : `Layer 2 runs halfway between the layer 1 lines, in opposite phase. Waves stay at least ${floor.toFixed(2)} mm deep so every line crosses the lines on both sides.`;
-  $('#sq-pattern-hint').textContent = s.pattern === 'uniform'
-    ? 'Every wave is the same, so the fabric is symmetric. Choose a pattern to make some parts deeper.'
-    : floor === null
-      ? 'Darker parts of the pattern get deeper, tighter waves.'
-      : 'Darker parts of the pattern get deeper waves.';
-  for (const btn of $$('[data-sqmode]')) btn.setAttribute('aria-pressed', String(btn.dataset.sqmode === s.mode));
-  for (const btn of $$('[data-sqshape]')) btn.setAttribute('aria-pressed', String(btn.dataset.sqshape === s.shape));
-  for (const btn of $$('[data-pattern]')) btn.setAttribute('aria-pressed', String(btn.dataset.pattern === s.pattern));
-  $('#sq-color-change').checked = s.colorChange;
-
-  const showBox = s.pattern === 'image' || state.imageBoxOpen;
-  $('#sq-image-box').hidden = !showBox;
-  $('#sq-img-info').hidden = !state.image;
-  $('#sq-drop-label').textContent = state.image ? 'Drop another picture, or browse' : 'Drop a picture here, or browse';
-  if (state.image) {
-    $('#sq-img-name').textContent = state.image.name;
-    // the picture spans the swatch whatever its shape; matching the shape just stops it being stretched
-    const matched = Math.abs(s.width / s.height - state.image.px[0] / state.image.px[1]) < 0.02;
-    $('#sq-img-size').textContent = `${state.image.px[0]} × ${state.image.px[1]} px${matched ? ', the swatch has its shape' : ', stretched to fill the swatch'}`;
-    $('#sq-img-match').hidden = matched;
-  }
-  for (const fold of squiggleFolds.values()) fold.update();
-}
-
 function renderAdvancedSummary() {
   let total = 0;
   for (const group of ADVANCED_GROUPS) {
@@ -1352,12 +1397,12 @@ function render() {
   renderPrinter();
   renderSizes();
   renderSliders();
-  renderSquiggleChoices();
   renderDesignChoices();
   renderTilePressed();
   renderAdvancedSummary();
   renderLegend();
   renderPreviewMode();
+  renderRegions();
 }
 
 /* ---------- controls ---------- */
@@ -1477,67 +1522,6 @@ function drawPatternThumb(canvas, sampler) {
   }
 }
 
-/** The squiggle panel's long lists sit behind one line that names the chosen option, like every other design's. */
-const squiggleFolds = new Map();
-function foldSquiggle(id) {
-  if (squiggleFolds.has(id)) return;
-  const fold = new SectionFold(host, $(`#${id}`).closest('section'), { id });
-  squiggleFolds.set(id, fold);
-  controls.push(fold);
-}
-
-/** The strand-shape picker of the squiggle panel: the same shapes the Coil card offers. */
-function buildSquiggleShapes() {
-  $('#sq-shapes').replaceChildren(...SHAPE_IDS.map((shape) => {
-    const btn = el('button', { type: 'button', class: 'pattern', 'data-sqshape': shape, 'aria-pressed': 'false', title: SHAPES[shape].hint });
-    btn.innerHTML = `${shapeThumb(shape)}<span>${SHAPES[shape].label === 'Wave' ? 'Wave (default)' : SHAPES[shape].label}</span>`;
-    btn.addEventListener('click', () => {
-      state.squiggle.shape = shape;
-      renderSquiggleChoices();
-      schedule();
-      commit();
-    });
-    return btn;
-  }));
-  foldSquiggle('sq-shapes');
-}
-
-function buildPatterns() {
-  const host = $('#sq-patterns');
-  host.replaceChildren(...PATTERNS.map((p) => {
-    let thumb;
-    if (p.id === 'image') {
-      if (state.image) {
-        thumb = el('canvas', { class: 'pattern-thumb', width: 96, height: 96, 'aria-hidden': 'true' });
-        thumb.getContext('2d').drawImage(state.image.thumb, 0, 0, 96, 96);
-      } else {
-        thumb = el('span', { class: 'pattern-thumb upload', 'aria-hidden': 'true' }, icon('M9 12.5V4M5.5 7.5L9 4l3.5 3.5M3 14.5h12'));
-      }
-    } else {
-      thumb = el('canvas', { class: 'pattern-thumb', 'aria-hidden': 'true' });
-      drawPatternThumb(thumb, SAMPLERS[p.id]);
-    }
-    const btn = el('button', { type: 'button', class: 'pattern', 'data-pattern': p.id, 'aria-pressed': 'false' }, thumb, el('span', { text: p.label }));
-    btn.addEventListener('click', () => {
-      if (p.id === 'image' && !state.image) {
-        state.imageBoxOpen = true;
-        renderSquiggleChoices();
-        $('#sq-file-input').click();
-        return;
-      }
-      state.imageBoxOpen = false;
-      state.squiggle.pattern = p.id;
-      renderSquiggleChoices();
-      schedule();
-      commit();
-    });
-    return btn;
-  }));
-  foldSquiggle('sq-patterns');
-  renderSquiggleChoices();
-}
-
-/** The sections of the two hand-built panels fold like every other design's, closed until they are opened. */
 function foldRemainingSections() {
   for (const section of $$('#settings-body .panel > section.group')) {
     const heading = section.querySelector('h2');
@@ -1555,7 +1539,6 @@ function syncControls() {
   buildAdvanced();
   renderSliders();
   renderSizes();
-  renderSquiggleChoices();
   renderDesignChoices();
   $('#doc-name').value = state.docName;
   fillDialogSelects();
@@ -1659,9 +1642,7 @@ function renderProfileList() {
 /** One tile per registry module; planned designs are visible placeholders that cannot be selected. */
 function renderTiles() {
   const ranking = new Map(PRINTABILITY.map((p, i) => [p.id, { ...p, rank: i + 1 }]));
-  const byRank = (a, b) => (ranking.get(a.id)?.rank ?? 1000) - (ranking.get(b.id)?.rank ?? 1000);
-  const { essentials, others: rest } = galleryGroups();
-  const others = rest.sort(byRank);
+  const presets = DESIGNS.filter((design) => design.status === 'preset');
   const makeTile = (d) => {
     const ready = d.status === 'ready';
     const planned = d.status === 'planned';
@@ -1676,31 +1657,57 @@ function renderTiles() {
       disabled: planned,
       title: planned ? `${d.name} is coming soon` : `${d.name}: ${d.blurb}`,
     });
-    const assessment = ranking.get(d.id);
+    const assessment = ['parquet','truchet','meander','turing'].includes(d.id) ? null : ranking.get(d.id);
     tile.title = `${d.blurb}${assessment ? ` · Estimated printability ${assessment.rank} of ${PRINTABILITY.length}. ${assessment.longestUnsupported.toFixed(1)} mm longest free span; ${assessment.maxSlopeDeg.toFixed(1)}° maximum slope. Default 100 × 100 mm geometry; physical testing pending.` : ''}`;
-    tile.innerHTML = `${d.thumb ?? THUMBS[d.id] ?? ''}<span class="design-text"><span class="design-name">${d.name}${planned ? '<span class="soon">Soon</span>' : ''}</span></span>`;
+    const supportLabel = { self: 'Holds itself', auto: '+ backing', 'built-in': 'Built-in carrier' }[d.support];
+    const stateLabel = d.state === 'needs-repair' ? 'Needs repair' : d.state === 'untested' ? 'Untested' : '';
+    const badges = [supportLabel, stateLabel].filter(Boolean).map((text) => `<span class="design-badge" aria-label="${text}">${text}</span>`).join('');
+    tile.innerHTML = `${d.thumb ?? THUMBS[d.id] ?? ''}<span class="design-side-strip" data-side-strip="${ready ? d.id : ''}" aria-hidden="true"></span><span class="design-text"><span class="design-name">${d.name}${planned ? '<span class="soon">Soon</span>' : ''}</span><span class="design-badges">${badges}</span></span>`;
     if (ready) tile.addEventListener('click', () => setDesign(d.id));
     if (d.status === 'preset') tile.addEventListener('click', () => openPresetTile(d));
     return tile;
   };
-  // the headings are one word or two; what they mean is a tooltip, so the first tile is the first thing in the list
-  const heading = (text, sub) => el('h3', { class: 'design-group', title: sub }, text);
-  $('#design-list').replaceChildren(
-    heading('Essentials', 'Flat lines in one or two layers, with only a few controls'),
-    ...essentials.map(makeTile),
-  );
-  $('#experimental-design-list').replaceChildren(...others.map(makeTile));
+  const shelfNode = (shelf, groups) => {
+    const titleId = `shelf-${shelf}-title`;
+    const details = el('details', { class: `library-shelf shelf-${shelf}`, open: shelf === 'flat' });
+    const title = el('summary', { class: 'shelf-heading', id: titleId },
+      el('span', { class: 'shelf-title', text: SHELVES[shelf].label }),
+      el('span', { class: 'shelf-hint', text: SHELVES[shelf].hint }));
+    details.setAttribute('aria-labelledby', titleId);
+    details.append(title, el('div', { class: 'shelf-cards' }, ...groups.flatMap(({ cards }) => cards.map(makeTile))));
+    return details;
+  };
+  const groups = libraryGroups();
+  $('#design-list').replaceChildren(...['flat', 'layered', 'raised'].map((shelf) => shelfNode(shelf, groups[shelf])));
+  $('#experimental-design-list').replaceChildren(...(presets.length ? [el('section', { class: 'library-shelf quick-starts', 'aria-label': 'Quick starts' },
+    el('h2', { class: 'family-heading', text: 'Quick starts' }), ...presets.map(makeTile))] : []));
+  const strips = [...document.querySelectorAll('.design-side-strip[data-side-strip]')];
+  const renderStrip = (strip) => {
+    const mod = designById(strip.dataset.sideStrip);
+    if (!mod || strip.dataset.done) return;
+    strip.dataset.done = 'true';
+    try {
+      const settings = { ...mod.defaults(), width: 36, height: 6 };
+      const result = mod.generate(state.machines.get(state.machine), printMaterial(), settings, {});
+      const section = defaultSection(result);
+      strip.innerHTML = section ? drawSideView(sideProfile(result.strands, section), { width: 140, height: 18, compact: true }) : '';
+    } catch { strip.replaceChildren(); }
+  };
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => entries.forEach((entry) => { if (entry.isIntersecting) { renderStrip(entry.target); observer.unobserve(entry.target); } }));
+    strips.forEach((strip) => observer.observe(strip));
+  } else strips.forEach(renderStrip);
   renderTilePressed();
 }
 
 /** The settings object a design keeps its state in (the two older designs keep theirs at the top level). */
 function settingsOf(id) {
   if (id === 'loop-pile') return state.primary;
-  if (id === 'squiggle') return state.squiggle;
-  return state.designs[id];
+  const mod = designById(id);
+  return state.designs[mod?.settingsKey ?? id];
 }
 
-/** A preset tile opens another design with some settings changed, for example the zigzag mesh on Squiggle & Gyroid. */
+/** A preset tile opens another design with some settings changed. */
 function openPresetTile(d) {
   const { design, patch } = d.opens;
   Object.assign(settingsOf(design), patch);
@@ -1737,16 +1744,13 @@ function matchesPreset(d) {
 
 /** The code that names this swatch: design, preset, size and a fingerprint of every setting. */
 function currentSwatch() {
+  if(state.regions?.length)return `regions-${regionsFingerprint(state.vector,state.regions,state.seam,state.print)}`;
   const mod = designById(state.design);
   let settings, size, preset = null;
-  if (!mod.legacy) {
-    settings = state.designs[mod.id];
+  if (!mod.legacyPanel) {
+    settings = state.designs[mod.settingsKey ?? mod.id];
     size = mod.size(settings);
     preset = mod.presetMatch ? mod.presetMatch(settings) : null;
-  } else if (mod.id === 'squiggle') {
-    settings = state.squiggle;
-    size = [settings.width, settings.height];
-    if (JSON.stringify(settings) === JSON.stringify(mod.defaults())) preset = 'default';
   } else {
     settings = { primary: state.primary, advanced: state.advanced };
     size = sampleSize(state.primary);
@@ -1764,26 +1768,34 @@ function showDesign() {
   renderTilePressed();
   for (const d of DESIGNS) {
     const panel = $(`#panel-${d.id}`);
-    if (panel) panel.hidden = d.id !== state.design;
+    if (panel) panel.hidden = d.id !== state.design || !!state.regions?.length && selectedRegion()?.role!=='pattern';
   }
   const svgSlot = $(`#panel-${state.design} .size-svg-slot`);
   if (svgSlot && svgImportCard) svgSlot.append(svgImportCard.node);
+  const importSlot=$('#region-import');
+  importSlot.hidden=!state.regions?.length;
+  if(state.regions?.length&&svgImportCard)importSlot.append(svgImportCard.node);
   $('#tight-option').hidden = state.design !== 'loop-pile';
   renderExport();
   if (state.design !== 'loop-pile' && state.showTight) setShowTight(false);
 }
 
-function setDesign(id, { fromPreset = false } = {}) {
+function setDesign(id, { fromPreset = false, fromVariant = false } = {}) {
   if (!isReady(id)) return;
+  if(state.regions?.length){
+    const region=selectedRegion()??state.regions.find(r=>r.role==='pattern');
+    if(region){regionCard(region.id,id);return;}
+    toast('Select a drawing colour first, then choose its design.', { kind:'warning' });return;
+  }
   let variantChanged = false;
-  if (!fromPreset) {
+  if (!fromPreset && !fromVariant) {
     const own = settingsOf(id), next = baseDesignSettings(id, own);
     variantChanged = Object.keys(next).some((key) => next[key] !== own[key]);
     Object.assign(own, next);
   }
   if (state.design === id && !variantChanged) return;
   stopPlay();
-  state.design = id;
+  if (!selectVariant(state, id)) return;
   state.fraction = 1;
   state.checkOpen = null;
   state.why = false;
@@ -1822,6 +1834,9 @@ function forgetPictureChoices() {
     s.pattern = mod.defaults().pattern ?? 'none';
     changed = true;
   }
+  for(const region of state.regions??[]){
+    if(region.settings?.pattern===PICTURE){region.settings.pattern=designById(region.card)?.defaults().pattern??'none';if(region.settings.pattern===PICTURE)region.settings.pattern='centerSpot';changed=true;}
+  }
   return changed;
 }
 
@@ -1829,7 +1844,6 @@ function clearPicture() {
   state.image = null;
   state.imageBoxOpen = false;
   forgetPictureChoices();
-  buildPatterns();
   renderControls();
   schedule();
   commit();
@@ -1873,9 +1887,7 @@ function loadPicture(file, designId = 'squiggle') {
     const target = settingsOf(designId);
     if (target) target.pattern = PICTURE;
     state.imageBoxOpen = false;
-    $('#sq-thumb').getContext('2d').drawImage(thumb, 0, 0, 112, 112);
-    buildPatterns();
-    renderControls();
+      renderControls();
     renderSizes();
     schedule();
     commit();
@@ -1884,38 +1896,6 @@ function loadPicture(file, designId = 'squiggle') {
   };
   img.onerror = () => { URL.revokeObjectURL(url); toast('That picture could not be opened.'); };
   img.src = url;
-}
-
-function bindSquiggle() {
-  for (const btn of $$('[data-sqmode]')) {
-    btn.addEventListener('click', () => {
-      state.squiggle.mode = btn.dataset.sqmode;
-      renderSquiggleChoices();
-      schedule();
-      commit();
-    });
-  }
-  $('#sq-color-change').addEventListener('change', (e) => {
-    state.squiggle.colorChange = e.target.checked;
-    schedule();
-    commit();
-  });
-
-  const fileInput = $('#sq-file-input');
-  fileInput.addEventListener('change', () => {
-    if (fileInput.files?.[0]) loadPicture(fileInput.files[0]);
-    fileInput.value = '';
-  });
-  const drop = $('#sq-dropzone');
-  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('dragover'); });
-  drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
-  drop.addEventListener('drop', (e) => {
-    e.preventDefault();
-    drop.classList.remove('dragover');
-    if (e.dataTransfer?.files?.[0]) loadPicture(e.dataTransfer.files[0]);
-  });
-  $('#sq-img-match').addEventListener('click', () => { givePictureShape('squiggle'); renderSquiggleChoices(); });
-  $('#sq-img-clear').addEventListener('click', clearPicture);
 }
 
 /* ---------- actions ---------- */
@@ -1997,7 +1977,7 @@ async function fixGeometry() {
   const unitOf = (key) => binding.sliders.find((s) => s.key === key)?.unit ?? '';
   const advice = adviceFor(designById(state.design), fabric.issues.join('. '));
   const candidates = fixCandidates(fabric, { sliders: binding.sliders, get: binding.get, range: binding.range });
-  if (!candidates.length) { toast(`None of this design's settings is likely to change this.${advice}`); return; }
+  if (!candidates.length) { toast(`None of this design's settings is likely to change this.${advice}`, { kind:'warning' }); return; }
   const key = snapshotKey(), controller = new AbortController(), before = problemScore(fabric);
   fixJob = { controller, tried: 0, total: candidates.length };
   renderCheck();
@@ -2020,7 +2000,7 @@ async function fixGeometry() {
     return;
   }
   fixJob = null;
-  if (!best) { renderCheck(); toast(`No small change cleared it.${advice || ' Try a simpler shape or a larger swatch.'}`); return; }
+  if (!best) { renderCheck(); toast(`No small change cleared it.${advice || ' Try a simpler shape or a larger swatch.'}`, { kind:'warning' }); return; }
   applySettingsPatch(best.patch);
   const changed = describeChanges(best.changes, unitOf);
   toast(best.score === 0 ? `Fixed: ${changed}. Undo brings your settings back.` : `Better, though not cleared: ${changed}. Undo brings your settings back.`);
@@ -2111,7 +2091,7 @@ function reportStudyExport(exportType, options = {}, stats = state.result?.stats
 /** The settings an exported file is named after: what a registry design's panel shows, the controls of the two older ones. */
 function namedKeys(id) {
   const mod = designById(id), s = settingsOf(id);
-  if (!mod.legacy) return relevantKeys(mod, s);
+  if (!mod.legacyPanel) return relevantKeys(mod, s);
   if (id === 'squiggle') return ['mode', 'shape', ...SQ_SLIDERS.map((d) => d.key), 'pattern', 'colorChange'];
   return [...LOOP_SLIDERS.map((d) => d.key), 'edgeLoops', 'roomy', 'pattern', ...(s.pattern && s.pattern !== 'none' ? ['patternScale'] : [])];
 }
@@ -2121,6 +2101,7 @@ function namedKeys(id) {
  * the print setup (src/ui/file-name.js), so a folder of exports shows which designs and looks are printed most.
  */
 function exportName(size, panel = false, panelSettings = {}) {
+  if(state.regions?.length&&!panel)return `${currentSwatch()}_${size[0]}x${size[1]}mm.gcode`;
   const settings = panel ? { ...settingsOf(state.design), ...panelSettings } : settingsOf(state.design);
   const keys = panel ? [...namedKeys(state.design), 'repeat', 'backingSpacing'] : namedKeys(state.design);
   return exportFileName(designById(state.design), settings, keys, { size, print: state.print, material: state.material, docName: state.docName, panel });
@@ -2132,6 +2113,7 @@ function swatchFileName() {
 
 async function exportGcode() {
   if (exporting) return;
+  if(requiresApply()&&readyGcode?.key!==snapshotKey()&&state.resultKey!==snapshotKey()){toast('Apply the whole piece before exporting.');return;}
   let input;
   const controller = new AbortController();
   exportController = controller;
@@ -2150,9 +2132,10 @@ async function exportGcode() {
     else if (previewBuild?.key === key) result = await previewBuild.promise;
     else result = await buildSwatch(input, { signal: controller.signal });
     if (controller.signal.aborted || snapshotKey() !== key) throw new DOMException('The design changed during export.', 'AbortError');
+    assertConstructionExportable(result);
     const moveCount = result.moveCount ?? result.moves?.length ?? 0;
     if (!moveCount) throw new Error('Nothing to print for this design and size.');
-    const settings = JSON.stringify({ design: input.design, settings: input.studySettings, print: { ...savedPrint,
+    const settings = JSON.stringify({ design: input.design, settings: input.studySettings, regions:input.regions, seam:input.seam, print: { ...savedPrint,
       ...(result.layerPlan ? { extraLayers: result.layerPlan.extraLayers, nativeLayers: result.layerPlan.nativeLayers, totalLayers: result.layerPlan.totalLayers,
         ...(result.layerPlan.mode === 'backing' ? { backingLayers: result.layerPlan.backingLayers, totalBackingLayers: result.layerPlan.totalBackingLayers, textureCopies: 1 } : {}) } : {}) }, machine: input.machine.id, material: input.material.id });
     const text = result.gcode.replace('; Textile G-code generator v1\n', (head) => `${head}; swatch ${code}\n; name ${title}\n; studio settings ${settings}\n`);
@@ -2174,11 +2157,80 @@ async function exportGcode() {
   }
 }
 
+let variantExportReady=null;
+function drawVariantPreview(result,variants){
+  const host=$('#variants-preview'),svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox',`-2 -2 ${result.width+4} ${result.height+4}`);svg.setAttribute('role','img');svg.setAttribute('aria-label',`Top-down overview of ${variants.length} variants on one bed`);
+  const colors=['#b44737','#276e69','#a46b25','#566c9a'];
+  for(let i=0;i<variants.length;i++){
+    const x=result.pieces[i].x,y=result.pieces[i].y,w=result.pieces[i].width,h=result.pieces[i].height;
+    const rect=document.createElementNS(svg.namespaceURI,'rect');rect.setAttribute('x',x);rect.setAttribute('y',result.height-y-h);rect.setAttribute('width',w);rect.setAttribute('height',h);rect.setAttribute('fill','none');rect.setAttribute('stroke','currentColor');rect.setAttribute('stroke-dasharray','1.5 1');rect.setAttribute('stroke-width','.25');svg.append(rect);
+    const label=document.createElementNS(svg.namespaceURI,'text');label.setAttribute('x',x+w/2);label.setAttribute('y',result.height-y-h-1);label.setAttribute('text-anchor','middle');label.setAttribute('font-size','2.5');label.textContent=variants[i].name;svg.append(label);
+    const path=document.createElementNS(svg.namespaceURI,'path');let d='';
+    for(const strand of result.strands.filter(s=>s.id.startsWith(`variant-${i+1}-`))){if(strand.pts.length<2)continue;d+=`M ${strand.pts[0].x} ${result.height-strand.pts[0].y}`;for(let k=1;k<strand.pts.length;k++)d+=` L ${strand.pts[k].x} ${result.height-strand.pts[k].y}`;}
+    path.setAttribute('d',d);path.setAttribute('fill','none');path.setAttribute('stroke',colors[i%colors.length]);path.setAttribute('stroke-width','.45');path.setAttribute('stroke-linecap','round');path.setAttribute('stroke-linejoin','round');svg.append(path);
+  }
+  host.replaceChildren(svg);
+}
+
+async function exportAllVariants(id){
+  if(exporting)return;
+  const variants=variantsOf(id),dialog=$('#variants-dialog');
+  if(variants.length<2){toast('This design has no printable variants.');return;}
+  const controller=new AbortController();exportController=controller;exporting=true;variantExportReady=null;
+  const button=$('#variants-download'),status=$('#variants-status'),note=$('#variants-note'),list=$('#variants-list');
+  button.disabled=true;list.replaceChildren();$('#variants-preview').replaceChildren();
+  status.textContent='Checking the bed and building each variant…';note.textContent='Each piece is independently generated with the selected printer, filament and print setup.';
+  if(!dialog.open)dialog.showModal();
+  exportLabel='Building comparison set…';renderBusy();
+  try{
+    const [requestedW,requestedH]=BINDINGS[id].size.get(),machine=state.machines.get(state.machine),material=printMaterial();
+    const layout=planVariantLayout({width:requestedW,height:requestedH,count:variants.length,machine,material,overrides:{layer_height:state.print.layerHeight}});
+    const settingsByCard=Object.fromEntries(variants.map(card=>[card.id,structuredClone(settingsOf(card.id))]));
+    const results=[];
+    for(let index=0;index<variants.length;index++){
+      const card=variants[index];status.textContent=`Building ${index+1} of ${variants.length}: ${card.name}…`;
+      exportLabel=`Building ${card.name} (${index+1}/${variants.length})…`;renderBusy();
+      const input=structuredClone(exportOptions(layout.width,layout.height));
+      input.regions=null;input.vector=null;input.shapeOutline=false;
+      input.design=card.id;input.settings=structuredClone(settingsByCard[card.id]);input.studySettings=structuredClone(settingsByCard[card.id]);input.outline=state.regions?.length?null:placedOutline(layout.width,layout.height);
+      const result=await buildSwatch(input,{signal:controller.signal,preview:true});
+      if(controller.signal.aborted)throw new DOMException('Comparison build cancelled.','AbortError');
+      result.designId=card.id;results.push(result);
+    }
+    const combined=combineVariantResults(results,{machine,material,positions:layout.positions,width:layout.totalWidth,height:layout.totalHeight,settings:settingsByCard,print:{...state.print},gap:layout.gap});
+    const family=variants[0].variantGroup??variants[0].settingsKey??variants[0].family,hash=combined.settingsHash,name=variantsFileName(family,hash),code=`${family}-variants-${hash}`;
+    combined.gcode=combined.gcode.replace('; Textile G-code generator v1\n',match=>`${match}; swatch ${code}\n`);
+    combined.swatchCode=code;combined.filename=name;combined.scaled=layout.scaled;combined.pieces.forEach((piece,index)=>{piece.position=[layout.positions[index].x,layout.positions[index].y];piece.settings=settingsByCard[piece.card];});
+    variantExportReady=combined;
+    drawVariantPreview(combined,variants);
+    const mm=n=>Math.round(n*10)/10; // the layout is exact (76.49999999999999); the list is for reading
+    list.replaceChildren(...combined.pieces.map(piece=>el('li',{text:`${piece.index}. ${variants[piece.index-1].name} — ${mm(piece.width)} × ${mm(piece.height)} mm at (${mm(piece.x)}, ${mm(piece.y)}) mm · ${piece.settingsHash}`})));
+    status.textContent=`${variants.length} variants fit on one bed${layout.scaled?` at ${layout.width.toFixed(1)} × ${layout.height.toFixed(1)} mm each (scaled down from ${requestedW} × ${requestedH} mm)`: ` at ${mm(layout.width)} × ${mm(layout.height)} mm each`}.`;
+    note.textContent=`One G-code file · ${layout.gap} mm gaps · swatch ${code}. ${layout.scaled?'The swatch was reduced proportionally to fit the selected printer.':''}`;
+    button.disabled=false;
+  }catch(error){
+    if(error.name==='AbortError'){status.textContent='Comparison export cancelled.';}
+    else{status.textContent=`Could not build variants: ${error.message}`;recordBuildFailure(error,{...exportOptions(),design:id,operation:'variants-export'});}
+    variantExportReady=null;
+  }finally{exporting=false;exportController=null;renderBusy();render();}
+}
+
+function downloadVariants(){
+  const result=variantExportReady;if(!result)return;
+  const record={format:1,swatchCode:result.swatchCode,filename:result.filename,createdAt:new Date().toISOString(),machine:result.cfg.machine.id,material:result.cfg.material.id,dimensions:{width:result.width,height:result.height},pieces:result.pieces.map(({index,card,settingsHash,position,width,height,settings})=>({index,card,settingsHash,position,width,height,settings}))};
+  download(result.filename,new Blob([result.gcode],{type:'text/plain'}));
+  download(result.filename.replace(/\.gcode$/i,'.swatch.json'),new Blob([JSON.stringify(record,null,2)],{type:'application/json'}));
+  toast(`Saved ${result.pieces.length} variants${result.scaled?' at the reduced swatch size':''}: ${result.filename}`);
+  $('#variants-dialog').close('export');variantExportReady=null;
+}
+
 async function shareLink() {
-  const hash = stateToHash({ ...snapshot(), vector: null });
+  const hash = stateToHash({ ...snapshot(), vector: state.regions?.length ? state.vector : null });
   const url = `${location.origin}${location.pathname}${hash}`;
-  const picture = state.design === 'squiggle' && state.squiggle.pattern === 'image';
-  const note = state.vector ? ' SVG paths stay in your saved settings file; the link shares the pattern settings.' : picture ? ' Your picture stays on this computer, so the link opens with the centre spot pattern.' : '';
+  if(url.length>32000){toast('This drawing and its regions are too large for a reliable share link. Save a settings file instead; nothing has been truncated.');return;}
+  const picture = settingsOf(state.design)?.pattern === PICTURE && !!state.image;
+  const note = state.regions?.length ? ' The drawing and all region settings are included.' : state.vector ? ' SVG paths stay in your saved settings file; the link shares the pattern settings.' : picture ? ' Your picture stays on this computer, so the link opens with the centre spot pattern.' : '';
   try {
     await navigator.clipboard.writeText(url);
     toast(`Link copied.${note}`);
@@ -2209,18 +2261,14 @@ async function openFile(file) {
 
 function resetDesign() {
   const mod = designById(state.design);
-  if (!mod.legacy) {
-    state.designs[mod.id] = mod.defaults();
-  } else if (state.design === 'squiggle') {
-    state.squiggle = { ...SQUIGGLE_DEFAULTS };
-    state.image = null;
-    state.imageBoxOpen = false;
-    buildPatterns();
+  if (!mod.legacyPanel) {
+    state.designs[mod.settingsKey ?? mod.id] = mod.defaults();
   } else {
     state.primary = { ...PRIMARY_DEFAULTS };
     state.advanced = {};
   }
   state.checkOpen = null;
+  captureRegionSettings();
   syncControls();
   schedule();
   commit();
@@ -2323,9 +2371,19 @@ function bindStatic() {
   $('#btn-undo').addEventListener('click', undo);
   $('#btn-redo').addEventListener('click', redo);
   $('#btn-export').addEventListener('click', () => { void exportGcode(); });
+  $('#btn-details').addEventListener('click', () => { state.details = !state.details; renderFigures(); });
+  $('#btn-apply').addEventListener('click', () => { void applyPiece(); });
+  $('#btn-swatch-record').addEventListener('click',()=>{
+    closeMenus();
+    const input=exportOptions(),code=currentSwatch();
+    const record=swatchRecord({code,card:state.regions?.length?'colour regions':state.design,settings:state.regions??settingsOf(state.design),machine:state.machine,material:state.material,width:input.width,height:input.height,print:state.print,construction:state.resultKey===snapshotKey()?state.result?.construction:null});
+    download(`${code}.md`,new Blob([record],{type:'text/markdown'}));
+  });
+  $('#variants-cancel').addEventListener('click', () => { exportController?.abort(); variantExportReady=null; $('#variants-dialog').close('cancel'); });
+  $('#variants-download').addEventListener('click', downloadVariants);
+  $('#variants-dialog').addEventListener('close', () => { if(exporting)exportController?.abort(); variantExportReady=null; });
   $('#btn-panel').addEventListener('click', closeMenus);
   $('#btn-share').addEventListener('click', shareLink);
-  $('#btn-details').addEventListener('click', () => { state.details = !state.details; renderFigures(); });
   $('#btn-advanced').addEventListener('click', () => openAdvanced($('#advanced-body').hidden));
   $('#doc-name').addEventListener('input', (e) => { state.docName = e.target.value; });
   $('#doc-name').addEventListener('change', () => { store.set(STORAGE_KEY, JSON.stringify(snapshot())); });
@@ -2376,9 +2434,8 @@ function bindStatic() {
     else if (e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
   });
 
-  window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', () => { buildPatterns(); for (const c of controls) c.redraw(); });
+  window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', () => { for (const c of controls) c.redraw(); });
 
-  bindSquiggle();
 }
 
 async function init() {
@@ -2416,12 +2473,11 @@ async function init() {
 
   buildPanels();
   buildAdvanced();
-  buildSquiggleShapes();
-  buildPatterns();
   foldRemainingSections();
   fillDialogSelects();
   renderTiles();
   bindStatic();
+  bindSwatchLab({button:$('#btn-swatch-lab'),options:exportOptions,download,toast});
   bindPanelExport({
     options: exportOptions,
     machines: () => state.machines, machineId: () => state.machine,
@@ -2438,7 +2494,7 @@ async function init() {
   $('#doc-name').value = state.docName;
   regenerate();
   commit();
-  if (pictureDropped && fromLink) toast('This link was made with a picture, which links can\'t carry, so it opens with the centre spot pattern.');
+  if (pictureDropped && fromLink) toast('This link was made with a picture, which links can\'t carry, so it opens with the centre spot pattern.', { kind:'warning' });
 }
 
 init().catch((e) => {

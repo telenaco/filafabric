@@ -24,7 +24,8 @@ function gitFiles(root) {
 function canonicalBytes(name, data) {
   // Preserve the exact pinned engine bytes used by provenance.json.
   if (name === 'site/vendor/arachne/slicer_core.js') return data;
-  return (textExtension.test(name) || name === '.gitignore' || name === 'LICENSE' || name === 'NOTICE')
+  // licence and notice files have no extension, in any folder (site/vendor/three/LICENSE); they are text like the rest
+  return (textExtension.test(name) || name === '.gitignore' || /(^|\/)(LICENSE|NOTICE)$/.test(name))
     ? Buffer.from(data.toString('utf8').replace(/\r\n/g, '\n')) : data;
 }
 

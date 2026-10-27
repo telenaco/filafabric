@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DESIGNS, designById } from '../../site/src/ui/designs.js';
-import { relevantKeys, settingsFileName, exportFileName, parseFileName, ownName } from '../../site/src/ui/file-name.js';
+import { relevantKeys, settingsFileName, exportFileName, parseFileName, ownName, variantsFileName } from '../../site/src/ui/file-name.js';
 
 const PRINT = { layerHeight: 0.2, extraLayers: 0, brim: 2 };
 const MATERIAL = 'filaflex-95-foamy';
@@ -20,16 +20,16 @@ test('the demo prints keep the names they had: the studio and the demo exporter 
     const [w, h] = mod.size(s);
     return settingsFileName({ head: [String(n).padStart(2, '0'), mod.file, preset ?? 'custom', `${w}x${h}mm`], s, keys: relevantKeys(mod, s) });
   };
-  assert.equal(demo(17, 'coil', 'overlapping'), '17_coil_overlapping_100x100mm_shape-looped_size3_pitch5_overlap30_lift0.25_pattern-none_scale1.gcode');
+  assert.equal(demo(17, 'coil', 'overlapping'), '17_coil_overlapping_100x100mm_size3_pitch5_overlap30_lift0.25_pattern-none_scale1.gcode');
   assert.equal(demo(8, 'halftone', 'colour-swap'), '08_halftone_colour-swap_100x100mm_shape-straight_second-complement_pattern-bumps_scale1_spacing3_thin0.6_thick1.8_angle0_size1.5_pitch8_twoColours-on.gcode');
-  assert.equal(demo(10, 'svgdesign', 'filled-backed'), '10_svgdesign_filled-backed_100x100mm_mode-both_fill-rectilinear_fillSp2.5_fillAng45_backing-one_area-swatch_b1-gyroid_b1Sp4_b1Ang0.gcode');
+  assert.match(demo(10, 'svgdesign', 'filled-backed'), /^10_svgdesign_filled-backed_100x100mm_mode-both_.*_h-[0-9a-f]{16}\.gcode$/);
   assert.equal(demo(4, 'weave', null, { binding: 'plain', pitch: 4 }), '04_weave_custom_100x100mm_binding-plain_pitch4.gcode');
 });
 
 test('an exported swatch is named after its design, preset, size, every look-and-feel value and the print setup', () => {
   const { mod, s } = settingsFor('coil', 'overlapping');
   const name = exportFileName(mod, s, relevantKeys(mod, s), { size: [100, 100], print: PRINT, material: MATERIAL, docName: 'Untitled swatch' });
-  assert.equal(name, 'coil_overlapping_100x100mm_shape-looped_size3_pitch5_overlap30_lift0.25_pattern-none_scale1_brim2_lh0.2_extra0_filaflex-95-foamy.gcode');
+  assert.equal(name, 'coil_overlapping_100x100mm_size3_pitch5_overlap30_lift0.25_pattern-none_scale1_brim2_lh0.2_extra0_filaflex-95-foamy.gcode');
 });
 
 test('moving a slider changes its value in the name, and the preset becomes custom', () => {
@@ -60,7 +60,7 @@ test('a full panel says so after its size', () => {
 
 test('every design gives a short, safe name that reads back to the same design and settings', () => {
   for (const mod of DESIGNS) {
-    if (mod.status !== 'ready' || mod.legacy) continue;
+    if (mod.status !== 'ready' || mod.legacyPanel) continue;
     const s = mod.defaults();
     const keys = relevantKeys(mod, s);
     const name = exportFileName(mod, s, keys, { size: mod.size(s), print: PRINT, material: MATERIAL, docName: 'A long swatch name that somebody typed in full' });
@@ -76,7 +76,7 @@ test('every design gives a short, safe name that reads back to the same design a
     assert.equal(back.material, MATERIAL);
     // every setting that made it into the name reads back with the value it was written with
     for (const [key, value] of Object.entries(back.settings)) {
-      const original = keys.find((k) => k === key || ({ fill: 'designPattern', fillSp: 'designSpacing', fillAng: 'designAngle', area: 'backingArea', b1: 'backing1Pattern', b1Sp: 'backing1Spacing', b1Ang: 'backing1Angle', b2: 'backing2Pattern', b2Sp: 'backing2Spacing', b2Ang: 'backing2Angle', scale: 'patternScale', overlap: 'rowOverlap', twoColours: 'colorChange' })[key] === k);
+      const original = keys.find((k) => k === key || ({ fill: 'designPattern', fillSp: 'designSpacing', fillAng: 'designAngle', area: 'backingArea', b1: 'backing1Pattern', b1Sp: 'backing1Spacing', b1Ang: 'backing1Angle', b2: 'backing2Pattern', b2Sp: 'backing2Spacing', b2Ang: 'backing2Angle', scale: 'patternScale', overlap: 'rowOverlap', twoColours: 'colorChange',shA:'shape1',shB:'shape2',shC:'shape3',shD:'shape4',shE:'shape5',shF:'shape6' })[key] === k);
       assert.ok(original, `${mod.id}: ${key} is one of its settings`);
       const v = s[original];
       assert.equal(value, typeof v === 'number' ? String(Number(v.toFixed(2))) : v === true ? 'on' : String(v), `${mod.id}: ${key}`);
@@ -95,8 +95,13 @@ test('names that are not the studio\'s are not read', () => {
 test('truncated late settings retain a distinguishing deterministic digest', () => {
   const mod = designById('svgdesign');
   const options = { size: [100, 100], print: PRINT, material: MATERIAL, docName: 'A long swatch name that somebody typed in full' };
+  const setting = spacing => {
+    const s = mod.defaults();
+    s.support.passes[0].spacing = spacing;
+    return s;
+  };
   const names = [5, 6].map((backing1Spacing) => {
-    const s = { ...mod.defaults(), backing1Spacing };
+    const s = setting(backing1Spacing);
     return exportFileName(mod, s, relevantKeys(mod, s), options);
   });
   assert.notEqual(names[0], names[1]);
@@ -107,7 +112,7 @@ test('truncated late settings retain a distinguishing deterministic digest', () 
     assert.equal(back.material, MATERIAL);
     assert.equal(Object.hasOwn(back.settings, 'h'), false);
   }
-  const s = { ...mod.defaults(), backing1Spacing: 5 };
+  const s = setting(5);
   assert.equal(exportFileName(mod, s, relevantKeys(mod, s), options), names[0]);
 });
 
@@ -169,9 +174,9 @@ test('panel names describe one-filament output without modifying the supplied se
   assert.equal(exportFileName(mod, { ...s, colorChange: false }, relevantKeys(mod, s), { ...options, panel: true }), panel);
 });
 
-test('all twenty existing demo filenames keep their ordinary names including omitted zero angles', () => {
+test('demo names reflect the fixed-shape cards and retain ordinary zero-angle shorthand', () => {
   const cases = [
-    ['crosshatch', 'isogrid', {}, '01_crosshatch_isogrid_100x100mm_directions-0-60-120_shape-wave_spacing3.5_size0_pitch6.gcode'],
+    ['crosshatch', 'isogrid', {}, '01_crosshatch_isogrid_100x100mm_directions-0-60-120_spacing3.5_pattern-none_scale1.gcode'],
     ['starlattice', 'stars', {}, '02_starlattice_stars_100x100mm_tiling-square_size8_angle67.5_pattern-none_scale1.gcode' /* the star lattice took a pattern on 2026-10-21 */],
     ['dipweave', null, {}, '03_dipweave_default_100x100mm_warpPitch3.5_weftPitch3.5.gcode'],
     ['weave', null, { binding: 'plain', pitch: 4 }, '04_weave_plain_100x100mm_binding-plain_pitch4.gcode'],
@@ -184,10 +189,10 @@ test('all twenty existing demo filenames keep their ordinary names including omi
     ['svgdesign', 'two-layer', {}, '11_svgdesign_two-layer_100x100mm_mode-both_fill-concentric_fillSp2.5_backing-two_area-swatch_b1-gyroid_b1Sp4_b2-triangles_b2Sp6_b2Ang15.gcode'],
     ['svgdesign', 'lightning-badge', {}, '12_svgdesign_lightning-badge_100x100mm_mode-both_fill-honeycomb_fillSp3_fillAng0_backing-one_area-shape_b1-lightning_b1Sp4_b1Ang0.gcode'],
     ['svgdesign', null, { mode: 'both', designPattern: 'hilbert', designSpacing: 3.5, designAngle: 0, backing: 'one', backingArea: 'box', backing1Pattern: 'cubic', backing1Spacing: 5, backing1Angle: 0 }, '13_svgdesign_custom_100x100mm_mode-both_fill-hilbert_fillSp3.5_fillAng0_backing-one_area-box_b1-cubic_b1Sp5_b1Ang0.gcode'],
-    ['auxetic', 're-entrant', {}, '14_auxetic_re-entrant_100x100mm_cell-reentrant_rowPitch6_period8_amplitude1.75.gcode'],
+    ['auxetic', 're-entrant', {}, '14_auxetic_re-entrant_100x100mm_rowPitch6_period8_amplitude1.75.gcode'],
     ['spiral', null, {}, '15_spiral_standard_100x100mm_second-none_spacing3.gcode'],
     ['meander', null, {}, '16_meander_hilbert_100x100mm_curve-hilbert_cell6_angle45_spacing5_seed1_backing-wave_backingDepth2_backingLength10_backingLayers-one_pattern-none.gcode'],
-    ['coil', 'overlapping', {}, '17_coil_overlapping_100x100mm_shape-looped_size3_pitch5_overlap30_lift0.25_pattern-none_scale1.gcode'],
+    ['coil', 'overlapping', {}, '17_coil_overlapping_100x100mm_size3_pitch5_overlap30_lift0.25_pattern-none_scale1.gcode'],
     ['spacer', 'thin', {}, '18_spacer_thin_100x100mm_pitch6_layers4_radius1_every1.gcode'],
     ['pillarweave', 'close', {}, '19_pillarweave_close_100x100mm_pitch4_layers5_radius0.8.gcode'],
     ['spacer', 'airy', {}, '20_spacer_airy_100x100mm_pitch4_layers6_radius1_every2.gcode'],
@@ -196,7 +201,11 @@ test('all twenty existing demo filenames keep their ordinary names including omi
     const { mod, s } = settingsFor(id, preset, patch);
     const head = expected.slice(0, -6).split('_').slice(0, 4);
     const name = settingsFileName({ head, s, keys: relevantKeys(mod, s) });
-    assert.equal(name, expected, id);
+    if (mod.support === 'auto') {
+      assert.ok(name.startsWith(head.join('_')), id);
+      assert.match(name, /_h-[0-9a-f]{16}\.gcode$/, 'the canonical Support object retains a distinguishing digest');
+      assert.equal(parseFileName(name).design, mod.file);
+    } else assert.equal(name, expected, id);
   }
 });
 
@@ -266,4 +275,10 @@ test('legacy export callers keep their copies token and parser return shape', ()
   assert.equal(back.brim, 0);
   assert.equal(back.material, MATERIAL);
   assert.equal(Object.hasOwn(back, 'extraLayers'), false);
+});
+
+test('variant jobs have a stable family and hash filename, and reject an empty hash',()=>{
+  assert.equal(variantsFileName('Rings','a1b2c3'),'rings-variants-a1b2c3.gcode');
+  assert.equal(variantsFileName('ring mail','ABCDEF1234567890'),'ring-mail-variants-abcdef123456.gcode');
+  assert.throws(()=>variantsFileName('rings',''),/fingerprint is required/);
 });

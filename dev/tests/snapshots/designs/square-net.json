@@ -1,0 +1,18 @@
+[
+  {
+    "card": "square-net",
+    "preset": "default",
+    "settingsHash": "887c7be85806",
+    "gcodeSha256": "c2dccd5301dce5f413d3c7fc6e1d6adeba8a35bdb48028c9f85af4585f21dcfa",
+    "strands": 28,
+    "moves": 4853,
+    "extrudeMm": 1390,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  }
+]

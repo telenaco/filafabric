@@ -8,7 +8,12 @@ import { DESIGNS, designById } from '../../site/src/ui/designs.js';
 import { defaultProfiles } from './helpers.js';
 
 const card = designById('svgdesign');
-const base = () => ({ ...card.defaults(), width: 100, height: 100 });
+// Old saved links spell the carrier as `backing*` keys and the card derives its canonical `support` from them, so
+// these tests run what an old link carries through `sanitize`: the same settings must still print the same thing.
+const base = (patch = {}) => {
+  const { support, ...legacy } = card.defaults();
+  return card.sanitize({ ...legacy, width: 100, height: 100, ...patch });
+};
 const square = (x, y, w, h) => [{ x, y }, { x: x + w, y }, { x: x + w, y: y + h }, { x, y: y + h }, { x, y }];
 const flatten = (lines) => lines.flatMap((pts) => pts);
 
@@ -35,14 +40,14 @@ test('paths are scaled to the swatch and told apart as closed shapes and open li
 
 test('the design layer and each backing layer are separate layers', () => {
   const b = boundaryFor(100, 100);
-  assert.equal(svgDesignLayers(b, { ...base(), backing: 'none' }).layers.length, 1);
-  assert.equal(svgDesignLayers(b, { ...base(), backing: 'one' }).layers.length, 2);
-  assert.equal(svgDesignLayers(b, { ...base(), backing: 'two' }).layers.length, 3);
+  assert.equal(svgDesignLayers(b, base({ backing: 'none' })).layers.length, 1);
+  assert.equal(svgDesignLayers(b, base({ backing: 'one' })).layers.length, 2);
+  assert.equal(svgDesignLayers(b, base({ backing: 'two' })).layers.length, 3);
 });
 
 test('fill stays inside the shapes and leaves the ring open', () => {
   const b = boundaryFor(100, 100);
-  const { layers } = svgDesignLayers(b, { ...base(), mode: 'fill', designPattern: 'rectilinear', backing: 'none' });
+  const { layers } = svgDesignLayers(b, base({ mode: 'fill', designPattern: 'rectilinear', backing: 'none' }));
   const { closed } = splitPaths(sampleVector(), 100, 100);
   const shape = new PolygonBoundary(closed);
   const fillPoints = flatten(layers[0]);
@@ -54,21 +59,21 @@ test('fill stays inside the shapes and leaves the ring open', () => {
 });
 
 test('lines mode prints every path as drawn and nothing else', () => {
-  const { layers } = svgDesignLayers(boundaryFor(100, 100), { ...base(), mode: 'outline', backing: 'none' });
+  const { layers } = svgDesignLayers(boundaryFor(100, 100), base({ mode: 'outline', backing: 'none' }));
   assert.equal(layers[0].length, 3);
 });
 
 test('both prints the outline and the fill', () => {
   const b = boundaryFor(100, 100);
-  const outline = svgDesignLayers(b, { ...base(), mode: 'outline', backing: 'none' }).layers[0].length;
-  const both = svgDesignLayers(b, { ...base(), mode: 'both', backing: 'none' }).layers[0].length;
+  const outline = svgDesignLayers(b, base({ mode: 'outline', backing: 'none' })).layers[0].length;
+  const both = svgDesignLayers(b, base({ mode: 'both', backing: 'none' })).layers[0].length;
   assert.ok(both > outline);
 });
 
 test('backing can cover the swatch, the shapes or the drawing\'s box', () => {
   const b = boundaryFor(100, 100);
   const extent = (area) => {
-    const pts = flatten(svgDesignLayers(b, { ...base(), backing: 'one', backingArea: area, backing1Pattern: 'rectilinear', backing1Spacing: 3 }).layers[1]);
+    const pts = flatten(svgDesignLayers(b, base({ backing: 'one', backingArea: area, backing1Pattern: 'rectilinear', backing1Spacing: 3 })).layers[1]);
     return { minX: Math.min(...pts.map((p) => p.x)), maxX: Math.max(...pts.map((p) => p.x)), minY: Math.min(...pts.map((p) => p.y)), n: pts.length };
   };
   const swatch = extent('swatch'), box = extent('box'), shape = extent('shape');
@@ -80,7 +85,7 @@ test('backing can cover the swatch, the shapes or the drawing\'s box', () => {
 test('every infill pattern works as a design fill and as a backing', () => {
   const b = boundaryFor(60, 60);
   for (const id of INFILL_IDS) {
-    const r = svgDesignLayers(b, { ...base(), width: 60, height: 60, mode: 'both', designPattern: id, backing: 'two', backing1Pattern: id, backing2Pattern: id });
+    const r = svgDesignLayers(b, base({ width: 60, height: 60, mode: 'both', designPattern: id, backing: 'two', backing1Pattern: id, backing2Pattern: id }));
     assert.ok(r.layers[0].length > 3, `${id} fill`);
     assert.ok(r.layers[1].length > 0 && r.layers[2].length > 0, `${id} backing`);
   }
@@ -88,7 +93,7 @@ test('every infill pattern works as a design fill and as a backing', () => {
 
 test('a drawing with no closed shape falls back to its lines, with a note', () => {
   const vector = { name: 'open.svg', width: 50, height: 50, paths: [[{ x: 5, y: 5 }, { x: 25, y: 40 }, { x: 45, y: 8 }]] };
-  const r = svgDesignLayers(boundaryFor(100, 100), { ...base(), mode: 'fill', backing: 'one', backingArea: 'shape' }, vector);
+  const r = svgDesignLayers(boundaryFor(100, 100), base({ mode: 'fill', backing: 'one', backingArea: 'shape' }), vector);
   assert.equal(r.extra.svgDesign.mode, 'outline');
   assert.ok(r.warnings.some((w) => /no closed shapes/.test(w)));
   assert.ok(r.layers[1].length > 0, 'the backing falls back to the drawing\'s box');
@@ -97,7 +102,7 @@ test('a drawing with no closed shape falls back to its lines, with a note', () =
 test('an imported drawing is scaled to the swatch and prints as one connected fabric', () => {
   const { machine, material } = defaultProfiles();
   const vector = { name: 'badge.svg', width: 60, height: 40, paths: [square(5, 5, 50, 30), square(20, 14, 20, 12)] };
-  const s = { ...base(), width: 120, height: 80, mode: 'both', backing: 'one', backingArea: 'swatch' };
+  const s = base({ width: 120, height: 80, mode: 'both', backing: 'one', backingArea: 'swatch' });
   const r = card.generate(machine, material, s, { vector });
   assert.equal(r.svgDesign.name, 'badge.svg');
   assert.equal(r.svgDesign.sample, false);
@@ -112,8 +117,8 @@ test('an imported drawing is scaled to the swatch and prints as one connected fa
 
 test('the backing pattern chosen is the pattern printed', () => {
   const b = boundaryFor(100, 100);
-  const a = svgDesignLayers(b, { ...base(), backing: 'one', backing1Pattern: 'gyroid' }).layers[1];
-  const c = svgDesignLayers(b, { ...base(), backing: 'one', backing1Pattern: 'hilbert' }).layers[1];
+  const a = svgDesignLayers(b, base({ backing: 'one', backing1Pattern: 'gyroid' })).layers[1];
+  const c = svgDesignLayers(b, base({ backing: 'one', backing1Pattern: 'hilbert' })).layers[1];
   assert.notEqual(JSON.stringify(a), JSON.stringify(c));
 });
 
@@ -129,6 +134,6 @@ test('settings are sanitised: an unknown pattern or a shared bad value falls bac
 
 test('the same settings give the same G-code', () => {
   const { machine, material } = defaultProfiles();
-  const s = { ...base(), width: 60, height: 60, backing: 'two', backing1Pattern: 'lightning', backing2Pattern: 'cubic' };
+  const s = base({ width: 60, height: 60, backing: 'two', backing1Pattern: 'lightning', backing2Pattern: 'cubic' });
   assert.equal(card.generate(machine, material, s).gcode, card.generate(machine, material, s).gcode);
 });

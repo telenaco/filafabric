@@ -7,6 +7,7 @@ import { buildLayeredVerdict } from './verdict.js';
 import { thumbFromLayers, optionThumbFromLayers, shapeThumb } from './thumbs.js';
 import { OPTION_ICONS } from './option-thumbs.js';
 import { boundaryFor, layeredResult } from '../engine/layers.js';
+import { acceptIssues } from '../engine/fabric-result.js';
 import { resolveConfig } from '../engine/params.js';
 import { SHAPES } from '../engine/shapes.js';
 import { crosshatchLayers, DIRECTIONS, DIRECTION_IDS } from '../engine/crosshatch.js';
@@ -16,11 +17,14 @@ import { webLayers } from '../engine/web.js';
 import { chainmailLayers } from '../engine/chainmail.js';
 import { meanderLayers, CURVES, CURVE_IDS } from '../engine/meander.js';
 import { lissajousLayers } from '../engine/lissajous.js';
-import { truchetLayers, TILES, TILE_IDS } from '../engine/truchet.js';
+import { truchetLayers, truchetLegacyLayers, TILES, TILE_IDS } from '../engine/truchet.js';
 import { voronoiLayers } from '../engine/voronoi.js';
 import { turingLayers } from '../engine/turing.js';
+import { rotatedStackLayers, STACK_TURNS } from '../engine/rotated-stack.js';
+import { moireLayers } from '../engine/moire.js';
 import { FIELD_IDS, createField } from '../engine/fields.js';
 import { BACKING_STYLES, BACKING_LAYER_COUNTS } from '../engine/backing.js';
+import { thicknessAlong, THICKNESS_RANGES } from '../engine/pattern-effects.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const WAVY = ['looped', 'figure8', 'zigzag', 'honeycomb', 'wave', 'square'];
@@ -72,6 +76,17 @@ export function layered(def) {
     thumb = thumbFromLayers(def.build(s, boundaryFor(tw, th)).layers, tw, th);
   } catch { /* a tile without a picture still works */ }
   return {
+    shelf: def.shelf,
+    family: def.family,
+    joins: def.joins,
+    support: def.support,
+    state: def.state,
+    settingsKey: def.settingsKey,
+    variantGroup: def.variantGroup,
+    sources: def.sources,
+    patternEffects: def.patternEffects,
+    colourModes: def.colourModes,
+    legacy: def.legacy,
     id: def.id,
     name: def.name,
     blurb: def.blurb,
@@ -80,13 +95,13 @@ export function layered(def) {
     status: 'ready',
     thumb,
     roles: def.roles ?? { base: 'Layer 1', anchored: 'Later layers' },
-    defaults: () => ({ ...c.defaults }),
-    sanitize: c.sanitize,
-    ranges: c.ranges,
+    defaults: def.defaults ?? (() => ({ ...c.defaults })),
+    sanitize: def.sanitize ?? c.sanitize,
+    ranges: def.ranges ?? c.ranges,
     presets: c.presets,
     presetMatch: c.presetMatch,
     presetPicture: (preset) => picture(preset.patch)(),
-    describe: c.describe,
+    describe: def.describe ?? c.describe,
     size: (s) => [s.width, s.height],
     setSize: (s, w, h) => { s.width = w; s.height = h; },
     patterns: def.patterns,
@@ -104,20 +119,29 @@ export function layered(def) {
     overviewLayers: (s, boundary, context) => def.build(s, boundary, context).layers,
     generate: (machine, material, s, { outline = null, vector = null, vectorSize = null, vectorOffset = [0, 0], includeLines = true, picture = null, perimeters = 0, printedBoundary = false } = {}) => {
       // a drawing's lines print as many passes as their width asks for, and a pass is as wide as this filament's bead
-      const bead = resolveConfig(machine, material, { sample_width: s.width, sample_height: s.height }).t.extrusion_width;
-      const built = def.build(s, boundaryFor(s.width, s.height, outline), { vector, bead, vectorSize, vectorOffset, includeLines, picture, perimeters, printedBoundary });
-      const result = layeredResult(machine, material, {
+      // a raised card may change what this one result is printed with (a fan, a speed) without touching the profile
+      const printed = def.material ? def.material(s, material) : material;
+      const bead = resolveConfig(machine, printed, { sample_width: s.width, sample_height: s.height }).t.extrusion_width;
+      const built = def.build(s, boundaryFor(s.width, s.height, outline), { vector, bead, vectorSize, vectorOffset, includeLines, picture, perimeters, printedBoundary, widthMaps:material.flow.width_maps??null });
+      const result = layeredResult(machine, printed, {
         width: s.width,
         height: s.height,
         layers: built.layers,
+        families: built.families ?? built.extra?.families,
+        source: def.id,
         colorChange: !!s.colorChange,
         outline: built.outline ?? outline,
         inset: def.usesVector ? 0 : undefined,
         optimizeTravel: !!def.optimizeTravel,
         extra: { layerCount: built.layers.length, ...(built.extra ?? {}) },
+        planes: !!built.extra?.planes,
         ramp: def.ramp ?? 1.6,
       });
       if (built.warnings?.length) result.warnings.push(...built.warnings);
+      // what a card's transform left on its `extra` while the strands were built (counts, notes) is only known now
+      for (const [key, value] of Object.entries(built.extra ?? {})) if (key !== 'transform' && result[key] === undefined) result[key] = value;
+      acceptIssues(result, def.accept && ((issue, found) => def.accept(issue, found, s)));
+      if (def.advise) { const advice = def.advise(result, s, printed); result.warnings.push(...advice); }
       return result;
     },
     verdict: (result, s) => (def.verdict ? def.verdict(result, s) : buildLayeredVerdict(result)),
@@ -127,18 +151,20 @@ export function layered(def) {
 }
 
 const CROSSHATCH = defineControls({
-  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, size: { min: 0, max: 2.5, step: 0.25 }, pitch: { min: 0.8, max: 10, step: 0.1 } },
-  defaults: { width: 100, height: 100, directions: '0-90', spacing: 3.5, shape: 'wave', size: 0, pitch: 6, colorChange: false },
-  enums: { directions: DIRECTION_IDS, shape: WAVY },
-  bools: ['colorChange'],
-  presets: [
+  ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, size: { min: 0, max: 2.5, step: 0.25 }, pitch: { min: 0.8, max: 10, step: 0.1 }, bundle:{min:1,max:5,step:1},bundleGap:{min:.1,max:1,step:.05},
+    // read only by the raised variants of the grid (Grid · lifted crossings, Grid · sliding channels); the layered grid ignores them
+    lift:{min:.4,max:2,step:.1},liftLength:{min:1,max:8,step:.5},liftFan:{min:0,max:100,step:5},spanLift:{min:.6,max:2,step:.1},channelLift:{min:1.2,max:3,step:.1},legBefore:{min:.8,max:3,step:.1},channelSpeed:{min:1.5,max:6,step:.1} },
+  defaults: { width: 100, height: 100, directions: '0-90', spacing: 3.5, shape: 'wave', size: 0, pitch: 6, bundle:1,bundleTouch:true,bundleGap:.3,colorChange: false,
+    liftWhere:'alternate',lift:1,liftLength:3,liftFan:60,slideMask:'b',spanLift:1,channelLift:2,legBefore:1.2,channelSpeed:3.3 },
+  enums: { directions: DIRECTION_IDS, shape: WAVY, liftWhere:['all','alternate','pattern'], slideMask:['b','a','alternate','pattern'] },
+  bools: ['colorChange','bundleTouch'],
+    presets: [
     { id: 'square', name: 'Square', blurb: 'Two layers at 90°', patch: { directions: '0-90', size: 0 } },
     { id: 'diagonal', name: 'Diagonal', blurb: 'On the bias', patch: { directions: '45-135', size: 0 } },
     { id: 'isogrid', name: 'Isogrid', blurb: 'Three layers 60° apart', patch: { directions: '0-60-120', size: 0 } },
     { id: 'kagome', name: 'Kagome', blurb: 'Hexagons and triangles, two strands at a node', patch: { directions: 'kagome', size: 0 } },
-    { id: 'wavy-diagonal', name: 'Wavy diagonal', blurb: 'Lines that can stretch', patch: { directions: '45-135', shape: 'wave', size: 1.25 } },
   ],
-  describe: (s) => ({ spacing: `${r1(s.spacing)} mm apart`, size: s.size === 0 ? 'Straight' : `${r2(s.size)} mm`, pitch: `${r1(s.pitch)} mm` }),
+  describe: (s) => ({ spacing: `${r1(s.spacing)} mm apart` }),
 });
 
 const BACKING_LABELS = {
@@ -147,14 +173,18 @@ const BACKING_LABELS = {
   straight: { label: 'Straight', hint: 'Parallel straight lines' },
 };
 
-export const MORE_DESIGNS = [
-  layered({
+/** The grid card's description, shared by its raised variants (Grid · lifted crossings, Grid · sliding channels). */
+export const GRID_DEF = {
     id: 'crosshatch',
+    shelf: 'layered', family: 'grids', support: 'self', state: 'untested',
+    joins: "Straight lines in two or three directions fuse where they cross.", sources: { catalogue: ['S2'], papers: [29, 54, 9] },
     optimizeTravel: true,
-    hidden: true, // out of the list for now; the design and its tests stay
+    hidden: false,
+    settingsKey: 'grid',
+    patternEffects: ['thickness'],
     name: 'Crosshatch & isogrid',
     blurb: 'Straight lines at the angles you choose, layer on layer',
-    about: 'The angle is the design here: layers of parallel lines, each layer at its own angle, so every pair of layers crosses. Square drapes like woven cloth on the bias; three directions 60° apart are close to the same in every direction. Give the lines a wave so they can stretch along their length.',
+    about: 'The angle is the design here: straight layers of parallel lines, each layer at its own angle, so every pair of layers crosses. Square drapes like woven cloth on the bias; three directions 60° apart are close to the same in every direction.',
     file: 'crosshatch',
     c: CROSSHATCH,
     bundle: 'directions',
@@ -168,22 +198,43 @@ export const MORE_DESIGNS = [
         hint: 'The angle of each layer. Every pair of layers crosses.',
         options: DIRECTION_IDS.map((id) => ({ id, label: DIRECTIONS[id].label, hint: DIRECTIONS[id].hint })),
       },
-      { kind: 'choice', key: 'shape', title: 'Line shape', hint: 'Only used when the wave size is above zero.', options: shapeOptions() },
       {
         kind: 'sliders',
         title: 'Look and feel',
         items: [
           { key: 'spacing', label: 'Line spacing', help: 'Distance between neighbouring lines in a layer.', lo: 'Dense', hi: 'Airy', unit: 'mm', edit: true },
-          { key: 'size', label: 'Wave size', help: 'How far each line swings to the side. Zero is straight.', lo: 'Straight', hi: 'Deep', unit: 'mm', edit: true },
-          { key: 'pitch', label: 'Wave length', help: 'Length of one full wave.', lo: 'Tight', hi: 'Long', unit: 'mm', edit: true },
+          { key: 'bundle', label: 'Strands per bundle', help: 'Group parallel strands; 1 preserves the original grid.', lo: 'Single', hi: 'Five', unit: '', edit: true, filenameWhen:s=>Number(s.bundle)>1 },
+          { key: 'bundleGap', label: 'Gap inside bundle', help: 'Used only when bundle neighbours do not touch.', lo: 'Narrow', hi: 'Wide', unit: 'mm', edit: true, when:s=>Number(s.bundle)>1, filenameWhen:s=>Number(s.bundle)>1 },
         ],
       },
-      COLOUR,
+      {kind:'switch',key:'bundleTouch',when:s=>Number(s.bundle)>1,label:'Touch neighbours inside bundles',help:'When on, adjacent strands are 0.9 × bead width apart and fuse.'},
+      { kind: 'pattern', key: 'pattern', title: 'Pattern', hint: 'Line thickness carries the dark and light parts of the pattern.', picture: 'positive', pictureHint: 'Dark parts of the picture make the strands thicker.', scale: { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false } },
     ],
-    build: (s, boundary) => crosshatchLayers(boundary, { directions: s.directions, spacing: s.spacing, shape: s.shape, size: s.size, pitch: s.pitch }),
+    defaults: () => ({ ...CROSSHATCH.defaults, shape: 'looped', size: 0, pattern: 'none', patternScale: 1, patternEffect: 'thickness', thin: 0.6, thick: 1.8 }),
+    sanitize: (raw) => {
+      const out = { ...CROSSHATCH.sanitize(raw), shape: 'looped', size: 0,
+        pattern: ['none', ...FIELD_IDS, 'image'].includes(raw?.pattern) ? raw.pattern : 'none',
+        patternScale: Number.isFinite(Number(raw?.patternScale)) ? Math.max(0.5, Math.min(2, Number(raw.patternScale))) : 1,
+        patternEffect: 'thickness' };
+      for (const [key, range] of Object.entries(THICKNESS_RANGES)) {
+        const value = Number(raw?.[key]);
+        out[key] = Number.isFinite(value) && value >= range.min && value <= range.max ? value : key === 'thin' ? 0.6 : 1.8;
+      }
+      return out;
+    },
+    ranges: { ...CROSSHATCH.ranges, patternScale: { min: 0.5, max: 2, step: 0.25 }, ...THICKNESS_RANGES },
+    patterns: withPicture(['none', ...FIELD_IDS]),
+    build: (s, boundary, ctx) => {
+      const field = patternField(s.pattern, { scale: s.patternScale, picture: ctx?.picture });
+      const built = crosshatchLayers(boundary, { directions: s.directions, spacing: s.spacing, shape: s.shape, size: s.size, pitch: s.pitch,bundle:s.bundle,bundleTouch:s.bundleTouch,bundleGap:s.bundleGap,bead:ctx?.bead??.45,bundleMask:s.pattern==='none'?null:(x,y)=>field?.(x,y)<.5 });
+      if (!field) return built;
+      return { ...built, layers: built.layers.map((layer, index) => layer.map((line) => thicknessAlong(line, field, { thin: s.thin, thick: s.thick, layer: index, complement: s.colourMode === 'halftone2', widthMaps:ctx?.widthMaps, bead:ctx?.bead??.45 }))) };
+    },
     summary: (result) => `a crosshatch of ${result.layerCount} layers with ${result.report.crossings} crossings`,
-  }),
-];
+};
+export const MORE_DESIGNS = [layered(GRID_DEF)];
+
+
 
 const AUXETIC = defineControls({
   ranges: { ...SIZE, rowPitch: { min: 0.8, max: 10, step: 0.1 }, period: { min: 4, max: 16, step: 0.5 }, amplitude: { min: 0.5, max: 4, step: 0.25 } },
@@ -200,23 +251,19 @@ const AUXETIC = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'auxetic',
+  shelf: 'flat', family: 'cells', support: 'self', state: 'untested',
+  joins: "Bow-tie cells joined by struts; they widen when pulled.", sources: { catalogue: ['S4'], papers: [24, 26, 55] },
   optimizeTravel: true,
-  name: 'Auxetic mesh',
-  blurb: 'Honeycomb and re-entrant (bow-tie) cells',
+  name: 'Re-entrant mesh',
+  blurb: 'Bow-tie cells that widen when pulled',
   about: 'Rows of zigzag, each the mirror of the one below, and staircases that climb through them. Struts at the waists make an ordinary honeycomb; struts at the wide points make bow-tie cells that widen when pulled, so the fabric spreads under tension and hugs a curve.',
   file: 'auxetic',
   c: AUXETIC,
-  bundle: 'cell',
+  defaults: () => ({ ...AUXETIC.defaults, cell: 'reentrant' }),
+  sanitize: (raw) => ({ ...AUXETIC.sanitize(raw), cell: 'reentrant' }),
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
-    {
-      kind: 'choice',
-      key: 'cell',
-      title: 'Cell',
-      hint: 'Where the struts join the rows.',
-      options: CELL_IDS.map((id) => ({ id, label: CELLS[id].label, hint: CELLS[id].hint })),
-    },
     {
       kind: 'sliders',
       title: 'Look and feel',
@@ -232,6 +279,47 @@ MORE_DESIGNS.push(layered({
   summary: (result) => `an auxetic mesh of ${result.report.crossings} crossings`,
 }));
 
+const crosshatch = MORE_DESIGNS[0];
+crosshatch.presets = CROSSHATCH.presets.filter((preset) => preset.id !== 'wavy-diagonal');
+MORE_DESIGNS.push({
+  ...crosshatch, id: 'crosshatch-wavy', name: 'Grid & isogrid · legacy waves', hidden: true, settingsKey: 'crosshatch-wavy',
+  patternEffects: [],
+  defaults: () => ({ ...CROSSHATCH.defaults }), sanitize: CROSSHATCH.sanitize,
+  controls: [
+    { kind: 'presets', title: 'Start from' }, { kind: 'size', title: 'Size and shape' },
+    ...crosshatch.controls.filter((section) => section.kind === 'choice'),
+    { kind: 'choice', key: 'shape', title: 'Line shape', options: shapeOptions() },
+    { kind: 'sliders', title: 'Look and feel', items: [
+      { key: 'spacing', label: 'Line spacing', help: 'Distance between neighbouring lines in a layer.', lo: 'Dense', hi: 'Airy', unit: 'mm', edit: true },
+      { key: 'size', label: 'Wave size', help: 'How far each line swings to the side.', lo: 'Straight', hi: 'Deep', unit: 'mm', edit: true },
+      { key: 'pitch', label: 'Wave length', help: 'Length of one full wave.', lo: 'Tight', hi: 'Long', unit: 'mm', edit: true },
+    ] },
+  ],
+});
+MORE_DESIGNS.at(-1).presets = CROSSHATCH.presets;
+MORE_DESIGNS.at(-1).controls = MORE_DESIGNS.at(-1).controls.filter((section) => section.kind !== 'pattern');
+
+const honeycombFlat = layered({
+  id: 'honeycomb-flat', shelf: 'flat', family: 'cells', support: 'self', state: 'untested',
+  joins: 'Hexagon cells share their walls in one pass.', sources: { catalogue: ['S4'], papers: [24, 26, 55] },
+  name: 'Honeycomb · flat', blurb: 'Hexagon cells share their walls in one pass',
+  about: 'A single connected pass of convex hexagon cells joined by struts.', file: 'auxetic', c: AUXETIC,
+  defaults: () => ({ ...AUXETIC.defaults, cell: 'hexagon' }),
+  sanitize: (raw) => ({ ...AUXETIC.sanitize(raw), cell: 'hexagon' }),
+  controls: [
+    { kind: 'size', title: 'Size and shape' },
+    { kind: 'sliders', title: 'Look and feel', items: [
+      { key: 'rowPitch', label: 'Row spacing', help: 'Distance between cell rows.', lo: 'Close', hi: 'Wide', unit: 'mm', edit: true },
+      { key: 'period', label: 'Cell width', help: 'Length of one zigzag, and so the width of a cell.', lo: 'Narrow', hi: 'Wide', unit: 'mm', edit: true },
+      { key: 'amplitude', label: 'Cell depth', help: 'Depth of each hexagon cell.', lo: 'Shallow', hi: 'Deep', unit: 'mm', edit: true },
+    ] },
+  ],
+  build: (s, boundary) => auxeticLayers(boundary, { rowPitch: s.rowPitch, period: s.period, amplitude: s.amplitude, cell: 'hexagon' }),
+  summary: (result) => `a flat honeycomb of ${result.report.crossings} crossings`,
+});
+honeycombFlat.settingsKey = 'honeycomb';
+MORE_DESIGNS.push(honeycombFlat);
+
 const DIPWEAVE = defineControls({
   ranges: { ...SIZE, warpPitch: { min: 0.8, max: 8, step: 0.1 }, weftPitch: { min: 0.8, max: 8, step: 0.1 } },
   defaults: { width: 100, height: 100, warpPitch: 3.5, weftPitch: 3.5 },
@@ -245,6 +333,8 @@ const DIPWEAVE = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'dipweave',
+  shelf: 'raised', family: 'woven', support: 'self', state: 'untested',
+  joins: "Wefts rise over the warps and dip between them.", sources: {},
   optimizeTravel: true,
   name: 'Dip weave',
   blurb: 'A straight warp with a weft that dips between: over and under in one layer',
@@ -279,6 +369,10 @@ MORE_DESIGNS.push(layered({
   summary: (result) => `a dip weave of ${result.report.crossings} crossings`,
 }));
 
+const auxetic = MORE_DESIGNS.find((card) => card.id === 'auxetic');
+auxetic.presets = AUXETIC.presets.filter((preset) => preset.id !== 'honeycomb');
+auxetic.presetMatch = (s) => AUXETIC.presets.filter((preset) => preset.id !== 'honeycomb').find((preset) => Object.entries(preset.patch).every(([key, value]) => s[key] === value))?.id ?? null;
+
 const WEB = defineControls({
   ranges: { ...SIZE, spacing: { min: 0.8, max: 8, step: 0.1 }, spokes: { min: 8, max: 48, step: 4 }, hub: { min: 0, max: 10, step: 0.1 }, tooth: { min: 0, max: 2, step: 0.25 } },
   defaults: { width: 100, height: 100, spacing: 4, spokes: 24, hub: 0.6, hubStyle: 'solid', tooth: 0, colorChange: false },
@@ -294,6 +388,8 @@ const WEB = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'web',
+  shelf: 'layered', family: 'radial', support: 'self', state: 'untested',
+  joins: "A spiral crossed by a radial zigzag.", sources: {},
   optimizeTravel: true,
   name: 'Spiderweb',
   blurb: 'A spiral crossed by a radial zigzag',
@@ -321,19 +417,23 @@ MORE_DESIGNS.push(layered({
 }));
 
 const CHAINMAIL = defineControls({
-  ranges: { ...SIZE, spacing: { min: 0.8, max: 10, step: 0.1 }, ratio: { min: 1.1, max: 1.8, step: 0.1 } },
-  defaults: { width: 100, height: 100, spacing: 6, ratio: 1.5, colorChange: false },
+  ranges: { ...SIZE, spacing: { min: 0.8, max: 10, step: 0.1 }, ratio: { min: 1.1, max: 1.8, step: 0.1 }, ringSize: { min: 3, max: 20, step: 0.5 }, overlap: { min: .45, max: 3, step: .05 } },
+  defaults: { width: 100, height: 100, spacing: 6, ratio: 1.5, ringSize: 9, overlap: 3, lattice: 'hex', colorChange: false },
+  enums: { lattice: ['hex', 'square'] },
   bools: ['colorChange'],
   presets: [
-    { id: 'mail', name: 'Mail', blurb: 'Rings overlapping like chainmail', patch: { spacing: 6, ratio: 1.5 } },
-    { id: 'fine', name: 'Fine mail', blurb: 'Small rings, close together', patch: { spacing: 4, ratio: 1.5 } },
-    { id: 'loose', name: 'Loose rings', blurb: 'Barely overlapping, soft', patch: { spacing: 7, ratio: 1.2 } },
+    { id: 'mail', name: 'Mail', blurb: 'Rings overlapping like chainmail', patch: { spacing: 6, ratio: 1.5, ringSize: 9, overlap: 3, lattice: 'hex' } },
+    { id: 'fine', name: 'Fine mail', blurb: 'Small rings, close together', patch: { spacing: 4, ratio: 1.5, ringSize: 6, overlap: 2, lattice: 'hex' } },
+    { id: 'loose', name: 'Loose rings', blurb: 'Barely overlapping, soft', patch: { spacing: 7, ratio: 1.2, ringSize: 8.4, overlap: 1.4, lattice: 'hex' } },
   ],
   describe: (s) => ({ spacing: `${r1(s.spacing)} mm apart`, ratio: `${Math.round((s.ratio - 1) * 100)}% overlap` }),
 });
 
 MORE_DESIGNS.push(layered({
   id: 'chainmail',
+  shelf: 'layered', family: 'rings', support: 'self', state: 'untested',
+  variantGroup: 'rings',
+  joins: "Rings on two layers overlap and fuse.", sources: {},
   optimizeTravel: true,
   name: 'Ring mail',
   blurb: 'Overlapping rings, two layers, a chainmail look',
@@ -375,8 +475,10 @@ const MEANDER = defineControls({
   describe: (s) => ({ cell: `${r1(s.cell)} mm cells`, angle: `${s.angle}°`, spacing: `${r1(s.spacing)} mm apart`, seed: `#${s.seed}`, backingDepth: `${r1(s.backingDepth)} mm each way`, backingLength: `${r1(s.backingLength)} mm per wave` }),
 });
 
-MORE_DESIGNS.push(layered({
-  id: 'meander',
+const MEANDER_CARD = {
+  id: 'meander', patternEffects: ['size'],
+  shelf: 'layered', family: 'motif', support: 'auto', state: 'untested',
+  joins: "A space-filling curve held by a backing.", sources: {},
   optimizeTravel: true,
   name: 'Meander',
   blurb: 'A space-filling curve held by a wavy backing',
@@ -417,9 +519,10 @@ MORE_DESIGNS.push(layered({
     { kind: 'pattern', key: 'pattern', title: 'Grade the dots', hint: 'Only the stipple tour uses it: dots are denser where the pattern is bright.', scale: { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false }, picture: 'positive', pictureHint: 'With the stipple tour, the dots are denser where the picture is dark.' },
     COLOUR,
   ],
-  build: (s, boundary, ctx) => meanderLayers(boundary, { curve: s.curve, cell: s.cell, angle: s.angle, spacing: s.spacing, seed: s.seed, backing: s.backing, backingDepth: s.backingDepth, backingLength: s.backingLength, backingLayers: s.backingLayers, tone: patternField(s.pattern, { scale: s.patternScale, picture: ctx?.picture }) }),
+  build: (s, boundary, ctx) => meanderLayers(boundary, { ...s, bead:ctx?.bead??.45, tone: patternField(s.pattern, { scale: s.patternScale, picture: ctx?.picture }) }),
   summary: (result) => `a meander of ${result.report.crossings} crossings`,
-}));
+};
+MORE_DESIGNS.push(layered(MEANDER_CARD),layered({...MEANDER_CARD,id:'meander-legacy',name:'Meander (legacy)',file:'meander-legacy',hidden:true,build:(s,b,ctx)=>meanderLayers(b,{...s,legacy:true,tone:patternField(s.pattern,{scale:s.patternScale,picture:ctx?.picture})})}));
 
 const HARMONOGRAPH = defineControls({
   ranges: { ...SIZE, a: { min: 2, max: 14, step: 1 }, b: { min: 2, max: 14, step: 1 }, phase: { min: 0, max: 90, step: 5 } },
@@ -435,6 +538,8 @@ const HARMONOGRAPH = defineControls({
 
 MORE_DESIGNS.push(layered({
   id: 'harmonograph',
+  shelf: 'flat', family: 'curves', support: 'self', state: 'untested',
+  joins: "One closed curve crosses itself in diamonds.", sources: {},
   optimizeTravel: true,
   name: 'Harmonograph',
   blurb: 'One closed curve that crosses itself in diamonds',
@@ -444,6 +549,10 @@ MORE_DESIGNS.push(layered({
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
+    { kind: 'choice', key: 'second', title: 'Structure', options: [
+      { id: 'one', value: false, label: 'One curve', hint: 'One closed curve crosses itself in diamonds.' },
+      { id: 'two', value: true, label: 'Two curves', hint: 'A second curve with its phase turned crosses the first everywhere.' },
+    ] },
     {
       kind: 'sliders',
       title: 'Look and feel',
@@ -453,7 +562,6 @@ MORE_DESIGNS.push(layered({
         { key: 'phase', label: 'Phase', help: 'Turns the curve: zero is a straight diagonal at the extreme, larger fills the diamond.', lo: 'Squeezed', hi: 'Open', unit: '°', edit: true },
       ],
     },
-    { kind: 'switch', key: 'second', label: 'Second curve', help: 'A copy with its phase turned, which crosses the first everywhere.' },
     COLOUR,
   ],
   build: (s, boundary) => lissajousLayers(boundary, { a: s.a, b: s.b, phase: s.phase, second: s.second }),
@@ -473,8 +581,10 @@ const TRUCHET = defineControls({
   describe: (s) => ({ size: `${r1(s.size)} mm tiles`, seed: `#${s.seed}` }),
 });
 
-MORE_DESIGNS.push(layered({
+const TRUCHET_CARD = {
   id: 'truchet',
+  shelf: 'layered', family: 'tiles', support: 'self', state: 'needs-repair',
+  joins: "Tile curves meet at tile edges; a shifted second layer crosses them.", sources: {},
   optimizeTravel: true,
   name: 'Truchet tiles',
   blurb: 'Random tiles that flow into curves',
@@ -502,15 +612,16 @@ MORE_DESIGNS.push(layered({
     },
     COLOUR,
   ],
-  build: (s, boundary) => truchetLayers(boundary, { tile: s.tile, size: s.size, seed: s.seed }),
+  build: (s, boundary, ctx) => truchetLayers(boundary, { tile: s.tile, size: s.size, seed: s.seed, bead:ctx?.bead??.45 }),
   summary: (result) => `a Truchet pattern of ${result.report.crossings} crossings`,
-}));
+};
+MORE_DESIGNS.push(layered(TRUCHET_CARD),layered({...TRUCHET_CARD,id:'truchet-legacy',name:'Truchet tiles (legacy)',file:'truchet-legacy',hidden:true,build:(s,b)=>truchetLegacyLayers(b,s)}));
 
-const VORONOI = defineControls({
+export const VORONOI = defineControls({
   ranges: { ...SIZE, spacing: { min: 0.8, max: 14, step: 0.1 }, relax: { min: 0, max: 8, step: 1 }, seed: { min: 1, max: 999, step: 1 }, patternScale: { min: 0.5, max: 2, step: 0.25 } },
-  defaults: { width: 100, height: 100, spacing: 8, relax: 5, seed: 11, pattern: 'none', patternScale: 1, colorChange: false },
+  defaults: { width: 100, height: 100, spacing: 8, relax: 5, seed: 11, pattern: 'none', patternScale: 1, border: true, colorChange: false },
   enums: { pattern: withPicture(['none', ...FIELD_IDS]) },
-  bools: ['colorChange'],
+  bools: ['colorChange','border'],
   presets: [
     { id: 'lace', name: 'Lace', blurb: 'Even, round cells', patch: { spacing: 8, relax: 5, pattern: 'none' } },
     { id: 'scatter', name: 'Scatter', blurb: 'Random cells, no relaxing', patch: { spacing: 8, relax: 0, pattern: 'none' } },
@@ -520,7 +631,10 @@ const VORONOI = defineControls({
 });
 
 MORE_DESIGNS.push(layered({
-  id: 'voronoi',
+  id: 'voronoi', patternEffects: ['size'],
+  shelf: 'layered', family: 'cells', support: 'self', state: 'untested',
+  settingsKey: 'voronoi',
+  joins: "Triangle edges print first, then the cells over them.", sources: {},
   optimizeTravel: true,
   name: 'Voronoi lace',
   blurb: 'Even cells with their triangulation across',
@@ -560,8 +674,103 @@ const TURING = defineControls({
   describe: (s) => ({ wavelength: `${r1(s.wavelength)} mm between stripes`, seed: `#${s.seed}`, angle: `${s.angle}°`, spacing: `${r1(s.spacing)} mm apart`, backingDepth: `${r1(s.backingDepth)} mm each way`, backingLength: `${r1(s.backingLength)} mm per wave` }),
 });
 
+const ROTATED_STACK = defineControls({
+  ranges: { ...SIZE, layers: { min: 2, max: 8, step: 1 }, strand: { min: .4, max: .9, step: .05 }, gapFactor: { min: .5, max: 2, step: .25 },bundle:{min:1,max:5,step:1},bundleGap:{min:.1,max:1,step:.05} },
+  defaults: { width: 100, height: 100, layers: 3, turn: 90, strand: .45, gapFactor: 1,bundle:1,bundleTouch:true,bundleGap:.3,colorChange: false },
+  enums: { turn: STACK_TURNS },
+  bools: ['colorChange','bundleTouch'],
+  presets: [
+    { id: 'wearable', name: "Lu's wearable mesh", blurb: '90° layers with a close, soft gap', patch: { turn: 90, gapFactor: .5, layers: 3 } },
+    { id: 'open-60', name: 'Open 60°', blurb: 'Three directions with a wider gap', patch: { turn: 60, gapFactor: 1.5, layers: 3 } },
+    { id: 'fine-45', name: 'Fine 45°', blurb: 'Four closely spaced planes', patch: { turn: 45, gapFactor: 1, layers: 4 } },
+  ],
+  describe: s => ({ layers: `${s.layers} layers`, turn: `${s.turn}° per layer`, strand: `${r2(s.strand)} mm thick`, gapFactor: `${r1(s.gapFactor)} × strand width` }),
+});
+
+const turnThumb = turn => `<svg viewBox="0 0 48 28" aria-hidden="true"><g fill="none" stroke="var(--accent)" stroke-width="1.2">${[0, Number(turn)].map(a => `<path d="M4 7H44M4 14H44M4 21H44" transform="rotate(${a} 24 14)"/>`).join('')}</g></svg>`;
+const turnOptions = STACK_TURNS.map(turn => ({ id: turn, label: `${turn}°`, hint: `Each plane turns ${turn}° from the one below.`, thumb: turnThumb(turn) }));
+
 MORE_DESIGNS.push(layered({
+  id: 'rotated-stack', shelf: 'layered', family: 'grids', support: 'self', state: 'untested',
+  joins: 'Straight parallel strands bond where each rotated plane crosses the one below.',
+  sources: { papers: [69] },
+  name: 'Rotated stack', blurb: 'Straight strands, turned plane by plane',
+  about: "Layers of straight strands, each turned from the one below. The gap between strands is the main softness control: in Lu's 1.8 mm NinjaFlex meshes, doubling it from one to two strand widths cut stiffness by about 40%.",
+  file: 'rotated-stack', c: ROTATED_STACK,
+  controls: [
+    { kind: 'presets', title: 'Start from' },
+    { kind: 'size', title: 'Size and shape' },
+    { kind: 'choice', key: 'turn', title: 'Structure', hint: 'Each printed plane turns from the one below.', options: turnOptions },
+      { kind: 'sliders', title: 'Look and feel', items: [
+        { key: 'layers', label: 'Layers', help: 'Each layer is a separate plane of straight strands.', lo: '2', hi: '8', unit: '', edit: true },
+        { key: 'strand', label: 'Strand thickness', help: 'Sets extrusion width. A thicker strand makes a firmer mesh.', lo: 'Thin', hi: 'Thick', unit: 'mm', edit: true },
+        { key: 'gapFactor', label: 'Gap between strands', help: 'The main softness control. Lu et al. measured lower stiffness with wider gaps in 1.8 mm NinjaFlex meshes.', lo: 'Close', hi: 'Open', unit: '× strand', edit: true },
+        { key: 'bundle', label: 'Strands per bundle', help: 'Group parallel strands; 1 preserves the original mesh.', lo: 'Single', hi: 'Five', unit: '', edit: true, filenameWhen:s=>Number(s.bundle)>1 },
+        { key: 'bundleGap', label: 'Gap inside bundle', help: 'Used only when bundle neighbours do not touch.', lo: 'Narrow', hi: 'Wide', unit: 'mm', edit: true, when:s=>Number(s.bundle)>1, filenameWhen:s=>Number(s.bundle)>1 },
+      ] },
+      {kind:'switch',key:'bundleTouch',when:s=>Number(s.bundle)>1,label:'Touch neighbours inside bundles',help:'When on, adjacent strands are 0.9 × bead width apart and fuse.'},
+      COLOUR,
+  ],
+  build: (s, boundary, ctx) => {
+    const built = rotatedStackLayers(boundary, s, { bead: ctx?.bead ?? .45 });
+    return { layers: [...built], families: built.families, extra: built.extra };
+  },
+  summary: result => `${result.layerCount} rotated planes with ${result.report.crossings} crossings`,
+}));
+
+const MOIRE_BASE = defineControls({
+  ranges: { ...SIZE, pitchA: { min: 1.2, max: 6, step: .1 }, pitchDiff: { min: 0, max: 1, step: .02 }, angleDiff: { min: 0, max: 15, step: .5 }, size: { min: 0, max: 2, step: .1 }, patternScale: { min: .5, max: 2, step: .25 } },
+  defaults: { width: 100, height: 100, pitchA: 2, pitchDiff: .1, angleDiff: 3, size: 0, shape: 'wave', wavelength: 6, pattern: 'none', patternScale: 1, colorChange: false },
+  enums: { shape: ['wave', 'zigzag'], pattern: ['none', ...FIELD_IDS, 'image'] },
+  bools: ['colorChange','bundleTouch'],
+  presets: [
+    { id: 'fine-bands', name: 'Fine bands', blurb: 'Close pitches, gentle angle', patch: { pitchA: 2, pitchDiff: .1, angleDiff: 3, size: 0 } },
+    { id: 'wide-bands', name: 'Wide bands', blurb: 'A larger difference between pitches', patch: { pitchA: 2, pitchDiff: .25, angleDiff: 2, size: 0 } },
+    { id: 'wavy', name: 'Wavy interference', blurb: 'Soft waves make the bands wander', patch: { pitchA: 2.2, pitchDiff: .12, angleDiff: 4, size: 1, shape: 'wave' } },
+  ],
+  describe: s => ({ pitch: `${r1(s.pitchA)} / ${r1(s.pitchA + s.pitchDiff)} mm`, angle: `${r1(s.angleDiff)}° apart` }),
+});
+const MOIRE = { ...MOIRE_BASE, sanitize: raw => {
+  const out = MOIRE_BASE.sanitize(raw);
+  if (out.pitchDiff === 0 && out.angleDiff === 0) out.angleDiff = .5;
+  return out;
+} };
+
+MORE_DESIGNS.push(layered({
+  id: 'moire-net', shelf: 'layered', family: 'grids', support: 'self', state: 'untested',
+  joins: 'Two close-pitched line families cross to make broad interference bands.',
+  sources: { catalogue: ['M7'], papers: [43, 58, 61] },
+  name: 'Moiré net', blurb: 'Interference bands from two close line pitches',
+  about: 'Two straight or wavy families with slightly different pitch or angle make broad bands. The picture shifts the second family to draw an image in those bands. The cited papers mention moiré-like structures but do not measure this textile; its printability remains untested.',
+  file: 'moire-net', c: MOIRE, patternEffects: ['phase'], patterns: withPicture(['none', ...FIELD_IDS]),
+  controls: [
+    { kind: 'presets', title: 'Start from' },
+    { kind: 'size', title: 'Size and shape' },
+    { kind: 'choice', key: 'shape', title: 'Line shape', hint: 'Both families use the same line shape.', options: [
+      { id: 'wave', label: 'Wave', hint: 'Rounded waves in both families.' },
+      { id: 'zigzag', label: 'Zigzag', hint: 'Angular waves in both families.' },
+    ] },
+    { kind: 'sliders', title: 'Look and feel', items: [
+      { key: 'pitchA', label: 'Gap between strands', help: 'The first family’s pitch; the second starts slightly wider.', lo: 'Close', hi: 'Open', unit: 'mm', edit: true },
+      { key: 'pitchDiff', label: 'Pitch difference', help: 'A small difference makes wider bands. If pitches match, a slight angle difference is required.', lo: 'Same', hi: 'Different', unit: 'mm', edit: true },
+      { key: 'angleDiff', label: 'Angle difference', help: 'The second family turns by this many degrees. Matching pitch and angle would make the families coincide.', lo: 'Parallel', hi: 'Turned', unit: '°', edit: true },
+      { key: 'size', label: 'Wave depth', help: 'How far the strands wander. Zero keeps both families straight.', lo: 'Straight', hi: 'Wavy', unit: 'mm', edit: true },
+    ] },
+    { kind: 'pattern', key: 'pattern', title: 'Moiré image', hint: 'The picture shifts the second family to draw its tones in the bands.', picture: 'positive', pictureHint: 'Dark parts of the picture shift the second family by up to one pitch.', scale: { key: 'patternScale', label: 'Pattern size', help: 'Stretches the picture or field across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false } },
+    COLOUR,
+  ],
+  build: (s, boundary, ctx) => {
+    const phaseField = patternField(s.pattern, { scale: s.patternScale, picture: ctx?.picture });
+    const built = moireLayers(boundary, { pitchA: s.pitchA, pitchB: s.pitchA + s.pitchDiff, angleA: 0, angleB: s.angleDiff, shape: s.size > 0 ? s.shape : null, size: s.size, wavelength: s.wavelength, phaseField });
+    return { layers: [...built], families: built.families, extra: built.extra, warnings: built.warnings };
+  },
+  summary: result => `Two interference families with ${result.report.crossings} crossings`,
+}));
+
+const TURING_CARD = {
   id: 'turing',
+  shelf: 'layered', family: 'motif', support: 'auto', state: 'untested',
+  joins: "Grown stripes held by a backing.", sources: {},
   optimizeTravel: true,
   name: 'Turing stripes',
   blurb: 'Grown stripes held by a wavy backing',
@@ -592,6 +801,7 @@ MORE_DESIGNS.push(layered({
     },
     COLOUR,
   ],
-  build: (s, boundary) => turingLayers(boundary, { wavelength: s.wavelength, seed: s.seed, angle: s.angle, spacing: s.spacing, backing: s.backing, backingDepth: s.backingDepth, backingLength: s.backingLength, backingLayers: s.backingLayers }),
+  build: (s, boundary, ctx) => turingLayers(boundary, { ...s, bead:ctx?.bead??.45 }),
   summary: (result) => `Turing stripes of ${result.loops} loops and ${result.report.crossings} crossings`,
-}));
+};
+MORE_DESIGNS.push(layered(TURING_CARD),layered({...TURING_CARD,id:'turing-legacy',name:'Turing stripes (legacy)',file:'turing-legacy',hidden:true,build:(s,b)=>turingLayers(b,{...s,legacy:true})}));

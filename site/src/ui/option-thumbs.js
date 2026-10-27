@@ -86,7 +86,34 @@ const HUB = {
   open: icon(circle(24, 16, 13, B, 1.4) + spokes(24, 16, 6, 13, 8, B) + circle(24, 16, 6, B, 1.4)),
 };
 
+/** A 3 x 3 grid of crossings; `mark(i, j)` names the colour of the ring drawn at a crossing, or nothing. */
+function crossGrid(mark, { across = A, along = B } = {}) {
+  const xs = [12, 24, 36], ys = [8, 16, 24];
+  let d = '';
+  for (const y of ys) d += line(4, y, 44, y, along);
+  for (const x of xs) d += line(x, 3, x, 29, across);
+  ys.forEach((y, j) => xs.forEach((x, i) => { const colour = mark(i, j); if (colour) d += circle(x, y, 3.4, colour, 1.6); }));
+  return icon(d);
+}
+
 export const OPTION_ICONS = {
+  // Grid · lifted crossings: which crossings the later strand rises over
+  'grid-lifted:liftWhere': {
+    all: crossGrid(() => L),
+    alternate: crossGrid((i, j) => ((i + j) % 2 === 0 ? L : null)),
+    pattern: crossGrid((i, j) => (i + j >= 2 ? L : null)),
+  },
+  // Grid · sliding channels: which direction slides in its channels
+  'grid-sliding:slideMask': {
+    b: crossGrid(() => null, { across: L, along: B }),
+    a: crossGrid(() => null, { across: A, along: L }),
+    alternate: crossGrid((i, j) => ((i + j) % 2 === 0 ? L : A)),
+    pattern: crossGrid((i, j) => (i + j >= 3 ? L : i + j >= 2 ? A : B)),
+  },
+  'squiggle:mode': {
+    cross: icon(path(wave(8, { vertical: true }), B) + path(wave(24, { vertical: true }), B) + path(wave(15), A) + path(wave(25), A)),
+    parallel: icon(path(wave(7), B) + path(wave(20), B) + path(wave(13), A)),
+  },
   // Zigzag mesh: how the two layers lie
   'zigzag:mode': {
     parallel: icon(path(zigzag(7), B) + path(zigzag(16), A) + path(zigzag(25), B)),

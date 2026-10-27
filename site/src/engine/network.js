@@ -21,7 +21,7 @@ const EPS = 1e-9;
 const dist = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
 
 function plain(s) {
-  if (s.name === 'Structural tie' || (s.layer ?? 0) < 0 || s.pts.length < 2) return false;
+  if (s.role === 'tie' || (s.layer ?? 0) < 0 || s.pts.length < 2) return false;
   const z = s.pts[0].z ?? 0;
   return s.pts.every((p) => p.cls === undefined && p.flow === undefined && Math.abs((p.z ?? 0) - z) < 1e-6);
 }
@@ -244,15 +244,19 @@ function network(input, { snap, bridge, allow, maxSegments, maxOdd }) {
       const e = edges[step.via];
       if (e.dummy) { flush(); continue; }
       const pts = e.a === step.from ? e.pts : [...e.pts].reverse();
-      if (!current) current = { si: e.si, pts: pts.map((p) => ({ ...p })) };
+      if (!current) current = { si: e.si, sources:new Set([e.si]), pts: pts.map((p) => ({ ...p })) };
       else {
+        current.sources.add(e.si);
         const startIdx = dist(current.pts.at(-1), pts[0]) < snap * 2 ? 1 : 0;
         for (let i = startIdx; i < pts.length; i++) current.pts.push({ ...pts[i] });
       }
     }
     flush();
   }
-  return strokes.map((stroke, k) => ({ ...group[stroke.si], id: `${group[stroke.si].id}-n${k}`, pts: stroke.pts }));
+  return strokes.map((stroke, k) => {
+    const joints=new Map([...stroke.sources].flatMap(si=>group[si].joints??[]).map(joint=>[joint.id,joint]));
+    return { ...group[stroke.si], id: `${group[stroke.si].id}-n${k}`, pts: stroke.pts, ...(joints.size?{joints:[...joints.values()]}:{}) };
+  });
 }
 
 /**
@@ -266,7 +270,7 @@ export function joinNetwork(strands, { snap = 0.05, within = 0, allow = null, ma
   for (const s of strands) {
     if (!plain(s)) { rest.push(s); continue; }
     // what must not be mixed: another layer, kind or name, or a different standing against the outline
-    const key = `${s.layer ?? 0}|${s.kind}|${s.name ?? ''}|${!!s.onBoundary}|${!!s.shape}|${!!s.fixed}`;
+    const key = JSON.stringify([s.layer ?? 0, s.kind, s.name ?? '', !!s.onBoundary, !!s.shape, !!s.fixed, s.family, s.role, s.source]);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(s);
   }

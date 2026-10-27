@@ -1,0 +1,66 @@
+[
+  {
+    "card": "isohedral-tiles",
+    "preset": "default",
+    "settingsHash": "a3a9a26c8d76",
+    "gcodeSha256": "cc8939e1a18510e5689aac9f88745cbac23efd1e24383ab219ea7aecb29e6cb2",
+    "strands": 22,
+    "moves": 580,
+    "extrudeMm": 302.5,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "border",
+      "edges"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "isohedral-tiles",
+    "preset": "square",
+    "settingsHash": "a3a9a26c8d76",
+    "gcodeSha256": "cc8939e1a18510e5689aac9f88745cbac23efd1e24383ab219ea7aecb29e6cb2",
+    "strands": 22,
+    "moves": 580,
+    "extrudeMm": 302.5,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "border",
+      "edges"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "isohedral-tiles",
+    "preset": "hexagonal",
+    "settingsHash": "4789739164b1",
+    "gcodeSha256": "e8a5662dd403525cfba4e4420254a052f54968d778348ce585d07a027546084b",
+    "strands": 75,
+    "moves": 1172,
+    "extrudeMm": 639,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "border",
+      "edges"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "isohedral-tiles",
+    "preset": "triangle",
+    "settingsHash": "e11905a4d13d",
+    "gcodeSha256": "0a46534470c340f08e858548adcbcded6222df0d343646b93d45f5e100993aff",
+    "strands": 299,
+    "moves": 9199,
+    "extrudeMm": 2680.5,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "border",
+      "edges"
+    ],
+    "ties": 0
+  }
+]

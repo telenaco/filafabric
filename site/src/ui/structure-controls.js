@@ -1,6 +1,7 @@
 import { validNumber } from './numeric.js';
 import { FIELD_IDS } from '../engine/fields.js';
 import { withPicture } from '../engine/picture.js';
+import { colourMode } from '../engine/colour-plan.js';
 // Controls for the newer structures (Relief, Fringe, Bouclé, Spiral, Weave): ranges, defaults, sanitising, presets and
 // read-outs, built from one small description each. Pure: no DOM, so it is tested in Node like the engine.
 
@@ -37,6 +38,16 @@ export function defineControls({ ranges, defaults, enums = {}, bools = [], prese
     return null;
   };
   return { ranges: Object.freeze(ranges), defaults: frozen, sanitize, presets, presetMatch, describe };
+}
+
+/** Add the common colour settings without coupling a design's geometry controls to the UI. */
+export function withColour(c) {
+  return { ...c, defaults: Object.freeze({ ...c.defaults, colorChange: !!c.defaults.colorChange, colourMode: colourMode(c.defaults), layerColours: [] }),
+    sanitize(raw) {
+      const mode = colourMode(raw);
+      const layerColours = Array.isArray(raw?.layerColours) ? raw.layerColours.slice(0, 256).map(value => /^#[\da-f]{6}$/i.test(value) ? value.toLowerCase() : '#8ea5ff') : [];
+      return { ...c.sanitize(raw), colourMode: mode, layerColours, colorChange: ['face', 'halftone2'].includes(mode) };
+    } };
 }
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };

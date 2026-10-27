@@ -4,8 +4,9 @@ import { encodeState, decodeState, stateToHash, hashToState, sanitizeState, sani
 import { SQUIGGLE_DEFAULTS } from '../../site/src/ui/squiggle-controls.js';
 import { COIL_DEFAULTS } from '../../site/src/ui/coil-controls.js';
 import { DESIGNS } from '../../site/src/ui/designs.js';
+import { initialDesignSettings } from '../../site/src/ui/library.js';
 
-const newerDefaults = () => Object.fromEntries(DESIGNS.filter((d) => d.status === 'ready' && !d.legacy).map((d) => [d.id, d.defaults()]));
+const newerDefaults = () => initialDesignSettings(DESIGNS);
 import { PRIMARY_DEFAULTS } from '../../site/src/ui/controls.js';
 
 const known = { machines: ['prusa-mk3s'], materials: ['filaflex-95-foamy', 'generic-flex-mk3'] };
@@ -88,11 +89,11 @@ test('an outline survives a link, and anything malformed or oversized is refused
   assert.equal(sanitizeOutline({ rings: [[0, 0, 1, 0, 0.5, 0.8]], name: 42 }).name, 'Outline');
 });
 
-test('v3 states carry per-design settings; unknown or planned designs fall back to the loop pile', () => {
+test('v3 states migrate to v4; unknown or planned designs fall back to the loop pile', () => {
   const s = sanitizeState({ v: 3, design: 'nope', designs: { nope: { a: 1 } } }, known);
   assert.equal(s.design, 'loop-pile');
-  assert.equal(s.v, 3);
-  assert.deepEqual(s.designs, newerDefaults(), 'an unknown design id adds nothing; every newer design still has its defaults');
+  assert.equal(s.v, 4);
+  assert.deepEqual(s.designs, newerDefaults(), 'an unknown design id adds nothing; every card still has its defaults');
 });
 
 test('a version 2 link (squiggle key, no designs) opens identically', () => {
@@ -100,24 +101,44 @@ test('a version 2 link (squiggle key, no designs) opens identically', () => {
   assert.equal(s.design, 'squiggle');
   assert.equal(s.squiggle.mode, 'parallel');
   assert.equal(s.squiggle.spacing, 4);
-  assert.deepEqual(s.designs, newerDefaults());
-  assert.deepEqual(s.designs.coil, COIL_DEFAULTS);
+  const defaults = newerDefaults();
+  defaults.wave = { ...defaults.wave, mode: 'parallel', spacing: 4 };
+  assert.deepEqual(s.designs, defaults);
+  assert.equal(s.designs.wave.spacing, 4);
+  assert.deepEqual(s.designs.coil, { ...COIL_DEFAULTS, colorChange: false, colourMode: 'one', layerColours: [] });
+});
+
+test('v3 settings and colour choice migrate into v4 card records', () => {
+  const s = sanitizeState({ v: 3, design: 'squiggle', primary: { ...PRIMARY_DEFAULTS, pileHeight: 4 },
+    squiggle: { ...SQUIGGLE_DEFAULTS, colorChange: true }, print: { backing: true } }, known);
+  assert.equal(s.v, 4);
+  assert.equal(s.designs['loop-pile'].pileHeight, 4);
+  assert.equal(s.designs.wave.colorChange, true);
+  assert.equal(s.designs.meander.support.openness, 3.7);
+  assert.equal(s.squiggle.colorChange, false);
+});
+
+test('legacy preset ids migrate through the map while preserving the selected card', () => {
+  const s = sanitizeState({ v: 3, design: 'zigzag-mesh' }, known);
+  assert.equal(s.design, 'squiggle-zigzag');
+  assert.equal(s.designs['squiggle-zigzag'].shape, 'zigzag');
+  assert.equal(s.designs['squiggle-zigzag'].mode, 'parallel');
 });
 
 test('coil settings travel in a link and are sanitised', () => {
   const s = sanitizeState({ v: 3, design: 'coil', designs: { coil: { size: 4, rowOverlap: -5, shape: 'figure8', evil: 1 } } }, known);
-  assert.equal(s.design, 'coil');
-  assert.equal(s.designs.coil.size, 4);
-  assert.equal(s.designs.coil.rowOverlap, COIL_DEFAULTS.rowOverlap, 'a negative overlap is nonsense');
+  assert.equal(s.design, 'figure8-rows');
+  assert.equal(s.designs['figure8-rows'].size, 4);
+  assert.equal(s.designs['figure8-rows'].rowOverlap, COIL_DEFAULTS.rowOverlap, 'a negative overlap is nonsense');
   // a number outside the slider's range is used as typed: the panel warns, it does not refuse
   const wide = sanitizeState({ v: 3, design: 'coil', designs: { coil: { size: 40, rowOverlap: 150, pitch: 90 } } }, known);
   assert.equal(wide.designs.coil.size, 40);
   assert.equal(wide.designs.coil.rowOverlap, 150);
   assert.equal(wide.designs.coil.pitch, 90);
-  assert.equal(s.designs.coil.shape, 'figure8');
-  assert.equal('evil' in s.designs.coil, false);
-  const round = decodeState(encodeState({ v: 3, design: 'coil', designs: { coil: s.designs.coil } }));
-  assert.deepEqual(sanitizeState(round, known).designs.coil, s.designs.coil);
+  assert.equal(s.designs['figure8-rows'].shape, 'figure8');
+  assert.equal('evil' in s.designs['figure8-rows'], false);
+  const round = decodeState(encodeState({ v: 4, design: 'figure8-rows', designs: { 'figure8-rows': s.designs['figure8-rows'] } }));
+  assert.deepEqual(sanitizeState(round, known).designs['figure8-rows'], s.designs['figure8-rows']);
 });
 
 test('layer thickness and additional layers use defaults when absent or invalid', () => {

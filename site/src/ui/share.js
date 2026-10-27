@@ -6,6 +6,8 @@ import { DESIGNS, READY_IDS } from './designs.js';
 import { sanitizeSvgLines } from '../engine/svg-lines.js';
 import { sanitizeFilamentSettings } from './filament-settings.js';
 import { BACKING_MESH } from '../engine/backing.js';
+import { migrateState } from './library.js';
+import { sanitizeRegions, sanitizeSeam } from '../engine/regions.js';
 
 /** The designs a link can open, in gallery order (planned placeholders are not loadable). The first opens by default. */
 export const DESIGN_IDS = READY_IDS;
@@ -120,11 +122,15 @@ export function sanitizeOutline(raw) {
  * known advanced keys. Version 1 links (before designs were saved) open as the loop pile.
  */
 export function sanitizeState(raw, known) {
-  const r = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const r = migrateState(raw);
   const design = DESIGN_IDS.includes(r.design) ? r.design : DESIGN_IDS[0];
   const machine = known.machines.includes(r.machine) ? r.machine : known.machines[0];
   const material = known.materials.includes(r.material) ? r.material : known.materials[0];
   const primary = sanitizePrimary(r.primary);
+  if (r.primary?.colourMode !== undefined || r.primary?.layerColours !== undefined) {
+    const clean = DESIGNS.find(d => d.id === 'loop-pile').sanitize(r.primary);
+    Object.assign(primary, { colourMode: clean.colourMode, layerColours: clean.layerColours });
+  }
   const advanced = {};
   if (r.advanced && typeof r.advanced === 'object' && !Array.isArray(r.advanced)) {
     for (const [key, value] of Object.entries(r.advanced)) {
@@ -135,11 +141,23 @@ export function sanitizeState(raw, known) {
       if (ok) advanced[key] = value;
     }
   }
-  // the loop pile and squiggle keep their own keys; every newer design keeps its settings under `designs[id]`
   const saved = r.designs && typeof r.designs === 'object' && !Array.isArray(r.designs) ? r.designs : {};
   const designs = {};
   for (const d of DESIGNS) {
-    if (d.status === 'ready' && !d.legacy) designs[d.id] = d.sanitize(saved[d.id]);
+    if (d.status === 'ready') {
+      const key = d.settingsKey ?? d.id;
+      const source = saved[key] ?? saved[d.id] ?? (d.id === 'loop-pile' ? r.primary : d.id === 'squiggle' ? r.squiggle : undefined);
+      const clean = d.sanitize(source);
+      designs[key] = clean;
+    }
   }
-  return { v: 3, design, machine, material, primary, advanced, squiggle: sanitizeSquiggle(r.squiggle), designs, outline: sanitizeOutline(r.outline), vector: sanitizeSvgLines(r.vector), print: sanitizePrint(r.print) };
+  const print = sanitizePrint(r.print);
+  const extraBacking = !!print.backing;
+  delete print.backing;
+  const migrationNotes = extraBacking ? [DESIGNS.find(d => d.id === design)?.support === 'self'
+    ? 'This design no longer takes an extra backing; your link is shown without it.'
+    : 'This design now uses one Support carrier instead of an additional global backing.'] : [];
+  const vector = sanitizeSvgLines(r.vector);
+  const regions = sanitizeRegions(r.regions, vector, { cards:DESIGNS, currentCard:design, currentSettings:design==='loop-pile'?primary:designs[DESIGNS.find(d=>d.id===design)?.settingsKey??design], notes:migrationNotes });
+  return { v: 4, geometryRevision:2, design, machine, material, primary, advanced, squiggle: sanitizeSquiggle(r.squiggle ?? designs.squiggle), designs, outline: sanitizeOutline(r.outline), vector, regions, seam:sanitizeSeam(r.seam), print, ...(migrationNotes.length ? { migrationNotes } : {}) };
 }

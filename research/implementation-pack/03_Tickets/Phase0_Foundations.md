@@ -284,7 +284,7 @@ Contracts are in [02_Architecture_and_Contracts.md](../02_Architecture_and_Contr
 
 4. **Shelf check.** Add `shelfFromConstruction(report, { layerHeight })` to `construction-report.js`. It implements the plan's shelf rule:
    - **flat:** exactly one native family, or several whose `byPair` crossings are under 1 per cm², and `z.max ≤ 2 × layerHeight + 0.05`;
-   - **layered:** two or more native families that cross, or any `carrier` role, with `z.max ≤ (families + 1) × layerHeight + 0.05`;
+   - **layered:** two or more native families that cross, or any `carrier` role, with `z.max ≤ (native families + carrier passes + 1) × layerHeight + 0.05` (a carrier pass is a layer of its own);
    - **raised:** anything higher.
 
    A registry test generates every visible ready card at default settings and asserts `shelfFromConstruction(...) === card.shelf`. Keep an `SHELF_EXCEPTIONS` map of card ID → one-sentence reason for the few cards whose declared shelf is a deliberate choice; for example, `coil` is declared flat although its self-crossings lift by one layer. **The reviewer approves every exception.**

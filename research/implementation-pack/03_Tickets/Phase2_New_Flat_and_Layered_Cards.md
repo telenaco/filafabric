@@ -410,7 +410,7 @@ The Pattern effect is `size`: density follows the picture through the subdivisio
 - Schumacher et al. 2018, [Paper 54](../../reports/FilaFabric_Research_Reference_and_Design_Notes.md#paper-54-schumacher-2018--mechanical-characterization-of-structured-sheet-materials): 93 isohedral families; tiling symmetry sets the material class;
 - FlexScale, [Paper 47](../../reports/FilaFabric_Research_Reference_and_Design_Notes.md#paper-47-montes-maestre-2024--flexscale-flexible-scaled-sheets), which used the *Tactile* JavaScript library (isohedral.ca).
 
-**Gate before code:** the Tactile library's licence must be checked by the reviewer, and its addition under `site/vendor/` approved by Luis (handbook §3.4). If it cannot be used, implement only the tiling families needed for the first presets (IH28, IH21, IH1, IH41 and IH84 are good starting points, covering square, hexagonal and triangular symmetry) from their published definitions, and say so in the PR.
+**Gate before code (resolved 27 October 2026):** TactileJS is BSD 3-Clause; Luis approved vendoring the pinned library under `site/vendor/tactile/`. See [local review](../04_Review/T2_11_Local_Review.md). Keep its upstream licence and provenance with the source.
 
 **What it is:** the outlines of an isohedral tiling, printed as a connected net. Choosing a family and its shape parameters changes the cell outline continuously.
 
@@ -460,7 +460,9 @@ The Pattern effect is `size`: density follows the picture through the subdivisio
 
 **Engine:** add `meanderTiesLayers(boundary, { curve, cell, angle, tieInterval = 6, tieLength = null, seed })` to `site/src/engine/meander.js`.
 - Build the curve exactly as `meanderLayers` does, **without** the backing.
-- Then find pairs of parallel runs closer than `cell × 1.2`, and every `tieInterval` mm along them add a straight tie perpendicular to both. A tie is one bead wide and overlaps both runs by half a bead.
+- Then find pairs of parallel runs closer than `cell × 1.2`, and every `tieInterval` mm **of curve length** (stations along each run, not at every point of its rounded corners) add a straight tie perpendicular to both. A tie is one bead wide.
+- A tie runs from the centreline of one fold to the centreline of the other and **declares a joint at each end** (`joints`, as the other designed-joint cards do). Without the joints the engine reads each end as a tie laid over the curve and lifts it a layer, so the card stops being flat.
+- A tie is dropped if it would cross the curve or another tie, or lie closer than half the interval to another tie.
 - Ties are a **designed family** (`role: 'native'`, family `ties-designed`), not the engine's automatic ties.
 - `families = ['curve', 'ties-designed']`.
 
@@ -469,6 +471,7 @@ The Pattern effect is `size`: density follows the picture through the subdivisio
 **Checks:**
 - One component **without** automatic ties: `report.ties.count === 0` and `componentsWithoutTies === 1`.
 - Every run longer than `2 × tieInterval` has at least one tie.
+- The default measures as declared: no crossings, Z 0.2 mm everywhere, and `shelfFromConstruction` returns `flat`. The tie count stays near curve length ÷ `tieInterval`.
 
 ---
 

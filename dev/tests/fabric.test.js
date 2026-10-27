@@ -1,4 +1,5 @@
 import test from 'node:test';
+import { isByDesign } from '../../site/src/engine/by-design.js';
 import assert from 'node:assert/strict';
 import { boundaryFor, crossingReport, layersToStrands } from '../../site/src/engine/layers.js';
 import { buildLayeredVerdict } from '../../site/src/ui/verdict.js';
@@ -7,6 +8,7 @@ import { findCrossings, resolveCrossings } from '../../site/src/engine/crossings
 import { DESIGNS } from '../../site/src/ui/designs.js';
 import { defaultProfiles } from './helpers.js';
 import { generate } from '../../site/src/engine/generate.js';
+import { generateSquiggle } from '../../site/src/engine/squiggle.js';
 import { PolygonBoundary } from '../../site/src/engine/boundary.js';
 import * as routing from '../../site/src/engine/fabric.js';
 import { sanitizeSquiggle } from '../../site/src/ui/squiggle-controls.js';
@@ -24,6 +26,22 @@ test('two separate crossing-rich islands are not reported as one fabric', () => 
   const report = crossingReport(items, 300);
   assert.equal(report.components, 2);
   assert.notEqual(buildLayeredVerdict({ report, layerCount: 2, stats: { hops: 3 } }).level, 'ok');
+});
+
+test('raised verdicts state lift, channel and climbing counts plainly',()=>{
+  const verdict=buildLayeredVerdict({
+    report:{strands:2,components:1,crossings:4,perCm2:2,between:3,longestUncrossed:2},layerCount:2,stats:{hops:1},
+    construction:{lifted:{crossings:2,total:4},channels:{count:3,along:{x:2,y:1},fused:1},levels:{max:3},z:{max:1.2}},
+  });
+  assert.match(verdict.body,/Lifted crossings: 2 of 4/);
+  assert.match(verdict.body,/Sliding channels: 3; slides along X: 2, along Y: 1; fused: 1/);
+  assert.match(verdict.body,/Builds up to 3 levels \(Z up to 1\.20 mm\)/);
+});
+
+test('Squiggle transform runs on settled strands before emission and leaves defaults unchanged',()=>{
+  const {machine,material}=defaultProfiles(),params={width:20,height:20,spacing:4,amplitude:.8},base=generateSquiggle(machine,material,params),noop=generateSquiggle(machine,material,{...params,transform:strands=>strands}),raised=generateSquiggle(machine,material,{...params,transform:strands=>strands.map(s=>({...s,pts:s.pts.map(p=>({...p,z:p.z+.1}))}))});
+  assert.equal(noop.gcode,base.gcode);
+  assert.ok(Math.abs(Math.min(...raised.moves.filter(m=>m.extrude).map(m=>m.z))-Math.min(...base.moves.filter(m=>m.extrude).map(m=>m.z))-.1)<1e-7);
 });
 
 test('crossings with a vertical gap do not join separate strands', () => {
@@ -72,13 +90,13 @@ test('loop pile has interior cross-row backing connections', () => {
 
 test('every default design exposes a final 3D fabric report', () => {
   const { machine, material } = defaultProfiles();
-  for (const d of DESIGNS.filter((d) => d.status === 'ready' && !d.legacy)) {
+  for (const d of DESIGNS.filter((d) => d.status === 'ready' && !d.legacyPanel)) {
     const r = d.generate(machine, material, d.defaults());
     assert.ok(r.fabric, `${d.id}: missing report`);
-    assert.equal(r.fabric.components, 1, `${d.id}: separate regions`);
+    if (!isByDesign(d.id, 'regions')) assert.equal(r.fabric.components, 1, `${d.id}: separate regions`);
     assert.equal(r.fabric.reversedCrossings, 0, `${d.id}: crossing heights reversed`);
     assert.equal(r.fabric.outsideSegments, 0, `${d.id}: extrusion leaves the shape`);
-    assert.ok(r.fabric.maxSlopeDeg <= 25.001, `${d.id}: slope ${r.fabric.maxSlopeDeg}`);
+    if (!isByDesign(d.id, 'slope')) assert.ok(r.fabric.maxSlopeDeg <= 25.001, `${d.id}: slope ${r.fabric.maxSlopeDeg}`);
   }
 });
 
@@ -163,7 +181,7 @@ test('manual values beyond a slider range survive saving and restoring', () => {
 
 test('printability ranks have one assessed entry per selectable gallery tile', async () => {
   const { PRINTABILITY } = await import('../../site/src/ui/printability-data.js');
-  assert.deepEqual(PRINTABILITY.map((d) => d.id).sort(), DESIGNS.filter((d) => ['ready', 'preset'].includes(d.status)).map((d) => d.id).sort());
+  assert.deepEqual(PRINTABILITY.map((d) => d.id).sort(), DESIGNS.filter((d) => ['ready', 'preset'].includes(d.status) && !d.id.endsWith('-legacy')).map((d) => d.id).sort());
   for (let i = 1; i < PRINTABILITY.length; i++) assert.ok(PRINTABILITY[i].score >= PRINTABILITY[i - 1].score);
   assert.ok(PRINTABILITY.every((d) => d.physicallyVerified === false));
 });

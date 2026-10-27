@@ -1,0 +1,84 @@
+[
+  {
+    "card": "crosshatch",
+    "preset": "default",
+    "settingsHash": "b1be1a1890dc",
+    "gcodeSha256": "eef51926c71309934ab6a37731829e843de433dca59e56644e5153e9e5dff02d",
+    "strands": 2,
+    "moves": 241,
+    "extrudeMm": 742.5,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "crosshatch",
+    "preset": "square",
+    "settingsHash": "b1be1a1890dc",
+    "gcodeSha256": "eef51926c71309934ab6a37731829e843de433dca59e56644e5153e9e5dff02d",
+    "strands": 2,
+    "moves": 241,
+    "extrudeMm": 742.5,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "crosshatch",
+    "preset": "diagonal",
+    "settingsHash": "5d3af8ce4883",
+    "gcodeSha256": "49952f13374656aac0dbac4d67e140222c34fed392f6dbd6d3ff08086cfcaf3c",
+    "strands": 2,
+    "moves": 273,
+    "extrudeMm": 788.2,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "crosshatch",
+    "preset": "isogrid",
+    "settingsHash": "06f5117dfca3",
+    "gcodeSha256": "89d1bd8b3dff022e6ba6df407ac7fa07e5328be2a2cd57dcc06a699f89e4f234",
+    "strands": 3,
+    "moves": 374,
+    "extrudeMm": 1156.5,
+    "zMin": 0.2,
+    "zMax": 0.6000000000000001,
+    "families": [
+      "L1",
+      "L2",
+      "L3"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "crosshatch",
+    "preset": "kagome",
+    "settingsHash": "0dd9884be608",
+    "gcodeSha256": "3c0bebd00f41e4a6ebc7cb83193242bf8349b6eff70d3b25a38ede3e0bdfd68a",
+    "strands": 3,
+    "moves": 637,
+    "extrudeMm": 1168.7,
+    "zMin": 0.2,
+    "zMax": 0.6000000000000001,
+    "families": [
+      "L1",
+      "L2",
+      "L3"
+    ],
+    "ties": 0
+  }
+]

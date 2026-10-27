@@ -266,7 +266,7 @@ export function connectStrands(strands, boundary, { strandWidth = 0.45, maxTie =
     if (second) pair.push(second);
     for (const q of pair) {
       const n = Math.max(2, Math.ceil(q.d / 0.4));
-      ties.push({ id: `tie-${ties.length + 1}`, kind: 'supported', layer: -1, name: 'Structural tie', pts: Array.from({ length: n + 1 }, (_, i) => ({ ...mix(q.a.p, q.b.p, i / n), flow: 1 })) });
+      ties.push({ id: `tie-${ties.length + 1}`, family: 'ties', role: 'tie', source: strands[q.a.si]?.source, kind: 'supported', layer: -1, name: 'Structural tie', pts: Array.from({ length: n + 1 }, (_, i) => ({ ...mix(q.a.p, q.b.p, i / n), flow: 1 })) });
     }
   }
   return { strands: [...strands, ...ties], ties: ties.length };
@@ -280,7 +280,7 @@ export function gridStrands(boundary, { spacing = 5, layerHeight = 0.2, inset = 
     for (let k = 0; k < count; k++) for (const [a, b] of boundary.intervals(axis, start + k * spacing)) {
       if (b - a <= 2 * inset) continue;
       const from = a + inset, to = b - inset, n = Math.max(1, Math.ceil((to - from) / 0.5));
-      strands.push({ id: `grid-${layer}-${k}-${strands.length}`, kind: layer ? 'supported' : 'base', layer, name: 'Crossed backing', pts: Array.from({ length: n + 1 }, (_, i) => {
+      strands.push({ id: `grid-${layer}-${k}-${strands.length}`, family: `carrier-${layer + 1}`, role: 'carrier', kind: layer ? 'supported' : 'base', layer, name: 'Crossed backing', pts: Array.from({ length: n + 1 }, (_, i) => {
         const u = from + (to - from) * (k % 2 ? 1 - i / n : i / n);
         return axis === 'x' ? { x: start + k * spacing, y: u, z: layerHeight * (layer + 1) } : { x: u, y: start + k * spacing, z: layerHeight * (layer + 1) };
       }) });
@@ -289,9 +289,18 @@ export function gridStrands(boundary, { spacing = 5, layerHeight = 0.2, inset = 
   return strands;
 }
 
+const analyzedGeometry = new WeakMap();
+/** Consume the result builder's final analysis once; later public reports recompute after edits. */
+export function constructionGeometry(strands, strandWidth, layerHeight) {
+  const cached = analyzedGeometry.get(strands);
+  analyzedGeometry.delete(strands);
+  return cached?.strandWidth === strandWidth && cached.layerHeight === layerHeight ? cached : null;
+}
+
 export function analyzeFabric(strands, { strandWidth = 0.45, layerHeight = 0.2, boundary = null, supportedAt = null } = {}) {
   const graph = contactGraph(strands, { strandWidth, layerHeight });
   const { found, arcs } = findCrossings(strands, { strandWidth });
+  analyzedGeometry.set(strands, { strandWidth, layerHeight, graph, found, arcs });
   const pointAt = (si, arc) => {
     const list = arcs[si]; let lo = 0, hi = list.length - 1;
     while (lo + 1 < hi) { const mid = (lo + hi) >> 1; if (list[mid] <= arc) lo = mid; else hi = mid; }

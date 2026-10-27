@@ -26,7 +26,8 @@ test('every floor is a right-angle mesh that stays inside', () => {
   for (const tiling of TILING_IDS) {
     for (const turn of [0, 45]) {
       const { layers } = parquetLayers(boundaryFor(50, 50), { tiling, block: 8, spacing: 2, turn });
-      const r = crossingReport(layers.flatMap((l, k) => l.map((pts) => ({ pts, layer: k }))), 2500);
+      // The perimeter is aligned to the swatch, not to a rotated tile's right-angle mesh.
+      const r = crossingReport(layers.flatMap((l, k) => l.filter(pts=>pts.family!=='seams').map((pts) => ({ pts, layer: k }))), 2500);
       assert.ok(r.between > 300, `${tiling} ${turn}: ${r.between}`);
       assert.ok(r.minAngle > 85, `${tiling} ${turn}: angle ${r.minAngle}`);
       // a chevron turned 45° runs in steps, and a step along the edge can miss the other layer for a band or so

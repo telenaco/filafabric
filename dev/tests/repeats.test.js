@@ -89,10 +89,10 @@ test('chainmail rings are all whole, and they reach the edges from inside', () =
   assert.ok(Math.min(...pts.map((p) => p.x)) < 0.4 && Math.max(...pts.map((p) => p.x)) > 69.6, 'the outer rings touch the side edges');
 });
 
-test('Truchet tiles fill the swatch exactly, each way', () => {
+test('world-grid Truchet tiles reach each edge without changing the requested cell size', () => {
   const r = truchetLayers(boundaryFor(73, 41), { tile: 'diagonals', size: 5 });
   assert.equal(r.extra.cols, 15);
-  assert.equal(r.extra.rows, 8);
+  assert.equal(r.extra.rows, 9, 'the last world-grid row is cropped, not rescaled');
   const xs = r.layers.flat(2).map((p) => p.x);
   assert.ok(Math.min(...xs) < 1e-6 && Math.max(...xs) > 73 - 1e-6, 'diagonals from edge to edge');
 });

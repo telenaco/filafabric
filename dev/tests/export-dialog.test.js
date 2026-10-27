@@ -8,6 +8,7 @@ import { defaultProfiles } from './helpers.js';
 
 const source = fs.readFileSync(new URL('../../site/src/ui/main.js', import.meta.url), 'utf8');
 const uiFunction = (name) => source.match(new RegExp(`(?:async )?function ${name}\\([^]*?\\n}`))[0];
+const applyRequirement = source.match(/^const requiresApply = .*;$/m)[0];
 
 test('a sampled large SVG is named with the complete selected size', () => {
   const state = { design: 'zigzag' };
@@ -55,13 +56,14 @@ function exportHost({ size = 200, previewSize = 100, pending = null, timer = nul
     previewBuild: pending, readyGcode: ready, state: { design: 'svgdesign', docName: 'Sample', print: { layerHeight: 0.2, layers: 2 }, resultKey: 'current', result: result(previewSize) },
     exportOptions: () => ({ design: 'svgdesign', width: size, height: size, machine: { id: 'printer' }, material: { id: 'tpu' }, studySettings: { backing1Spacing: 5.12345, pattern: 'none' } }),
     snapshotKey: () => 'current', currentSwatch: () => 'test', swatchFileName: () => 'short.gcode',
-    renderBusy() {}, renderExport() {}, render() {}, toast() {}, printEstimates: { put() {} },
+    renderBusy() {}, renderExport() {}, render() {}, toast(message) { host.message=message; }, printEstimates: { put() {} },
     async buildSwatch(input) { host.built = input; if (fail) throw new Error('Too large'); return result(input.width); },
+    assertConstructionExportable() {},
     download(name, blob) { host.saved = { name, blob }; },
     reportStudyExport(type, input, stats) { host.recorded = { type, input, stats }; },
     recordBuildFailure(error, input) { host.failure = { error, input }; },
   };
-  host.run = () => runInNewContext(`${uiFunction('exportGcode')}\nexportGcode();`, host);
+  host.run = () => runInNewContext(`${applyRequirement}\n${uiFunction('exportGcode')}\nexportGcode();`, host);
   return host;
 }
 
@@ -139,6 +141,24 @@ test('scheduled edits prevent reuse of the previous preview', async () => {
   const host = exportHost({ previewSize: 200, timer: 1 });
   await host.run();
   assert.equal(host.built.width, 200);
+});
+
+test('multi-pattern edits require Apply and never save the stale piece', async () => {
+  const host=exportHost({previewSize:200});
+  host.state.regions=[{role:'pattern',enabled:true},{role:'pattern',enabled:true}];
+  host.state.resultKey='previous';
+  await host.run();
+  assert.equal(host.saved,undefined);
+  assert.equal(host.built,undefined);
+  assert.match(host.message,/Apply the whole piece/);
+});
+
+test('an applied multi-pattern piece exports without rebuilding', async () => {
+  const host=exportHost({previewSize:200});
+  host.state.regions=[{role:'pattern',enabled:true},{role:'pattern',enabled:true}];
+  await host.run();
+  assert.ok(host.saved);
+  assert.equal(host.built,undefined);
 });
 
 test('generation errors are logged and never download a smaller fallback', async () => {

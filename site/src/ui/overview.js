@@ -205,5 +205,7 @@ export function createOverview(container, onStatus) {
   canvas.addEventListener('pointercancel', () => { drag = null; });
   new ResizeObserver(() => draw()).observe(container);
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
-  return { update, cancel: stop, fit, redraw: draw };
+  return { update, cancel: stop, fit, redraw: draw,
+    setResult(next) { stop();result=next;buildPaths();if(!size||size.w!==next.width||size.h!==next.height){zoom=1;dx=dy=0;}size={w:next.width,h:next.height};draw(); },
+  };
 }

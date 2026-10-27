@@ -1,0 +1,18 @@
+[
+  {
+    "card": "weave",
+    "preset": "default",
+    "settingsHash": "c0f4d0b4c91d",
+    "gcodeSha256": "477611db510783b6887493361ac9b95bc48b5dffe9c60e254d34e5b5f5bbbdcf",
+    "strands": 160,
+    "moves": 1632,
+    "extrudeMm": 621.4,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  }
+]

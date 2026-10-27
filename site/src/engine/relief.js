@@ -192,7 +192,7 @@ export function generateRelief(machine, material, params = {}) {
   if (estimate > MAX_MOVES) {
     throw new ConfigError([`This layout would need about ${estimate.toLocaleString('en')} moves; the limit is ${MAX_MOVES.toLocaleString('en')}. Use wider rows or a smaller swatch.`]);
   }
-  const r = reliefPlacements({ width, height, field: params.field ?? null, relief, rowPitch, floor: params.floor ?? 0.3, boundary });
+  const r = reliefPlacements({ width, height, field: params.field ?? null, relief, rowPitch, floor: params.floor ?? 0.3, boundary, maxSlopeDeg:params.maxSlopeDeg??25 });
   cfg.derived.loopBaseZ = 3 * cfg.t.layer_height;
   const box = boundary.bbox(), lanes = rowLanes(box.minY, box.maxY, rowPitch);
   const base = crossBase({ boundary, lanes, spacing: rowPitch, z: cfg.t.layer_height, inset: outline ? cfg.t.extrusion_width / 2 : 0 });

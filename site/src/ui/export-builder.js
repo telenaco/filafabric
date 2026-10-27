@@ -2,7 +2,7 @@ const createSwatchWorker = () => new Worker(new URL('./swatch-worker.js', import
 const abortError = () => new DOMException('Export cancelled', 'AbortError');
 
 /** Capture a full-size export job and release its worker on completion, failure or cancellation. */
-export function buildSwatch(input, { signal, preview = false, createWorker = createSwatchWorker } = {}) {
+export function buildSwatch(input, { signal, preview = false, progress = () => {}, createWorker = createSwatchWorker } = {}) {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) { reject(abortError()); return; }
     let worker, settled = false;
@@ -23,7 +23,8 @@ export function buildSwatch(input, { signal, preview = false, createWorker = cre
       const snapshot = structuredClone(input);
       worker = createWorker();
       worker.onmessage = ({ data }) => {
-        if (data.type === 'done') {
+        if (data.type === 'progress') progress(data);
+        else if (data.type === 'done') {
           if (!data.result || typeof data.result.gcode !== 'string') finish(new Error('Export worker returned no printable result.'));
           else finish(null, data.result);
         } else if (data.type === 'error') {

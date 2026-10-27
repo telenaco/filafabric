@@ -1,0 +1,66 @@
+[
+  {
+    "card": "stochastic-net",
+    "preset": "default",
+    "settingsHash": "79a986960238",
+    "gcodeSha256": "b7ce1022035d09b2bb26392f0e6be1530a3f227927b1c76b25b221a97e1d6de1",
+    "strands": 20,
+    "moves": 495,
+    "extrudeMm": 599.5,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "border",
+      "net"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "stochastic-net",
+    "preset": "balanced",
+    "settingsHash": "79a986960238",
+    "gcodeSha256": "b7ce1022035d09b2bb26392f0e6be1530a3f227927b1c76b25b221a97e1d6de1",
+    "strands": 20,
+    "moves": 495,
+    "extrudeMm": 599.5,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "border",
+      "net"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "stochastic-net",
+    "preset": "soft",
+    "settingsHash": "5da3bf9c6c88",
+    "gcodeSha256": "872f0a7e64238a7fd7d311a84f3f6dd3784c8cfd8bf0961397b08d2e0598182e",
+    "strands": 9,
+    "moves": 278,
+    "extrudeMm": 452.8,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "border",
+      "net"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "stochastic-net",
+    "preset": "stiff",
+    "settingsHash": "36186dd8e320",
+    "gcodeSha256": "ac8db83f0724706304bb2d601acb7bfb61a0166c7234d3454362d4621fad98b5",
+    "strands": 28,
+    "moves": 715,
+    "extrudeMm": 832.7,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "border",
+      "net"
+    ],
+    "ties": 0
+  }
+]

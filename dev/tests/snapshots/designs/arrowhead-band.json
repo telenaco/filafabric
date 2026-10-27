@@ -1,0 +1,50 @@
+[
+  {
+    "card": "arrowhead-band",
+    "preset": "default",
+    "settingsHash": "6b9c167a2c2a",
+    "gcodeSha256": "df843c92933f3472efb71f25c9c17022bc50f0f999a84b9e784905de16042ae0",
+    "strands": 86,
+    "moves": 3989,
+    "extrudeMm": 2440.9,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "arrows",
+      "rails"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "arrowhead-band",
+    "preset": "ariel-band",
+    "settingsHash": "6b9c167a2c2a",
+    "gcodeSha256": "df843c92933f3472efb71f25c9c17022bc50f0f999a84b9e784905de16042ae0",
+    "strands": 86,
+    "moves": 3989,
+    "extrudeMm": 2440.9,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "arrows",
+      "rails"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "arrowhead-band",
+    "preset": "spahiu-panel",
+    "settingsHash": "f2fc647114f4",
+    "gcodeSha256": "c42faa3b051f1d137c6d7b9a94c0ddb6b8dc70917ba39aef8733da6bcbfcdde0",
+    "strands": 93,
+    "moves": 4484,
+    "extrudeMm": 1585.5,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "arrows",
+      "ties"
+    ],
+    "ties": 2
+  }
+]

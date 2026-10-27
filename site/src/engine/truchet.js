@@ -1,6 +1,7 @@
 import { createRng } from './rng.js';
 import { clipPolyline, trailsFromEdges, densify, chainPolylines } from './layers.js';
 import { fitCount } from './repeats.js';
+import { cellSeed, nativeBorders, pathLength } from './repair-geometry.js';
 
 /**
  * Truchet tiles: a square grid where every cell holds one of two orientations of a simple tile, chosen at random
@@ -57,7 +58,7 @@ function arcEdges(ox, oy, cols, rows, sx, sy, rng) {
  *               a whole number fits each way, and the second layer of arcs (half a tile over) keeps to the tiles that
  *               lie wholly inside; otherwise square tiles centred in the box and a second layer cut at the edge
  */
-export function truchetLayers(boundary, { tile = 'diagonals', size = 5, seed = 1, whole = true } = {}) {
+export function truchetLegacyLayers(boundary, { tile = 'diagonals', size = 5, seed = 1, whole = true } = {}) {
   if (!TILES[tile]) throw new Error(`Unknown Truchet tile: ${tile}`);
   const box = boundary.bbox();
   const w = box.maxX - box.minX, h = box.maxY - box.minY;
@@ -88,4 +89,24 @@ export function truchetLayers(boundary, { tile = 'diagonals', size = 5, seed = 1
     ? arcEdges(ox + sx / 2, oy + sy / 2, cols - 1, rows - 1, sx, sy, rng)
     : arcEdges(ox - sx / 2, oy - sy / 2, cols + 1, rows + 1, sx, sy, rng);
   return { layers: [toLayer(first), toLayer(second)], extra: { cols, rows } };
+}
+
+/** World-grid choices do not change when a drawing is cropped or the sheet is resized. */
+export function truchetLayers(boundary,{tile='diagonals',size=5,seed=1,bead=.45}={}) {
+  if(!TILES[tile])throw new Error(`Unknown Truchet tile: ${tile}`);
+  const box=boundary.bbox();
+  const build=(shift,salt,other=false)=>{
+    const edges=[];
+    for(let j=Math.floor(box.minY/size-shift)-1;j<=Math.ceil(box.maxY/size-shift);j++)for(let i=Math.floor(box.minX/size-shift)-1;i<=Math.ceil(box.maxX/size-shift);i++){
+      const x=(i+shift)*size,y=(j+shift)*size;
+      const flip=createRng(cellSeed(seed,i,j,salt)).next()<.5;
+      if(tile==='diagonals'){
+        edges.push(flip!==other?[{x,y},{x:x+size,y:y+size}]:[{x,y:y+size},{x:x+size,y}]);
+      }else edges.push(...arcEdges(x,y,1,1,size,size,{next:()=>flip?0:1}));
+    }
+    return trailsFromEdges(edges).flatMap(path=>clipPolyline(path,boundary,.01)).filter(path=>tile!=='arcs'||pathLength(path)>=size/4);
+  };
+  const layers=[build(0,0),build(tile==='arcs'?.5:0,tile==='arcs'?0x6d2b79f5:0,true)];
+  layers[0].push(...nativeBorders(boundary,bead));
+  return {layers,families:['L1','L2','border'],extra:{families:['L1','L2','border'],geometryVersion:2,cols:Math.ceil((box.maxX-box.minX)/size),rows:Math.ceil((box.maxY-box.minY)/size)}};
 }

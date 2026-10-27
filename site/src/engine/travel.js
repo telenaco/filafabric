@@ -25,7 +25,7 @@ const near = (p, q) => dist(p, q) < 1e-6;
 
 /** A strand that is a plain flat line: one height, no per-point move class, so it can be joined to another. */
 function joinable(s) {
-  if (s.name === 'Structural tie' || (s.layer ?? 0) < 0 || s.pts.length < 2 || near(s.pts[0], s.pts.at(-1))) return false;
+  if (s.role === 'tie' || (s.layer ?? 0) < 0 || s.pts.length < 2 || near(s.pts[0], s.pts.at(-1))) return false;
   const z = s.pts[0].z ?? 0;
   return s.pts.every((p) => p.cls === undefined && p.flow === undefined && p.width === undefined && Math.abs((p.z ?? 0) - z) < 1e-6);
 }
@@ -58,7 +58,7 @@ export function mergeTouching(strands, { within = 0.1, allow = null } = {}) {
     const cx = Math.floor(p.x / cell), cy = Math.floor(p.y / cell);
     for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
       for (const e of grid.get(keyOf(layer, cx + dx, cy + dy)) ?? []) {
-        if (e.item.used || e.item === self || e.item.s.kind !== kind) continue;
+        if (e.item.used || e.item === self || e.item.s.kind !== kind || e.item.s.family !== self.s.family || e.item.s.role !== self.s.role || e.item.s.source !== self.s.source) continue;
         const d = dist(p, at(e));
         if (d < bestD && (d < 1e-9 || !allow || allow(p, at(e)))) { bestD = d; best = e; }
       }
@@ -72,6 +72,7 @@ export function mergeTouching(strands, { within = 0.1, allow = null } = {}) {
     if (!item.ok) { out.push(item.s); continue; }
     const layer = item.s.layer ?? 0, kind = item.s.kind;
     let pts = [...item.s.pts], pause = !!item.s.pauseBefore, joined = false;
+    const joints = new Map((item.s.joints??[]).map(joint=>[joint.id,joint]));
     for (let side = 0; side < 2; side++) {
       for (;;) {
         const e = nearest(item, pts.at(-1), layer, kind);
@@ -79,6 +80,7 @@ export function mergeTouching(strands, { within = 0.1, allow = null } = {}) {
         e.item.used = true;
         joined = true;
         pause = pause || !!e.item.s.pauseBefore;
+        for(const joint of e.item.s.joints??[])joints.set(joint.id,joint);
         const more = e.end === 0 ? e.item.s.pts : e.item.s.pts.slice().reverse();
         // lines that meet exactly share a point: it is printed once
         const startIdx = dist(pts.at(-1), more[0]) < 1e-9 ? 1 : 0;
@@ -86,7 +88,7 @@ export function mergeTouching(strands, { within = 0.1, allow = null } = {}) {
       }
       pts.reverse();
     }
-    out.push(joined ? { ...item.s, pts, pauseBefore: pause } : item.s);
+    out.push(joined ? { ...item.s, pts, pauseBefore: pause, ...(joints.size?{joints:[...joints.values()]}:{}) } : item.s);
   }
   return out;
 }

@@ -66,7 +66,7 @@ export function emitStrands(strands, { startLift = null, travelLift = null, retr
     const printed = ending?.printed ?? strand.pts;
     for (let i = 1; i < printed.length; i++) {
       const p = printed[i];
-      const move = { x: p.x, y: p.y, z: p.z, cls: p.cls ?? kindClass, extrude: true, tag: strand.id };
+      const move = { x: p.x, y: p.y, z: p.z, cls: p.cls ?? kindClass, extrude: true, tag: strand.id, ...(strand.role==='channel'?{role:'channel'}:{}) };
       if (p.flow !== undefined && p.flow !== 1) move.flow = p.flow;
       if (p.width !== undefined) move.width = p.width;
       if (i === 1 && pendingUnretract) {

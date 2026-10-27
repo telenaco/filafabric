@@ -127,6 +127,16 @@ test('stacking copies a flat strand a layer higher each time, in the same place'
   assert.equal(stackStrands([line('a', 0, 0, 10, 0)], 1).length, 1, 'one copy is the strands as they are');
 });
 
+test('designed joints stay shared within a pass, but never alias across printed copies', () => {
+  const joint={id:'native-joint',x:5,y:5};
+  const native=[line('a',0,5,10,5),line('b',5,0,5,10)].map(strand=>({...strand,joints:[joint]}));
+  const original=structuredClone(native),copies=stackStrands(native,2);
+  assert.equal(copies[0].joints[0].id,copies[1].joints[0].id);
+  assert.equal(copies[2].joints[0].id,copies[3].joints[0].id);
+  assert.notEqual(copies[0].joints[0].id,copies[2].joints[0].id);
+  assert.deepEqual(native,original,'copy metadata must not mutate the original');
+});
+
 test('where strands cross, the copies pile up one layer at a time and never pass through each other', () => {
   const out = stackStrands([line('a', 0, 5, 10, 5), line('b', 5, 0, 5, 10)], 2, { layerHeight: 0.2, strandWidth: 0.45 });
   const at = (s) => s.pts.reduce((best, p) => (Math.abs(p.x - 5) + Math.abs(p.y - 5) < Math.abs(best.x - 5) + Math.abs(best.y - 5) ? p : best)).z;
@@ -166,7 +176,7 @@ test('the layer thickness chosen reaches every design through the material', () 
   const { machine, material } = defaultProfiles();
   for (const height of [0.1, 0.3]) {
     const thick = { ...material, print_defaults: { layer_height: height } };
-    for (const d of DESIGNS.filter((x) => x.status === 'ready' && !x.legacy)) {
+    for (const d of DESIGNS.filter((x) => x.status === 'ready' && !x.legacyPanel)) {
       const s = { ...d.defaults() };
       d.setSize(s, 40, 40);
       const r = d.generate(machine, thick, s);

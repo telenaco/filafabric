@@ -14,6 +14,7 @@
     "serve": "node dev/tools/serve.mjs --open",
     "vendor": "node dev/tools/vendor-three.mjs",
     "golden": "node dev/tools/update-golden.mjs",
+    "snapshots": "node dev/tools/update-design-snapshots.mjs",
     "profiles": "node dev/tools/profiles-index.mjs",
     "source:snapshot": "node dev/tools/source-snapshot.mjs",
     "source:verify": "node dev/tools/source-verify.mjs"
