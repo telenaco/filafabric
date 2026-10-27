@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "site/vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "13283109cc91651fba1bfe3ea235c66791a3ff359b3d654f4e639036236a9cf3",
+  "archiveSha256": "e09587f709e9555a0ad43c4c5e08f85930459933e26ce8b56b827bb09fcfd028",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -368,6 +368,11 @@
       "path": "dev/tests/lissajous.test.js",
       "bytes": 2305,
       "sha256": "432bd6c490fb64b3e501ee054746b3f9da9f414382378802e770f6ef5ebf2211"
+    },
+    {
+      "path": "dev/tests/look-and-feel-labels.test.js",
+      "bytes": 1095,
+      "sha256": "ca53f688fc99a4755f5ea4ae2545e151cfb28fc70359d72f73dc2534ebbe431f"
     },
     {
       "path": "dev/tests/machine-search.test.js",
@@ -1836,8 +1841,8 @@
     },
     {
       "path": "site/src/ui/designs.js",
-      "bytes": 31803,
-      "sha256": "7303f2940deab6b4023c9b5c36759ff29b99d9ff0dd95aec859ceec30728b806"
+      "bytes": 33574,
+      "sha256": "8cd5bc42e68e13de7fcd4af16375da9c3480a2f7999f4e1d68bdff2dd573e946"
     },
     {
       "path": "site/src/ui/diagnostics.js",
@@ -1902,7 +1907,7 @@
     {
       "path": "site/src/ui/main.js",
       "bytes": 113806,
-      "sha256": "8ca4a31190af2a72cfd4faaeaf9198bcf2ff7efbfe02285ff00017b49833beb0"
+      "sha256": "6594dec1c1845606e7ecea0aa2fd2e8fd547c5fd5bb11b731a20d36a7e11ae31"
     },
     {
       "path": "site/src/ui/more-designs.js",

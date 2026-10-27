@@ -447,6 +447,32 @@ const drawingCard = DESIGNS.find(card => card.id === 'svgdesign');
 drawingCard.hidden = false;
 drawingCard.name = 'Your drawing';
 
+// T1.9: keep stable setting keys; use the library's material language in slider labels/help.
+for (const card of DESIGNS) {
+  const waves = ['squiggle', 'square-net', 'zigzag', 'crosshatch-wavy', 'honeycomb-layered'].includes(card.id);
+  card.controls = card.controls?.map(section => ({
+    ...section,
+    items: section.items?.map(item => {
+      const labels = {
+        spacing: waves ? ['Gap between strands', 'The main softness control: a wider gap gives a softer, more open net.'] : null,
+        amplitude: waves ? ['Wave depth', 'How far it stretches before the strands pull straight.'] : null,
+        depth: ['Wave depth', 'How far it stretches before the strands pull straight.'],
+        wavelength: waves ? ['Wave length', 'With depth, how much slack each strand holds.'] : null,
+        rowOverlap: ['Overlap', 'How much neighbouring rows share at each join. More overlap is stronger and stiffer; avoid point-only contact.'],
+        overlap: ['Overlap', 'How much neighbours share at each join. More overlap is stronger and stiffer; avoid point-only contact.'],
+        thin: ['Strand thickness · light', 'The thinnest extrusion flow. Thinner strands make a softer net.'],
+        thick: ['Strand thickness · dark', 'The thickest extrusion flow. Thicker strands make a stronger, firmer net.'],
+        pileHeight: ['Height', 'How high a strand rises over the layer below.'],
+      };
+      const copy = labels[item.key];
+      return copy ? { ...item, label: copy[0], help: copy[1] } : item;
+    }),
+  }));
+  card.controls = card.controls?.map(section => section.kind === 'choice' && section.key === 'directions'
+    ? { ...section, title: 'Directions', hint: '0/90 is soft on the bias; 60° grids feel similar in every direction.' }
+    : section);
+}
+
 /**
  * The essentials: the structures to start from, listed first and in this order. Every other card is a variation, an
  * experiment or a structure that needs more care.

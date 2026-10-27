@@ -63,7 +63,7 @@ const PAUSE_ICON = 'M4 3h3.5v12H4zM10.5 3H14v12h-3.5z';
 const ROLE_HEIGHT = { base: 2, anchored: 3, lifting: 3, free: 5 };
 
 const LOOP_SLIDERS = [
-  { key: 'pileHeight', label: 'Pile height', help: 'How far the loops rise above the base.', lo: 'Flat', hi: 'Plush', unit: 'mm', edit: true },
+  { key: 'pileHeight', label: 'Height', help: 'How high a loop rises over the layer below.', lo: 'Flat', hi: 'Plush', unit: 'mm', edit: true },
   { key: 'loopSize', label: 'Loop size', help: 'Width and length of each loop, kept in proportion.', lo: 'Small', hi: 'Large' },
   { key: 'airFlow', label: 'Strand thickness', help: 'Extra flow where the loops are in the air, for thicker, sturdier strands.', lo: 'Thin', hi: 'Thick', unit: '%', edit: true },
   { key: 'loopSpacing', label: 'Loop spacing', help: 'Distance between neighbouring loops in a row.', lo: 'Packed', hi: 'Open', unit: 'mm', edit: true },
