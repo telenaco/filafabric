@@ -203,22 +203,23 @@ export class SizeControl extends Control {
     this.divider = el('div', { class: 'size-source-divider', text: 'or', 'aria-hidden': 'true' });
     this.svgSlot = el('div', { class: 'size-svg-slot' });
     this.brim = new SliderControl({ ...host, binding: () => host.binding('print') }, `${designId}-edge`, {
-      key: 'brim', label: 'Solid perimeters', info: true, help: 'Walls inside solid shapes. More walls strengthen their edges; 0 leaves only infill. Mesh edges use the separate Mesh outlines setting.',
+      key: 'brim', label: 'Outline', info: true, help: 'Lines round every edge: the walls of solid shapes, the border round the pattern and inside its windows, and round every colour of a drawing. They overlap by 20%. Centred on the edge, half lies each side of it, so the pattern on either side runs into it and is joined. 0 leaves them off.',
       lo: 'Off', hi: 'Wide', unit: 'lines', edit: true,
     });
     this.brim.node.classList.add('brim-control');
-    this.meshPerimeters = new SliderControl({ ...host, binding: () => host.binding('print') }, `${designId}-mesh-edge`, {
-      key: 'meshPerimeters', label: 'Mesh outlines', info: true, help: 'Extra rings around the mesh and inside pattern windows. They reinforce loose ends and add material. 0 leaves them off; solid shapes use Solid perimeters.',
-      lo: 'Off', hi: 'Wide', unit: 'lines', edit: true,
-    });
-    this.meshPerimeters.node.classList.add('brim-control');
+    // which side of the edge the outline sits on
+    this.edgeAlign = el('select', { 'aria-label': 'Outline sits', id: `${designId}-edge-align` },
+      ...[['inside', 'Inside the edge'], ['centre', 'Centred on the edge'], ['outside', 'Outside the edge']].map(([value, text]) => el('option', { value, text })));
+    this.edgeAlign.addEventListener('change', () => { host.binding('print').set('edgeAlign', this.edgeAlign.value); this.host.nudge(); this.host.commit(); });
+    this.edgeAlignRow = el('label', { class: 'field-row brim-control' }, el('span', { text: 'Outline sits' }), this.edgeAlign);
     this.warn = el('p', { class: 'ctl-warn small', hidden: true });
-    this.node = el('div', { class: 'size-control' }, this.inputs, this.divider, this.svgSlot, this.note, this.warn, this.error, this.brim.node, this.meshPerimeters.node);
+    this.node = el('div', { class: 'size-control' }, this.inputs, this.divider, this.svgSlot, this.note, this.warn, this.error, this.brim.node, this.edgeAlignRow);
   }
 
   update() {
     this.brim.update();
-    this.meshPerimeters.update();
+    this.edgeAlign.value = this.host.binding('print').get('edgeAlign') ?? 'centre';
+    this.edgeAlignRow.hidden = !(this.host.binding('print').get('brim') > 0);
     const limits = this.host.sizeLimits?.(this.designId);
     for (const [f, max] of [[this.width, limits?.width], [this.height, limits?.height]]) {
       if (max !== undefined) f.input.max = String(max);
@@ -1119,7 +1120,7 @@ export class PrintSetupCard extends Control {
 
 /* ---------- the one place a drawing comes in ---------- */
 
-/** The sample drawing on the site (samples/), to try or to open and copy: red fills, a blue hole, yellow and green solids, lines. */
+/** The sample drawing on the site (samples/), to try or to open and copy: a red piece with a shape of every other colour in it. */
 export const SAMPLE_SVG = 'samples/filafabric-sample.svg';
 
 

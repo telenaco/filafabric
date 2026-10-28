@@ -1,5 +1,7 @@
 const createSwatchWorker = () => new Worker(new URL('./swatch-worker.js', import.meta.url), { type: 'module' });
 const abortError = () => new DOMException('Export cancelled', 'AbortError');
+// Whole-piece patterns of colour regions, kept between jobs so that only a changed colour is generated again (newest last).
+const patternCache = new Map(), PATTERN_CACHE_LIMIT = 8;
 
 /**
  * Capture a full-size export job and release its worker on completion, failure or cancellation. `trace` adds the print order
@@ -24,12 +26,20 @@ export function buildSwatch(input, { signal, preview = false, trace = false, pro
     const abort = () => finish(abortError());
     try {
       const snapshot = structuredClone(input);
+      if (input.regions?.length) snapshot.patternCache = Object.fromEntries(patternCache);
       worker = createWorker();
       worker.onmessage = ({ data }) => {
         if (data.type === 'progress') progress(data);
         else if (data.type === 'done') {
           if (!data.result || typeof data.result.gcode !== 'string') finish(new Error('Export worker returned no printable result.'));
-          else finish(null, data.result);
+          else {
+            for (const [key, value] of Object.entries(data.result.patternCache ?? {})) {
+              patternCache.delete(key); patternCache.set(key, value);
+              if (patternCache.size > PATTERN_CACHE_LIMIT) patternCache.delete(patternCache.keys().next().value);
+            }
+            delete data.result.patternCache;
+            finish(null, data.result);
+          }
         } else if (data.type === 'error') {
           const error = new Error(data.message || 'Unable to generate export.');
           error.name = data.name || 'Error';

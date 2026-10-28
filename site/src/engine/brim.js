@@ -6,6 +6,19 @@ import { emitStrands, travelLiftOf } from './emit.js';
 import { computeStats } from './stats.js';
 import { GcodeWriter, writeGcode } from './gcode.js';
 import { MAX_MOVES } from './tiler.js';
+import { offsetPolyline } from './drawing.js';
+
+const ringArea = (ring) => ring.reduce((sum, p, i) => { const q = ring[(i + 1) % ring.length]; return sum + p.x * q.y - q.x * p.y; }, 0) / 2;
+/** Each ring moved `distance` mm away from the material: an outer edge outwards, a hole's edge into the hole. */
+function outsetRings(rings, distance) {
+  return rings.map((ring) => {
+    const probe = ring[0];
+    const isHole = rings.some((other) => other !== ring && Math.abs(ringArea(other)) > Math.abs(ringArea(ring)) && new PolygonBoundary([other]).contains(probe.x, probe.y));
+    // offsetPolyline moves to the left for a positive distance; the left of an anticlockwise (positive) ring is its inside
+    const sign = (ringArea(ring) > 0 ? -1 : 1) * (isHole ? -1 : 1);
+    return offsetPolyline([...ring, ring[0]], sign * distance).slice(0, -1);
+  });
+}
 
 const OVERLAP = 0.2;
 const rectangle = (width, height) => [{ x: 0, y: 0 }, { x: width, y: 0 }, { x: width, y: height }, { x: 0, y: height }];
@@ -187,7 +200,7 @@ export function insetRings(rings, radius) {
 }
 
 /** Side-by-side bed runs INSIDE the full selected outline. Clip to a preview only after making its real contours. */
-export function buildBrimStrands(rings, { count = 2, strandWidth = 0.45, layerHeight = 0.2, viewport = null, printedBoundary = false } = {}) {
+export function buildBrimStrands(rings, { count = 2, strandWidth = 0.45, layerHeight = 0.2, viewport = null, printedBoundary = false, shift = 0 } = {}) {
   validateCount(count);
   if (!count) return [];
   if (!(strandWidth > 0) || !Number.isFinite(strandWidth) || !(layerHeight > 0) || !Number.isFinite(layerHeight)) throw new ConfigError(['Brim bead width and layer height must be positive finite numbers.']);
@@ -197,8 +210,9 @@ export function buildBrimStrands(rings, { count = 2, strandWidth = 0.45, layerHe
   const strands = [];
   for (let run = 0; run < count; run++) {
     const pitch = strandWidth * (1 - OVERLAP);
-    const inset = (printedBoundary ? pitch : strandWidth / 2) + run * pitch;
-    const contours = insetRings(rings, inset).map(cleanContour).filter((ring) => ring.length >= 3);
+    // shift moves the runs out across the edge: half their width to centre them on it, all of it to sit outside
+    const inset = (printedBoundary ? pitch : strandWidth / 2) + run * pitch - shift;
+    const contours = (inset < 0 ? outsetRings(rings, -inset) : insetRings(rings, inset)).map(cleanContour).filter((ring) => ring.length >= 3);
     if (!contours.length) break;
     for (const ring of contours) strands.push({ id: `brim-${run + 1}-${strands.length + 1}`, name: 'Brim', kind: 'base', layer: -1, brim: true, run, inset, pts: [...ring, ring[0]].map((p) => ({ ...p, z: layerHeight })) });
   }
@@ -299,7 +313,7 @@ export function headerNotes(result) {
 }
 
 /** Prepend brim and short bed ties. Native coordinates, classes and commands stay intact; only a missing startup prime is added. */
-export function applyBrim(result, { count = 2, outline = result.outline, fullWidth = result.cfg?.t.sample_width, fullHeight = result.cfg?.t.sample_height, maxTie = 12, label = 'Brim', requestedCount = count, printedBoundary = result.printedBoundary ?? false } = {}) {
+export function applyBrim(result, { count = 2, outline = result.outline, fullWidth = result.cfg?.t.sample_width, fullHeight = result.cfg?.t.sample_height, maxTie = 12, label = 'Brim', requestedCount = count, printedBoundary = result.printedBoundary ?? false , shift = 0 } = {}) {
   validateCount(count);
   if (!count) {
     if (label !== 'Perimeters') return result;
@@ -311,7 +325,7 @@ export function applyBrim(result, { count = 2, outline = result.outline, fullWid
   const viewport = { width: cfg.t.sample_width, height: cfg.t.sample_height };
   let brim;
   try {
-    brim = buildBrimStrands(rings, { count, strandWidth, layerHeight, viewport, printedBoundary });
+    brim = buildBrimStrands(rings, { count, strandWidth, layerHeight, viewport, printedBoundary, shift });
   } catch (error) {
     // the brim is an extra: an outline too detailed to offset leaves it out, and the design itself still prints
     if (!(error instanceof ConfigError)) throw error;
@@ -344,7 +358,9 @@ export function applyBrim(result, { count = 2, outline = result.outline, fullWid
   const baseSegments = (result.base?.strands ?? []).flatMap((pts) => pts.slice(1).map((p, i) => [pts[i], p]));
   const supportedAt = baseSegments.length ? (p) => baseSegments.some(([a, b]) => p.z - a.z > layerHeight / 2 && p.z - a.z <= layerHeight + 0.04 && segmentContact(p, p, a, b).distance <= strandWidth / 2) : null;
   // checked against the whole piece: a lace's solid body lies outside the outline of its windows of pattern
-  const fabric = analyzeFabric(strands, { strandWidth, layerHeight, boundary: result.pieceOutline ? new PolygonBoundary(result.pieceOutline) : boundary, supportedAt });
+  // an outline centred on or outside the edge widens the piece by that much: check against the widened edge
+  const checked = shift > 0 ? new PolygonBoundary(outsetRings(result.pieceOutline ?? rings, shift + strandWidth / 2)) : result.pieceOutline ? new PolygonBoundary(result.pieceOutline) : boundary;
+  const fabric = analyzeFabric(strands, { strandWidth, layerHeight, boundary: checked, supportedAt });
   const warnings = [...(result.warnings ?? []).filter((w) => !(result.fabric?.issues ?? []).includes(w)), ...fabric.issues];
   const metadata = { count, overlap: OVERLAP, strandWidth, pitch: strandWidth * (1 - OVERLAP), width: strandWidth * (1 + (count - 1) * (1 - OVERLAP)), runs: brim.length, connections: connections.length };
   return { ...result, strands, moves, stats, fabric, warnings, brim: metadata, meshPerimeters: metadata, ...(label === 'Perimeters' ? { perimeters: { ...metadata, count: requestedCount } } : {}), ...(result.report ? { report: { ...result.report, components: fabric.components } } : {}),

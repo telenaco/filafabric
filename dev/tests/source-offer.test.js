@@ -32,6 +32,16 @@ test('source offer excludes private untracked files even within an allowed sourc
   assert.equal(verifySourceSnapshot(f.root).current, true);
 });
 
+test('generated default toolpath blobs are excluded from the software archive but their index is included', t => {
+  const f=fixture(t);
+  f.write('site/precomputed/abc/card.json.gz','generated toolpath output');
+  f.write('site/precomputed/index.json','{"format":1}');
+  f.git('add','--','site/precomputed');createSourceSnapshot(f.root);
+  const names=decodeArchive(f.read(archivePath)).map(e=>e.path);
+  assert.ok(names.includes('site/precomputed/index.json'));
+  assert.ok(!names.includes('site/precomputed/abc/card.json.gz'));
+});
+
 test('currentness rejects edited, deleted and newly staged source before any commit', t => {
   const f = fixture(t);
   createSourceSnapshot(f.root);

@@ -8,7 +8,8 @@ import { defaultProfiles } from './helpers.js';
 
 const source = fs.readFileSync(new URL('../../site/src/ui/main.js', import.meta.url), 'utf8');
 const uiFunction = (name) => source.match(new RegExp(`(?:async )?function ${name}\\([^]*?\\n}`))[0];
-const applyRequirement = source.match(/^const requiresApply = .*;$/m)[0];
+// a colour ticked but not yet applied must be applied before the piece exports
+const applyRequirement = ['workingRegions', 'requiresApply'].map((name) => source.match(new RegExp(`^const ${name} = .*;$`, 'm'))[0]).join('\n');
 
 test('a sampled large SVG is named with the complete selected size', () => {
   const state = { design: 'zigzag' };
@@ -52,7 +53,7 @@ function exportHost({ size = 200, previewSize = 100, pending = null, timer = nul
   const result = (width) => ({ cfg: { t: { sample_width: width, sample_height: width } }, moves: [{}], gcode: '; Textile G-code generator v1\nG90\n', stats: { moves: 1, timeSec: 123 } });
   const host = {
     Blob, AbortController, DOMException, structuredClone,
-    exporting: false, exportController: null, exportLabel: '', genTimer: timer,
+    exporting: false, exportController: null, exportLabel: '', genTimer: timer, overviewTrace: null, referenceResult: null,
     previewBuild: pending, readyGcode: ready, state: { design: 'svgdesign', docName: 'Sample', print: { layerHeight: 0.2, layers: 2 }, resultKey: 'current', result: result(previewSize) },
     exportOptions: () => ({ design: 'svgdesign', width: size, height: size, machine: { id: 'printer' }, material: { id: 'tpu' }, studySettings: { backing1Spacing: 5.12345, pattern: 'none' } }),
     snapshotKey: () => 'current', currentSwatch: () => 'test', swatchFileName: () => 'short.gcode',
@@ -155,7 +156,7 @@ test('multi-pattern edits require Apply and never save the stale piece', async (
 
 test('an applied multi-pattern piece exports without rebuilding', async () => {
   const host=exportHost({previewSize:200});
-  host.state.regions=[{role:'pattern',enabled:true},{role:'pattern',enabled:true}];
+  host.state.regions=[{role:'pattern',enabled:true,applied:true},{role:'pattern',enabled:true,applied:true}];
   await host.run();
   assert.ok(host.saved);
   assert.equal(host.built,undefined);

@@ -461,7 +461,7 @@ MORE_DESIGNS.push(layered({
     },
     COLOUR,
   ],
-  build: (s, boundary) => chainmailLayers(boundary, { spacing: s.spacing, ratio: s.ratio }),
+  build: (s, boundary) => chainmailLayers(boundary, { spacing: s.spacing, ratio: s.ratio, whole: false }),
   summary: (result) => `a ring mail of ${result.report.crossings} crossings`,
 }));
 

@@ -69,6 +69,9 @@ export function sanitizePrint(raw) {
   const meshRaw = Object.hasOwn(raw, 'meshPerimeters') ? raw.meshPerimeters : b;
   const mesh = (typeof meshRaw === 'number' || typeof meshRaw === 'string' && meshRaw.trim() !== '') ? Number(meshRaw) : NaN;
   if (Number.isFinite(mesh) && mesh >= 0 && mesh <= 50) out.meshPerimeters = Math.round(mesh);
+  const edge = Number(raw.edgeWidth);
+  if (raw.edgeWidth !== undefined && Number.isFinite(edge) && edge >= 0 && edge <= 10) out.edgeWidth = Math.round(edge * 100) / 100;
+  if (['inside', 'centre', 'outside'].includes(raw.edgeAlign)) out.edgeAlign = raw.edgeAlign;
   return out;
 }
 

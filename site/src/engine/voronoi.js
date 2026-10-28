@@ -13,6 +13,42 @@ import { findCrossings } from './crossings.js';
 
 const dist2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
 
+/**
+ * Buckets of `size` mm holding indices into `pts`, so that a site only looks at the sites near it. This is what lets a
+ * lace of any size build in time proportional to its number of cells (a 1 x 1 m garment has a few hundred thousand),
+ * where comparing every site with every other grew with the square of that number.
+ */
+function bucketGrid(pts, size) {
+  const map = new Map();
+  const key = (i, j) => (i + 1048576) * 2097152 + (j + 1048576); // a number, not a string: much faster to look up
+  const add = (p, n) => { const k = key(Math.floor(p.x / size), Math.floor(p.y / size)); let list = map.get(k); if (!list) map.set(k, list = []); list.push(n); };
+  pts.forEach(add);
+  return {
+    size, add,
+    /** Indices of the points in the buckets within r of (x, y): every point within r, and some a little further. */
+    /** Whether every point in the buckets within r of (x, y) passes `test` (stops at the first that fails; no list made). */
+    all(x, y, r, test) {
+      const i0 = Math.floor((x - r) / size), i1 = Math.floor((x + r) / size), j0 = Math.floor((y - r) / size), j1 = Math.floor((y + r) / size);
+      for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const list = map.get(key(i, j)); if (list) for (const n of list) if (!test(n)) return false; }
+      return true;
+    },
+    near(x, y, r) {
+      const out = [], i0 = Math.floor((x - r) / size), i1 = Math.floor((x + r) / size), j0 = Math.floor((y - r) / size), j1 = Math.floor((y + r) / size);
+      for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const list = map.get(key(i, j)); if (list) for (const n of list) out.push(n); }
+      return out;
+    },
+  };
+}
+
+/** The index of the point of `pts` nearest (x, y), searching ever wider rings of buckets. */
+function nearestIndex(grid, pts, x, y) {
+  for (let r = grid.size; ; r *= 2) {
+    let best = -1, bd = Infinity;
+    for (const n of grid.near(x, y, r)) { const d = (pts[n].x - x) ** 2 + (pts[n].y - y) ** 2; if (d < bd) { bd = d; best = n; } }
+    if (best >= 0 && bd <= r * r || r > 1e7) return best;
+  }
+}
+
 /** Sites by dart throwing with a local radius, then Lloyd relaxation on a grid with density weights. */
 export function sites(box, { spacing = 8, relax = 4, seed = 1, tone = null } = {}) {
   const rng = createRng(seed);
@@ -21,10 +57,11 @@ export function sites(box, { spacing = 8, relax = 4, seed = 1, tone = null } = {
   const radiusAt = (x, y) => spacing * (1.35 - 0.7 * toneAt(x, y));
   const pts = [];
   const limit = 4 + Math.ceil(((w * h) / (spacing * spacing)) * 2.2);
+  const darts = bucketGrid([], spacing * 1.35 * 0.85);
   for (let tries = 0; tries < limit * 40 && pts.length < limit; tries++) {
     const p = { x: box.minX + rng.next() * w, y: box.minY + rng.next() * h };
     const r = radiusAt(p.x, p.y) * 0.85;
-    if (pts.every((q) => dist2(p, q) >= r * r)) pts.push(p);
+    if (darts.all(p.x, p.y, r, (n) => dist2(p, pts[n]) >= r * r)) { darts.add(p, pts.length); pts.push(p); }
   }
   if (pts.length < 4) throw new Error('The swatch is too small for this cell size');
 
@@ -32,13 +69,10 @@ export function sites(box, { spacing = 8, relax = 4, seed = 1, tone = null } = {
   const step = Math.max(0.5, Math.min(w, h) / 60, spacing / 8);
   for (let it = 0; it < relax; it++) {
     const sum = pts.map(() => ({ x: 0, y: 0, m: 0 }));
+    const grid = bucketGrid(pts, spacing);
     for (let y = box.minY + step / 2; y < box.maxY; y += step) {
       for (let x = box.minX + step / 2; x < box.maxX; x += step) {
-        let best = 0, bd = Infinity;
-        for (let i = 0; i < pts.length; i++) {
-          const d = (pts[i].x - x) ** 2 + (pts[i].y - y) ** 2;
-          if (d < bd) { bd = d; best = i; }
-        }
+        const best = nearestIndex(grid, pts, x, y);
         const r = radiusAt(x, y);
         const weight = 1 / (r * r);
         const s = sum[best];
@@ -118,51 +152,58 @@ function clipSegment(a, b, box) {
   return [{ x: a.x + t0 * dx, y: a.y + t0 * dy }, { x: a.x + t1 * dx, y: a.y + t1 * dy }];
 }
 
-/** Delaunay edges and Voronoi edges (clipped to the box) as two-point polylines. */
-export function tessellate(points, box) {
-  const tri = delaunay(points);
-  const delaunayEdges = new Map();
-  const owners = new Map();
-  tri.forEach((t, ti) => {
-    for (let k = 0; k < 3; k++) {
-      const a = t[k], b = t[(k + 1) % 3];
-      const key = a < b ? `${a},${b}` : `${b},${a}`;
-      if (!delaunayEdges.has(key)) delaunayEdges.set(key, [a, b]);
-      if (!owners.has(key)) owners.set(key, []);
-      owners.get(key).push(ti);
+/** Polygon (vertex labels name the edge that starts there) cut to the side of the bisector of a and b nearer a. */
+function clipByBisector(poly, a, b, label) {
+  const nx = b.x - a.x, ny = b.y - a.y, c = (b.x * b.x + b.y * b.y - a.x * a.x - a.y * a.y) / 2;
+  const side = (p) => p.x * nx + p.y * ny - c; // <= 0: nearer a
+  const out = [];
+  for (let k = 0; k < poly.length; k++) {
+    const p = poly[k], q = poly[(k + 1) % poly.length], sp = side(p), sq = side(q);
+    if (sp <= 0) out.push(p);
+    if ((sp <= 0) !== (sq <= 0)) {
+      const t = sp / (sp - sq);
+      // leaving the half-plane starts the new bisector edge; coming back in continues the edge p-q
+      out.push({ x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t, label: sp <= 0 ? label : p.label });
     }
-  });
-  const centres = tri.map((t) => circumcircle(points[t[0]], points[t[1]], points[t[2]]));
-  const far = Math.hypot(box.maxX - box.minX, box.maxY - box.minY) * 4;
-  const voronoi = [];
-  for (const [key, list] of owners) {
-    const [a, b] = delaunayEdges.get(key);
-    let seg = null;
-    if (list.length === 2 && centres[list[0]] && centres[list[1]]) {
-      seg = [centres[list[0]], centres[list[1]]];
-    } else if (list.length === 1 && centres[list[0]]) {
-      // a hull edge: the Voronoi edge is a ray, away from the triangle's third vertex
-      const third = tri[list[0]].find((v) => v !== a && v !== b);
-      const pa = points[a], pb = points[b], pc = points[third];
-      let nx = -(pb.y - pa.y), ny = pb.x - pa.x;
-      const len = Math.hypot(nx, ny) || 1;
-      nx /= len;
-      ny /= len;
-      if ((pc.x - pa.x) * nx + (pc.y - pa.y) * ny > 0) {
-        nx = -nx;
-        ny = -ny;
-      }
-      const c = centres[list[0]];
-      seg = [{ x: c.x, y: c.y }, { x: c.x + nx * far, y: c.y + ny * far }];
-    }
-    if (!seg) continue;
-    const clipped = clipSegment(seg[0], seg[1], box);
-    if (clipped && dist2(clipped[0], clipped[1]) > 1e-4) voronoi.push(clipped);
   }
-  return {
-    delaunay: [...delaunayEdges.values()].map(([a, b]) => [points[a], points[b]]),
-    voronoi,
-  };
+  return out;
+}
+
+/**
+ * Delaunay edges and Voronoi edges (clipped to the box) as two-point polylines, for the first `count` points (the rest
+ * are mirror sites: they shape the cells along the edge but get no cell of their own). Each cell is the box cut by the
+ * bisectors with the sites near it (a bucket grid finds them, and the search widens for any cell that needs it), so the
+ * time grows with the number of cells, not its square. Every wall is the bisector of the two sites it separates, and
+ * those two sites make a Delaunay edge.
+ */
+export function tessellate(points, box, { count = points.length } = {}) {
+  const spacing = Math.sqrt(((box.maxX - box.minX) * (box.maxY - box.minY)) / Math.max(1, count));
+  const grid = bucketGrid(points, spacing), span = Math.hypot(box.maxX - box.minX, box.maxY - box.minY);
+  const voronoi = [], delaunayEdges = [], seen = new Set();
+  for (let i = 0; i < count; i++) {
+    const a = points[i];
+    let r = 3 * spacing, poly;
+    for (;;) {
+      poly = [{ x: box.minX, y: box.minY, label: -1 }, { x: box.maxX, y: box.minY, label: -1 }, { x: box.maxX, y: box.maxY, label: -1 }, { x: box.minX, y: box.maxY, label: -1 }];
+      const near = grid.near(a.x, a.y, r).filter((n) => n !== i && dist2(points[n], a) <= r * r).sort((m, n) => dist2(points[m], a) - dist2(points[n], a));
+      for (const n of near) { poly = clipByBisector(poly, a, points[n], n); if (poly.length < 3) break; }
+      // any site whose bisector could still cut this cell is within twice its farthest corner
+      const far = Math.max(0, ...poly.map((p) => Math.sqrt(dist2(p, a))));
+      if (2 * far <= r || r > 4 * span) break;
+      r = 2 * far + spacing;
+    }
+    for (let k = 0; k < poly.length; k++) {
+      const p = poly[k], q = poly[(k + 1) % poly.length], j = p.label;
+      if (j < 0 || dist2(p, q) <= 1e-4) continue;
+      // a wall between two real cells is found from both sides: keep it once
+      const key = j < count ? (i < j ? `${i},${j}` : `${j},${i}`) : `${i},m${j}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      voronoi.push([{ x: p.x, y: p.y }, { x: q.x, y: q.y }]);
+      delaunayEdges.push([a, points[j]]);
+    }
+  }
+  return { delaunay: delaunayEdges, voronoi };
 }
 
 /**
@@ -171,7 +212,7 @@ export function tessellate(points, box) {
  * @param seed     random seed
  * @param tone     optional (x, y, w, h) giving 0..1; cells are smaller where it is bright
  */
-export const MAX_SITES = 6000;
+export const MAX_SITES = 400000; // a 1 x 1 m garment at 1.7 mm cells is about 350,000
 
 /** Whether an outline is just its own bounding box (the plain swatch), so its edges are straight and square. */
 export function isBox(boundary) {
@@ -199,7 +240,7 @@ export function voronoiLayers(boundary, { spacing = 8, relax = 4, seed = 1, tone
       { x: 2 * inner.minX - p.x, y: p.y }, { x: 2 * inner.maxX - p.x, y: p.y },
       { x: p.x, y: 2 * inner.minY - p.y }, { x: p.x, y: 2 * inner.maxY - p.y },
     ]);
-    const { delaunay: dEdges, voronoi: vEdges } = tessellate([...points, ...mirrors], inner);
+    const { delaunay: dEdges, voronoi: vEdges } = tessellate([...points, ...mirrors], inner, { count: points.length });
     const own = new Set(points);
     // the first layer joins the real sites only
     return { layers: [toLayer(dEdges.filter(([a, b]) => own.has(a) && own.has(b))), toLayer(vEdges)], extra: { sites: points.length } };

@@ -258,6 +258,7 @@ export const SHELF_EXCEPTIONS = Object.freeze({
   'figure8-rows': 'Declared raised: one strand rises over its own earlier passes, but the envelope is only 0.4 mm, so the measured rule selects flat.',
   scales: 'Declared layered because the tile islands are stacked above a continuous carrier; geometry estimate pending physical validation.',
   dipweave: 'Declared raised for the dipping technique, but its default warp and weft families measure only 0.400 mm and satisfy layered.',
+  chainmail: 'Declared layered: its ring lattice runs past the edge and is cut there (28 October 2026), and the cut rings cross more often near the edge, so the lifts reach about 0.78 mm, above the two-native-family 0.650 mm layered ceiling.',
   voronoi: 'Declared layered as a cellular mesh, but the measured 0.800 mm envelope exceeds the two-native-family 0.650 mm layered ceiling.',
   spirograph: 'Declared layered as overlapping curves, but its measured 0.656 mm envelope exceeds the two-native-family 0.650 mm layered ceiling.',
   kirigami: 'Declared flat as a solid sheet: its orthogonal infill passes are intentionally fused at the same Z, not separate textile layers.',

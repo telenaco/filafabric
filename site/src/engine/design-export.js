@@ -19,6 +19,33 @@ import { buildRegions, regionsFromDrawing } from './regions.js';
 import { fingerprint } from '../ui/swatch.js';
 import { clipStrands } from './fabric.js';
 import { PolygonBoundary } from './boundary.js';
+import { finishFabric } from './fabric-result.js';
+
+/**
+ * Patterns run past the edge and are cut by it, instead of stopping at the last repeat that fits inside the piece. These
+ * cards are generated on a larger piece (a margin on every side, set by the piece size) and cut back to the piece or its
+ * outline. Checked card by card at 100 x 100 mm (28 October 2026): the other Flat and Layered cards already run to the
+ * edge (Rings · layered by its own lattice cut at the edge; Rotating squares stays whole, as cutting it needs ties on a
+ * second layer), and those with their own border wall or cells (Voronoi, Truchet, Meander, Turing...) fall apart when cut, so they
+ * keep their own edges. Raised cards keep theirs too: a cut loop would hang in the air.
+ */
+const OVERSCAN_CARDS = new Set(['rings-flat', 'rotating-triangles', 'zigzag-flat', 'coil-flat', 'figure8-rows-flat']);
+export const overscanFor = (mod, width, height) => OVERSCAN_CARDS.has(mod.id) ? Math.min(20, Math.max(6, Math.max(width, height) * .1)) : 0;
+
+function generateOverscanned(mod, input, { width, height, outline, margin, options }) {
+  const { machine, material, settings = {} } = input;
+  const bigMachine = { ...machine, bed: { ...machine.bed, width: (machine.bed?.width ?? width) + 2 * margin, depth: (machine.bed?.depth ?? height) + 2 * margin } };
+  const picture = options.picture && { ...options.picture, offset: [options.picture.offset[0] - margin, options.picture.offset[1] - margin] };
+  const big = mod.generate(bigMachine, material, mod.sanitize({ ...settings, width: width + 2 * margin, height: height + 2 * margin }), { ...options, outline: null, picture });
+  const cfg = resolveConfig(machine, material, { ...big.cfg.t, sample_width: width, sample_height: height });
+  const rings = outline?.length ? outline : [[{ x: 0, y: 0 }, { x: width, y: 0 }, { x: width, y: height }, { x: 0, y: height }]];
+  const boundary = new PolygonBoundary(rings);
+  const moved = big.strands.map((s) => ({ ...s, pts: s.pts.map((p) => ({ ...p, x: p.x - margin, y: p.y - margin })) }));
+  const strands = clipStrands(moved, boundary, cfg.t.extrusion_width / 2);
+  const { strands: _s, moves: _m, gcode: _g, fabric: _f, construction: _c, ...rest } = big;
+  return finishFabric({ ...rest, cfg, strands, moves: [], stats: big.stats, warnings: [], outline: outline?.length ? outline : null },
+    { boundary, flat: !!mod.flat, transform: mod.flat ? null : () => null });
+}
 
 /** Generate the selected design once at its complete size, independently of the preview window. */
 export function generateDesignBase(input) {
@@ -42,7 +69,7 @@ export function generateDesignBase(input) {
   } else if (design === 'squiggle') {
     result = mod.generate(machine, material, mod.sanitize({...settings,width,height}), {outline,picture});
   } else {
-    result = mod.generate(machine, material, mod.sanitize({ ...settings, width, height }), {
+    const options = {
       outline: mod.outline === false ? null : outline,
       vector: mod.usesVector || mod.vectorGuides ? vector : null,
       vectorSize: input.vectorSize ?? [width, height],
@@ -51,7 +78,10 @@ export function generateDesignBase(input) {
       picture,
       perimeters: input.meshPerimeters ?? input.perimeters ?? 0,
       printedBoundary: !!input.vector && !!input.shapeOutline,
-    });
+    };
+    const margin = options.vector ? 0 : overscanFor(mod, width, height);
+    result = margin ? generateOverscanned(mod, input, { width, height, outline: options.outline, margin, options })
+      : mod.generate(machine, material, mod.sanitize({ ...settings, width, height }), options);
   }
   // a drawing that is all green (and blue) has no red to fill: no pattern, only its solids
   if (vector && solidOnly(vector)) result = withoutPattern(result);
@@ -91,19 +121,27 @@ export function generateDesignExport(input, { progress = () => {} } = {}) {
       result.gcode=result.gcode.replace('; BODY START',result.regions.map(r=>`; region ${r.hex??r.id}: ${r.role} ${r.card??''} settings ${r.settingsHash}`).join('\n')+'\n; BODY START');
       return result;
     }
-    return buildRegions(input.machine, input.material, input.vector, input.regions, {
+    // Whole-piece patterns already made for these exact settings come in with the job (patternCache) and are cut again
+    // instead of generated again; the ones made now go back out with the result, for the next job.
+    const cache = input.patternCache ?? {}, fresh = {};
+    const built = buildRegions(input.machine, input.material, input.vector, input.regions, {
       seam: input.seam, width: input.width, height: input.height, solidCount: input.solidLayers ?? 1, extraLayers:input.extraLayers??0, progress,
-      generate: (design, settings, outline) => {
+      generate: (design, settings, outline, [width, height] = [input.width, input.height]) => {
         const mod = designById(design);
-        const own = mod.sanitize({ ...settings, width: input.width, height: input.height });
-        const regionInput = { ...input, design, settings: design === 'loop-pile' ? { ...input.settings, ...own } : own,
+        const own = mod.sanitize({ ...settings, width, height });
+        const key = fingerprint({ design, own, outline, machine:input.machine, material:input.material });
+        if (cache[key]) return cache[key];
+        const regionInput = { ...input, width, height, patternCache:null, design, settings: design === 'loop-pile' ? { ...input.settings, ...own } : own,
           pilePattern: own.pattern, pilePatternScale: own.patternScale, outline, vector: mod.usesVector ? {
-            name: input.vector.name, width:input.width, height:input.height, paths:outline.map(ring=>[...ring,ring[0]]),
+            name: input.vector.name, width, height, paths:outline.map(ring=>[...ring,ring[0]]),
             styles:outline.map(()=>({color:'red',hex:'#ff0000',width:input.material?.extrusion_width??.45})),
           } : null, regions:null, regionBuild:true, shapeOutline:false, meshPerimeters:0, perimeters:0, brim:0 };
-        return generateDesignExport(regionInput);
+        const made = generateDesignExport(regionInput);
+        return fresh[key] = { strands:made.strands, intendedFamilies:made.intendedFamilies, warnings:made.warnings };
       },
     });
+    built.patternCache = fresh;
+    return built;
   }
   let result = generateDesignBase(input);
   if (input.extraLayers === undefined && input.layers !== undefined) {
@@ -121,7 +159,7 @@ export function generateDesignExport(input, { progress = () => {} } = {}) {
     ? 'This design no longer takes an extra backing; your link is shown without it.'
     : 'This design uses its own Support carrier; an additional global backing is left out.'];
   // a solid already prints its own edge pass: an all-solid piece takes no brim over it
-  result = applyBrim(result, { count: solidOnly(input.vector) ? 0 : input.meshPerimeters ?? input.perimeters ?? input.brim ?? 2, label: input.perimeters !== undefined ? 'Perimeters' : 'Brim', requestedCount: input.perimeters });
+  result = applyBrim(result, { shift: input.meshShift ?? 0, count: solidOnly(input.vector) ? 0 : input.meshPerimeters ?? input.perimeters ?? input.brim ?? 2, label: input.perimeters !== undefined ? 'Perimeters' : 'Brim', requestedCount: input.perimeters });
   if (input.regionBuild && input.outline) result.strands = clipStrands(result.strands, new PolygonBoundary(input.outline), 0);
   result = refreshConstruction(colourResult(result, input.settings, { record: true }));
   return input.regionBuild ? result : assertConstructionExportable(result);

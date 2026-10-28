@@ -350,6 +350,48 @@ export function analyzeFabric(strands, { strandWidth = 0.45, layerHeight = 0.2, 
  * Layer precedence first; within a layer, bottom-left start and nearest endpoint/closed-loop seam. `improve` follows
  * the greedy order with a 2-opt and Or-opt pass over the travel moves (travel.js), for drawings with many strands.
  */
+/**
+ * The possible start points of `list` (both ends of an open strand, every vertex of a closed loop) in a bucket grid.
+ * nearest(at) gives the indices in `list`, ascending, of the strands with a start within a hair (2e-9 mm) of the nearest
+ * start to `at`: the only strands orderStrands' scan could pick. remove(strand) takes a printed strand out.
+ */
+function strandStarts(list) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, count = 0;
+  const entries = [];
+  list.forEach((s, i) => {
+    if (!s.pts.length) return;
+    const a = s.pts[0], b = s.pts.at(-1), loop = Math.hypot(a.x - b.x, a.y - b.y) < 1e-6, last = s.pts.length - 1;
+    for (let j = 0; loop ? j < last : j <= last; j = loop || j === last ? j + 1 : last) {
+      const p = s.pts[j];
+      entries.push({ s, p });
+      minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); count++;
+    }
+  });
+  const size = Math.max(1e-3, Math.sqrt(Math.max(1e-6, (maxX - minX) * (maxY - minY)) / Math.max(1, count)) * 2);
+  const buckets = new Map(), key = (i, j) => (i + 1048576) * 2097152 + (j + 1048576);
+  for (const e of entries) { const k = key(Math.floor(e.p.x / size), Math.floor(e.p.y / size)); let b = buckets.get(k); if (!b) buckets.set(k, b = []); b.push(e); }
+  const position = new Map(list.map((s, i) => [s, i])), removed = new Set();
+  const span = Math.hypot(maxX - minX, maxY - minY) + 1;
+  const within = (x, y, r, fn) => {
+    const i0 = Math.floor((x - r) / size), i1 = Math.floor((x + r) / size), j0 = Math.floor((y - r) / size), j1 = Math.floor((y + r) / size);
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const b = buckets.get(key(i, j)); if (b) for (const e of b) if (!removed.has(e.s)) fn(e); }
+  };
+  return {
+    nearest(at) {
+      let dmin = Infinity;
+      for (let r = size; ; r *= 2) {
+        within(at.x, at.y, r, (e) => { const d = Math.hypot(e.p.x - at.x, e.p.y - at.y); if (d < dmin) dmin = d; });
+        // far from every remaining start (the cursor can be outside their box): the whole box
+        if (dmin <= r || r > 2 * (span + Math.abs(at.x - minX) + Math.abs(at.y - minY))) break;
+      }
+      const picked = new Set();
+      within(at.x, at.y, dmin + 2e-9, (e) => { if (Math.hypot(e.p.x - at.x, e.p.y - at.y) <= dmin + 2e-9) picked.add(position.get(e.s)); });
+      return [...picked].sort((a, b) => a - b);
+    },
+    remove(s) { removed.add(s); },
+  };
+}
+
 export function orderStrands(strands, { start = null, improve = false } = {}) {
   if (!strands.length) return [];
   let minX = Infinity, minY = Infinity;
@@ -385,9 +427,16 @@ export function orderStrands(strands, { start = null, improve = false } = {}) {
         at = out.at(-1)?.pts.at(-1) ?? at;
         continue;
       }
-      while (left.length) {
-        let best = Infinity, pick = 0, vertex = 0, reverse = false, closed = false;
-        left.forEach((s, i) => {
+      // Many strands: a bucket grid of their possible start points finds the nearest without scanning them all (the
+      // scan grew with the square of the count: a minute and more for a large lace). It picks exactly what the scan picks.
+      // Many strands: a bucket grid of their possible start points finds the nearest without scanning them all (the
+      // scan grew with the square of the count: a minute and more for a large lace). It picks exactly what the scan picks.
+      const starts = left.length > 64 ? strandStarts(left) : null, taken = new Uint8Array(left.length);
+      let firstFree = 0;
+      for (let remaining = left.length; remaining > 0; remaining--) {
+        while (taken[firstFree]) firstFree++;
+        let best = Infinity, pick = firstFree, vertex = 0, reverse = false, closed = false;
+        const consider = (s, i) => {
           if (!s.pts.length) return;
           const a = s.pts[0], b = s.pts.at(-1), loop = Math.hypot(a.x - b.x, a.y - b.y) < 1e-6;
           // Closed loops can start at any vertex; open strands can start at either end.
@@ -396,8 +445,13 @@ export function orderStrands(strands, { start = null, improve = false } = {}) {
             const p = s.pts[j], d = Math.hypot(p.x - at.x, p.y - at.y);
             if (d < best - 1e-9) { best = d; pick = i; vertex = j; reverse = !loop && j > 0; closed = loop; }
           }
-        });
-        const s = left.splice(pick, 1)[0];
+        };
+        // only the strands with a start within a hair of the nearest can win; they are tried in the scan's own order
+        if (starts) for (const i of starts.nearest(at)) consider(left[i], i);
+        else left.forEach((s, i) => { if (!taken[i]) consider(s, i); });
+        taken[pick] = 1;
+        const s = left[pick];
+        starts?.remove(s);
         let pts = s.pts;
         if (closed && vertex) pts = rotatePoints(pts, vertex);
         else if (reverse) pts = reversePoints(pts);

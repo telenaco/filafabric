@@ -85,7 +85,8 @@ test('a bright tone makes smaller cells, so more strand there', () => {
 
 test('too many cells is refused plainly, and fast', () => {
   const started = Date.now();
-  assert.throws(() => voronoiLayers(boundaryFor(240, 200), { spacing: 2 }), (e) => e.name === 'ConfigError' && /cells/.test(e.message));
+  // the limit covers a 1 x 1 m garment at fine cells (MAX_SITES); beyond it the refusal comes before any work
+  assert.throws(() => voronoiLayers(boundaryFor(2000, 2000), { spacing: 2 }), (e) => e.name === 'ConfigError' && /cells/.test(e.message));
   assert.ok(Date.now() - started < 1000);
 });
 

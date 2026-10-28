@@ -13,7 +13,8 @@ const textExtension = /\.(?:js|mjs|cjs|json|html|css|md|txt|svg|sql|yml|yaml|ini
 const sha256 = data => createHash('sha256').update(data).digest('hex');
 const byteOrder = (a, b) => Buffer.compare(Buffer.from(a), Buffer.from(b));
 const validPath = name => name && !name.startsWith('/') && !name.includes('\\') && !/[\0\r\n]/.test(name) && name.split('/').every(p => p && p !== '.' && p !== '..');
-const allowed = name => name !== archivePath && name !== manifestPath && (sourceFiles.has(name) || sourceDirectories.some(dir => name.startsWith(dir)));
+// Precomputed toolpaths are generated output, not software source. Their generator and index remain in the offer.
+const allowed = name => name !== archivePath && name !== manifestPath && !/^site\/precomputed\/.*\.json\.gz$/.test(name) && (sourceFiles.has(name) || sourceDirectories.some(dir => name.startsWith(dir)));
 
 function gitFiles(root) {
   const result = spawnSync('git', ['ls-files', '--cached', '-z', '--', '.'], { cwd: root, encoding: 'utf8' });

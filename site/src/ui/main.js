@@ -32,7 +32,7 @@ import { createProfilePicker } from './profile-picker.js';
 import { DESIGNS, designById, isReady, baseDesignSettings } from './designs.js';
 import { THUMBS, shapeThumb, presetThumb } from './thumbs.js';
 import { SHELVES, libraryGroups, initialDesignSettings, selectVariant, variantsOf, simplestFirst } from './library.js';
-import { regionsFromDrawing, REGION_LIMIT, sanitizeSeam, regionsFingerprint } from '../engine/regions.js';
+import { regionsFromDrawing, REGION_LIMIT, sanitizeSeam, regionsFingerprint, colourName } from '../engine/regions.js';
 import { RegionControls } from './region-controls.js';
 import { bindSwatchLab, swatchRecord } from './swatch-lab.js';
 import { sanitizeWidthMaps } from '../engine/width-maps.js';
@@ -59,6 +59,7 @@ import { bindPanelExport } from './panel-ui.js';
 import { createStudyRecorder } from './study.js';
 import { DENSITY_REVISION, RETUNED_CARDS } from './density.js';
 import { buildSwatch } from './export-builder.js';
+import { defaultCache } from './default-cache.js';
 import { classifyBuildError, DiagnosticLog, suggestRecovery, safeMetadata } from './diagnostics.js';
 import { bindFeedback, problemReport } from './feedback.js';
 import { bindPrivacyNotice, statsAllowed } from './privacy.js';
@@ -198,6 +199,7 @@ const printEstimates = new PrintEstimates();
 let previewBuild = null;
 // the G-code a "Generate G-code" step made for these exact settings, so Export saves it without building it again
 let readyGcode = null; // { key, result }
+let referenceResult = null; // { key, result }: fixed browsing sample, never printable output for the selected machine
 // the print order of that G-code (src/engine/trace.js), which the 2D view plays and exports as SVG
 let overviewTrace = null; // { key, trace, source? }
 let autoBuildStopped = ''; // the settings whose background build was stopped or failed: 2D does not start it again
@@ -365,6 +367,20 @@ let studyRecorder = null;
 const RAISED_DESIGNS = new Set(['loop-pile', 'relief', 'fringe', 'spacer', 'pillarweave']);
 const PRINT_SOLIDS = { key: 'solidLayers', label: 'Solid layers', info: true, help: 'Layers of fill in solid SVG shapes. 1 prints a single layer; more adds thickness and reinforcement. This does not change the mesh layers.', lo: 'Single', hi: 'Reinforced', unit: '', edit: true };
 const PRINT_RANGES = { solidLayers: { min: 1, max: 8, step: 1 }, extraLayers: { min: 0, max: 10, step: 1 }, brim: { min: 0, max: 8, step: 1 }, meshPerimeters: { min: 0, max: 8, step: 1 } };
+
+/**
+ * The outline: one setting, a number of lines overlapping by 20%, for every edge of the piece. It is the walls of solid
+ * shapes, the border round the pattern and inside its windows, and the contour round every colour of a drawing. Centred
+ * on the edge by default (half each side), so a pattern and its neighbour both run into it and are joined.
+ */
+const EDGE_PITCH = 0.8;
+const edgeCount = () => state.print.brim ?? 2;
+const edgeWidth = () => edgeCount() > 0 ? Math.round(beadNow() * (1 + (edgeCount() - 1) * EDGE_PITCH) * 100) / 100 : 0;
+const edgeAlign = () => state.print.edgeAlign ?? 'centre';
+// outside: the passes lie beyond the edge except the innermost, which stays one pass inside so the pattern's ends cross it
+// and bond to it (a pass that only touches their ends leaves the outline a separate piece)
+const edgeShift = () => ({ inside: 0, centre: edgeWidth() / 2, outside: Math.max(0, edgeCount() - 2) * beadNow() * EDGE_PITCH })[edgeAlign()] ?? 0;
+const edgeSeam = () => ({ enabled: edgeWidth() > 0, width: Math.max(.4, edgeWidth()), align: edgeAlign() });
 const PRINT_THICKNESS = { label: 'Layer thickness', help: 'Height of each printed layer. Smaller values make finer, thinner strands. Changing this also changes the total thickness of the piece.' };
 const PRINT_LAYERS = { key: 'extraLayers', label: 'Extra layers', info: true, help: 'Adds reinforcing passes to the pattern or, for raised textures, its backing. 0 keeps the original design, including its native layers. Solid fill is controlled separately.', lo: 'Original', hi: 'More', unit: '', edit: true };
 
@@ -395,6 +411,8 @@ function nearestLayerHeight(h) {
 function normalisePrint() {
   const h = nearestLayerHeight(state.print.layerHeight);
   if (h !== state.print.layerHeight) state.print.layerHeight = h;
+  // one outline count for every edge: the older separate mesh outline count follows it
+  state.print.meshPerimeters = edgeCount(); delete state.print.edgeWidth;
   // Whole-copy settings previously left raised textures unchanged; migrating them keeps that behavior.
   if (RAISED_DESIGNS.has(state.design) && state.print.legacyCopies) { state.print.extraLayers = 0; delete state.print.legacyCopies; }
 }
@@ -408,7 +426,7 @@ function layerSetupText() {
 }
 
 function patternLayerSetupText() {
-  if(state.regions?.length)return `${state.regions.filter(r=>r.enabled!==false).length} regions${state.result?.layerPlan?.totalLayers?` · ${state.result.layerPlan.totalLayers} layer groups`:''}`;
+  if(state.regions?.length)return `${state.regions.filter(inPiece).length} regions${state.result?.layerPlan?.totalLayers?` · ${state.result.layerPlan.totalLayers} layer groups`:''}`;
   const plan = state.result?.designId === state.design ? state.result.layerPlan : null;
   if (plan?.mode === 'backing' && plan.repeatable) return `${plan.backingLayers} backing + ${state.print.extraLayers} extra = ${plan.backingLayers + state.print.extraLayers} · texture once`;
   if (plan && !plan.repeatable) return plan.nativeLayers === null ? 'Original raised structure' : `${plan.nativeLayers} original · SVG only`;
@@ -419,16 +437,19 @@ function patternLayerSetupText() {
 
 const PRINT_BINDING = {
   get: (key) => {
+    if (key === 'edgeAlign') return edgeAlign();
     return state.print[key];
   },
   set: (key, value) => {
     if (key === 'solidLayers') { state.print.solidLayers = Math.max(1, Math.min(8, Math.round(value))); return; }
+    if (key === 'edgeAlign') { state.print.edgeAlign = value; return; }
     if (['brim', 'meshPerimeters'].includes(key) && value > 50) { toast('Perimeters: enter a count from 0 to 50.'); return; }
     if (key === 'extraLayers') {
       if (value > 250) { toast('Extra layers: enter a count from 0 to 250.'); return; }
       delete state.print.legacyCopies;
     }
     state.print[key] = ['extraLayers', 'brim', 'meshPerimeters'].includes(key) ? Math.max(0, Math.round(value)) : value;
+    if (key === 'brim') { state.print.meshPerimeters = state.print.brim; delete state.print.edgeWidth; } // one outline count for every edge
   },
   available: (key) => key !== 'extraLayers' || !(state.result?.designId === state.design && state.result.layerPlan?.repeatable === false),
   range: (key) => PRINT_RANGES[key],
@@ -440,6 +461,7 @@ const PRINT_BINDING = {
   readout: (key) => {
     if (key === 'solidLayers') return `${state.print.solidLayers} ${state.print.solidLayers === 1 ? 'layer' : 'layers'} · ${Number((state.print.solidLayers * state.print.layerHeight).toFixed(3))} mm`;
     if (key === 'extraLayers') return `${state.print.extraLayers} extra`;
+    if (key === 'brim') return edgeCount() ? `${edgeCount()} ${edgeCount() === 1 ? 'line' : 'lines'} · ${edgeWidth()} mm` : 'Off';
     if (['brim', 'meshPerimeters'].includes(key)) return state.print[key] ? `${state.print[key]} ${state.print[key] === 1 ? 'line' : 'lines'}` : 'Off';
     if (key === 'layerHeight') return `${Math.round(state.print.layerHeight * 1000) / 1000} mm${state.print.layerHeight === defaultLayerHeight(state.machines.get(state.machine)) ? ' (default)' : ''}`;
     return layerSetupText();
@@ -569,10 +591,13 @@ async function importSvg(file) {
     previewChoice = 'auto';
     const regions = regionsFromDrawing(drawing, { currentCard:state.design, currentSettings:settingsOf(state.design) });
     if(regions.length>REGION_LIMIT)throw new Error(`The drawing has ${regions.length} colours; reduce it to ${REGION_LIMIT} or fewer. Nothing was imported.`);
+    // every colour loads, one ticked: work through them one at a time, then tick them all to export
+    const first = regions.find(r=>r.role==='pattern') ?? regions[0];
+    for (const r of regions) r.enabled = r === first;
     state.vector = drawing;
     state.regions = regions;
     state.seam = sanitizeSeam();
-    selectRegion(regions.find(r=>r.role==='pattern')?.id ?? regions[0]?.id, { quiet:true });
+    selectRegion(first?.id, { quiet:true });
     state.outline = shapesOf(drawing); // red contains the pattern and blue cuts it away on import
     followVectorSize();
     state.docName = file.name.replace(/\.svg$/i, '').slice(0, 60);
@@ -580,6 +605,7 @@ async function importSvg(file) {
     $('#panel-width').value = state.vector.width;
     $('#panel-height').value = state.vector.height;
     syncControls();
+    renderRegions(true); // the colours show at once, not when the first preview is done
     schedule();
     commit();
     toast(`Imported ${state.vector.name}: ${state.vector.width.toFixed(1)} × ${state.vector.height.toFixed(1)} mm`);
@@ -607,7 +633,14 @@ function setShapeOutline(on) {
 
 /* ---------- drawing regions ---------- */
 const selectedRegion = () => state.regions?.find(region=>region.id===state.selectedRegion) ?? null;
-const requiresApply = () => (state.regions?.filter(region=>region.enabled!==false&&region.role==='pattern').length ?? 0)>1;
+/** A colour is in the piece once it is applied, and while it is ticked (being worked on). */
+const inPiece = (region) => region.enabled!==false || !!region.applied;
+/** The regions as the engine builds them: every colour in the piece is enabled, and "applied" is the UI's own business. */
+const pieceRegions = () => state.regions?.map(region=>{ const { applied, ...rest } = region; return { ...rest, enabled:inPiece(region) }; }) ?? null;
+/** Ticked colours not yet applied: what Apply would set aside. */
+const workingRegions = () => state.regions?.filter(region=>region.enabled!==false&&!region.applied) ?? [];
+const regionName = (region) => colourName(region.hex) ?? region.color;
+const requiresApply = () => workingRegions().length>0;
 
 function captureRegionSettings() {
   const region=selectedRegion();
@@ -645,12 +678,15 @@ function regionCard(id,cardId) {
 
 function changeRegion(id,patch) {
   captureRegionSettings();
-  if(!id)state.seam=sanitizeSeam(patch.seam);
+  if(!id&&patch.allEnabled!==undefined)for(const region of state.regions)region.enabled=patch.allEnabled;
+  else if(!id)state.seam=sanitizeSeam(patch.seam);
   else {
     const region=state.regions.find(r=>r.id===id);if(!region)return;
     Object.assign(region,patch);
     if(region.role==='pattern'&&!region.card){region.card=state.design;region.settings=structuredClone(settingsOf(state.design));}
-    state.selectedRegion=null;selectRegion(id);
+    // with one colour left ticked, that colour is the one being edited
+    const only=patch.enabled!==undefined&&state.regions.filter(r=>r.enabled!==false);
+    state.selectedRegion=null;selectRegion(only?.length===1?only[0].id:id);
   }
   schedule();commit();showDesign();renderRegions(true);
 }
@@ -659,25 +695,29 @@ function renderRegions(force=false) {
   if(!regionUI) {
     regionUI=new RegionControls({bar:$('#colour-bar'),header:$('#region-header'),cards:DESIGNS,select:selectRegion,change:changeRegion,useCard:regionCard,close:()=>selectRegion(null)});
   }
-  const key=JSON.stringify([state.regions?.map(({settings,...r})=>r),state.selectedRegion,state.seam]);
-  if(force||key!==regionUIKey){regionUI.update(state.regions,state.selectedRegion,state.seam);regionUIKey=key;}
-  const multi=requiresApply(),keyNow=snapshotKey(),applied=readyGcode?.key===keyNow||state.resultKey===keyNow;
+  const key=JSON.stringify([state.regions?.map(({settings,...r})=>r),state.selectedRegion,edgeSeam()]);
+  if(force||key!==regionUIKey){regionUI.update(state.regions,state.selectedRegion,edgeSeam());regionUIKey=key;}
+  const keyNow=snapshotKey(),built=readyGcode?.key===keyNow||state.resultKey===keyNow;
+  const working=workingRegions(),names=working.length>2?`${working.length} colours`:working.map(regionName).join(' and ');
   const button=$('#btn-apply');
-  button.disabled=exporting||!!previewBuild||!!currentPrintSizeProblem()||!isReady(state.design);
-  button.textContent=previewBuild?'Applying…':applied?'Export G-code':multi?'Apply whole piece':'Apply';
-  button.dataset.mode=applied?'export':'apply';
-  button.classList.toggle('has-changes',!applied);
-  button.title=applied?'Save the G-code for the current settings.':'Build all enabled regions with these settings.';
+  button.disabled=exporting||!!currentPrintSizeProblem()||!isReady(state.design)||!working.length&&!!previewBuild;
+  button.textContent=working.length?`Apply to ${names}`:previewBuild?'Updating…':'Export G-code';
+  button.dataset.mode=working.length?'apply':'export';
+  button.classList.toggle('has-changes',!!working.length);
+  button.title=working.length?`Set ${names} aside as part of the piece, then untick it and work on the next colour.`:'Save the G-code for every applied colour.';
   $('#apply-status').hidden=!state.regions?.length;
-  if(state.regions?.length&&!previewBuild)$('#apply-status').textContent=applied?'Whole piece is current. Export is ready.':multi?'Settings changed. Apply the whole piece before exporting.':'Updating the whole piece…';
+  const parked=state.regions?.filter(r=>r.applied).length??0;
+  if(state.regions?.length&&!previewBuild)$('#apply-status').textContent=working.length?`Showing ${names} on top of ${parked?`${parked} applied colour${parked>1?'s':''}`:'nothing applied yet'}.`
+    :built?`${parked} colour${parked===1?'':'s'} applied. Export is ready.`:'Updating the piece…';
 }
 
-async function applyPiece() {
-  if(previewBuild||exporting)return;
+/** Set the ticked colours aside as part of the piece. They keep showing when unticked, and print in the order applied. */
+function applyPiece() {
+  if(exporting)return;
   captureRegionSettings();
-  clearTimeout(genTimer);genTimer=null;
-  overviewActive=false;overview.cancel();renderPreviewMode();
-  previewAtSelectedSize(exportOptions());renderRegions();
+  let next=Math.max(0,...state.regions.map(r=>r.order??0));
+  for(const r of workingRegions()){r.applied=true;if(!r.order)r.order=++next;}
+  schedule();commit();renderRegions(true);
 }
 
 /* ---------- generation ---------- */
@@ -685,6 +725,7 @@ let genTimer = null;
 function schedule() {
   captureRegionSettings();
   if (readyGcode && readyGcode.key !== snapshotKey()) readyGcode = null; // made for settings that are no longer these
+  if (referenceResult && referenceResult.key !== snapshotKey()) referenceResult = null;
   if (overviewTrace && overviewTrace.key !== snapshotKey()) overviewTrace = null; // likewise: made for settings that are no longer these
   if (traceProblem && traceProblem.key !== snapshotKey()) traceProblem = null;
   fixJob?.controller.abort(); // the settings changed under the search: what it would fix is gone
@@ -718,8 +759,8 @@ function exportOptions(width = null, height = null) {
     machine: state.machines.get(state.machine), material: printMaterial(), design: state.design,
     width, height, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : settingsOf(state.design),
     studySettings: { ...settingsOf(state.design) }, outline: state.regions?.length ? null : placedOutline(width, height),
-    regions: state.regions, seam: state.seam,
-    vector: state.vector, shapeOutline: !!state.outline?.page, solidLayers: state.print.solidLayers, solidGenerator: 'arachne', extraLayers: state.print.extraLayers, legacyCopies: state.print.legacyCopies, brim: state.print.brim, perimeters: state.print.brim, meshPerimeters: state.print.meshPerimeters, backing: backingFor(),
+    regions: pieceRegions(), seam: edgeSeam(),
+    vector: state.vector, shapeOutline: !!state.outline?.page, solidLayers: state.print.solidLayers, solidGenerator: 'arachne', extraLayers: state.print.extraLayers, legacyCopies: state.print.legacyCopies, brim: state.print.brim, perimeters: state.print.brim, meshPerimeters: edgeCount(), meshShift: edgeShift(), backing: backingFor(),
     image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale,
     panelSize: size,
   };
@@ -737,10 +778,11 @@ function showGenerated(result, key) {
   state.resultKey = key;
   state.error = null;
   const [width, height] = BINDINGS[state.design].size.get();
-  printEstimates.put(key, result, width, height);
+  if (result.referencePreview) referenceResult = { key, result };
+  else printEstimates.put(key, result, width, height);
   preview.update(regionPreviewResult(result));
   applyScrub();
-  if(state.regions?.length) readyGcode = {key,result};
+  if(state.regions?.length && !result.referencePreview) readyGcode = {key,result};
 }
 
 function regionPreviewResult(result) {
@@ -753,7 +795,7 @@ function showRegionOverview() {
   overviewActive=true;renderPreviewMode();
   const current=state.resultKey===snapshotKey()?state.result:null;
   const width=state.vector.width,height=state.vector.height;
-  const source=state.regions.filter(r=>r.enabled===false).flatMap(r=>r.pathIndices.map(i=>({pts:state.vector.paths[i],color:'other'})));
+  const source=state.regions.filter(r=>!inPiece(r)).flatMap(r=>r.pathIndices.map(i=>({pts:state.vector.paths[i],color:'other'})));
   // the whole piece is already built in this flow, so its print order needs no second build
   if(current&&overviewTrace?.source!==current)overviewTrace={key:snapshotKey(),trace:packTrace(current),source:current};
   overview.setResult({width,height,rings:current?.outline??[[{x:0,y:0},{x:width,y:0},{x:width,y:height},{x:0,y:height}]],source,packed:packLines(current?.strands??[]),strandWidth:current?.cfg.t.extrusion_width??.45,shapeOnly:!current});
@@ -762,17 +804,41 @@ function showRegionOverview() {
 }
 
 /** Full ordinary-size designs build off the UI thread; obsolete slider jobs are terminated. */
-function previewAtSelectedSize(input, { estimateOnly = false, auto = false } = {}) {
-  state.error = null;
+function canBrowseReference(input) {
+  return input.width === 100 && input.height === 100 && !input.vector && !input.outline && !input.image && !input.regions?.length
+    && state.print.layerHeight === defaultLayerHeight(state.machines.get(state.machine))
+    && !FILAMENT_FIELDS.some(field => Object.hasOwn(state.print, field.key)) && !Object.hasOwn(state.print, 'widthMaps');
+}
+
+function showReferenceOverview(result) {
+  const width = result.cfg.t.sample_width, height = result.cfg.t.sample_height;
+  overview.setResult({ width, height, rings: result.outline ?? [[{x:0,y:0},{x:width,y:0},{x:width,y:height},{x:0,y:height}]], source: [],
+    packed: packLines(result.strands), strandWidth: result.cfg.t.extrusion_width });
+}
+
+function previewAtSelectedSize(input, { estimateOnly = false, auto = false, reference = false } = {}) {  state.error = null;
   const key = snapshotKey(), controller = new AbortController();
   const job = { key, controller, promise: null, estimateOnly, auto };
   previewBuild = job;
   // the G-code for time, filament and Export, with its print order for 2D to play (no 3D geometry crosses from the worker)
-  job.promise = buildSwatch(input, { signal: controller.signal, preview: !estimateOnly, trace: estimateOnly, progress:p=>{ if(state.regions?.length) { $('#apply-status').hidden=false; $('#apply-status').textContent=p.message; } } }).then((result) => {
+  const build = async () => {
+    const cached = await defaultCache.load(input, { signal: controller.signal, reference: reference && canBrowseReference(input) });
+    if (cached) {
+      job.referenceGeometry = cached.referencePreview ? cached : null;
+      return estimateOnly ? { ...compactDesignExport(cached), referencePreview: !!cached.referencePreview, trace: packTrace(cached) } : cached;
+    }
+    if (estimateOnly && overviewActive && previewBuild === job && canBrowseReference(input)) overview.update(input);
+    return buildSwatch(input, { signal: controller.signal, preview: !estimateOnly, trace: estimateOnly, progress:p=>{ if(state.regions?.length) { $('#apply-status').hidden=false; $('#apply-status').textContent=p.message; } } });
+  };
+  job.promise = build().then((result) => {
     if (previewBuild === job && snapshotKey() === key) {
       if (estimateOnly) {
-        printEstimates.put(key, result, input.width, input.height); readyGcode = { key, result };
-        if (result.trace) overviewTrace = { key, trace: result.trace };
+        if (result.referencePreview) {
+          referenceResult = { key, result: job.referenceGeometry ?? result };
+          if (overviewActive && job.referenceGeometry) showReferenceOverview(job.referenceGeometry);
+        }
+        else { printEstimates.put(key, result, input.width, input.height); readyGcode = { key, result }; }
+        if (result.trace) overviewTrace = { key, trace: result.trace, referencePreview: !!result.referencePreview };
       } else showGenerated(result, key);
     }
     return result;
@@ -914,7 +980,7 @@ function renderPreviewMode() {
   $('#overview-actions').hidden = !overviewActive;
   $('#overview-status').hidden = !overviewActive;
   const building = printOrderBuilding(), problem = overviewActive ? traceProblem?.message ?? '' : '';
-  $('#overview-status').textContent = [overviewStatus, building && 'building the print order…', problem && `the print order could not be built (${problem})`].filter(Boolean).join(' · ');
+  $('#overview-status').textContent = [overviewTrace?.referencePreview ? 'Reference sample · Prusa MK3S / Foamy 95A · Export uses your selected setup' : overviewStatus, building && 'building the print order…', problem && `the print order could not be built (${problem})`].filter(Boolean).join(' · ');
   const trace = overviewTraceNow();
   $('#overview-export-svg').disabled = !trace;
   $('#overview-export-svg').title = trace ? 'Save this view as an SVG at true size, with every strand as a path' : 'Available once the print order is built';
@@ -941,8 +1007,8 @@ function showWholeOverview(input, { build = true } = {}) {
   const [sw, sh] = BINDINGS[state.design].size.get();
   if (state.result && !state.error && state.resultKey === snapshotKey() && state.result.cfg.t.sample_width === sw && state.result.cfg.t.sample_height === sh) {
     const trace = packTrace(state.result);
-    readyGcode = { key: state.resultKey, result: { ...compactDesignExport(state.result), trace } };
-    overviewTrace = { key: state.resultKey, trace };
+    if (!state.result.referencePreview) readyGcode = { key: state.resultKey, result: { ...compactDesignExport(state.result), trace } };
+    overviewTrace = { key: state.resultKey, trace, referencePreview: !!state.result.referencePreview };
   }
   overviewActive = true;
   preview.reset();
@@ -951,7 +1017,10 @@ function showWholeOverview(input, { build = true } = {}) {
   state.resultKey = null;
   state.error = null;
   renderPreviewMode();
-  overview.update(input);
+  const reference = referenceResult?.key === snapshotKey() ? referenceResult.result : null;
+  if (reference?.strands) showReferenceOverview(reference);
+  else if (canBrowseReference(input)) overview.setResult({ width: sw, height: sh, rings: [[{x:0,y:0},{x:sw,y:0},{x:sw,y:sh},{x:0,y:sh}]], source: [], packed: packLines([]), strandWidth: .45, shapeOnly: true });
+  else overview.update(input);
   if (build) startPrintOrder(input);
   renderBusy();
   render();
@@ -959,10 +1028,11 @@ function showWholeOverview(input, { build = true } = {}) {
 
 function startPrintOrder(input) {
   const key = snapshotKey();
-  if (currentPrintSizeProblem() || previewBuild || autoBuildStopped === key) return;
+  if (currentPrintSizeProblem() && !canBrowseReference(input) || previewBuild || autoBuildStopped === key) return;
+  if (overviewTrace?.key === key && overviewTrace.trace) return;
   if (readyGcode?.key === key && readyGcode.result.trace) { overviewTrace = { key, trace: readyGcode.result.trace }; return; } // already built: not again
   traceProblem = null;
-  previewAtSelectedSize(input, { estimateOnly: true, auto: true });
+  previewAtSelectedSize(input, { estimateOnly: true, auto: true, reference: true });
 }
 
 /**
@@ -992,26 +1062,23 @@ async function regenerate() {
     followVectorSize();
     const [selectedWidth, selectedHeight] = BINDINGS[state.design].size.get();
     if (state.regions?.length && previewChoice==='overview') { showRegionOverview(); return; }
-    if (requiresApply()) {
-      overviewActive=false;renderPreviewMode();
-      if(state.resultKey===snapshotKey())preview.update(regionPreviewResult(state.result));
-      renderBusy(); render(); return;
-    }
+    if (state.regions?.length && !state.regions.some(inPiece)) { showRegionOverview(); return; } // nothing ticked or applied: just the outlines
     if (state.regions?.length) {
       if(currentPrintSizeProblem())throw new Error(currentPrintSizeProblem());
       overviewActive=false; overview.cancel(); renderPreviewMode();
       previewAtSelectedSize(exportOptions(selectedWidth,selectedHeight)); return;
     }
-    if (useWholeOverview(selectedWidth, selectedHeight, machine, previewChoice) || previewChoice !== 'sample' && currentPrintSizeProblem()) {
+    const reference = previewChoice !== 'sample' && canBrowseReference(exportOptions(selectedWidth, selectedHeight));
+    if ((useWholeOverview(selectedWidth, selectedHeight, machine, previewChoice) || previewChoice !== 'sample' && currentPrintSizeProblem()) && !(reference && previewChoice !== 'overview')) {
       showWholeOverview(exportOptions(selectedWidth, selectedHeight));
       return;
     }
     overviewActive = false;
     overview.cancel();
     renderPreviewMode();
-    const wholePreview = !currentPrintSizeProblem() && previewChoice !== 'sample';
+    const wholePreview = (!currentPrintSizeProblem() || reference) && previewChoice !== 'sample';
     if (wholePreview) {
-      previewAtSelectedSize(exportOptions(selectedWidth, selectedHeight));
+      previewAtSelectedSize(exportOptions(selectedWidth, selectedHeight), { reference: true });
       return;
     }
     if (state.vector && state.print.brim > 0) {
@@ -1059,7 +1126,7 @@ async function regenerate() {
       const boundary = boundaryFor(fullWidth, fullHeight, placedOutline(fullWidth, fullHeight));
       brimOutline = state.vector ? conformalGuideRegion(boundary, vectorGuides(state.vector, fullWidth, fullHeight)).rings : boundary.rings;
     }
-    result = applyBrim(result, { count: allSolid && !backingFor() ? 0 : state.print.meshPerimeters, outline: brimOutline, fullWidth, fullHeight, label: 'Perimeters', requestedCount: state.print.brim });
+    result = applyBrim(result, { count: allSolid && !backingFor() ? 0 : edgeCount(), shift: edgeShift(), outline: brimOutline, fullWidth, fullHeight, label: 'Perimeters', requestedCount: state.print.brim });
     if (state.vector && result.cfg.t.sample_width === selectedWidth && result.cfg.t.sample_height === selectedHeight) result.documentSize = [state.vector.width, state.vector.height];
     showGenerated(refreshConstruction(colourResult(result, settingsOf(state.design))), snapshotKey());
   } catch (e) {
@@ -1107,6 +1174,7 @@ function renderErrors() {
     const sampled = t && (t.sample_width !== w || t.sample_height !== h);
     $('#canvas-note').hidden = !sampled;
     if (sampled) $('#canvas-note').textContent = `3D sample: a ${t.sample_width} × ${t.sample_height} mm corner · Export makes the whole ${w} × ${h} mm`;
+    if (state.result?.referencePreview) { $('#canvas-note').hidden = false; $('#canvas-note').textContent = 'Reference sample · Prusa MK3S / Foamy 95A · Export builds for your selected printer and filament'; }
     const stale=state.regions?.length&&state.resultKey!==snapshotKey()&&!!state.result;
     if(stale){$('#canvas-note').hidden=false;$('#canvas-note').textContent='Settings changed — showing the last applied piece';}
     $('#canvas-wrap').classList.toggle('dimmed',!!stale);
@@ -1133,10 +1201,11 @@ function renderErrors() {
       sizeError.dataset.engine = '1';
     } else general.push(text);
   }
-  box.hidden = general.length === 0;
+  // build errors are not shown as text: the check says to choose another design (the error log keeps the detail)
+  box.hidden = true;
   box.replaceChildren(...general.map((t) => el('div', { text: t })));
   const hasPreview = !!state.result;
-  $('#canvas-note').textContent = 'Showing your last valid settings';
+  $('#canvas-note').textContent = 'This design can\'t be made with these settings: choose another design on the left';
   $('#canvas-note').hidden = !hasPreview;
   $('#canvas-wrap').classList.toggle('dimmed', hasPreview);
 }
@@ -1197,7 +1266,9 @@ function renderCheck() {
   if (!v && state.error) {
     // say what the problem is, and which setting to change: the same words the message above the controls uses
     const text = Array.isArray(state.error.errors) ? state.error.errors.map((m) => plainError(m).text).join('. ') : String(state.error.message || state.error);
-    v = { level: 'error', title: 'Can\'t build this yet', body: recovery ? `${text} Simplify this pattern restores practical spacing and loop or wave sizes. You can undo the change.` : `${text}${adviceFor(designById(state.design), text)} Download the error log to keep this attempt and its settings.`, action: null };
+    // no technical detail here: Download error log in the ··· menu keeps it for whoever needs it
+    void text;
+    v = { level: 'error', title: 'This design can\'t be made with these settings', body: recovery ? 'Choose another design on the left, or press Simplify this pattern (Undo brings your settings back).' : 'Choose another design on the left, or make the piece smaller.', action: null };
   }
   if (!v) { box.hidden = true; return; }
   box.hidden = false;
@@ -1231,13 +1302,7 @@ function renderCheck() {
   if (open) {
     const body = el('div', { class: 'check-body', id: 'check-body' }, el('p', { text: v.body }));
     const actions = el('div', { class: 'check-actions' });
-    if (state.error) {
-      const saveLog = el('button', { type: 'button', class: 'check-btn ghost', text: 'Download error log', title: 'Downloads recent local errors and current settings, including the current drawing. Share this file only when you want to share that drawing.' });
-      saveLog.addEventListener('click', saveErrorLog);
-      const report = el('button', { type: 'button', class: 'check-btn ghost', text: 'Report this problem', title: 'Tell us what happened: the error details and settings go with it, never your drawing.' });
-      report.addEventListener('click', () => feedback?.open('problem'));
-      actions.append(saveLog, report);
-    }
+    // a build error shows no log or report buttons here: Download error log stays in the ··· menu
     if (v.action === 'roomy-off') {
       const btn = el('button', { type: 'button', class: 'check-btn ghost', text: v.actionLabel });
       btn.addEventListener('click', () => setRoomy(false));
@@ -1286,6 +1351,7 @@ function renderFigures() {
     const [w, h] = BINDINGS[state.design].size.get();
     const key = snapshotKey();
     const estimate = printEstimates.get(key);
+    const reference = referenceResult?.key === key ? referenceResult.result : null;
     const generating = !!previewBuild?.estimateOnly;
     const problem = currentPrintSizeProblem();
     const scope = estimate?.full ? 'Whole-piece' : 'Sample';
@@ -1293,7 +1359,8 @@ function renderFigures() {
     host.replaceChildren();
     if (estimate) host.append(fig(minutes(estimate), 'min', `${scope} motion estimate`),
       fig(grams(estimate.filamentGrams ?? 0), 'g', `${scope} filament`));
-    const info = generating ? `Generating the G-code for the whole ${w} × ${h} mm piece, the same work Export does. You can keep looking; the time appears when it is done.`
+    else if (reference) host.append(fig(minutes(reference.stats), 'min', 'Reference motion estimate'), fig(grams(reference.stats.filamentGrams), 'g', 'Reference filament'));
+    const info = reference && !estimate ? 'Reference sample: Prusa MK3S / Foamy 95A. Export or Generate G-code calculates your selected printer and filament.' : generating ? `Generating the G-code for the whole ${w} × ${h} mm piece, the same work Export does. You can keep looking; the time appears when it is done.`
       : estimate?.full ? null
         : estimate ? `From a ${estimate.width} × ${estimate.height} mm 3D sample only, not the whole ${w} × ${h} mm piece.`
           : `The 2D view is a drawing, so it has no print time. Time and filament come from the G-code for the whole ${w} × ${h} mm piece.`;
@@ -1317,9 +1384,9 @@ function renderFigures() {
   const mod = designById(state.design);
   host.classList.toggle('stale', !!state.error);
   host.replaceChildren(
-    fig(minutes(stats), 'min', sampled ? 'Preview motion estimate' : 'Motion estimate'),
-    fig(grams(stats.filamentGrams), 'g', sampled ? 'Preview filament' : 'Filament'),
-    state.regions?.length ? fig(String(state.regions.filter(r=>r.enabled!==false).length), '', 'Regions') : !mod.legacyPanel
+    fig(minutes(stats), 'min', state.result.referencePreview ? 'Reference motion estimate' : sampled ? 'Preview motion estimate' : 'Motion estimate'),
+    fig(grams(stats.filamentGrams), 'g', state.result.referencePreview ? 'Reference filament' : sampled ? 'Preview filament' : 'Filament'),
+    state.regions?.length ? fig(String(state.regions.filter(inPiece).length), '', 'Regions') : !mod.legacyPanel
       ? (() => { const f = mod.figure(state.result); return fig(f.value, f.unit, f.label); })()
       : fig(stats.loops.toLocaleString('en'), '', 'Loops'),
   );
@@ -1830,7 +1897,7 @@ function matchesPreset(d) {
 
 /** The code that names this swatch: design, preset, size and a fingerprint of every setting. */
 function currentSwatch() {
-  if(state.regions?.length)return `regions-${regionsFingerprint(state.vector,state.regions,state.seam,state.print)}`;
+  if(state.regions?.length)return `regions-${regionsFingerprint(state.vector,pieceRegions(),edgeSeam(),state.print)}`;
   const mod = designById(state.design);
   let settings, size, preset = null;
   if (!mod.legacyPanel) {
@@ -2212,13 +2279,21 @@ async function exportGcode() {
     exportLabel = `Preparing ${input.width} × ${input.height} mm…`;
     renderBusy(); renderExport();
     let result;
-    const fullPreview = !genTimer && !previewBuild && state.result && !state.error && state.resultKey === key && state.result.cfg.t.sample_width === input.width && state.result.cfg.t.sample_height === input.height;
+    let referenceWasVisible = !!(state.result?.referencePreview || overviewTrace?.referencePreview);
+    const buildActual = () => buildSwatch(input, { signal: controller.signal, preview: referenceWasVisible && !overviewActive, trace: referenceWasVisible && overviewActive });
+    const fullPreview = !genTimer && !previewBuild && state.result && !state.result.referencePreview && !state.error && state.resultKey === key && state.result.cfg.t.sample_width === input.width && state.result.cfg.t.sample_height === input.height;
     if (fullPreview) result = state.result;
     else if (readyGcode?.key === key) result = readyGcode.result;
     else if (previewBuild?.key === key) result = await previewBuild.promise;
-    else result = await buildSwatch(input, { signal: controller.signal });
+    else result = await buildActual();
+    if (result.referencePreview) { referenceWasVisible = true; result = await buildActual(); }
     if (controller.signal.aborted || snapshotKey() !== key) throw new DOMException('The design changed during export.', 'AbortError');
     assertConstructionExportable(result);
+    if (referenceWasVisible) {
+      referenceResult = null;
+      if (!overviewActive && result.moves) showGenerated(result, key);
+      else if (result.trace) { overviewTrace = { key, trace: result.trace }; renderPreviewMode(); }
+    }
     const moveCount = result.moveCount ?? result.moves?.length ?? 0;
     if (!moveCount) throw new Error('Nothing to print for this design and size.');
     const settings = JSON.stringify({ design: input.design, settings: input.studySettings, regions:input.regions, seam:input.seam, print: { ...savedPrint,
@@ -2228,6 +2303,7 @@ async function exportGcode() {
     download(name, new Blob([text], { type: 'text/plain' }));
     reportStudyExport('gcode-swatch', { ...input, cfg: result.cfg, moveCount, layerPlan: result.layerPlan }, result.stats);
     printEstimates.put(key, result, input.width, input.height);
+    readyGcode = { key, result };
     toast(`Saved ${input.width} × ${input.height} mm: ${name}`);
   } catch (error) {
     if (error.name === 'AbortError') toast('Export cancelled because the design changed.');
@@ -2251,7 +2327,7 @@ function exportOverviewSvg() {
   const mod = designById(state.design), what = state.regions?.length ? 'Colour regions' : mod.name;
   const svg = traceToSvg(trace, {
     title: `${what}, ${w} × ${h} mm, seen from above`,
-    description: `FilaFabric ${currentSwatch()}. One unit is one millimetre. Strands are drawn at the width they print; the back of the bed is the top of the page.`,
+    description: `${overviewTrace?.referencePreview ? 'Reference sample: Prusa MK3S / Foamy 95A. ' : ''}FilaFabric ${currentSwatch()}. One unit is one millimetre. Strands are drawn at the width they print; the back of the bed is the top of the page.`,
   });
   const name = swatchFileName().replace(/\.gcode$/i, '.svg');
   download(name, new Blob([svg], { type: 'image/svg+xml' }));
