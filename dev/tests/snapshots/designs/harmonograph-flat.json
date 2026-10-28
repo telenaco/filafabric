@@ -1,0 +1,62 @@
+[
+  {
+    "card": "harmonograph-flat",
+    "preset": "default",
+    "settingsHash": "86af64176dbc",
+    "gcodeSha256": "9fc28fbeb7b047fc024653740e8070575e8d1f466343b9b82d96fff69600f84e",
+    "strands": 1,
+    "moves": 1588,
+    "extrudeMm": 1328.7,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "harmonograph-flat",
+    "preset": "fine",
+    "settingsHash": "86af64176dbc",
+    "gcodeSha256": "9fc28fbeb7b047fc024653740e8070575e8d1f466343b9b82d96fff69600f84e",
+    "strands": 1,
+    "moves": 1588,
+    "extrudeMm": 1328.7,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "harmonograph-flat",
+    "preset": "coarse",
+    "settingsHash": "4a2e1d328a51",
+    "gcodeSha256": "5db59d4bbf9befe014cdd3ef6c6ac71d15b5742765d52d2b9aa0a5d4fe11a3e3",
+    "strands": 1,
+    "moves": 885,
+    "extrudeMm": 730.1,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "harmonograph-flat",
+    "preset": "lens",
+    "settingsHash": "b55f55f3f60e",
+    "gcodeSha256": "8d9cf8722df9d0834905330f1dfc2a584d96998c6c141a91223d83d1fb32c7be",
+    "strands": 1,
+    "moves": 665,
+    "extrudeMm": 531.5,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1"
+    ],
+    "ties": 0
+  }
+]

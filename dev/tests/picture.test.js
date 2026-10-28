@@ -70,7 +70,7 @@ test('the picture changes every design that offers it', () => {
   const make = (mod, settings, withImage) => generateDesignExport({ machine, material, design: mod.id, settings, width: 40, height: 20, image: withImage ? image : null, extraLayers: 0, brim: 0 }).gcode;
   for (const mod of patterned) {
     // two designs use the pattern in one mode only: the stipple tour of the meander and the pattern flow of the flow lines
-    const mode = ['meander','meander-legacy'].includes(mod.id) ? { curve: 'tsp' } : mod.id === 'flowlines' ? { flow: 'pattern' } : {};
+    const mode = ['meander','meander-legacy','meander-flat'].includes(mod.id) ? { curve: 'tsp' } : mod.id === 'flowlines' ? { flow: 'pattern' } : {};
     const settings = { ...mod.defaults(), ...mode, width: 40, height: 20 };
     const plain = make(mod, { ...settings, pattern: 'none' }, false);
     const pictured = make(mod, { ...settings, pattern: PICTURE }, true);

@@ -1,0 +1,64 @@
+[
+  {
+    "card": "figure8-rows-flat",
+    "preset": "default",
+    "settingsHash": "da620866504b",
+    "gcodeSha256": "652faf62fe8aaf4e86b6a303e1707650123bab9fe1019d6afeb2fc62005db384",
+    "strands": 33,
+    "moves": 1592,
+    "extrudeMm": 758.6,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1",
+      "ties"
+    ],
+    "ties": 2
+  },
+  {
+    "card": "figure8-rows-flat",
+    "preset": "open-chain",
+    "settingsHash": "f3238a75bbfb",
+    "gcodeSha256": "ed856280f8981cfb6771a9b7b0f623121ee1e268871e01cf4f78c2da439f5bbc",
+    "strands": 15,
+    "moves": 1066,
+    "extrudeMm": 488.2,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "figure8-rows-flat",
+    "preset": "overlapping",
+    "settingsHash": "0596bddf4c72",
+    "gcodeSha256": "652faf62fe8aaf4e86b6a303e1707650123bab9fe1019d6afeb2fc62005db384",
+    "strands": 33,
+    "moves": 1592,
+    "extrudeMm": 758.6,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1",
+      "ties"
+    ],
+    "ties": 2
+  },
+  {
+    "card": "figure8-rows-flat",
+    "preset": "dense",
+    "settingsHash": "a701a8dbc5c3",
+    "gcodeSha256": "951b23cd96f02e737a6dc02d50acc6651f55d49f1e2b90148e4b9c4771fd681d",
+    "strands": 25,
+    "moves": 2627,
+    "extrudeMm": 1043.3,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1"
+    ],
+    "ties": 0
+  }
+]

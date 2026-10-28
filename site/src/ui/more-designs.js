@@ -75,7 +75,7 @@ export function layered(def) {
     const s = { ...c.defaults, width: tw, height: th };
     thumb = thumbFromLayers(def.build(s, boundaryFor(tw, th)).layers, tw, th);
   } catch { /* a tile without a picture still works */ }
-  return {
+  const card = {
     shelf: def.shelf,
     family: def.family,
     joins: def.joins,
@@ -148,6 +148,9 @@ export function layered(def) {
     figure: (result) => (def.figure ? def.figure(result) : { value: result.report.perCm2.toFixed(1), unit: 'per cm²', label: 'Crossings' }),
     summary: (result) => def.summary(result),
   };
+  // the description it was made from, so a variant of this card (a truly flat version, say) can be made from the same pieces
+  Object.defineProperty(card, 'def', { value: def });
+  return card;
 }
 
 const CROSSHATCH = defineControls({

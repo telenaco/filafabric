@@ -9,7 +9,7 @@ import { defaultProfiles } from './helpers.js';
 
 test('Coil is fixed to looped rows; the Figure-8 card has its own settings key', () => {
   const coil = designById('coil'), figure8 = designById('figure8-rows');
-  assert.equal(coil.name, 'Looped rows');
+  assert.equal(coil.name, 'Looped rows · raised');
   assert.equal(coil.sanitize({ shape: 'zigzag' }).shape, 'looped');
   assert.equal(coil.controls.some((section) => section.kind === 'shape'), false);
   assert.deepEqual(coil.presets.map((preset) => preset.id), ['open-chain', 'overlapping', 'dense']);

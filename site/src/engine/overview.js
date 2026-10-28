@@ -58,10 +58,10 @@ export function rawLayers(input, shape, factor) {
     return layersOf(generateSquiggleTextile({ ...s, shape: mod.shape, boundary, planCrossings: false,
       sampler: s.pattern === 'image' && input.image ? pictureDarkness(input.image, width, height) : SAMPLERS[s.pattern] ?? SAMPLERS.centerSpot }));
   }
-  const coil = ['coil', 'figure8-rows', 'coil-shapes', 'boucle'].includes(input.design);
+  const coil = ['coil', 'figure8-rows', 'coil-shapes', 'boucle', 'coil-flat', 'figure8-rows-flat', 'boucle-flat'].includes(input.design);
   const field = coil || input.design === 'relief' ? patternField(s.pattern, { scale: s.patternScale ?? 1, picture }) : null;
   if (coil) return layersOf(generateCoilTextile({ ...s, boundary, planCrossings: false,
-    shape: input.design === 'boucle' ? 'ring' : s.shape, rowOverlap: input.design === 'boucle' ? 0 : s.rowOverlap / 100,
+    shape: ['boucle', 'boucle-flat'].includes(input.design) ? 'ring' : s.shape, rowOverlap: ['boucle', 'boucle-flat'].includes(input.design) ? 0 : s.rowOverlap / 100,
     sizeAt: field ? (x, y) => field(x, y, width, height) : null }));
   if (input.design === 'weave') return layersOf(generateWeaveTextile({ ...s, boundary }));
   if (input.design === 'spiral') {

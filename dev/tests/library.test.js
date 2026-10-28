@@ -19,8 +19,8 @@ test('all ready cards have the exact ticket metadata', () => {
     "   | `looped-net` | raised | loops | built-in | untested | Loops circle over themselves and lift over the earlier pass. |",
     "   | `squiggle-rings` | layered | rings | self | untested | Wavy ring families cross. |",
     "   | `squiggle-zigzag` | layered | waves | self | untested | Two zigzag families cross and fuse. |",
-    "   | `coil` | flat | loops | self | untested | One strand in rows of loops; each touches the next row. |",
-    "   | `figure8-rows` | flat | loops | self | untested | One strand in rows of figure-8s; each touches the next row. |",
+    "   | `coil` | raised | loops | self | untested | One strand in rows of loops; each touches the next row. |",
+    "   | `figure8-rows` | raised | loops | self | untested | One strand in rows of figure-8s; each touches the next row. |",
     "   | `coil-shapes` | flat | loops | self | untested | One strand in rows; each loop touches the next row. |",
     "   | `weave` | layered | woven | self | untested | Lower and upper pieces at two levels, joined by ramps; crossings fuse. |",
     "   | `spiral` | layered | radial | built-in | untested | Nested rings held by a crossing carrier. |",
@@ -31,13 +31,13 @@ test('all ready cards have the exact ticket metadata', () => {
     "   | `svgdesign` | layered | motif | auto | untested | Your drawing, held by a backing printed with it. |",
     "   | `crosshatch` | layered | grids | self | untested | Straight lines in two or three directions fuse where they cross. |",
     "   | `crosshatch-wavy` | layered | grids | self | untested | Straight lines in two or three directions fuse where they cross. |",
-    "   | `auxetic` | flat | cells | self | untested | Bow-tie cells joined by struts; they widen when pulled. |",
-    "   | `honeycomb-flat` | flat | cells | self | untested | Hexagon cells share their walls in one pass. |",
+    "   | `auxetic` | layered | cells | self | untested | Bow-tie cells joined by struts; they widen when pulled. |",
+    "   | `honeycomb-flat` | layered | cells | self | untested | Hexagon cells share their walls in one pass. |",
     "   | `dipweave` | raised | woven | self | untested | Wefts rise over the warps and dip between them. |",
     "   | `web` | layered | radial | self | untested | A spiral crossed by a radial zigzag. |",
     "   | `chainmail` | layered | rings | self | untested | Rings on two layers overlap and fuse. |",
     "   | `meander` | layered | motif | auto | untested | A space-filling curve held by a backing. |",
-    "   | `harmonograph` | flat | curves | self | untested | One closed curve crosses itself in diamonds. |",
+    "   | `harmonograph` | layered | curves | self | untested | One closed curve crosses itself in diamonds. |",
     "   | `truchet` | layered | tiles | self | needs-repair | Tile curves meet at tile edges; a shifted second layer crosses them. |",
     "   | `voronoi` | layered | cells | self | untested | Triangle edges print first, then the cells over them. |",
     "   | `turing` | layered | motif | auto | untested | Grown stripes held by a backing. |",
@@ -48,7 +48,7 @@ test('all ready cards have the exact ticket metadata', () => {
     "   | `bubbles` | layered | rings | self | untested | Packed rings held by a ring in every gap. |",
     "   | `parquet` | layered | tiles | self | needs-repair | Block turnarounds meet a designed seam family. Print validation is still pending. |",
     "   | `spirograph` | layered | radial | self | untested | Two rings of curls, half a ring apart, cross. |",
-    "   | `starlattice` | flat | lattices | self | untested | Star straps in non-crossing families meet at the tile edges. |",
+    "   | `starlattice` | layered | lattices | self | untested | Star straps in non-crossing families meet at the tile edges. |",
     "   | `halftone` | layered | waves | self | untested | A crossed net whose line thickness carries a picture. |",
     "   | `spacer` | raised | spacers | built-in | untested | Two nets held apart by small pillars. |",
     "   | `pillarweave` | raised | spacers | self | untested | Fibre locked round upright pillars. |",
@@ -72,14 +72,25 @@ test('all ready cards have the exact ticket metadata', () => {
     "   | `step-lace` | layered | curves | built-in | untested | A second decorative family crosses the parallel base lines and holds them together. |",
     "   | `paired-loops` | layered | loops | self | untested | The second loop family crosses and bonds to the first on the next print plane. |",
     "   | `scales` | layered | cells | built-in | untested | Tiles are separated by a constant gap and bonded to the carrier underneath. |",
+    "   | `coil-flat` | flat | loops | self | untested | One strand in rows; each row touches the next, all in one layer. |",
+    "   | `figure8-rows-flat` | flat | loops | self | untested | One strand in rows; each row touches the next, all in one layer. |",
+    "   | `auxetic-flat` | flat | cells | self | untested | Bow-tie cells in one layer: each strut ends on the rows beside it. |",
+    "   | `honeycomb-planar` | flat | cells | self | untested | Hexagon cells in one layer: each strut ends on the rows beside it. |",
+    "   | `starlattice-flat` | flat | lattices | self | untested | Star straps in non-crossing families meet at the tile edges, joined in one layer. |",
+    "   | `harmonograph-flat` | flat | curves | self | untested | One closed curve crosses itself in diamonds, joined in one layer. |",
+    "   | `truchet-flat` | flat | tiles | needs-backing | untested | Tile curves meet at the tile edges, in one layer without a backing. |",
+    "   | `turing-flat` | flat | motif | needs-backing | untested | Grown stripes in one layer, without a backing. |",
+    "   | `meander-flat` | flat | motif | needs-backing | untested | One space-filling curve in one layer, without a backing. |",
+    "   | `parquet-flat` | flat | tiles | needs-backing | untested | Blocks of parallel lines joined by seams, in one layer without a backing. |",
+    "   | `boucle-flat` | flat | rings | needs-backing | untested | Rings sit on a line, in one layer without the built-in backing. |",
     "   | `grid-lifted` | raised | grids | self | untested | Later strands lift over earlier ones at chosen crossings and land after cooling. |",
     "   | `grid-sliding` | raised | grids | self | untested | Printed channels hold one direction over the other while letting it slide. |",
     "   | `wave-bridged` | raised | waves | self | untested | The second family rises over the first on rounded bridges at every crossing. |",
     "   | `colour-exposure` | raised | textures | self | untested | The upper family sits higher where the picture is light, showing more of the lower colour. |",
   ].join("\n");
-  const rows = [...brief.matchAll(/\| `([^`]+)` \| (flat|layered|raised) \| (\w+) \| (self|auto|built-in) \| (untested|needs-repair) \| ([^|]+) \|/g)];
-  assert.equal(rows.length, 65);
-  assert.equal(DESIGNS.filter(d => d.status === 'ready' && !d.id.endsWith('-legacy')).length, 65);
+  const rows = [...brief.matchAll(/\| `([^`]+)` \| (flat|layered|raised) \| (\w+) \| (self|auto|built-in|needs-backing) \| (untested|needs-repair) \| ([^|]+) \|/g)];
+  assert.equal(rows.length, 76);
+  assert.equal(DESIGNS.filter(d => d.status === 'ready' && !d.id.endsWith('-legacy')).length, 76);
   assert.deepEqual(DESIGNS.filter(d => d.id.endsWith('-legacy')).map(d=>d.id).sort(),['meander-legacy','truchet-legacy','turing-legacy']);
   assert.ok(DESIGNS.filter(d=>d.id.endsWith('-legacy')).every(d=>d.hidden&&d.status==='ready'));
   for (const [, id, shelf, family, support, state, joins] of rows) {
@@ -112,6 +123,9 @@ test('all ready cards have the exact ticket metadata', () => {
       'step-lace': { catalogue: ['M6'], papers: [10, 37] },
       'paired-loops': { catalogue: ['M4'], papers: [3, 4, 25] },
       scales: { catalogue: ['M8'], papers: [47] },
+      'auxetic-flat': { catalogue: ['S4'], papers: [24, 26, 55] },
+      'honeycomb-planar': { catalogue: ['S4'], papers: [24, 26, 55] },
+      'starlattice-flat': { catalogue: ['S3'], papers: [30, 31] },
       'grid-lifted': { papers: [66], catalogue: ['M9'] },
       'grid-sliding': { papers: [67] },
       'wave-bridged': { papers: [31] },
@@ -278,7 +292,7 @@ test('cards are listed simplest first, and every visible card has a place in tha
   assert.deepEqual(SIMPLEST_FIRST.filter((id) => !visible.includes(id)), [], 'SIMPLEST_FIRST names a card that is not there');
   assert.equal(new Set(SIMPLEST_FIRST).size, SIMPLEST_FIRST.length);
   const flat = simplestFirst(DESIGNS.filter((d) => d.status === 'ready' && !d.hidden && d.shelf === 'flat')).map((d) => d.id);
-  assert.deepEqual(flat.slice(0, 3), ['honeycomb-flat', 'auxetic', 'rings-flat']);
-  assert.equal(flat.at(-1), 'stochastic-net', 'the random graph is the most involved flat card');
+  assert.deepEqual(flat.slice(0, 3), ['honeycomb-planar', 'auxetic-flat', 'rings-flat']);
+  assert.ok(flat.indexOf('stochastic-net') > flat.indexOf('rotating-squares'), 'the random graph comes after the plain regular patterns');
   assert.deepEqual(simplestFirst([{ id: 'zzz' }, { id: 'auxetic' }, { id: 'yyy' }]).map((c) => c.id), ['auxetic', 'zzz', 'yyy'], 'unlisted cards keep their order, after the listed ones');
 });

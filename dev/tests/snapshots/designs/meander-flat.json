@@ -1,0 +1,138 @@
+[
+  {
+    "card": "meander-flat",
+    "preset": "default",
+    "settingsHash": "94c29941d3cc",
+    "gcodeSha256": "7e6d520401532043021e48d5ff781bf35293c3ddc813ad7cca0b2b6958f06a6a",
+    "strands": 1,
+    "moves": 218,
+    "extrudeMm": 264.4,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "motif"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "meander-flat",
+    "preset": "hilbert",
+    "settingsHash": "94c29941d3cc",
+    "gcodeSha256": "7e6d520401532043021e48d5ff781bf35293c3ddc813ad7cca0b2b6958f06a6a",
+    "strands": 1,
+    "moves": 218,
+    "extrudeMm": 264.4,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "motif"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "meander-flat",
+    "preset": "peano",
+    "settingsHash": "85e9ab6f6d3f",
+    "gcodeSha256": "f19d32438ccc5911e4a2b461d5fdf2dfd89386982e38ce4722424bb2fbd090c5",
+    "strands": 1,
+    "moves": 169,
+    "extrudeMm": 287.2,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "motif"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "meander-flat",
+    "preset": "maze",
+    "settingsHash": "d878e55b0ab3",
+    "gcodeSha256": "c1e71ffd787350110e3aecc7cd112768c3686ed390d8ab2f6040ee043583546c",
+    "strands": 1,
+    "moves": 105,
+    "extrudeMm": 279.5,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "motif"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "meander-flat",
+    "preset": "stipple",
+    "settingsHash": "d24fbc662059",
+    "gcodeSha256": "fbada49448433d528c30527a8461ab01b2fadafdadda173caca9616f9b0eaaf0",
+    "strands": 1,
+    "moves": 47,
+    "extrudeMm": 146.9,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "motif"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "meander-flat",
+    "preset": "moore",
+    "settingsHash": "23ed74a01ff3",
+    "gcodeSha256": "ad05f4b6a9931c37305f21267b414db193f6482cf147c9dbf3668852667f999f",
+    "strands": 1,
+    "moves": 213,
+    "extrudeMm": 263,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "motif"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "meander-flat",
+    "preset": "sierpinski",
+    "settingsHash": "5c91680719b2",
+    "gcodeSha256": "2b2ad9e71f5beb3b6745721c9210b6bfc2aa57e6bf932017f81577a746edc188",
+    "strands": 1,
+    "moves": 267,
+    "extrudeMm": 230.8,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "motif"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "meander-flat",
+    "preset": "flowsnake",
+    "settingsHash": "5948792730b8",
+    "gcodeSha256": "9d70782c35156a18c6422c73280a696c76625dc7bddd8ec052e02f06e54acffa",
+    "strands": 31,
+    "moves": 680,
+    "extrudeMm": 405.6,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "motif",
+      "ties"
+    ],
+    "ties": 19
+  },
+  {
+    "card": "meander-flat",
+    "preset": "open",
+    "settingsHash": "0324d33ed809",
+    "gcodeSha256": "439514265ea8c8f3a70269157b14c6ff899beb10aaa07d0c1c267f9961defb91",
+    "strands": 1,
+    "moves": 57,
+    "extrudeMm": 145.4,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "motif"
+    ],
+    "ties": 0
+  }
+]

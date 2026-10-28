@@ -42,6 +42,7 @@ import { OPTION_ICONS } from './option-thumbs.js';
 import { MORE_DESIGNS } from './more-designs.js';
 import { RESEARCH_DESIGNS } from './research-designs.js';
 import { RAISED_DESIGNS } from './raised-designs.js';
+import { makeFlatVariants } from './flat-variants.js';
 import { LINE_DESIGNS } from './line-designs.js';
 import { SVG_DESIGNS } from './svg-design.js';
 import { PUBLICATION_DESIGNS } from './pub-designs.js';
@@ -456,6 +457,8 @@ const figure8Rows = {
   presets: coilPresets.map((preset) => ({ ...preset, patch: { ...preset.patch, shape: 'figure8' } })),
 };
 DESIGNS.splice(DESIGNS.indexOf(coil) + 1, 0, figure8Rows, coilShapeCard);
+// cards that printed as two layers go to the Layered shelf; a truly flat card takes each one's place on the Flat shelf
+DESIGNS.push(...makeFlatVariants(DESIGNS));
 
 // Common colour state and panel for every card; old boolean links remain accepted.
 for (const mod of DESIGNS.filter(card => card.status === 'ready')) {
