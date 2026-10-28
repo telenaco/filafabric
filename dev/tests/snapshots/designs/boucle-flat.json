@@ -1,0 +1,65 @@
+[
+  {
+    "card": "boucle-flat",
+    "preset": "default",
+    "settingsHash": "302336e84436",
+    "gcodeSha256": "05390add2f85cfa90c2579f3e97d20c24d1aa6e6bad3baf63210ea5a294f4fdf",
+    "strands": 15,
+    "moves": 780,
+    "extrudeMm": 390.3,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1",
+      "ties"
+    ],
+    "ties": 2
+  },
+  {
+    "card": "boucle-flat",
+    "preset": "picot-trim",
+    "settingsHash": "7d0f7eb3db19",
+    "gcodeSha256": "97e6ebb61408b280031f2834b4fa70bc194b98ee9b7b6f18c4999021f15a3c6a",
+    "strands": 22,
+    "moves": 791,
+    "extrudeMm": 393.7,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1",
+      "ties"
+    ],
+    "ties": 8
+  },
+  {
+    "card": "boucle-flat",
+    "preset": "boucle",
+    "settingsHash": "d315951a6a27",
+    "gcodeSha256": "b3c9833ce88773e54ce77617c54574e6a2da29d1f7414ff24bfcdc90622deb73",
+    "strands": 8,
+    "moves": 765,
+    "extrudeMm": 392.1,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "boucle-flat",
+    "preset": "curls",
+    "settingsHash": "e73be987a3f5",
+    "gcodeSha256": "138c89f04283d210007831ef21bd665765b4039d7b22288f478fd6d948cb9030",
+    "strands": 22,
+    "moves": 1201,
+    "extrudeMm": 614.3,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1",
+      "ties"
+    ],
+    "ties": 10
+  }
+]

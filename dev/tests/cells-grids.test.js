@@ -6,7 +6,7 @@ import { defaultProfiles } from './helpers.js';
 
 test('Auxetic is fixed to Re-entrant and flat honeycomb has its own cell settings', () => {
   const auxetic = designById('auxetic'), honeycomb = designById('honeycomb-flat');
-  assert.equal(auxetic.name, 'Re-entrant mesh');
+  assert.equal(auxetic.name, 'Re-entrant mesh · layered');
   assert.equal(auxetic.defaults().cell, 'reentrant');
   assert.equal(auxetic.sanitize({ cell: 'hexagon' }).cell, 'reentrant');
   assert.deepEqual(auxetic.presets.map((preset) => preset.id), ['re-entrant', 'deep-auxetic']);
@@ -33,7 +33,7 @@ test('Harmonograph uses a Structure choice while Starlattice puts Pattern after 
   const structure = harmonograph.controls.find((section) => section.key === 'second');
   assert.equal(structure.kind, 'choice');
   assert.deepEqual(structure.options.map(({ label, value }) => [label, value]), [['One curve', false], ['Two curves', true]]);
-  assert.equal(harmonograph.shelf, 'flat');
+  assert.equal(harmonograph.shelf, 'layered');
   const star = designById('starlattice');
   assert.ok(star.controls.findIndex((section) => section.kind === 'sliders') < star.controls.findIndex((section) => section.kind === 'pattern'));
 });

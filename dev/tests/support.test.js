@@ -46,7 +46,7 @@ test('self and built-in cards cannot receive a global second carrier', () => {
 
 test('each auto card exposes one Support section, not native plus global backing controls', () => {
   for (const card of DESIGNS.filter(d=>d.status==='ready'&&!d.legacyPanel)) {
-    if (card.support==='self') assert.ok(!card.controls.some(c=>c.kind==='support'),card.id);
+    if (['self','needs-backing'].includes(card.support)) assert.ok(!card.controls.some(c=>c.kind==='support'),card.id);
     else assert.equal(card.controls.filter(c=>c.kind==='support').length,1,card.id);
   }
   for (const id of ['meander','turing','svgdesign']) {

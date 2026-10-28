@@ -7,7 +7,7 @@ import { printabilityScore } from '../../site/src/ui/printability.js';
 const profile = (kind, id) => JSON.parse(fs.readFileSync(new URL(`../../site/profiles/${kind}/${id}.json`, import.meta.url)));
 const machine = profile('machines', 'prusa-mk3s'), material = profile('materials', 'filaflex-95-foamy');
 const entries = [];
-for (const d of DESIGNS.filter((d) => ['ready', 'preset'].includes(d.status))) {
+for (const d of DESIGNS.filter((d) => ['ready', 'preset'].includes(d.status) && !d.id.endsWith('-legacy'))) {
   const id = d.opens?.design ?? d.id, target = DESIGNS.find((m) => m.id === id);
   const settings = { ...target.defaults(), ...d.opens?.patch };
   const r = id === 'loop-pile' ? generate(machine, material, toTextile(settings)) : id === 'squiggle' ? generateSquiggle(machine, material, settings) : target.generate(machine, material, settings);

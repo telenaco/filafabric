@@ -52,6 +52,9 @@ export const BEAD_SIZES = Object.freeze({
   // the period was already lowered from 4 to 1.5 mm for every nozzle: that stays the standard minimum, and the finest nozzle goes to 1 mm
   auxetic: { period: null },
   'honeycomb-flat': { period: null },
+  // the truly flat versions count their cells in beads like the cards they came from
+  'auxetic-flat': { period: null },
+  'honeycomb-planar': { period: null },
   'rings-flat': { ringSize: null, overlap: null },
   'rings-raised': { ringSize: null, overlap: null },
   'rotating-squares': { cell: null, neck: null, neckLength: null },
@@ -68,8 +71,10 @@ export const BEAD_SIZES = Object.freeze({
   'meander-ties': { tieInterval: null },
   turing: { wavelength: null },
   'turing-legacy': { wavelength: null },
+  'turing-flat': { wavelength: null },
   // the engine loses a layer cut to the shape below about 0.95 mm; 1.05 is the first step of the slider above that
   parquet: { block: 1.05 },
+  'parquet-flat': { block: 1.05 },
   halftone: { spacing: null, pitch: null },
   'moire-net': { pitchA: null },
   // pitches of structures that stand up: pillars, tiles, corrugations

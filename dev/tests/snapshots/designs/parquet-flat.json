@@ -1,0 +1,82 @@
+[
+  {
+    "card": "parquet-flat",
+    "preset": "default",
+    "settingsHash": "d705562cfcdd",
+    "gcodeSha256": "4a66e3da61e0442143eaa834b5594e4ff4250d17cf43000069171d8bdcb129e2",
+    "strands": 52,
+    "moves": 2865,
+    "extrudeMm": 1240.9,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1",
+      "seams"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "parquet-flat",
+    "preset": "herringbone",
+    "settingsHash": "d705562cfcdd",
+    "gcodeSha256": "4a66e3da61e0442143eaa834b5594e4ff4250d17cf43000069171d8bdcb129e2",
+    "strands": 52,
+    "moves": 2865,
+    "extrudeMm": 1240.9,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1",
+      "seams"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "parquet-flat",
+    "preset": "long-planks",
+    "settingsHash": "448713aa465f",
+    "gcodeSha256": "d864bb46146a73c575d68c074d77e8a513538688edf1e915dd330a3fb26d71a0",
+    "strands": 56,
+    "moves": 2790,
+    "extrudeMm": 1477.5,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1",
+      "seams"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "parquet-flat",
+    "preset": "basket",
+    "settingsHash": "052bb64e4a26",
+    "gcodeSha256": "65959e0aad426a3aae5895b4eb108daad98c61242946aee029aa9c190fe37b38",
+    "strands": 65,
+    "moves": 1884,
+    "extrudeMm": 1102,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1",
+      "seams"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "parquet-flat",
+    "preset": "chevron",
+    "settingsHash": "3e867259e4a2",
+    "gcodeSha256": "6c5def26c961faa375a44ef021798703b5d647ba53cee1b67f04aefcba72ea23",
+    "strands": 24,
+    "moves": 1256,
+    "extrudeMm": 737.4,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1",
+      "seams"
+    ],
+    "ties": 0
+  }
+]

@@ -6,7 +6,7 @@ import { serpentineChains, centredLanes } from './fill.js';
 import { emitStrands } from './emit.js';
 import { lanePoints, lanePeriods, loopsClose, fillPitch } from './shapes.js';
 import { fitLanes } from './repeats.js';
-import { resolveCrossings } from './crossings.js';
+import { resolveCrossings, findCrossings } from './crossings.js';
 import { MAX_MOVES } from './tiler.js';
 import { finishFabric } from './fabric-result.js';
 import { appendPoints } from './layers.js';
@@ -75,6 +75,7 @@ export function generateCoilTextile({
   rowPitch: rowPitchOverride = null,
   whole = true,
   planCrossings = true,
+  joinCrossings = false,
 }) {
   const warnings = [];
   const rowPitch = rowPitchOverride ?? coilRowPitch(size, rowOverlap, strandWidth);
@@ -176,6 +177,11 @@ export function generateCoilTextile({
     if (strands.length === 0) warnings.push('The outline is too small for these loops: nothing to print');
   }
 
+  // one plane: where a strand meets another, or itself, it is joined there, not lifted over
+  if (joinCrossings) {
+    const { found } = findCrossings(strands, { strandWidth });
+    found.forEach((crossing, n) => { for (const index of new Set([crossing.sa, crossing.sb])) (strands[index].joints ??= []).push({ id: `flat:${n}`, x: crossing.x, y: crossing.y }); });
+  }
   const resolved = planCrossings ? resolveCrossings(strands, { lift, strandWidth }) : { strands, crossings: 0, maxLift: 0, maxSlopeDeg: 0 };
   return {
     strands: resolved.strands,
@@ -193,6 +199,9 @@ export function generateCoilTextile({
  * End to end: machine, material and coil settings in, moves, stats and G-code out.
  * `params`: width, height, shape, size, pitch, rowOverlap (0..1), lift, layerHeight, sampler (x, y, w, h) → 0..1, outline (rings in mm).
  */
+/** Every point at the first layer height: a flat card is one layer, whatever the repairs lifted. */
+const onePlane = (strands, cfg) => strands.map((strand) => ({ ...strand, pts: strand.pts.map(({ cls, ...point }) => ({ ...point, z: cfg.t.layer_height })) }));
+
 export function generateCoil(machine, material, params = {}) {
   const width = params.width ?? 100;
   const height = params.height ?? 100;
@@ -213,8 +222,12 @@ export function generateCoil(machine, material, params = {}) {
     shape: params.shape ?? 'looped',
     size: params.size ?? 3,
     pitch: params.pitch ?? 5,
-    rowOverlap: params.rowOverlap ?? 0.25,
-    rowPitch: params.rowPitch ?? null,
+    // a flat card keeps every strand in one layer and lets the rows only touch
+    rowOverlap: params.flat ? 0 : params.rowOverlap ?? 0.25,
+    planCrossings: !params.flat,
+    joinCrossings: !!params.flat,
+    // flat: neighbouring rows' loops touch, overlapping by about a bead and a half so they fuse and do not reach into each other
+    rowPitch: params.rowPitch ?? (params.flat ? Math.max(1.5 * cfg.t.extrusion_width, coilRowPitch(params.size ?? 3, 0, cfg.t.extrusion_width) - (params.flatOverlap ?? 1.4 * cfg.t.extrusion_width)) : null),
     layerHeight: cfg.t.layer_height,
     strandWidth: cfg.t.extrusion_width,
     lift: params.lift ?? 0.25,
@@ -233,5 +246,5 @@ export function generateCoil(machine, material, params = {}) {
 
   const warnings = [...coil.warnings];
   if (moves.length === 0 && warnings.length === 0) warnings.push('Nothing to print');
-  return finishFabric({ cfg, strands: coil.strands, moves, stats, warnings, gcode, outline, coil }, { flat: true, reinforce: (params.shape ?? 'looped') === 'ring' });
+  return finishFabric({ cfg, strands: coil.strands, moves, stats, warnings, gcode, outline, coil }, { flat: true, reinforce: !params.flat && (params.shape ?? 'looped') === 'ring', transform: params.flat ? onePlane : undefined });
 }

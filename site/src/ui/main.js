@@ -397,7 +397,7 @@ function normalisePrint() {
 }
 
 /** The backing mesh under the current design: its settings, or null when it is off or the design stands on its own base. */
-const backingFor = (design = state.design) => (['self', 'auto', 'built-in'].includes(designById(design)?.support) ? null : state.print.backing ?? null);
+const backingFor = (design = state.design) => (['self', 'auto', 'built-in', 'needs-backing'].includes(designById(design)?.support) ? null : state.print.backing ?? null);
 
 function layerSetupText() {
   const solid = state.vector && interpretDrawing(state.vector).solids.length ? ` · solids: ${state.print.solidLayers} × ${state.print.layerHeight} mm` : '';
@@ -1733,7 +1733,7 @@ function renderTiles() {
     });
     const assessment = ['parquet','truchet','meander','turing'].includes(d.id) ? null : ranking.get(d.id);
     tile.title = `${d.blurb}${assessment ? ` · Estimated printability ${assessment.rank} of ${PRINTABILITY.length}. ${assessment.longestUnsupported.toFixed(1)} mm longest free span; ${assessment.maxSlopeDeg.toFixed(1)}° maximum slope. Default 100 × 100 mm geometry; physical testing pending.` : ''}`;
-    const supportLabel = { self: 'Holds itself', auto: '+ backing', 'built-in': 'Built-in carrier' }[d.support];
+    const supportLabel = { self: 'Holds itself', auto: '+ backing', 'built-in': 'Built-in carrier', 'needs-backing': 'Needs a backing' }[d.support];
     const stateLabel = d.state === 'needs-repair' ? 'Needs repair' : d.state === 'untested' ? 'Untested' : '';
     const estimate = ready ? estimateLine(CARD_ESTIMATES[d.id]) : '';
     const badges = [supportLabel, stateLabel].filter(Boolean).map((text) => `<span class="design-badge" aria-label="${text}">${text}</span>`).join('');

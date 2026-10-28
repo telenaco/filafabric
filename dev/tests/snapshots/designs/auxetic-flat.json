@@ -1,0 +1,66 @@
+[
+  {
+    "card": "auxetic-flat",
+    "preset": "default",
+    "settingsHash": "3a3973dfe9ab",
+    "gcodeSha256": "af8037f7900756d5254e3d4dee15f4e6194fb468df8b300d8577408d5806b0ee",
+    "strands": 25,
+    "moves": 346,
+    "extrudeMm": 467.7,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "rows",
+      "struts"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "auxetic-flat",
+    "preset": "honeycomb",
+    "settingsHash": "8e8c1ab27963",
+    "gcodeSha256": "32688dd880b082a1a7e771c2c0feb8b57b3bacaee837962d1c6d023748b4e508",
+    "strands": 25,
+    "moves": 346,
+    "extrudeMm": 444.1,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "rows",
+      "struts"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "auxetic-flat",
+    "preset": "re-entrant",
+    "settingsHash": "3a3973dfe9ab",
+    "gcodeSha256": "af8037f7900756d5254e3d4dee15f4e6194fb468df8b300d8577408d5806b0ee",
+    "strands": 25,
+    "moves": 346,
+    "extrudeMm": 467.7,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "rows",
+      "struts"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "auxetic-flat",
+    "preset": "deep-auxetic",
+    "settingsHash": "b343edc2a6d7",
+    "gcodeSha256": "f15c791f9bb07073f5f9edf73511cb605b08cb9d94bdceb7b842233cd73359e1",
+    "strands": 21,
+    "moves": 324,
+    "extrudeMm": 443.6,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "rows",
+      "struts"
+    ],
+    "ties": 0
+  }
+]

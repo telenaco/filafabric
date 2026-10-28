@@ -253,14 +253,12 @@ export function shelfFromConstruction(report, { layerHeight = 0.2 } = {}) {
 // Carrier cards (Spiral, Bouclé, Turing, Your drawing) are not listed: carrier passes count toward the layered height allowance.
 export const SHELF_EXCEPTIONS = Object.freeze({
   'colour-exposure': 'Declared raised for its height texture, but the upper family rises by at most 0.4 mm, so the measured envelope stays within the layered ceiling.',
+  coil: 'Declared raised: one strand rises over its own earlier passes, but the envelope is only 0.4 mm, so the measured rule selects flat.',
+  'figure8-rows': 'Declared raised: one strand rises over its own earlier passes, but the envelope is only 0.4 mm, so the measured rule selects flat.',
   scales: 'Declared layered because the tile islands are stacked above a continuous carrier; geometry estimate pending physical validation.',
-  auxetic: 'Declared flat as a planar lattice, but two native families cross at 0.400 mm and the measured rule selects layered.',
-  'honeycomb-flat': 'Declared flat as a planar cell lattice, but the inherited Auxetic generator uses two native families at 0.400 mm and the measured rule selects layered; physical validation pending.',
   dipweave: 'Declared raised for the dipping technique, but its default warp and weft families measure only 0.400 mm and satisfy layered.',
-  harmonograph: 'Declared flat as drawn curves, but its two crossing native families at 0.400 mm satisfy layered.',
   voronoi: 'Declared layered as a cellular mesh, but the measured 0.800 mm envelope exceeds the two-native-family 0.650 mm layered ceiling.',
   spirograph: 'Declared layered as overlapping curves, but its measured 0.656 mm envelope exceeds the two-native-family 0.650 mm layered ceiling.',
-  starlattice: 'Declared flat as a planar lattice, but its two crossing native families at 0.400 mm satisfy layered.',
   kirigami: 'Declared flat as a solid sheet: its orthogonal infill passes are intentionally fused at the same Z, not separate textile layers.',
   'looped-net': 'Declared raised for its over-under self-crossing strand, but its current measured default envelope is only 0.400 mm and the general rule classifies it as layered; geometry estimates are not physical qualification.',
   'squiggle-rings': 'Declared layered as a ring net, but the ring generator settles self-crossings to a measured 0.773 mm envelope and the general rule classifies it as raised; geometry estimates are not physical qualification.',

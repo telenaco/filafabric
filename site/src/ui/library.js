@@ -193,7 +193,7 @@ export function validateCard(mod) {
   if (!Object.hasOwn(SHELVES, mod.shelf)) problems.push('Unknown shelf.');
   if (!Object.hasOwn(FAMILIES, mod.family)) problems.push('Unknown family.');
   if (typeof mod.joins !== 'string' || !/\S.*\.$/.test(mod.joins) || mod.joins.length > 120) problems.push('Joins must be a sentence of at most 120 characters ending in a full stop.');
-  if (!['self', 'auto', 'built-in'].includes(mod.support)) problems.push('Unknown support policy.');
+  if (!['self', 'auto', 'built-in', 'needs-backing'].includes(mod.support)) problems.push('Unknown support policy.');
   if (!['tested', 'untested', 'needs-repair'].includes(mod.state)) problems.push('Unknown card state.');
   if (!object(mod.sources)) problems.push('Sources must be an object.');
   if (mod.settingsKey !== undefined && typeof mod.settingsKey !== 'string') problems.push('Settings key must be a string.');
@@ -210,8 +210,8 @@ export function validateCard(mod) {
  */
 export const SIMPLEST_FIRST = Object.freeze([
   // plain, regular patterns
-  'honeycomb-flat', 'auxetic', 'rings-flat', 'coil', 'figure8-rows', 'zigzag', 'crosshatch', 'squiggle', 'square-net', 'rotated-stack',
-  'rings-raised', 'loop-pile',
+  'honeycomb-planar', 'auxetic-flat', 'rings-flat', 'coil-flat', 'figure8-rows-flat', 'honeycomb-flat', 'auxetic', 'zigzag', 'crosshatch', 'squiggle', 'square-net', 'rotated-stack',
+  'rings-raised', 'coil', 'figure8-rows', 'loop-pile',
   // regular, with a little more to set
   'rotating-squares', 'rotating-triangles', 'arrowhead-band', 'starlattice', 'harmonograph', 'spiral-cells', 'kirigami', 'honeycomb-layered',
   'figure8-net', 'moire-net', 'chainmail', 'spiral', 'sunflower', 'rosette', 'web', 'spirograph', 'flowlines',
@@ -220,6 +220,8 @@ export const SIMPLEST_FIRST = Object.freeze([
   'voronoi-cells', 'star-metric', 'isohedral-tiles', 'connected-lace', 'meander-ties', 'voronoi', 'bubbles', 'conformal', 'parquet', 'truchet',
   'meander', 'turing', 'weave', 'paired-loops', 'step-lace', 'lace-backing', 'scales', 'boucle', 'stochastic-net',
   'colour-exposure', 'dipweave', 'pillarweave', 'spacer', 'grid-sliding', 'svgdesign',
+  // layers on their own, without a backing yet
+  'starlattice-flat', 'harmonograph-flat', 'boucle-flat', 'meander-flat', 'parquet-flat', 'truchet-flat', 'turing-flat',
 ]);
 
 /** @param cards  cards of one shelf @returns {object[]} the same cards, simplest first */
