@@ -14,7 +14,7 @@
 //   about, ranges, size(state) / setSize(state, w, h), presets, presetMatch(state), controls (see coil below),
 //   describe(state), generate(machine, material, state, { outline }), verdict(result, state),
 //   figure(result) → { value, unit, label }, summary(result) → text for the preview's accessible name.
-import { patternField, withPicture } from '../engine/picture.js';
+import { patternField, withPicture, PICTURE } from '../engine/picture.js';
 import { applyBeadSizes } from './nozzle-limits.js';
 import { THICKNESS_RANGES } from '../engine/pattern-effects.js';
 import { PRIMARY_DEFAULTS, sanitizePrimary } from './controls.js';
@@ -505,6 +505,36 @@ for (const card of DESIGNS) {
 const corrugationCard = DESIGNS.find((card) => card.id === 'corrugation');
 if (corrugationCard && !corrugationCard.thumb) corrugationCard.thumb = rowsThumb('wave');
 
+/**
+ * Picture detail: with your picture as the pattern, how finely the design draws it. Detail 2 halves these lengths (line
+ * spacing, wave size, cell, ring or loop size, row pitch), so there are twice as many lines or cells across the picture;
+ * a density grows instead. Each design names the settings that set its scale.
+ */
+const WAVE_SCALE = ['spacing', 'amplitude', 'wavelength'];
+export const DETAIL_KEYS = Object.freeze({
+  squiggle: WAVE_SCALE, 'square-net': WAVE_SCALE, 'trapezoid-net': WAVE_SCALE, 'honeycomb-layered': WAVE_SCALE, 'figure8-net': WAVE_SCALE,
+  'looped-net': WAVE_SCALE, 'squiggle-flat': WAVE_SCALE, 'square-net-flat': WAVE_SCALE, 'figure8-net-flat': WAVE_SCALE, 'wave-bridged': WAVE_SCALE,
+  'colour-exposure': WAVE_SCALE, zigzag: ['spacing', 'depth', 'wavelength'], 'zigzag-flat': ['spacing', 'depth', 'wavelength'],
+  coil: ['size', 'pitch'], 'figure8-rows': ['size', 'pitch'], 'coil-flat': ['size', 'pitch'], 'figure8-rows-flat': ['size', 'pitch'],
+  boucle: ['size', 'pitch', 'rowPitch'], 'boucle-flat': ['size', 'pitch', 'rowPitch'], relief: ['rowPitch'], crosshatch: ['spacing'],
+  meander: ['cell'], 'meander-flat': ['cell'], voronoi: ['spacing'], 'voronoi-cells': ['spacing'], 'moire-net': ['pitchA'],
+  'rings-flat': ['ringSize'], 'spiral-cells': ['cell'], 'star-metric': ['cell'], 'grid-lifted': ['spacing'], 'grid-sliding': ['spacing'],
+  flowlines: ['spacing'], bubbles: ['size'], starlattice: ['size'], 'starlattice-flat': ['size'],
+});
+const DETAIL_GROWS = Object.freeze({ 'stochastic-net': ['density'] });
+export const DETAIL_RANGE = Object.freeze({ min: 0.5, max: 4, step: 0.1 });
+export const offersDetail = (mod) => !!(DETAIL_KEYS[mod?.id] || DETAIL_GROWS[mod?.id]);
+const sanitizeDetail = (v) => { const n = Number(v); return Number.isFinite(n) ? Math.round(Math.max(DETAIL_RANGE.min, Math.min(DETAIL_RANGE.max, n)) * 10) / 10 : 1; };
+/** The settings a design is built with at its picture detail: unchanged unless the pattern is your picture. */
+export function atDetail(mod, s) {
+  const detail = sanitizeDetail(s?.detail);
+  if (s?.pattern !== PICTURE || detail === 1 || !offersDetail(mod)) return s;
+  const out = { ...s };
+  for (const key of DETAIL_KEYS[mod.id] ?? []) if (Number.isFinite(out[key])) out[key] = out[key] / detail;
+  for (const key of DETAIL_GROWS[mod.id] ?? []) if (Number.isFinite(out[key])) out[key] = out[key] * detail;
+  return out;
+}
+
 // Common colour state and panel for every card; old boolean links remain accepted.
 for (const mod of DESIGNS.filter(card => card.status === 'ready')) {
   const c = withColour({ defaults: mod.defaults(), sanitize: mod.sanitize });
@@ -521,14 +551,23 @@ for (const mod of DESIGNS.filter(card => card.status === 'ready')) {
     const controls = mod.controls.filter(section => !(section.kind === 'switch' && section.key === 'colorChange') && section.kind !== 'colour');
     const supportAt = controls.findIndex(section => section.kind === 'support');
     controls.splice(supportAt < 0 ? controls.length : supportAt, 0, { kind: 'colour', title: 'Colour' });
+    // an extra backing under the design, just before its colour: not under a raised design (it has its own base) nor
+    // under the Zigzag mesh · flat, which is the backing itself
+    if (mod.shelf !== 'raised' && mod.id !== 'zigzag-flat') controls.splice(controls.findIndex(section => section.kind === 'colour'), 0, { kind: 'backing', title: 'Extra backing' });
     mod.controls = controls;
   }
   if (mod.generate) {
     const generate = mod.generate;
     mod.generate = (machine, material, s, options) => {
       const mode = colourMode(s);
-      return colourResult(generate(machine, material, { ...s, colorChange: mode === 'face' || mode === 'halftone2' }, options), s);
+      return colourResult(generate(machine, material, { ...atDetail(mod, s), colorChange: mode === 'face' || mode === 'halftone2' }, options), s);
     };
+  }
+  if (offersDetail(mod)) {
+    // the picture detail travels with the design's settings (links, saved files) like any of its sliders
+    const sanitize = mod.sanitize, defaults = mod.defaults;
+    mod.sanitize = (raw) => ({ ...sanitize(raw), detail: sanitizeDetail(raw?.detail ?? 1) });
+    mod.defaults = () => ({ ...defaults(), detail: 1 });
   }
 }
 

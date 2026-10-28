@@ -2,7 +2,7 @@
   {
     "card": "voronoi-cells",
     "preset": "default",
-    "settingsHash": "2a46a7a58a13",
+    "settingsHash": "822455c2f5b9",
     "gcodeSha256": "d99b18321e4d0376aeb7670a084df23872f16665494511bdbd55afbdfbebba73",
     "strands": 223,
     "moves": 1401,
@@ -18,7 +18,7 @@
   {
     "card": "voronoi-cells",
     "preset": "lace",
-    "settingsHash": "2a46a7a58a13",
+    "settingsHash": "822455c2f5b9",
     "gcodeSha256": "d99b18321e4d0376aeb7670a084df23872f16665494511bdbd55afbdfbebba73",
     "strands": 223,
     "moves": 1401,
@@ -34,7 +34,7 @@
   {
     "card": "voronoi-cells",
     "preset": "scatter",
-    "settingsHash": "9596d02f3818",
+    "settingsHash": "3a62383cb376",
     "gcodeSha256": "0dd1761ab4a9449b37aba053ead8d680d64eb3692c6f5a208c8ed83707a29f63",
     "strands": 208,
     "moves": 1371,
@@ -50,7 +50,7 @@
   {
     "card": "voronoi-cells",
     "preset": "graded",
-    "settingsHash": "4a8d9e2aa5e5",
+    "settingsHash": "ee8772392b1d",
     "gcodeSha256": "106fcf6f9f06e2a0c359149c5ccb34a974f3919bc82c761010bc4f454733604b",
     "strands": 223,
     "moves": 1286,

@@ -71,7 +71,7 @@ test('every newer design describes itself completely, so the studio needs no per
     assert.ok(w > 0 && h > 0);
     d.setSize(s, 60, 40);
     assert.deepEqual(d.size(s), [60, 40]);
-    for (const c of d.controls) assert.ok(['presets', 'size', 'shape', 'choice', 'petal', 'draft', 'sliders', 'pattern', 'switch', 'colour', 'support'].includes(c.kind), `${d.id} control ${c.kind}`);
+    for (const c of d.controls) assert.ok(['presets', 'size', 'shape', 'choice', 'petal', 'draft', 'sliders', 'pattern', 'switch', 'backing', 'colour', 'support'].includes(c.kind), `${d.id} control ${c.kind}`);
     for (const c of d.controls.filter((x) => x.kind === 'sliders')) {
       for (const item of c.items) assert.ok(d.ranges[item.key], `${d.id} slider ${item.key} has a range`);
     }

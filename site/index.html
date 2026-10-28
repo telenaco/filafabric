@@ -68,7 +68,8 @@
     <button type="button" id="btn-redo" class="icon-btn" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4l4 4-4 4"/><path d="M15 8H7a4 4 0 000 8h3"/></svg></button>
     <button type="button" id="btn-feedback" class="btn" aria-haspopup="dialog" aria-label="Feedback" title="Tell us what works and what doesn't, ask for a pattern, or report a problem"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7.5H7l-3 2.5V11H2.5z"/><path d="M5.5 6.5h5M5.5 8.5h3"/></svg><span class="btn-label">Feedback</span></button>
     <button type="button" id="btn-share" class="btn" title="Copy a link that opens this design with these settings"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 9.5a3 3 0 004.2 0l2.3-2.3a3 3 0 00-4.2-4.2l-.9.9"/><path d="M9.5 6.5a3 3 0 00-4.2 0L3 8.8a3 3 0 004.2 4.2l.9-.9"/></svg><span class="btn-label">Share</span></button>
-    <button type="button" id="btn-export" class="btn primary" disabled>Export G-code</button>
+    <!-- hidden: Export G-code is the button under the settings; this one still carries whether an export is ready -->
+    <button type="button" id="btn-export" class="btn primary" disabled hidden>Export G-code</button>
     <button type="button" id="btn-more" class="icon-btn" popovertarget="more-menu" aria-label="More options"><svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><circle cx="4" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="14" cy="9" r="1.6"/></svg></button>
   </div>
 </header>

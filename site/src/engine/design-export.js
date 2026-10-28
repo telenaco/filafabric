@@ -20,6 +20,26 @@ import { fingerprint } from '../ui/swatch.js';
 import { clipStrands } from './fabric.js';
 import { PolygonBoundary } from './boundary.js';
 import { finishFabric } from './fabric-result.js';
+import { addBackingMesh } from './backing.js';
+
+/**
+ * Extra backing: one layer of the Zigzag mesh · flat (its own card, at the spacing, depth and wavelength chosen; 4 mm,
+ * 4 mm and 12 mm by default) across the piece, printed last, one layer above the design: the back of the fabric.
+ */
+function withExtraBacking(result, input) {
+  const backing = input.backing;
+  if (!backing) return result;
+  // the global backing of older links (dropped 28 October 2026) is not this one: it is left out, and said so
+  if (backing.extra !== true) return { ...result, warnings: [...(result.warnings ?? []), designById(input.design).support === 'self'
+    ? 'This design no longer takes an extra backing; your link is shown without it.'
+    : 'This design uses its own Support carrier; an additional global backing is left out.'] };
+  if (input.design === 'zigzag-flat') return { ...result, warnings: [...(result.warnings ?? []), 'This is the backing mesh itself: no extra backing is added under it.'] };
+  const mod = designById('zigzag-flat');
+  const settings = mod.sanitize({ ...mod.defaults(), spacing: backing.spacing, depth: backing.depth, wavelength: backing.wavelength });
+  const mesh = generateDesignBase({ ...input, design: 'zigzag-flat', settings, vector: null, image: null, regions: null, backing: null,
+    outline: result.pieceOutline ?? result.outline ?? input.outline ?? null });
+  return addBackingMesh(result, backing, { mesh: mesh.strands, layers: 1, name: 'Extra backing', last: true });
+}
 
 /**
  * Patterns run past the edge and are cut by it, instead of stopping at the last repeat that fits inside the piece. These
@@ -155,9 +175,7 @@ export function generateDesignExport(input, { progress = () => {} } = {}) {
     });
   }
   result = withSolids(result, input);
-  if (input.backing) result.warnings = [...result.warnings, designById(input.design).support === 'self'
-    ? 'This design no longer takes an extra backing; your link is shown without it.'
-    : 'This design uses its own Support carrier; an additional global backing is left out.'];
+  result = withExtraBacking(result, input);
   // a solid already prints its own edge pass: an all-solid piece takes no brim over it
   result = applyBrim(result, { shift: input.meshShift ?? 0, count: solidOnly(input.vector) ? 0 : input.meshPerimeters ?? input.perimeters ?? input.brim ?? 2, label: input.perimeters !== undefined ? 'Perimeters' : 'Brim', requestedCount: input.perimeters });
   if (input.regionBuild && input.outline) result.strands = clipStrands(result.strands, new PolygonBoundary(input.outline), 0);

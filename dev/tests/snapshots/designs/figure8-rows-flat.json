@@ -2,7 +2,7 @@
   {
     "card": "figure8-rows-flat",
     "preset": "default",
-    "settingsHash": "5aede844efe2",
+    "settingsHash": "fc788b37ffe3",
     "gcodeSha256": "1226e23ed63ae7730972f9de1a12e2edb09044b6317615f86d657bd91c93e73e",
     "strands": 29,
     "moves": 2701,
@@ -17,7 +17,7 @@
   {
     "card": "figure8-rows-flat",
     "preset": "open-chain",
-    "settingsHash": "fe6befa1e331",
+    "settingsHash": "d36975132bc1",
     "gcodeSha256": "652faf62fe8aaf4e86b6a303e1707650123bab9fe1019d6afeb2fc62005db384",
     "strands": 33,
     "moves": 1592,
@@ -33,7 +33,7 @@
   {
     "card": "figure8-rows-flat",
     "preset": "overlapping",
-    "settingsHash": "e73b5611d1c2",
+    "settingsHash": "49a4ba303da1",
     "gcodeSha256": "1226e23ed63ae7730972f9de1a12e2edb09044b6317615f86d657bd91c93e73e",
     "strands": 29,
     "moves": 2701,
@@ -48,7 +48,7 @@
   {
     "card": "figure8-rows-flat",
     "preset": "dense",
-    "settingsHash": "a339087632b3",
+    "settingsHash": "b262baf6767e",
     "gcodeSha256": "527436c99f0bcd1a54316df590fe61e11574f6927e8e84acbb2372ec6f39942a",
     "strands": 53,
     "moves": 4726,

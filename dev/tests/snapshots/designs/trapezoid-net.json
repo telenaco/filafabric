@@ -2,7 +2,7 @@
   {
     "card": "trapezoid-net",
     "preset": "default",
-    "settingsHash": "77136c061515",
+    "settingsHash": "54194b11acf2",
     "gcodeSha256": "dd8c4b8657bc9c80b4b08c9657106dc3687e8952f5b2ba8715b1b497167dd88d",
     "strands": 28,
     "moves": 2315,

@@ -2,7 +2,7 @@
   {
     "card": "grid-sliding",
     "preset": "default",
-    "settingsHash": "b1be1a1890dc",
+    "settingsHash": "453127604bdf",
     "gcodeSha256": "e2b0c0b0b60f8f683a1a9db16f5c1b2593860b9c5e4cc603e54cd8c11f4c82c4",
     "strands": 272,
     "moves": 1499,
@@ -19,7 +19,7 @@
   {
     "card": "grid-sliding",
     "preset": "square",
-    "settingsHash": "b1be1a1890dc",
+    "settingsHash": "453127604bdf",
     "gcodeSha256": "e2b0c0b0b60f8f683a1a9db16f5c1b2593860b9c5e4cc603e54cd8c11f4c82c4",
     "strands": 272,
     "moves": 1499,
@@ -36,7 +36,7 @@
   {
     "card": "grid-sliding",
     "preset": "diagonal",
-    "settingsHash": "5d3af8ce4883",
+    "settingsHash": "75792dd2021d",
     "gcodeSha256": "5fbe560239e0757792ece1413cc87db9485f8788b3069a966923baf3cad766bb",
     "strands": 280,
     "moves": 1567,

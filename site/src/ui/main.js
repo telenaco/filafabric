@@ -21,7 +21,6 @@ import { FILAMENT_FIELDS, filamentValue, withFilamentSettings, setFilamentSettin
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
 import { $, $$, el, icon, ICONS, helpBubble } from './dom.js';
 import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, SectionFold, ColourSection, SupportSection } from './panels.js';
-import { BACKING_MESH_LAYERS } from '../engine/backing.js';
 import { layerHeightOptions, defaultLayerHeight, resolveConfig, beadWidth } from '../engine/params.js';
 import { nozzleRange } from './nozzle-limits.js';
 import { TooltipLayer } from './tooltip.js';
@@ -366,7 +365,9 @@ let studyRecorder = null;
 
 const RAISED_DESIGNS = new Set(['loop-pile', 'relief', 'fringe', 'spacer', 'pillarweave']);
 const PRINT_SOLIDS = { key: 'solidLayers', label: 'Solid layers', info: true, help: 'Layers of fill in solid SVG shapes. 1 prints a single layer; more adds thickness and reinforcement. This does not change the mesh layers.', lo: 'Single', hi: 'Reinforced', unit: '', edit: true };
-const PRINT_RANGES = { solidLayers: { min: 1, max: 8, step: 1 }, extraLayers: { min: 0, max: 10, step: 1 }, brim: { min: 0, max: 8, step: 1 }, meshPerimeters: { min: 0, max: 8, step: 1 } };
+const PRINT_RANGES = { solidLayers: { min: 1, max: 8, step: 1 }, extraLayers: { min: 0, max: 10, step: 1 }, brim: { min: 0, max: 8, step: 1 }, meshPerimeters: { min: 0, max: 8, step: 1 }, meshSpacing: { min: 1, max: 12, step: 0.1 }, meshDepth: { min: 0.5, max: 10, step: 0.1 }, meshWave: { min: 3, max: 40, step: 0.5 } };
+/** The extra backing's three settings to start with: the Zigzag mesh · flat at the settings Luis chose. */
+const BACKING_DEFAULTS = { meshSpacing: 4, meshDepth: 4, meshWave: 12 };
 
 /**
  * The outline: one setting, a number of lines overlapping by 20%, for every edge of the piece. It is the walls of solid
@@ -418,7 +419,7 @@ function normalisePrint() {
 }
 
 /** The backing mesh under the current design: its settings, or null when it is off or the design stands on its own base. */
-const backingFor = (design = state.design) => (['self', 'auto', 'built-in', 'needs-backing'].includes(designById(design)?.support) ? null : state.print.backing ?? null);
+const backingFor = () => state.print.backingOn ? { extra: true, spacing: state.print.meshSpacing ?? BACKING_DEFAULTS.meshSpacing, depth: state.print.meshDepth ?? BACKING_DEFAULTS.meshDepth, wavelength: state.print.meshWave ?? BACKING_DEFAULTS.meshWave } : null;
 
 function layerSetupText() {
   const solid = state.vector && interpretDrawing(state.vector).solids.length ? ` · solids: ${state.print.solidLayers} × ${state.print.layerHeight} mm` : '';
@@ -430,7 +431,7 @@ function patternLayerSetupText() {
   const plan = state.result?.designId === state.design ? state.result.layerPlan : null;
   if (plan?.mode === 'backing' && plan.repeatable) return `${plan.backingLayers} backing + ${state.print.extraLayers} extra = ${plan.backingLayers + state.print.extraLayers} · texture once`;
   if (plan && !plan.repeatable) return plan.nativeLayers === null ? 'Original raised structure' : `${plan.nativeLayers} original · SVG only`;
-  const mesh = backingFor() ? BACKING_MESH_LAYERS : 0;
+  const mesh = backingFor() ? 1 : 0; // the extra backing is one layer
   if (plan) return `${mesh ? `${mesh} mesh + ` : ''}${plan.patternLayers ?? plan.nativeLayers} pattern passes + ${state.print.extraLayers} extra${plan.fixedLayers ? ' · drawing lines once' : ''}`;
   return RAISED_DESIGNS.has(state.design) ? `${state.print.extraLayers} extra backing layers · texture once` : `${mesh ? `${mesh} mesh + ` : ''}${state.print.extraLayers} extra layers`;
 }
@@ -438,6 +439,7 @@ function patternLayerSetupText() {
 const PRINT_BINDING = {
   get: (key) => {
     if (key === 'edgeAlign') return edgeAlign();
+    if (key in BACKING_DEFAULTS) return state.print[key] ?? BACKING_DEFAULTS[key];
     return state.print[key];
   },
   set: (key, value) => {
@@ -461,6 +463,9 @@ const PRINT_BINDING = {
   readout: (key) => {
     if (key === 'solidLayers') return `${state.print.solidLayers} ${state.print.solidLayers === 1 ? 'layer' : 'layers'} · ${Number((state.print.solidLayers * state.print.layerHeight).toFixed(3))} mm`;
     if (key === 'extraLayers') return `${state.print.extraLayers} extra`;
+    if (key === 'meshSpacing') return `${PRINT_BINDING.get(key)} mm apart`;
+    if (key === 'meshDepth') return `${PRINT_BINDING.get(key)} mm each way`;
+    if (key === 'meshWave') return `${PRINT_BINDING.get(key)} mm per wave`;
     if (key === 'brim') return edgeCount() ? `${edgeCount()} ${edgeCount() === 1 ? 'line' : 'lines'} · ${edgeWidth()} mm` : 'Off';
     if (['brim', 'meshPerimeters'].includes(key)) return state.print[key] ? `${state.print[key]} ${state.print[key] === 1 ? 'line' : 'lines'}` : 'Off';
     if (key === 'layerHeight') return `${Math.round(state.print.layerHeight * 1000) / 1000} mm${state.print.layerHeight === defaultLayerHeight(state.machines.get(state.machine)) ? ' (default)' : ''}`;
@@ -2025,7 +2030,8 @@ function loadPicture(file, designId = 'squiggle') {
     URL.revokeObjectURL(url);
     const natW = img.naturalWidth || img.width;
     const natH = img.naturalHeight || img.height;
-    const scale = Math.min(1, 400 / Math.max(natW, natH));
+    // kept at up to 1000 pixels across: enough for picture detail on a large garment (a metre is 1 mm a pixel)
+    const scale = Math.min(1, 1000 / Math.max(natW, natH));
     const canvas = document.createElement('canvas');
     canvas.width = Math.max(1, Math.round(natW * scale));
     canvas.height = Math.max(1, Math.round(natH * scale));

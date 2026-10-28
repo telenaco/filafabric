@@ -27,6 +27,7 @@ import { el, svgEl, helpBubble } from './dom.js';
 import { validNumber } from './numeric.js';
 import { FIELDS, createField } from '../engine/fields.js';
 import { PICTURE } from '../engine/picture.js';
+import { offersDetail, DETAIL_RANGE } from './designs.js';
 import { PATTERN_EFFECTS } from '../engine/pattern-effects.js';
 import { SHAPES } from '../engine/shapes.js';
 import { shapeThumb } from './thumbs.js';
@@ -484,7 +485,24 @@ export class PatternPicker extends Control {
     this.scale = scale ? new SliderControl(host, designId, scale) : null;
     if (this.scale) this.scaleBox.append(this.scale.node);
     this.pictureBox = offersPicture ? this.buildPictureBox(pictureHint) : null;
-    this.node = el('div', { class: 'pattern-picker' }, this.grid, this.scaleBox, this.pictureBox, this.fileInput);
+    // a picture to try, for whoever has none to hand
+    this.sampleRow = offersPicture ? el('p', { class: 'small muted picture-sample' }) : null;
+    if (this.sampleRow) {
+      const trySample = el('button', { type: 'button', class: 'link small', text: 'use the sample picture' });
+      trySample.addEventListener('click', async () => {
+        try {
+          const res = await fetch(encodeURI(SAMPLE_PICTURE));
+          if (!res.ok) throw new Error(`${res.status}`);
+          const blob = await res.blob();
+          // a server may not name the type of a .jpg: it is one
+          host.loadPicture(new File([blob], SAMPLE_PICTURE.split('/').pop(), { type: blob.type.startsWith('image/') ? blob.type : 'image/jpeg' }), designId);
+        } catch {
+          host.toast?.('The sample picture could not be loaded.');
+        }
+      });
+      this.sampleRow.append('No picture to hand? ', trySample);
+    }
+    this.node = el('div', { class: 'pattern-picker' }, this.grid, this.scaleBox, this.sampleRow, this.pictureBox, this.fileInput);
   }
 
   /** The picture in use: how this design reads it, its name and size, and what can be done with it. */
@@ -869,11 +887,18 @@ export class PatternSection extends Section {
       lo: key === 'thin' ? 'Lighter' : 'Thinner', hi: key === 'thin' ? 'Heavier' : 'Thicker', unit: '×', edit: true,
     })) : [];
     this.thicknessNode = el('div', { class: 'controls pattern-thickness' }, ...this.thickness.map((control) => control.node));
-    return [this.hint(), this.picker.node, this.effectPicker, this.thicknessNode];
+    // with your picture: how finely the design draws it (designs.js DETAIL_KEYS says what each design changes)
+    this.detail = offersDetail(this.mod) ? new SliderControl({ ...this.host, binding: () => ({
+      get: () => this.settings.detail ?? 1,
+      set: (key, value) => { this.settings.detail = Math.round(Math.max(DETAIL_RANGE.min, Math.min(DETAIL_RANGE.max, value)) * 10) / 10; },
+      range: () => DETAIL_RANGE, available: () => true, readout: () => `${this.settings.detail ?? 1}×`,
+    }) }, `${this.mod.id}-detail`, { key: 'detail', label: 'Picture detail', info: true, help: 'How finely the design draws your picture. More detail brings the lines, cells or loops closer together, so the picture has more of them: slower to print, sharper to see.', lo: 'Coarse', hi: 'Fine', unit: '×', edit: true }) : null;
+    return [this.hint(), this.picker.node, this.detail?.node, this.effectPicker, this.thicknessNode];
   }
 
   refresh() {
     this.picker.update();
+    if (this.detail) { this.detail.node.hidden = this.settings[this.spec.key] !== PICTURE; if (!this.detail.node.hidden) this.detail.update(); }
     const effect = this.settings.patternEffect ?? this.effects[0];
     for (const button of this.effectButtons) button.setAttribute('aria-pressed', String(button.dataset.patternEffect === effect));
     this.thicknessNode.hidden = effect !== 'thickness';
@@ -928,6 +953,34 @@ export class ColourSection extends Section {
       input.addEventListener('change', () => { this.settings.layerColours[i] = input.value; this.host.change(); });
       this.colours.append(el('label', { class: 'layer-colour' }, el('span', { text: `Layer ${i + 1}` }), input));
     }
+  }
+}
+
+/**
+ * Extra backing, shared by every design like the outline: one layer of the Zigzag mesh · flat under the whole piece,
+ * with its line spacing, wave depth and wave length (4 mm, 4 mm and 12 mm to start with).
+ */
+export class BackingSection extends Section {
+  buildBody() {
+    const binding = () => this.host.binding('print');
+    this.input = el('input', { type: 'checkbox', role: 'switch', 'data-switch': `${this.mod.id}:backingOn` });
+    this.input.addEventListener('change', () => { binding().set('backingOn', this.input.checked); this.host.nudge(); this.host.commit(); });
+    const slider = (key, label, help, lo, hi) => new SliderControl({ ...this.host, binding }, `${this.mod.id}-${key}`, { key, label, help, lo, hi, unit: 'mm', edit: true, info: true });
+    this.sliders = [
+      slider('meshSpacing', 'Line spacing', 'Distance between neighbouring lines in a layer.', 'Dense', 'Open'),
+      slider('meshDepth', 'Wave depth', 'How far it stretches before the strands pull straight.', 'Shallow', 'Deep'),
+      slider('meshWave', 'Wave length', 'Length of one full wave, from one peak to the next on the same side.', 'Tight', 'Long'),
+    ];
+    this.settingsRow = el('div', { class: 'backing-settings' }, ...this.sliders.map((s) => s.node));
+    return [el('label', { class: 'switch-row' }, this.input, el('span', {}, el('strong', { text: 'Print a backing first' }),
+      el('small', { text: 'One layer of the Zigzag mesh · flat under the whole piece; the design is printed on top of it.' }))), this.settingsRow];
+  }
+
+  refresh() {
+    const on = !!this.host.binding('print').get('backingOn');
+    this.input.checked = on;
+    this.settingsRow.hidden = !on;
+    for (const s of this.sliders) s.update();
   }
 }
 
@@ -986,7 +1039,7 @@ export class SupportSection extends Section {
 /** Returns panel-template contract violations for one card's controls list. */
 export function panelOrderErrors(controls = []) {
   const errors = [];
-  const groups = { presets: 0, size: 1, choice: 2, petal: 2, draft: 2, sliders: 3, switch: 3, pattern: 4, colour: 5, support: 6 };
+  const groups = { presets: 0, size: 1, choice: 2, petal: 2, draft: 2, sliders: 3, switch: 3, pattern: 4, backing: 4.5, colour: 5, support: 6 };
   let last = -1;
   const seen = new Set();
   let slidersSeen = false;
@@ -1018,6 +1071,7 @@ export const SECTION_TYPES = {
   sliders: SlidersSection,
   pattern: PatternSection,
   colour: ColourSection,
+  backing: BackingSection,
   support: SupportSection,
   draft: DraftSection,
 };
@@ -1122,6 +1176,8 @@ export class PrintSetupCard extends Control {
 
 /** The sample drawing on the site (samples/), to try or to open and copy: a red piece with a shape of every other colour in it. */
 export const SAMPLE_SVG = 'samples/filafabric-sample.svg';
+/** A picture to try as a pattern (samples/): floral motifs with clear darks and lights. */
+export const SAMPLE_PICTURE = 'samples/floral motives.jpg';
 
 
 /**

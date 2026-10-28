@@ -2,7 +2,7 @@
   {
     "card": "grid-lifted",
     "preset": "default",
-    "settingsHash": "b1be1a1890dc",
+    "settingsHash": "453127604bdf",
     "gcodeSha256": "95dbbcefff9779393e2cfac48ac8a953a68b96e55131c833c5ee57e636428c85",
     "strands": 2,
     "moves": 927,
@@ -18,7 +18,7 @@
   {
     "card": "grid-lifted",
     "preset": "square",
-    "settingsHash": "b1be1a1890dc",
+    "settingsHash": "453127604bdf",
     "gcodeSha256": "95dbbcefff9779393e2cfac48ac8a953a68b96e55131c833c5ee57e636428c85",
     "strands": 2,
     "moves": 927,
@@ -34,7 +34,7 @@
   {
     "card": "grid-lifted",
     "preset": "diagonal",
-    "settingsHash": "5d3af8ce4883",
+    "settingsHash": "75792dd2021d",
     "gcodeSha256": "feb3bb8c7f4a3c753676cb1ca10f91451debf6580908680ea7ba39988aafb8c4",
     "strands": 2,
     "moves": 1122,

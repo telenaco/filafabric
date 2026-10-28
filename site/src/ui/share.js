@@ -72,6 +72,11 @@ export function sanitizePrint(raw) {
   const edge = Number(raw.edgeWidth);
   if (raw.edgeWidth !== undefined && Number.isFinite(edge) && edge >= 0 && edge <= 10) out.edgeWidth = Math.round(edge * 100) / 100;
   if (['inside', 'centre', 'outside'].includes(raw.edgeAlign)) out.edgeAlign = raw.edgeAlign;
+  if (raw.backingOn === true) out.backingOn = true;
+  for (const [key, lo, hi] of [['meshSpacing', 1, 12], ['meshDepth', 0.5, 10], ['meshWave', 3, 40]]) {
+    const v = Number(raw[key]);
+    if (raw[key] !== undefined && Number.isFinite(v) && v >= lo && v <= hi) out[key] = v;
+  }
   return out;
 }
 

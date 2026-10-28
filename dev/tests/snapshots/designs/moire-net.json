@@ -2,7 +2,7 @@
   {
     "card": "moire-net",
     "preset": "default",
-    "settingsHash": "2c7db71f28df",
+    "settingsHash": "137d6e317d8e",
     "gcodeSha256": "99ca3e6ffdfc9029e5e28c9a182b73e749b2c70f7d14e664d8c046ede9c06b23",
     "strands": 3,
     "moves": 191,
@@ -18,7 +18,7 @@
   {
     "card": "moire-net",
     "preset": "fine-bands",
-    "settingsHash": "2c7db71f28df",
+    "settingsHash": "137d6e317d8e",
     "gcodeSha256": "99ca3e6ffdfc9029e5e28c9a182b73e749b2c70f7d14e664d8c046ede9c06b23",
     "strands": 3,
     "moves": 191,
@@ -34,7 +34,7 @@
   {
     "card": "moire-net",
     "preset": "wide-bands",
-    "settingsHash": "93d076d637da",
+    "settingsHash": "76460e706b78",
     "gcodeSha256": "1b384f23d0c8e212dcd410994c068c360d1c1e9d4e62f2322f0485073c302b22",
     "strands": 2,
     "moves": 193,
@@ -50,7 +50,7 @@
   {
     "card": "moire-net",
     "preset": "wavy",
-    "settingsHash": "7b00310923d4",
+    "settingsHash": "6180011b5500",
     "gcodeSha256": "b70e4dc5af928c17966f65d8751daf19c7f34a8ce6c1f742d89bbbc1f2ff9112",
     "strands": 12,
     "moves": 3542,

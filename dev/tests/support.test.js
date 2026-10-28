@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import { carrierLayers, backingStack, legacySupport, sanitizeSupport } from '../../site/src/engine/backing.js';
 import { boundaryFor } from '../../site/src/engine/layers.js';
 import { DESIGNS, designById } from '../../site/src/ui/designs.js';
@@ -40,8 +39,7 @@ test('self and built-in cards cannot receive a global second carrier', () => {
     assert.ok(!legacy.backingMesh,design);
     assert.ok(legacy.warnings.some(w=>/extra backing|additional global backing/.test(w)),design);
   }
-  const source = fs.readFileSync(new URL('../../site/src/engine/design-export.js',import.meta.url),'utf8');
-  assert.doesNotMatch(source,/addBackingMesh\(/);
+  // (the Extra backing section, 28 October 2026, is a separate, explicit choice: input.backing.extra; extra-backing.test.js)
 });
 
 test('each auto card exposes one Support section, not native plus global backing controls', () => {

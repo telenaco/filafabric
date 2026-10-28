@@ -2,7 +2,7 @@
   {
     "card": "meander",
     "preset": "default",
-    "settingsHash": "1da9c2e9c769",
+    "settingsHash": "2e76ec2711d5",
     "gcodeSha256": "b34a267c39845ad0b4a1a7713eb929e7368242c2f4ef79639c7f4de0cd838b52",
     "strands": 30,
     "moves": 3243,
@@ -18,7 +18,7 @@
   {
     "card": "meander",
     "preset": "hilbert",
-    "settingsHash": "1da9c2e9c769",
+    "settingsHash": "2e76ec2711d5",
     "gcodeSha256": "b34a267c39845ad0b4a1a7713eb929e7368242c2f4ef79639c7f4de0cd838b52",
     "strands": 30,
     "moves": 3243,
@@ -34,7 +34,7 @@
   {
     "card": "meander",
     "preset": "peano",
-    "settingsHash": "db46adc48223",
+    "settingsHash": "724316bbb28a",
     "gcodeSha256": "e71d16dac5d80094e446324369d761b4efe87a1f1abeeeb1aa227c0366c845f4",
     "strands": 30,
     "moves": 4090,
@@ -50,7 +50,7 @@
   {
     "card": "meander",
     "preset": "maze",
-    "settingsHash": "abf4221d5913",
+    "settingsHash": "2e6bbeaa0a40",
     "gcodeSha256": "d3a06ff8adb119dc659b7a8e39fce72bdc0f2d1896763f875a15ed2b40851af1",
     "strands": 30,
     "moves": 2787,
@@ -66,7 +66,7 @@
   {
     "card": "meander",
     "preset": "stipple",
-    "settingsHash": "d7d1ff8d2ba5",
+    "settingsHash": "c5a0ed7c76d5",
     "gcodeSha256": "91996b971bf46dbde4749c3ab6ab1221bfc53f7d33213257308c208b977623db",
     "strands": 39,
     "moves": 2457,
@@ -83,7 +83,7 @@
   {
     "card": "meander",
     "preset": "moore",
-    "settingsHash": "efc33eb5a299",
+    "settingsHash": "b5ef8c8ea08f",
     "gcodeSha256": "f0f986c66c4b238243097c839f95c46cc98428dce7b1c3f26b95e9de7d680181",
     "strands": 30,
     "moves": 3233,
@@ -99,7 +99,7 @@
   {
     "card": "meander",
     "preset": "sierpinski",
-    "settingsHash": "6415f13ecdc0",
+    "settingsHash": "6481409b0248",
     "gcodeSha256": "a06f45ad153db266dac9be15d6dc1bd55f855a0c97be3bf24f43336be900182d",
     "strands": 35,
     "moves": 6545,
@@ -116,7 +116,7 @@
   {
     "card": "meander",
     "preset": "flowsnake",
-    "settingsHash": "38c1b2e8adfe",
+    "settingsHash": "330b3bcc8908",
     "gcodeSha256": "4861fecdd203033272746f2a51512e880f86447caf31a2cec5363f70d9c9fab9",
     "strands": 65,
     "moves": 5889,
@@ -133,7 +133,7 @@
   {
     "card": "meander",
     "preset": "open",
-    "settingsHash": "eb3615d12a0f",
+    "settingsHash": "581201436170",
     "gcodeSha256": "191887177a6ecc899b33f87a236693d251653766fdf55e6d7ee4849b82a3a9aa",
     "strands": 22,
     "moves": 1847,

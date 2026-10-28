@@ -2,7 +2,7 @@
   {
     "card": "star-metric",
     "preset": "default",
-    "settingsHash": "f9b9c9494397",
+    "settingsHash": "e36183982a03",
     "gcodeSha256": "6b57f1460278ea86373b138804c9cbd37c6fdaab669478e47dde3d2ee173e3f0",
     "strands": 239,
     "moves": 4493,
@@ -18,7 +18,7 @@
   {
     "card": "star-metric",
     "preset": "tri-petal",
-    "settingsHash": "f9b9c9494397",
+    "settingsHash": "e36183982a03",
     "gcodeSha256": "6b57f1460278ea86373b138804c9cbd37c6fdaab669478e47dde3d2ee173e3f0",
     "strands": 239,
     "moves": 4493,
@@ -34,7 +34,7 @@
   {
     "card": "star-metric",
     "preset": "square-petal",
-    "settingsHash": "31d0f6f672ca",
+    "settingsHash": "f5735c4badf1",
     "gcodeSha256": "3f991391333dc17f60e21987b3bde319e78ad2e26220d771de44e0a3609b838c",
     "strands": 29,
     "moves": 1599,
@@ -50,7 +50,7 @@
   {
     "card": "star-metric",
     "preset": "hex-petal",
-    "settingsHash": "eb684595f07b",
+    "settingsHash": "7032ccf8f20f",
     "gcodeSha256": "9984d747b6be188d70d7df04c0cc097dc247ac707cf0ade42b47d164af81da71",
     "strands": 229,
     "moves": 6446,

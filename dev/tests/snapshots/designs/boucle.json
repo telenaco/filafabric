@@ -2,7 +2,7 @@
   {
     "card": "boucle",
     "preset": "default",
-    "settingsHash": "671dc9f1af1b",
+    "settingsHash": "f945268c24d4",
     "gcodeSha256": "5cea1506f661d0aadc5920bf67bace7c2e9981b3d0c716e117dd66ea085b1662",
     "strands": 47,
     "moves": 3748,
@@ -20,7 +20,7 @@
   {
     "card": "boucle",
     "preset": "picot-trim",
-    "settingsHash": "fb0c08c3e80c",
+    "settingsHash": "0126bc9e48df",
     "gcodeSha256": "2d9ac0a74b84c38c96cc5ed8660a454544e9f00e0cf6ca08379167e5398fa7d4",
     "strands": 46,
     "moves": 3318,
@@ -37,7 +37,7 @@
   {
     "card": "boucle",
     "preset": "boucle",
-    "settingsHash": "7f72b791e341",
+    "settingsHash": "1856d44a5a42",
     "gcodeSha256": "e28c5a831a89b402b8a637db9424f39d730ff7c0a3644f656226ca8e4f0c2bf2",
     "strands": 32,
     "moves": 3298,
@@ -54,7 +54,7 @@
   {
     "card": "boucle",
     "preset": "curls",
-    "settingsHash": "9d7aa387f6a9",
+    "settingsHash": "0be882143e96",
     "gcodeSha256": "2d503c5225edc515f92c9280782ba84dca3a7f017e7cd65872a8d1ef479bf5db",
     "strands": 40,
     "moves": 4370,

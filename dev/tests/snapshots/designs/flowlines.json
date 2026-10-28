@@ -2,7 +2,7 @@
   {
     "card": "flowlines",
     "preset": "default",
-    "settingsHash": "88c6c09637c3",
+    "settingsHash": "53452c3ef958",
     "gcodeSha256": "91c8394cc9dfd841da2d5ae081a023122929720f5be00633f2ef8bf97a964dd2",
     "strands": 46,
     "moves": 2374,
@@ -18,7 +18,7 @@
   {
     "card": "flowlines",
     "preset": "ripples",
-    "settingsHash": "88c6c09637c3",
+    "settingsHash": "53452c3ef958",
     "gcodeSha256": "91c8394cc9dfd841da2d5ae081a023122929720f5be00633f2ef8bf97a964dd2",
     "strands": 46,
     "moves": 2374,
@@ -34,7 +34,7 @@
   {
     "card": "flowlines",
     "preset": "whirlpool",
-    "settingsHash": "51c1feaa2326",
+    "settingsHash": "769a7bf19d5d",
     "gcodeSha256": "5235dbb48bd05b94c89e759a68ce0d106f94261c48ee2fcb8bd731155bdc5214",
     "strands": 53,
     "moves": 3009,
@@ -50,7 +50,7 @@
   {
     "card": "flowlines",
     "preset": "eddies",
-    "settingsHash": "70415e2e13a0",
+    "settingsHash": "5f22b0df6516",
     "gcodeSha256": "9796ca0e55fcbfaded98ef6af70965a75c7f09290ab21945738adb919793a1a5",
     "strands": 42,
     "moves": 5129,
@@ -66,7 +66,7 @@
   {
     "card": "flowlines",
     "preset": "marble",
-    "settingsHash": "0ddf8070ea99",
+    "settingsHash": "92268718bba1",
     "gcodeSha256": "8a787c2f58c8af2720248cbd09839800f12a0936a8c1edb52182530cf61c5e85",
     "strands": 58,
     "moves": 2561,

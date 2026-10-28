@@ -2,7 +2,7 @@
   {
     "card": "rings-flat",
     "preset": "default",
-    "settingsHash": "3d1ddee96b29",
+    "settingsHash": "c0a59e28be16",
     "gcodeSha256": "44737b4ac41f9727fba739004e0b073a96ad036f168a42a9c2efbc9914403297",
     "strands": 35,
     "moves": 2777,
@@ -17,7 +17,7 @@
   {
     "card": "rings-flat",
     "preset": "staggered",
-    "settingsHash": "3d1ddee96b29",
+    "settingsHash": "c0a59e28be16",
     "gcodeSha256": "44737b4ac41f9727fba739004e0b073a96ad036f168a42a9c2efbc9914403297",
     "strands": 35,
     "moves": 2777,
@@ -32,7 +32,7 @@
   {
     "card": "rings-flat",
     "preset": "square",
-    "settingsHash": "ae3ebf63187d",
+    "settingsHash": "79bb09553546",
     "gcodeSha256": "36908e461b6d2223a60bd050e6f8588747d05ccdfdda2b36c3de8f65572be3ae",
     "strands": 34,
     "moves": 2533,
@@ -47,7 +47,7 @@
   {
     "card": "rings-flat",
     "preset": "open",
-    "settingsHash": "8028a807b0ef",
+    "settingsHash": "728e8561f2be",
     "gcodeSha256": "87fedae2c7e902566130cd76e301da9d38f85a29aa348acadc45dfd5c20a1d12",
     "strands": 26,
     "moves": 2413,

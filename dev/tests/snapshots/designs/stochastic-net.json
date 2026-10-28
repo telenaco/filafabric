@@ -2,7 +2,7 @@
   {
     "card": "stochastic-net",
     "preset": "default",
-    "settingsHash": "86e3d6e39032",
+    "settingsHash": "10d83647b251",
     "gcodeSha256": "c797758639e6c64db27729eb0f0552a01dc884772e06385f3a56e949c65df1ba",
     "strands": 78,
     "moves": 1032,
@@ -18,7 +18,7 @@
   {
     "card": "stochastic-net",
     "preset": "balanced",
-    "settingsHash": "86e3d6e39032",
+    "settingsHash": "10d83647b251",
     "gcodeSha256": "c797758639e6c64db27729eb0f0552a01dc884772e06385f3a56e949c65df1ba",
     "strands": 78,
     "moves": 1032,
@@ -34,7 +34,7 @@
   {
     "card": "stochastic-net",
     "preset": "soft",
-    "settingsHash": "577c09ef7bb8",
+    "settingsHash": "aab47c60f25e",
     "gcodeSha256": "182b284f8132d5a3a6b17b55c68ad349fab63e529ef0ae5b40f59027de3b15d2",
     "strands": 43,
     "moves": 670,
@@ -50,7 +50,7 @@
   {
     "card": "stochastic-net",
     "preset": "stiff",
-    "settingsHash": "b3678c794cae",
+    "settingsHash": "1c34d610e107",
     "gcodeSha256": "c2e4c663c1fac26fda02b8957023b9b819bcd4a610e6bc99b9d782bf1264cc90",
     "strands": 86,
     "moves": 1263,

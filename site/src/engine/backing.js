@@ -110,7 +110,7 @@ export const BACKING_MESH_LAYERS = 2;
  * layer order holds. A raised design (loops, pillars, a spacer) stands on its own base and is returned as it is, with a
  * note. `backing` null or undefined: no backing.
  */
-export function addBackingMesh(result, backing) {
+export function addBackingMesh(result, backing, { mesh: given = null, layers = BACKING_MESH_LAYERS, name = 'Backing mesh', last = false } = {}) {
   if (!backing || !result?.cfg || !result.strands?.length) return result;
   const { spacing, depth, wavelength, pause } = { ...BACKING_MESH, ...backing };
   if (nativeLayerInfo(result).raised) {
@@ -119,21 +119,30 @@ export function addBackingMesh(result, backing) {
   const { cfg } = result, h = cfg.t.layer_height, bead = cfg.t.extrusion_width, W = cfg.t.sample_width, H = cfg.t.sample_height;
   const boundary = new PolygonBoundary(result.pieceOutline ?? result.outline ?? [[{ x: 0, y: 0 }, { x: W, y: 0 }, { x: W, y: H }, { x: 0, y: H }]]);
   const wave = { spacing, amplitude: depth, wavelength, shape: 'triangle', angle: 0 };
-  const mesh = layersToStrands([waveLines(boundary, wave), waveLines(boundary, { ...wave, phase: 0.5 })], { layerHeight: h, strandWidth: bead })
-    .map((s, i) => ({ ...s, id: `backing-${i + 1}`, family: `carrier-${s.layer + 1}`, role: 'carrier', name: 'Backing mesh', backingMesh: true, pauseBefore: false }));
+  const mesh = (given ?? layersToStrands([waveLines(boundary, wave), waveLines(boundary, { ...wave, phase: 0.5 })], { layerHeight: h, strandWidth: bead }))
+    .map((s, i) => ({ ...s, id: `backing-${i + 1}`, family: `carrier-${(s.layer ?? 0) + 1}`, role: 'carrier', name, backingMesh: true, pauseBefore: false }));
   if (!mesh.length) throw new ConfigError(['The backing mesh does not fit this outline. Use a smaller line spacing or wave depth.']);
-  // the design keeps its own heights, classes and order, two layers up: what lay on the bed now lies on the mesh
-  const rise = BACKING_MESH_LAYERS * h;
-  const body = result.strands.map((s, i) => ({ ...s, kind: 'supported', ...(pause && i === 0 ? { pauseBefore: true } : {}),
-    pts: s.pts.map((p) => ({ ...p, z: p.z + rise, ...(p.cls === 'base' ? { cls: 'supported' } : {}) })) }));
-  const strands = [...mesh, ...body];
+  let strands;
+  if (last) {
+    // printed last: the design as it was, then the mesh one layer above its top, laid over it
+    const top = Math.max(...result.strands.flatMap((s) => s.pts.map((p) => p.z)));
+    const over = mesh.map((s, i) => ({ ...s, kind: 'supported', ...(pause && i === 0 ? { pauseBefore: true } : {}),
+      pts: s.pts.map((p) => ({ ...p, z: top + p.z, ...(p.cls === 'base' ? { cls: 'supported' } : {}) })) }));
+    strands = [...result.strands, ...over];
+  } else {
+    // the design keeps its own heights, classes and order, two layers up: what lay on the bed now lies on the mesh
+    const rise = layers * h;
+    const body = result.strands.map((s, i) => ({ ...s, kind: 'supported', ...(pause && i === 0 ? { pauseBefore: true } : {}),
+      pts: s.pts.map((p) => ({ ...p, z: p.z + rise, ...(p.cls === 'base' ? { cls: 'supported' } : {}) })) }));
+    strands = [...mesh, ...body];
+  }
   if (strands.reduce((n, s) => n + s.pts.length + 4, 0) > MAX_MOVES) throw new ConfigError(['The backing mesh would take the print past the move limit. Use a wider line spacing or a smaller swatch.']);
   const moves = emitStrands(strands, { retraction: cfg.derived.retraction });
   const stats = { ...result.stats, ...computeStats(moves, cfg, result.placements ?? []), loops: result.stats.loops, crossings: result.stats.crossings };
   const fabric = analyzeFabric(strands, { strandWidth: bead, layerHeight: h, boundary });
   const warnings = [...(result.warnings ?? []).filter((w) => !(result.fabric?.issues ?? []).includes(w)), ...fabric.issues];
-  const backingMesh = { layers: BACKING_MESH_LAYERS, spacing, depth, wavelength, pause: !!pause };
-  const note = `Backing mesh: ${BACKING_MESH_LAYERS} zigzag layers, ${spacing} mm apart, ${depth} mm deep, ${wavelength} mm waves, under the design${pause ? '; a filament change after it' : ''}`;
+  const backingMesh = { layers, spacing, depth, wavelength, pause: !!pause };
+  const note = `${name}: ${layers} zigzag ${layers === 1 ? 'layer' : 'layers'}, ${spacing} mm apart, ${depth} mm deep, ${wavelength} mm waves, ${last ? 'over the design, printed last' : 'under the design'}${pause ? '; a filament change after it' : ''}`;
   return {
     ...result, strands, moves, stats, fabric, warnings, backingMesh,
     ...(result.report ? { report: { ...result.report, components: fabric.components } } : {}),

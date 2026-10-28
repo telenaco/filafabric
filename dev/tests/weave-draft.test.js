@@ -28,5 +28,5 @@ test('all named draft presets are bound and sanitization enforces grid limits an
   assert.ok(clean.threading.every(shaft=>shaft<8));assert.ok(clean.treadling.every(treadle=>treadle<8));
   assert.equal(weave.controls.find(control=>control.kind==='choice').options.at(-1).id,'draft');
   assert.equal(weave.controls.find(control=>control.kind==='draft').when({binding:'draft'}),true);
-  assert.deepEqual(weave.controls.map(control=>control.kind),['size','choice','draft','sliders','colour']);
+  assert.deepEqual(weave.controls.map(control=>control.kind),['size','choice','draft','sliders','backing','colour']);
 });

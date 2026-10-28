@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "site/vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "0a01f9b41c43d5ad4acd265ea51651819b86b3f7d6fdc50992dab93908926868",
+  "archiveSha256": "1b762af65468bf5b974f2412cb776ef68a453f35df5f12a53ddc42225c5e8215",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -221,8 +221,8 @@
     },
     {
       "path": "dev/tests/designs.test.js",
-      "bytes": 5400,
-      "sha256": "32ae8b6d808e50f451ea300dbac91eedae1b253e6390144fd92bf76ebe71dfa4"
+      "bytes": 5411,
+      "sha256": "4a6838756eabd17b5fbb147800b6cbbba58bdd272483dd99db90498147e3612c"
     },
     {
       "path": "dev/tests/diagnostics.test.js",
@@ -263,6 +263,11 @@
       "path": "dev/tests/export-dialog.test.js",
       "bytes": 13427,
       "sha256": "8266d9faa73fdf30703d7747551dc4b44b5d9d844ffbcf3921d9695cad0a49d9"
+    },
+    {
+      "path": "dev/tests/extra-backing.test.js",
+      "bytes": 2656,
+      "sha256": "fba7653d6922c4f5c59fee803927f65fcfdf5c97d7542f1fe9ac0eb8bbab57f7"
     },
     {
       "path": "dev/tests/extrusion.test.js",
@@ -761,8 +766,8 @@
     },
     {
       "path": "dev/tests/share.test.js",
-      "bytes": 13189,
-      "sha256": "23861ca0d01239b8b4b62718091b77086bed53a06e15dbb0d98596fb220e19de"
+      "bytes": 13200,
+      "sha256": "3ec35446c69e56e9e373dc567fcfbfc94491e73bd020ab67a4c4d7e791746178"
     },
     {
       "path": "dev/tests/side-profile.test.js",
@@ -802,17 +807,17 @@
     {
       "path": "dev/tests/snapshots/designs/boucle-flat.json",
       "bytes": 1342,
-      "sha256": "9a82f590e86ad1f4108c3faae02b871997dd4788c8c8f4078a76db60bb60d5f9"
+      "sha256": "54fa9d50a66dd6c7f8a4be1e37af44d93d249e6f8dcb4f248642c49afb53fa11"
     },
     {
       "path": "dev/tests/snapshots/designs/boucle.json",
       "bytes": 1531,
-      "sha256": "b93607d4d372b99e502afe9c9f065dd5bacd259973948e5b6b3d89d5ce53b078"
+      "sha256": "dd553267d31380192f65e2940137af1588490b2f628194b414cb8c1f71812464"
     },
     {
       "path": "dev/tests/snapshots/designs/bubbles.json",
       "bytes": 1757,
-      "sha256": "1611e665e6cda56c30775b0ace554b0f78869532eb79d7e2103e33eb4e73f82e"
+      "sha256": "629c999d9bf1bf4841c8c92c0cb782a6c602c7e3abbc4e529c6d8967b1996d34"
     },
     {
       "path": "dev/tests/snapshots/designs/chainmail.json",
@@ -822,7 +827,7 @@
     {
       "path": "dev/tests/snapshots/designs/coil-flat.json",
       "bytes": 1377,
-      "sha256": "19ba525cfadec06e4cee745872d456d6887f35e0b045724b1c7d1c6cb554ef89"
+      "sha256": "4c90e941809d56387e72d4287174865b2d41e2df207b2bb143094d4e83965eca"
     },
     {
       "path": "dev/tests/snapshots/designs/coil-shapes.json",
@@ -832,12 +837,12 @@
     {
       "path": "dev/tests/snapshots/designs/coil.json",
       "bytes": 1354,
-      "sha256": "ea9fc40772d46acd6733f4acb788a63741648e8ef90c41ce331c8c5ca8fe92eb"
+      "sha256": "b1ab1d114060bd41320cd2086355d5d35952da14231a00c03d24b319cf761d50"
     },
     {
       "path": "dev/tests/snapshots/designs/colour-exposure.json",
       "bytes": 365,
-      "sha256": "962152ba6cd2d57cd6efb3dac36d1c72540e6cf25e8f0ea554a3c49583d8d081"
+      "sha256": "bcc554f54fb1ad341faac8759047037779436e026d300a7ca99970046fc70bf7"
     },
     {
       "path": "dev/tests/snapshots/designs/conformal.json",
@@ -862,7 +867,7 @@
     {
       "path": "dev/tests/snapshots/designs/crosshatch.json",
       "bytes": 1758,
-      "sha256": "f6b4d98ff664bcdea9b1ccf747fdf093bb146fa1bfcfb4ea9c79165252cf1199"
+      "sha256": "7a526e8501977d37b5ed3a96c5a59bdd6d633fcd5228105aa541f9360fd02336"
     },
     {
       "path": "dev/tests/snapshots/designs/dipweave.json",
@@ -907,27 +912,27 @@
     {
       "path": "dev/tests/snapshots/designs/figure8-net-flat.json",
       "bytes": 349,
-      "sha256": "8952aa5f80c528e2b4b2fd70365f4a08ecce6b9499a7d60a3c22aff58624a1be"
+      "sha256": "ceac699c0750cb84351a008735f874cec23ab60485bfef1d2d0752609bb77901"
     },
     {
       "path": "dev/tests/snapshots/designs/figure8-net.json",
       "bytes": 346,
-      "sha256": "97f372d3ce9c89780dd218ba34191ebadc8cbf587a4b1d87ad110214e85601c1"
+      "sha256": "31eb8797d46815881a9ff5fa795a35725f29e841385725784c9829ce4108ca96"
     },
     {
       "path": "dev/tests/snapshots/designs/figure8-rows-flat.json",
       "bytes": 1383,
-      "sha256": "766d205723b6e0ea88bab7fe44b81f7f4bba0ce475948a1c69591686cefdc2ea"
+      "sha256": "6bc492879d96261313e90ed3b630a8cd83d1c108982f7193f021fa592c6a1f83"
     },
     {
       "path": "dev/tests/snapshots/designs/figure8-rows.json",
       "bytes": 1377,
-      "sha256": "740c9112a0ec0d5c0e98a31c7bf0a44b0eb7aace6a714e37a9228624ed4cf433"
+      "sha256": "eff81987d96e4ccb8f99cc5045148ab73f7badafcb47afe33e4c4c356341fb91"
     },
     {
       "path": "dev/tests/snapshots/designs/flowlines.json",
       "bytes": 1738,
-      "sha256": "7a53b047d861332d655c9a563f873e06ba917eef485963a633ee0a3f4d6f944c"
+      "sha256": "387235333ce60ef213236334d7e914a48c1c99ef5c9675a67c9d515c4a0ae808"
     },
     {
       "path": "dev/tests/snapshots/designs/fringe.json",
@@ -937,12 +942,12 @@
     {
       "path": "dev/tests/snapshots/designs/grid-lifted.json",
       "bytes": 1069,
-      "sha256": "949b1ac9dac05847e5790e313ec29df2f66266ab7442feb831f5d9ff69a3c5ee"
+      "sha256": "012074fea7df96d5cd9265b40fd10b2a2f5783b1f036a90a6b3336c7a4a3a8d7"
     },
     {
       "path": "dev/tests/snapshots/designs/grid-sliding.json",
       "bytes": 1089,
-      "sha256": "f0a0c26d63ec5773ed9c1f80cfffd8fb5063ca787e9750a2ef5168f879d16299"
+      "sha256": "9447ab843be9d067210b9be8687a66fd0386a97eaba1171e3cb64afce237d7d3"
     },
     {
       "path": "dev/tests/snapshots/designs/halftone.json",
@@ -967,7 +972,7 @@
     {
       "path": "dev/tests/snapshots/designs/honeycomb-layered.json",
       "bytes": 352,
-      "sha256": "9edb37a1b991dfd4891e36f7d0395020aaf517cd5a8d6c40d8777c42fedda80b"
+      "sha256": "d436ea6e931a509a9d5f453c8a690cea113af4821ee7fdf494fc0c20464e1ace"
     },
     {
       "path": "dev/tests/snapshots/designs/honeycomb-planar.json",
@@ -997,12 +1002,12 @@
     {
       "path": "dev/tests/snapshots/designs/looped-net.json",
       "bytes": 345,
-      "sha256": "80e7b12fe6998c8ade1d7388de69df2fabf58f8263ab3608e06574d5fc18cba8"
+      "sha256": "df61d79f2db0131a2490a7a92159e7e964191997018e99e1c6fd7174e30c4931"
     },
     {
       "path": "dev/tests/snapshots/designs/meander-flat.json",
       "bytes": 3034,
-      "sha256": "693b1edfca8354dd8be482e6f75af03cfcee7584376b1def50cec06a6e613346"
+      "sha256": "37fc715c1d2fa2fbbfc514e1b50d97e0dd83b9a804ccab9d6f810581097fa664"
     },
     {
       "path": "dev/tests/snapshots/designs/meander-legacy.json",
@@ -1017,12 +1022,12 @@
     {
       "path": "dev/tests/snapshots/designs/meander.json",
       "bytes": 3178,
-      "sha256": "2b0a925b69a3dab797f3bd26188b286bb405410807d8d071b1933e80491f2c4d"
+      "sha256": "cf003b61c10c30428965c0bd97a49c1ff136f809136908c7183f05b9dea304b9"
     },
     {
       "path": "dev/tests/snapshots/designs/moire-net.json",
       "bytes": 1384,
-      "sha256": "dac0cae08ad3b2783f64beacd29d5e2bd9ef6caa8a85f0d1c35cb941b116af31"
+      "sha256": "94676f049e5a3473deae975bd24ee64931a3480cd1f7dcfdd66f4da2974e2c5d"
     },
     {
       "path": "dev/tests/snapshots/designs/paired-loops.json",
@@ -1047,12 +1052,12 @@
     {
       "path": "dev/tests/snapshots/designs/relief.json",
       "bytes": 1459,
-      "sha256": "338ce0937e947099dd50ad2c27de316ac6fbbdb4dcc743dc85a518e554858fdf"
+      "sha256": "032a9c58b51ee9cb2e09654bf975ca8b694ea67e45c27b565b53985c1733f2e5"
     },
     {
       "path": "dev/tests/snapshots/designs/rings-flat.json",
       "bytes": 1332,
-      "sha256": "6af07ba37c3ac48984d3155f98efdd66ee346fea5cbf1e7b3511ba77ad73a296"
+      "sha256": "824b0860f4d8b7eb0ec10a20abda099d92feb19397979b5a237416054cc1b14a"
     },
     {
       "path": "dev/tests/snapshots/designs/rings-raised.json",
@@ -1102,7 +1107,7 @@
     {
       "path": "dev/tests/snapshots/designs/spiral-cells.json",
       "bytes": 1336,
-      "sha256": "d9fb73782d9d77660633204ce5c31e23e36e15cca40e2d9d28052263ad7ab008"
+      "sha256": "60019869891401349d3dce67e58144e7e5931d2954fbd65a95f27c19ab5204bb"
     },
     {
       "path": "dev/tests/snapshots/designs/spiral.json",
@@ -1117,17 +1122,17 @@
     {
       "path": "dev/tests/snapshots/designs/square-net-flat.json",
       "bytes": 350,
-      "sha256": "d68c526d99107c637b0e8dcb082c4e2b142ce5af7271f1d1413c35be424696b5"
+      "sha256": "920abdcf12ea7cb911ff1bee89f90e0763f2c8bbae0e05357a37323d2407e9ed"
     },
     {
       "path": "dev/tests/snapshots/designs/square-net.json",
       "bytes": 343,
-      "sha256": "982b336e8d525adf29af349bdf89217659bf2ea8def035b55f6af5d46fb18746"
+      "sha256": "2794962e93d4035bde3f2d51bd736537e5e277b13e0f5cb56fb26ef74a655c92"
     },
     {
       "path": "dev/tests/snapshots/designs/squiggle-flat.json",
       "bytes": 348,
-      "sha256": "8caf10c5adf642038590dafe620e12dcea304f1fb8e965fe46cd4fdb067cd6b1"
+      "sha256": "a716dbf185bcc10e3100892754c9715190b2de22484a34eaf1a5cd2c28074ba9"
     },
     {
       "path": "dev/tests/snapshots/designs/squiggle-rings.json",
@@ -1142,22 +1147,22 @@
     {
       "path": "dev/tests/snapshots/designs/squiggle.json",
       "bytes": 343,
-      "sha256": "592f1d05b2a3d9784ca362b2278a5836cea8237931b408563eb413677a6b0a15"
+      "sha256": "3ec69a2b801a88aa26ea50be6ed04be6309f04589bf47e99fff9a25186369e1a"
     },
     {
       "path": "dev/tests/snapshots/designs/star-metric.json",
       "bytes": 1415,
-      "sha256": "0f0c3a5dbf3efd1144824eac09e2826f137517cca61b1142f8ff195927a32f90"
+      "sha256": "25e9c03a6d8f91e6f90c3dc7ea198273742cfcb7d3fcbd0810ba53fa4ba0549b"
     },
     {
       "path": "dev/tests/snapshots/designs/starlattice-flat.json",
       "bytes": 1679,
-      "sha256": "5c03998ac0b6ca142c930499be34723c504bedd849554e4347169e98d0ce0496"
+      "sha256": "3541a0df70bec4982768adc72d81b554c3967e691667f80963925848a609484a"
     },
     {
       "path": "dev/tests/snapshots/designs/starlattice.json",
       "bytes": 1764,
-      "sha256": "2b7b12bf89edfa3d5c5423d35e6effd0d19c5435a101e1ba011ccb795a7fb69c"
+      "sha256": "ae207bec8cedc808c3cbffdb893fa0bef77f334283b57356fd8d78faf17ca6fb"
     },
     {
       "path": "dev/tests/snapshots/designs/step-lace.json",
@@ -1167,7 +1172,7 @@
     {
       "path": "dev/tests/snapshots/designs/stochastic-net.json",
       "bytes": 1401,
-      "sha256": "191f4a98efc09073dbdeda930ff34451ca9e6ea9ca63aba2ba1fd2cc02360cd3"
+      "sha256": "3f36835cd89b8eb4fdbae6029c2ed25a3966f32a56c035891264347bc3ff38e9"
     },
     {
       "path": "dev/tests/snapshots/designs/strain-wave-cells.json",
@@ -1187,7 +1192,7 @@
     {
       "path": "dev/tests/snapshots/designs/trapezoid-net.json",
       "bytes": 348,
-      "sha256": "cbf8ab630385d7b5500ebfa17495f57fb202a112703fa9bce6fe13491b22d735"
+      "sha256": "39d514b82fc64c2cdb79674f097c684ee60ddd860d34b90cad61d6599b777141"
     },
     {
       "path": "dev/tests/snapshots/designs/truchet-flat.json",
@@ -1222,17 +1227,17 @@
     {
       "path": "dev/tests/snapshots/designs/voronoi-cells.json",
       "bytes": 1411,
-      "sha256": "86d190f37ff92b13b82e1888019e472b7e1dcebf61c65bacfb122e99ed9e763d"
+      "sha256": "d055c64b50bdeb7a07fb3aa9f9b6a3cffb4b18d9356295219d0bd10fc1bd1d5a"
     },
     {
       "path": "dev/tests/snapshots/designs/voronoi.json",
       "bytes": 1349,
-      "sha256": "d55a6920aab9f511ec14dc45f4bcc5596515ed4ae464132e75cab1af89821f01"
+      "sha256": "570a19d5b2b03c124a02e843f2ebb95ad2537bd4b9cb64b8cc89754f9f33f514"
     },
     {
       "path": "dev/tests/snapshots/designs/wave-bridged.json",
       "bytes": 362,
-      "sha256": "9773d9453ac8237b4995c48dc1ce561af8d8c65ab9424c9c6afd2fd2017ea6ab"
+      "sha256": "706f5a743bcbb3509d6c54ac69e5fe3c020438fbb1ced04be334c191b02b89a5"
     },
     {
       "path": "dev/tests/snapshots/designs/weave.json",
@@ -1247,12 +1252,12 @@
     {
       "path": "dev/tests/snapshots/designs/zigzag-flat.json",
       "bytes": 332,
-      "sha256": "dff73566c36f8c55691b739166647c1ecdd4cd260cc745f871c1184146b5b771"
+      "sha256": "65e27443fc86073404479ce5bca6253325b57c15d3cb7ef15a00e1b319134dd9"
     },
     {
       "path": "dev/tests/snapshots/designs/zigzag.json",
       "bytes": 340,
-      "sha256": "ff68167e20a4b30e1ee11e067e4d0e87ff08242d0a50529fb6f35c7d067feb13"
+      "sha256": "5a7ea944358d6f31bd852c5ae9a0ae304ec697802d8d0a2f0485917813d93683"
     },
     {
       "path": "dev/tests/solid-fill.test.js",
@@ -1361,8 +1366,8 @@
     },
     {
       "path": "dev/tests/support.test.js",
-      "bytes": 5418,
-      "sha256": "1ad82d0bacbeb7252ba9f82eaceadee5fe47ce311b402eaf9dfdf94647212274"
+      "bytes": 5360,
+      "sha256": "790064d7e904ed6cb224cdad6e8ff31004a81db77204fe50e6ae4c9c63e29259"
     },
     {
       "path": "dev/tests/svg-colour.test.js",
@@ -1476,8 +1481,8 @@
     },
     {
       "path": "dev/tests/weave-draft.test.js",
-      "bytes": 2288,
-      "sha256": "9265d520c16be95916f04a4b4ff0fb17ea80b095d47a4c8940c427ac47b8c5bb"
+      "bytes": 2298,
+      "sha256": "bfdb4c1c73513a70ee84ce48b32a9b09ccf98601d34abbea2452798f70dd55ee"
     },
     {
       "path": "dev/tests/web.test.js",
@@ -1556,8 +1561,8 @@
     },
     {
       "path": "dev/tools/serve.mjs",
-      "bytes": 3430,
-      "sha256": "7294856c4f990f7c2667ba298bcd1d15ace850335bcc290558074d3ddb1d6240"
+      "bytes": 3504,
+      "sha256": "845fee186d5c6a3af29d83c1ca48dc29538aa88a2d398e0e1c86bac979c78c68"
     },
     {
       "path": "dev/tools/set-password.mjs",
@@ -1811,13 +1816,13 @@
     },
     {
       "path": "site/index.html",
-      "bytes": 36549,
-      "sha256": "78a7dfccdaf321fd9727c0302a315a744f2142a010cf7ee64f81dcd83c3c7cfa"
+      "bytes": 36675,
+      "sha256": "9c9609e37101f81820be80696e985d92f03b32a1a8940840a9339673366d61da"
     },
     {
       "path": "site/precomputed/index.json",
       "bytes": 33892,
-      "sha256": "a91e19ee7094b0aa0498111d9a7e42bf782c468cacf0bf7a44a99b8e623d4db0"
+      "sha256": "e121e633bf03556d9c853f75dbe7725079b2680e783fef5bac10ddea8732c9fa"
     },
     {
       "path": "site/profiles/MATERIAL_SOURCES.md",
@@ -1920,6 +1925,11 @@
       "sha256": "3d3de90bec5c1234bd0781371111a80699657d2280f9f97b26008b2f3226c3b5"
     },
     {
+      "path": "site/samples/floral motives.jpg",
+      "bytes": 1071609,
+      "sha256": "6b53c1ef6fefad4f9ab636e06ee57d060a879bb08c8151421bbbd15283f081ad"
+    },
+    {
       "path": "site/samples/garment-crop-top-front.svg",
       "bytes": 5116,
       "sha256": "fc094062f71d18236558b584994bfc79397c0e00a7c46f2e6a251722214d5e4a"
@@ -1971,8 +1981,8 @@
     },
     {
       "path": "site/src/engine/backing.js",
-      "bytes": 9992,
-      "sha256": "5b782dceea9547baa66e907246da965dea52bd0211a9e6935ad0bd36be2e0db7"
+      "bytes": 10610,
+      "sha256": "25d41a0f7970b1a7a6170e7127fcce3bbcb714f6b7bf2670999d96df5a92546f"
     },
     {
       "path": "site/src/engine/base.js",
@@ -2056,8 +2066,8 @@
     },
     {
       "path": "site/src/engine/design-export.js",
-      "bytes": 13005,
-      "sha256": "35ce8ec8b0d926c72ac75a10542badea23bb64faff4781fe1e9ce5bdffdef4b1"
+      "bytes": 14267,
+      "sha256": "5514b9571eee4a4e2ea75321fa2a2258376ce9b93434ca2ca1e2f20e29038604"
     },
     {
       "path": "site/src/engine/dipweave.js",
@@ -2571,8 +2581,8 @@
     },
     {
       "path": "site/src/ui/designs.js",
-      "bytes": 49155,
-      "sha256": "fc60df7993ad71ef849bafd4515cc8bd773e43c1b3be57b3fa104905e3adc9c3"
+      "bytes": 52304,
+      "sha256": "5400ed2181e3bd81e9166003d3492b278b0b59c0d140a8945b40668073457ec1"
     },
     {
       "path": "site/src/ui/diagnostics.js",
@@ -2651,8 +2661,8 @@
     },
     {
       "path": "site/src/ui/main.js",
-      "bytes": 148990,
-      "sha256": "c3ecfb5bf2d29f9d966a70b3c77312b8e048a268eadccc976bc3b58080ffa661"
+      "bytes": 149777,
+      "sha256": "1005210b31651b924b5a6b071501226b0464b5f97b66b47cf27a9b92ae3aa07c"
     },
     {
       "path": "site/src/ui/more-designs.js",
@@ -2696,8 +2706,8 @@
     },
     {
       "path": "site/src/ui/panels.js",
-      "bytes": 68830,
-      "sha256": "de1a50c5b0e893fa62f9900be45655e9b899aab7bd92944bdb0d17ff6d80338b"
+      "bytes": 72733,
+      "sha256": "91aa4ee26eb815eeb2fe7d3f1468555982b71fbda5db6a49dd6d1c5c846fea2c"
     },
     {
       "path": "site/src/ui/param-schema.js",
@@ -2707,7 +2717,7 @@
     {
       "path": "site/src/ui/precomputed-version.js",
       "bytes": 198,
-      "sha256": "4c8c44f05e2be49c8410e3b86503fc37a17cf02538144d0b91184933ea380bda"
+      "sha256": "3f17c470566b189cb319495de7ccdcf6c324bd39e93c1ac24f80f6d4726ab2f9"
     },
     {
       "path": "site/src/ui/preview.js",
@@ -2771,8 +2781,8 @@
     },
     {
       "path": "site/src/ui/share.js",
-      "bytes": 9147,
-      "sha256": "caf1b3b937e1f906f73bf24c72b3ea567882c64e2565657e444844ec3ca233c9"
+      "bytes": 9428,
+      "sha256": "e36572c4b9469816e69b67f11ac4d9a28286c541c2a3dcbeec4fb180aef2dc95"
     },
     {
       "path": "site/src/ui/sideview.js",
