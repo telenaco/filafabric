@@ -1,6 +1,8 @@
 import { overviewShape, OVERVIEW_FACTORS } from '../engine/overview.js';
 
 const MAX_ZOOM = 40;
+const GHOST = 0.2; // the finished drawing steps back to this opacity while the print order is partly shown
+const KIND_COLOUR = [null, '--role-base', '--role-anchored', '--role-lifting', '--role-free', '--role-channel']; // by trace kind
 const TIME_LIMIT = 20000; // ms per attempt; a slower drawing tries the next, larger pattern size
 const NICE = [1, 2, 5, 10, 20, 50, 100, 200, 500];
 
@@ -8,6 +10,7 @@ const NICE = [1, 2, 5, 10, 20, 50, 100, 200, 500];
  * The whole piece from above on a canvas: the outline, holes, drawing strokes and the texture at the size it prints, with
  * strands at their real width and a scale bar. Not a toolpath or a printability check (3D shows those).
  * The view keeps its zoom while settings change; it fits the piece again only when the piece's size changes.
+ * Once the G-code is built, setTrace gives it the print order and setProgress draws the toolpath growing over the picture.
  */
 export function createOverview(container, onStatus) {
   const canvas = document.createElement('canvas');
@@ -18,7 +21,12 @@ export function createOverview(container, onStatus) {
   const ctx = canvas.getContext('2d');
   let result = null, paths = [], worker = null, timer = null, zoom = 1, dx = 0, dy = 0, size = null;
   let frame = null, frameView = null, settle = 0; // the last full drawing, reused while panning and zooming
+  let trace = null, progress = Infinity; // the print order (src/engine/trace.js), and how many of its moves have printed
+  let trail = null, trailView = null, trailTrace = null, trailAt = 1; // the toolpath so far on its own canvas, grown as the print advances
   const css = () => getComputedStyle(container);
+  const color = (name) => css().getPropertyValue(name).trim();
+  const tracing = () => !!trace && progress < trace.count; // part of the print is shown: the finished drawing is only a ghost
+  const sameView = (a, b) => !!a && !!b && a.w === b.w && a.h === b.h && a.scale === b.scale && a.x0 === b.x0 && a.y0 === b.y0;
   const stop = () => { clearTimeout(timer); worker?.terminate(); worker = null; };
 
   /** One Path2D per layer colour, built once per result: redrawing then only strokes them. */
@@ -64,7 +72,7 @@ export function createOverview(container, onStatus) {
     canvas.width = v.w * ratio; canvas.height = v.h * ratio;
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     ctx.clearRect(0, 0, v.w, v.h);
-    const color = (name) => css().getPropertyValue(name).trim();
+    const ghost = tracing();
     ctx.save(); ctx.translate(v.x0, v.y0 + result.height * v.scale); ctx.scale(v.scale, -v.scale);
     const ring = (pts, close = false) => {
       if (!pts.length) return;
@@ -78,7 +86,9 @@ export function createOverview(container, onStatus) {
     // strands at their printed width, never thinner than a hairline on screen
     ctx.lineWidth = Math.max(result.strandWidth ?? 0.45, 0.6 / v.scale);
     ctx.lineJoin = 'round';
+    ctx.globalAlpha = ghost ? GHOST : 1;
     paths.forEach((path, layer) => { ctx.strokeStyle = color(layer % 2 ? '--role-anchored' : '--role-base'); ctx.stroke(path); });
+    ctx.globalAlpha = 1;
     ctx.restore();
     ctx.beginPath(); result.rings.forEach((r) => ring(r, true));
     ctx.lineWidth = 1.5 / v.scale; ctx.strokeStyle = color('--accent'); ctx.stroke();
@@ -99,6 +109,52 @@ export function createOverview(container, onStatus) {
     frame.width = canvas.width; frame.height = canvas.height;
     frame.getContext('2d').drawImage(canvas, 0, 0);
     frameView = { ...v, ratio };
+    paintTrail();
+  }
+
+  /** The strands of moves [from, to) at the view's scale, one stroke per role and colour. */
+  function strokeMoves(target, v, from, to) {
+    const { xy, kind, tone, tones, widths } = trace;
+    target.setTransform(v.ratio, 0, 0, v.ratio, 0, 0);
+    target.translate(v.x0, v.y0 + result.height * v.scale); target.scale(v.scale, -v.scale);
+    target.lineCap = 'round'; target.lineJoin = 'round';
+    const groups = new Map();
+    let open = -1;
+    for (let i = Math.max(1, from); i < to; i++) {
+      const k = kind[i];
+      if (!k) { open = -1; continue; }
+      const key = k * 256 + (tone ? tone[i] : 0);
+      let path = groups.get(key);
+      if (!path) groups.set(key, path = new Path2D());
+      if (key !== open) path.moveTo(xy[2 * i - 2], xy[2 * i - 1]); // a new run, or one that left this path for another
+      path.lineTo(xy[2 * i], xy[2 * i + 1]);
+      open = key;
+    }
+    for (const [key, path] of groups) {
+      target.lineWidth = Math.max(widths[key >> 8], 0.6 / v.scale);
+      target.strokeStyle = key & 255 ? tones[(key & 255) - 1] : color(KIND_COLOUR[key >> 8]);
+      target.stroke(path);
+    }
+  }
+
+  /** Lays the toolpath so far over the last full drawing, adding only the moves printed since the previous frame. */
+  function paintTrail() {
+    if (!tracing() || !frame || !frameView) return;
+    const upTo = Math.min(progress, trace.count), v = frameView;
+    trail ??= document.createElement('canvas');
+    if (trailTrace !== trace || trailView !== v || upTo < trailAt) {
+      trail.width = frame.width; trail.height = frame.height; // resizing also clears it
+      trailView = v; trailTrace = trace; trailAt = 1;
+    }
+    if (upTo > trailAt) { strokeMoves(trail.getContext('2d'), v, trailAt, upTo); trailAt = upTo; }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(trail, 0, 0);
+    // the nozzle, where the print has reached
+    const at = Math.max(0, upTo - 1), x = v.x0 + trace.xy[2 * at] * v.scale, y = v.y0 + (result.height - trace.xy[2 * at + 1]) * v.scale;
+    ctx.setTransform(v.ratio, 0, 0, v.ratio, 0, 0);
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, 2 * Math.PI);
+    ctx.fillStyle = color('--ink'); ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = color('--panel'); ctx.stroke();
   }
 
   function banner(v, text, color) {
@@ -111,16 +167,22 @@ export function createOverview(container, onStatus) {
     ctx.font = '13px "Instrument Sans", sans-serif';
   }
 
+  /** Draws a full-size copy of the last drawing (or of its toolpath) moved and scaled to the view `v`. */
+  function stretch(image, v) {
+    const k = v.scale / frameView.scale, ratio = frameView.ratio;
+    ctx.setTransform(ratio * k, 0, 0, ratio * k, ratio * (v.x0 - frameView.x0 * k), ratio * (v.y0 + result.height * v.scale - (frameView.y0 + result.height * frameView.scale) * k));
+    ctx.drawImage(image, 0, 0, image.width / ratio, image.height / ratio);
+  }
+
   /** While the view moves, stretch the last full drawing into place; the vector drawing follows when it rests. */
   function move() {
     if (!result) return;
     const v = view();
     if (frame && frameView && frameView.w === v.w && frameView.h === v.h) {
-      const k = v.scale / frameView.scale, ratio = frameView.ratio;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.setTransform(ratio * k, 0, 0, ratio * k, ratio * (v.x0 - frameView.x0 * k), ratio * (v.y0 + result.height * v.scale - (frameView.y0 + result.height * frameView.scale) * k));
-      ctx.drawImage(frame, 0, 0, frame.width / ratio, frame.height / ratio);
+      stretch(frame, v);
+      if (tracing() && trailTrace === trace && trailView === frameView) stretch(trail, v);
     }
     clearTimeout(settle);
     settle = setTimeout(draw, 120);
@@ -169,6 +231,29 @@ export function createOverview(container, onStatus) {
     attempt(0);
   }
 
+  /** The print order of the finished G-code, or null: the toolpath can then be drawn growing over the picture. */
+  function setTrace(next) {
+    if (next === trace) return;
+    const before = tracing();
+    trace = next;
+    if (result && (before || tracing())) draw();
+  }
+
+  /** Shows the moves before `k` (Infinity: all of them, which is the finished 2D drawing without the toolpath over it). */
+  function setProgress(k) {
+    if (k === progress) return;
+    const before = tracing();
+    progress = k;
+    if (!trace || !result) return;
+    if (before !== tracing()) { draw(); return; } // the finished drawing steps back, or forward again
+    if (frame && sameView(frameView, view())) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(frame, 0, 0);
+      paintTrail();
+    } else move();
+  }
+
   // zoom about the pointer, so the spot under it stays put
   const zoomAt = (factor, px, py) => {
     const v = view(), next = Math.max(1, Math.min(MAX_ZOOM, zoom * factor)), k = next / zoom;
@@ -204,8 +289,8 @@ export function createOverview(container, onStatus) {
   canvas.addEventListener('pointerup', () => { drag = null; });
   canvas.addEventListener('pointercancel', () => { drag = null; });
   new ResizeObserver(() => draw()).observe(container);
-  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', draw);
-  return { update, cancel: stop, fit, redraw: draw,
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { trailTrace = null; draw(); }); // the toolpath's colours are drawn into its canvas
+  return { update, cancel: stop, fit, redraw: draw, setTrace, setProgress,
     setResult(next) { stop();result=next;buildPaths();if(!size||size.w!==next.width||size.h!==next.height){zoom=1;dx=dy=0;}size={w:next.width,h:next.height};draw(); },
   };
 }

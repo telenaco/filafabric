@@ -7,6 +7,8 @@ import { placeOutline, unflattenRings } from '../engine/outline.js';
 import { createPreview, ROLES } from './preview.js';
 import { createOverview } from './overview.js';
 import { useWholeOverview, canSimplifyPreview, packLines } from '../engine/overview.js';
+import { packTrace, indexAtTime } from '../engine/trace.js';
+import { traceToSvg } from '../engine/trace-svg.js';
 import { bedSizeLimits, printSizeProblem } from './bed-size.js';
 import { PrintEstimates, printTimeSeconds } from './print-estimates.js';
 import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airStrandMm, fitAspect, pileLiftFactor } from './controls.js';
@@ -19,7 +21,8 @@ import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './pa
 import { $, $$, el, icon, ICONS, helpBubble } from './dom.js';
 import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, SectionFold, ColourSection, SupportSection } from './panels.js';
 import { BACKING_MESH_LAYERS } from '../engine/backing.js';
-import { layerHeightOptions, defaultLayerHeight, resolveConfig } from '../engine/params.js';
+import { layerHeightOptions, defaultLayerHeight, resolveConfig, beadWidth } from '../engine/params.js';
+import { nozzleRange } from './nozzle-limits.js';
 import { TooltipLayer } from './tooltip.js';
 // versioned with the release in boot.js, so a returning browser never pairs this file with an older printer loader
 import { ProfileStore } from './profile-store.js?v=20261019-printer-setup';
@@ -167,7 +170,7 @@ function bindingFor(mod) {
     host: `#${mod.id}-sliders`,
     get: (key) => own()[key],
     set: (key, value) => { own()[key] = value; },
-    range: (key) => mod.ranges[key],
+    range: (key) => nozzleRange(mod.ranges[key], beadNow()), // sizes that count in beads follow the nozzle
     readout: (key) => {
       const def = sliders.find((d) => d.key === key);
       const d = mod.describe(own());
@@ -193,6 +196,10 @@ const printEstimates = new PrintEstimates();
 let previewBuild = null;
 // the G-code a "Generate G-code" step made for these exact settings, so Export saves it without building it again
 let readyGcode = null; // { key, result }
+// the print order of that G-code (src/engine/trace.js), which the 2D view plays and exports as SVG
+let overviewTrace = null; // { key, trace, source? }
+let autoBuildStopped = ''; // the settings whose background build was stopped or failed: 2D does not start it again
+let traceProblem = null; // { key, message } when the background build failed
 let exporting = false;
 let exportController = null;
 let exportLabel = '';
@@ -265,16 +272,6 @@ function toast(message, { kind = 'info' } = {}) {
   t.hidden = false;
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => { t.hidden = true; }, 3600);
-}
-
-function indexAtTime(starts, t) {
-  let lo = 0, hi = starts.length;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (starts[mid] <= t) lo = mid + 1;
-    else hi = mid;
-  }
-  return lo;
 }
 
 const grams = (g) => (g < 1 ? g.toFixed(2) : g.toFixed(1));
@@ -370,6 +367,18 @@ const PRINT_LAYERS = { key: 'extraLayers', label: 'Extra layers', info: true, he
 
 /** The nozzle of the chosen printer (0.4 mm unless its profile says otherwise). */
 const nozzleDiameter = () => state.machines.get(state.machine)?.nozzle_diameter ?? 0.4;
+
+/**
+ * The width of one bead for the printer and filament now chosen (cfg.t.extrusion_width), which the sizes that count in beads
+ * follow. Remembered until the printer, the filament or its measured bead width changes: sliders ask for it on every redraw.
+ */
+let beadMemo = { key: '', bead: 0.45 };
+function beadNow() {
+  const machine = state.machines.get(state.machine), material = state.materials.get(state.material);
+  const key = `${state.machine}|${state.material}|${machine?.nozzle_diameter}|${state.print?.flatBeadWidth}`;
+  if (beadMemo.key !== key) beadMemo = { key, bead: beadWidth(machine, material && withFilamentSettings(material, state.print, machine)) };
+  return beadMemo.bead;
+}
 
 /** The layer thicknesses that nozzle can lay down. */
 const layerChoices = () => layerHeightOptions(nozzleDiameter(), state.machines.get(state.machine)?.print_defaults?.layer_height);
@@ -673,6 +682,8 @@ let genTimer = null;
 function schedule() {
   captureRegionSettings();
   if (readyGcode && readyGcode.key !== snapshotKey()) readyGcode = null; // made for settings that are no longer these
+  if (overviewTrace && overviewTrace.key !== snapshotKey()) overviewTrace = null; // likewise: made for settings that are no longer these
+  if (traceProblem && traceProblem.key !== snapshotKey()) traceProblem = null;
   fixJob?.controller.abort(); // the settings changed under the search: what it would fix is gone
   previewBuild?.controller.abort();
   previewBuild = null;
@@ -687,7 +698,8 @@ function schedule() {
 
 function renderBusy() {
   const busy = !!genTimer || !!previewBuild || exporting;
-  $('#busy-chip').hidden = !busy;
+  // the G-code 2D builds in the background is quiet: the picture is already there, and the playback bar says it is building
+  $('#busy-chip').hidden = !busy || (!!previewBuild?.auto && !genTimer && !exporting);
   $('#busy-chip').textContent = exporting ? exportLabel : previewBuild?.estimateOnly ? 'Generating G-code…' : 'Updating…';
   if (busy) $('#stage').setAttribute('aria-busy', 'true');
   else $('#stage').removeAttribute('aria-busy');
@@ -739,28 +751,38 @@ function showRegionOverview() {
   const current=state.resultKey===snapshotKey()?state.result:null;
   const width=state.vector.width,height=state.vector.height;
   const source=state.regions.filter(r=>r.enabled===false).flatMap(r=>r.pathIndices.map(i=>({pts:state.vector.paths[i],color:'other'})));
+  // the whole piece is already built in this flow, so its print order needs no second build
+  if(current&&overviewTrace?.source!==current)overviewTrace={key:snapshotKey(),trace:packTrace(current),source:current};
   overview.setResult({width,height,rings:current?.outline??[[{x:0,y:0},{x:width,y:0},{x:width,y:height},{x:0,y:height}]],source,packed:packLines(current?.strands??[]),strandWidth:current?.cfg.t.extrusion_width??.45,shapeOnly:!current});
   overviewStatus=current?'Whole colour-region piece at true scale.':'Region outlines only — Apply to build the whole piece.';
-  renderPreviewMode();render();
+  renderBusy();renderPreviewMode();render(); // the "Updating…" chip schedule() raised has nothing left to wait for
 }
 
 /** Full ordinary-size designs build off the UI thread; obsolete slider jobs are terminated. */
-function previewAtSelectedSize(input, { estimateOnly = false } = {}) {
+function previewAtSelectedSize(input, { estimateOnly = false, auto = false } = {}) {
   state.error = null;
   const key = snapshotKey(), controller = new AbortController();
-  const job = { key, controller, promise: null, estimateOnly };
+  const job = { key, controller, promise: null, estimateOnly, auto };
   previewBuild = job;
-  job.promise = buildSwatch(input, { signal: controller.signal, preview: !estimateOnly, progress:p=>{ if(state.regions?.length) { $('#apply-status').hidden=false; $('#apply-status').textContent=p.message; } } }).then((result) => {
+  // the G-code for time, filament and Export, with its print order for 2D to play (no 3D geometry crosses from the worker)
+  job.promise = buildSwatch(input, { signal: controller.signal, preview: !estimateOnly, trace: estimateOnly, progress:p=>{ if(state.regions?.length) { $('#apply-status').hidden=false; $('#apply-status').textContent=p.message; } } }).then((result) => {
     if (previewBuild === job && snapshotKey() === key) {
-      if (estimateOnly) { printEstimates.put(key, result, input.width, input.height); readyGcode = { key, result }; }
-      else showGenerated(result, key);
+      if (estimateOnly) {
+        printEstimates.put(key, result, input.width, input.height); readyGcode = { key, result };
+        if (result.trace) overviewTrace = { key, trace: result.trace };
+      } else showGenerated(result, key);
     }
     return result;
   }).catch((error) => {
-    if (error.name !== 'AbortError' && previewBuild === job) {
+    if (error.name !== 'AbortError' && previewBuild === job && job.auto) {
+      // the 2D picture stays: only the print order is missing, and Export reports the same problem if it is real
+      autoBuildStopped = key;
+      traceProblem = { key, message: error.message };
+      recordBuildFailure(error, { ...input, operation: 'preview' });
+    } else if (error.name !== 'AbortError' && previewBuild === job) {
       if (!estimateOnly && previewChoice === 'auto' && canSimplifyPreview(error)) {
         previewBuild = null;
-        showWholeOverview(input);
+        showWholeOverview(input, { build: false }); // 3D just failed to build this piece: the same build would fail again
         toast('3D could not finish for this piece, so it shows the 2D drawing. Print settings are unchanged.', { kind:'warning' });
         return null;
       }
@@ -888,12 +910,18 @@ function renderPreviewMode() {
   $('#btn-view').hidden = overviewActive;
   $('#overview-actions').hidden = !overviewActive;
   $('#overview-status').hidden = !overviewActive;
-  $('#overview-status').textContent = overviewStatus;
+  const building = printOrderBuilding(), problem = overviewActive ? traceProblem?.message ?? '' : '';
+  $('#overview-status').textContent = [overviewStatus, building && 'building the print order…', problem && `the print order could not be built (${problem})`].filter(Boolean).join(' · ');
+  const trace = overviewTraceNow();
+  $('#overview-export-svg').disabled = !trace;
+  $('#overview-export-svg').title = trace ? 'Save this view as an SVG at true size, with every strand as a path' : 'Available once the print order is built';
+  overview?.setTrace(trace);
+  if (overviewActive) applyScrub();
   $('#preview-whole').setAttribute('aria-pressed', String(overviewActive));
   $('#preview-full').setAttribute('aria-pressed', String(!overviewActive && previewChoice !== 'sample'));
   $('#preview-full').disabled = !!currentPrintSizeProblem();
   $('#preview-detail').setAttribute('aria-pressed', String(!overviewActive && previewChoice === 'sample'));
-  $('.playback').hidden = overviewActive;
+  $('.playback').hidden = overviewActive && !trace && !building; // 2D plays the print order once the G-code is built
   $('.canvas-hint').hidden = overviewActive;
   if (overviewActive) {
     $('#canvas-note').hidden = true;
@@ -901,22 +929,50 @@ function renderPreviewMode() {
   }
 }
 
-function showWholeOverview(input) {
+/**
+ * The 2D picture appears at once; unless `build` is false, the G-code is built behind it straight away (the same build Export
+ * and "Generate G-code" use), and when it is ready the print order can be played and saved as SVG.
+ */
+function showWholeOverview(input, { build = true } = {}) {
   // a finished whole-piece 3D build already holds the G-code: keep it (without its 3D geometry) for Export
   const [sw, sh] = BINDINGS[state.design].size.get();
   if (state.result && !state.error && state.resultKey === snapshotKey() && state.result.cfg.t.sample_width === sw && state.result.cfg.t.sample_height === sh) {
-    readyGcode = { key: state.resultKey, result: compactDesignExport(state.result) };
+    const trace = packTrace(state.result);
+    readyGcode = { key: state.resultKey, result: { ...compactDesignExport(state.result), trace } };
+    overviewTrace = { key: state.resultKey, trace };
   }
   overviewActive = true;
   preview.reset();
-  state.playing = false;
+  stopPlay();
   state.result = null;
   state.resultKey = null;
   state.error = null;
   renderPreviewMode();
   overview.update(input);
+  if (build) startPrintOrder(input);
   renderBusy();
   render();
+}
+
+function startPrintOrder(input) {
+  const key = snapshotKey();
+  if (currentPrintSizeProblem() || previewBuild || autoBuildStopped === key) return;
+  if (readyGcode?.key === key && readyGcode.result.trace) { overviewTrace = { key, trace: readyGcode.result.trace }; return; } // already built: not again
+  traceProblem = null;
+  previewAtSelectedSize(input, { estimateOnly: true, auto: true });
+}
+
+/**
+ * The print order of the finished G-code for the settings now showing in 2D, or null while it is not there. schedule() drops one
+ * made for other settings, so this is a plain lookup: playback asks for it on every frame, and the settings key is not cheap.
+ */
+function overviewTraceNow() {
+  return overviewActive ? overviewTrace?.trace ?? null : null;
+}
+
+/** 2D is waiting for its print order: the build is running (or about to start). */
+function printOrderBuilding() {
+  return overviewActive && !overviewTraceNow() && (!!previewBuild?.auto || (!!genTimer && !state.regions?.length));
 }
 
 let regenerationEpoch = 0;
@@ -1005,7 +1061,7 @@ async function regenerate() {
     showGenerated(refreshConstruction(colourResult(result, settingsOf(state.design))), snapshotKey());
   } catch (e) {
     if (previewChoice === 'auto' && canSimplifyPreview(e)) {
-      try { showWholeOverview(exportOptions()); return; } catch { /* invalid document dimensions still report normally */ }
+      try { showWholeOverview(exportOptions(), { build: false }); return; } catch { /* invalid document dimensions still report normally */ }
     }
     state.error = e;
     recordBuildFailure(e);
@@ -1016,6 +1072,11 @@ async function regenerate() {
 }
 
 function applyScrub() {
+  if (overviewActive) { // the 2D picture plays the same print order, over the same scrubber
+    const trace = overviewTraceNow();
+    overview.setProgress(trace && state.fraction < 1 ? indexAtTime(trace.time, state.fraction * trace.timeSec) : Infinity);
+    return;
+  }
   if (!state.result) return;
   const { stats } = state.result;
   const t = state.fraction * stats.timeSec;
@@ -1283,9 +1344,17 @@ function renderFigures() {
   $('#preview').setAttribute('aria-label', `3D preview: ${what} on a ${t.sample_width} by ${t.sample_height} millimetre swatch, ${printTimeSeconds(stats)===null ? 'motion estimate unavailable' : `about ${minutes(stats)} minutes of modeled motion`}.`);
 }
 
+/** The seconds the print order runs for in the view showing now, or null when there is nothing to play. */
+function playbackSeconds() {
+  const seconds = overviewActive ? overviewTraceNow()?.timeSec : state.result?.stats.timeSec;
+  return Number.isFinite(seconds) ? seconds : null;
+}
+
 function renderPlayback() {
-  const total = state.result ? state.result.stats.timeSec / 60 : 0;
-  $('#time-label').textContent = `${formatMinutes(total * state.fraction)} of ${formatMinutes(total)} min`;
+  const total = (playbackSeconds() ?? 0) / 60, waiting = overviewActive && playbackSeconds() === null;
+  $('#btn-play').disabled = waiting;
+  $('#scrub').disabled = waiting;
+  $('#time-label').textContent = waiting ? 'Building…' : `${formatMinutes(total * state.fraction)} of ${formatMinutes(total)} min`;
   $('#time-label').title = 'Print order uses commanded motion without acceleration; the motion estimate above includes acceleration and startup/end motion.';
   $('#play-icon').setAttribute('d', state.playing ? PAUSE_ICON : PLAY_ICON);
   $('#btn-play').setAttribute('aria-label', state.playing ? 'Pause' : 'Play the print order');
@@ -1340,7 +1409,11 @@ function renderPrinter() {
   $('#btn-printer').title = 'Printer, filament, layer thickness and extra layers above the original design. Add your own printer or filament from a PrusaSlicer or Bambu Studio export.';
   $('#btn-printer').setAttribute('aria-label', `Printer setup: ${shortMachine(machine.name)} with ${shortMaterial(material.name)}, ${layers}`);
   renderFilamentSettings();
+  // a new printer, filament or measured bead moves the ends of the sizes that count in beads, without waiting for the build
+  const bead = beadNow();
+  if (bead !== sliderBead) { sliderBead = bead; for (const c of controls) c.update(); }
 }
+let sliderBead = 0;
 
 function renderSizes() {
   renderControls();
@@ -2167,6 +2240,21 @@ async function exportGcode() {
   }
 }
 
+/** The finished toolpath seen from above as an SVG at true size (see traceToSvg for what it leaves out). */
+function exportOverviewSvg() {
+  const trace = overviewTraceNow();
+  if (!trace) { toast('The print order is still being built.'); return; }
+  const [w, h] = BINDINGS[state.design].size.get().map((n) => Math.round(n * 10) / 10);
+  const mod = designById(state.design), what = state.regions?.length ? 'Colour regions' : mod.name;
+  const svg = traceToSvg(trace, {
+    title: `${what}, ${w} × ${h} mm, seen from above`,
+    description: `FilaFabric ${currentSwatch()}. One unit is one millimetre. Strands are drawn at the width they print; the back of the bed is the top of the page.`,
+  });
+  const name = swatchFileName().replace(/\.gcode$/i, '.svg');
+  download(name, new Blob([svg], { type: 'image/svg+xml' }));
+  toast(`Saved ${w} × ${h} mm top view: ${name}`);
+}
+
 let variantExportReady=null;
 function drawVariantPreview(result,variants){
   const host=$('#variants-preview'),svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
@@ -2286,12 +2374,13 @@ function resetDesign() {
 }
 
 function play() {
-  if (!state.result) return;
+  if (playbackSeconds() === null) return;
   if (state.playing) { stopPlay(); renderPlayback(); return; }
   if (state.fraction >= 1) state.fraction = 0;
   state.playing = true;
   lastFrame = performance.now();
   const step = (now) => {
+    if (playbackSeconds() === null) { stopPlay(); renderPlayback(); return; } // the settings changed and the print order with them
     const dt = now - lastFrame;
     lastFrame = now;
     state.fraction = Math.min(1, state.fraction + dt / 12000);
@@ -2347,9 +2436,13 @@ function bindStatic() {
   $('#preview-full').addEventListener('click', () => { previewChoice = 'full'; schedule(); });
   $('#preview-whole').addEventListener('click', () => { previewChoice = 'overview'; schedule(); });
   $('#preview-detail').addEventListener('click', () => { previewChoice = 'sample'; schedule(); });
-  $('#preview-cancel').addEventListener('click', () => { previewBuild?.controller.abort(); previewBuild = null; previewChoice = 'overview'; schedule(); });
+  $('#preview-cancel').addEventListener('click', () => {
+    if (previewBuild?.estimateOnly) autoBuildStopped = snapshotKey(); // stopped on purpose: 2D must not start it again
+    previewBuild?.controller.abort(); previewBuild = null; previewChoice = 'overview'; schedule();
+  });
   $('#print-fit-printer').addEventListener('click', () => $('#btn-printer').click());
   $('#overview-fit').addEventListener('click', () => overview.fit());
+  $('#overview-export-svg').addEventListener('click', exportOverviewSvg);
   for (const b of $$('[data-camera]')) {
     b.addEventListener('click', () => {
       for (const o of $$('[data-camera]')) o.setAttribute('aria-pressed', String(o === b));

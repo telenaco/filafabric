@@ -1,8 +1,11 @@
 const createSwatchWorker = () => new Worker(new URL('./swatch-worker.js', import.meta.url), { type: 'module' });
 const abortError = () => new DOMException('Export cancelled', 'AbortError');
 
-/** Capture a full-size export job and release its worker on completion, failure or cancellation. */
-export function buildSwatch(input, { signal, preview = false, progress = () => {}, createWorker = createSwatchWorker } = {}) {
+/**
+ * Capture a full-size export job and release its worker on completion, failure or cancellation. `trace` adds the print order
+ * (src/engine/trace.js) to the compact result, for the 2D view.
+ */
+export function buildSwatch(input, { signal, preview = false, trace = false, progress = () => {}, createWorker = createSwatchWorker } = {}) {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) { reject(abortError()); return; }
     let worker, settled = false;
@@ -37,7 +40,7 @@ export function buildSwatch(input, { signal, preview = false, progress = () => {
       worker.onmessageerror = () => finish(new Error('Unable to read the export worker result.'));
       signal?.addEventListener('abort', abort, { once: true });
       if (signal?.aborted) { abort(); return; }
-      worker.postMessage({ type: 'start', input: snapshot, preview });
+      worker.postMessage({ type: 'start', input: snapshot, preview, trace });
     } catch (error) { finish(error); }
   });
 }

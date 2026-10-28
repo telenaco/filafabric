@@ -185,6 +185,14 @@ export function defaultLayerHeight(machine) {
   return choices.reduce((best, v) => Math.abs(v - nozzle / 2) < Math.abs(best - nozzle / 2) - 1e-9 ? v : best, choices[0]);
 }
 
+/**
+ * The width of one flat bead for this printer and filament: what a design's config calls `cfg.t.extrusion_width`, the nozzle
+ * diameter × 1.125 unless the filament says otherwise. Sizes that count in beads (ui/nozzle-limits.js) follow it.
+ */
+export function beadWidth(machine, material) {
+  try { return resolveConfig(machine, material).t.extrusion_width; } catch { return Math.round((machine?.nozzle_diameter > 0 ? machine.nozzle_diameter : 0.4) * 1.125 * 10000) / 10000; }
+}
+
 export function resolveConfig(machine, material, overrides = {}) {
   const profileErrors = [
     ...validateMachine(machine).map((e) => `machine: ${e}`),

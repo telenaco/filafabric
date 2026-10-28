@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#171c26">
 <link rel="preload" href="vendor/fonts/instrument-sans/instrument-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="src/ui/styles.css?v=20261027-toolbar-quiet">
+<link rel="stylesheet" href="src/ui/styles.css?v=20261028-print-order">
 <script type="importmap">
 { "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
 </script>
@@ -106,7 +106,7 @@
       <div class="preview-mode-row">
         <div class="seg" role="group" aria-label="Preview mode">
           <button type="button" id="preview-full" aria-pressed="true" title="The real toolpath of the whole piece, as it prints, with print time and filament">3D</button>
-          <button type="button" id="preview-whole" aria-pressed="false" title="A quick flat drawing of the whole piece at the size it prints, for checking the look. Print time needs the G-code.">2D</button>
+          <button type="button" id="preview-whole" aria-pressed="false" title="A flat drawing of the whole piece at the size it prints, shown at once. The G-code builds behind it: then print time and filament appear, the print order can be played, and the view can be saved as SVG.">2D</button>
           <button type="button" id="preview-detail" aria-pressed="false" title="The real toolpath of a corner of the piece (100 mm), quick for large pieces">3D sample</button>
         </div>
         <div id="colour-bar" class="colour-bar" role="toolbar" aria-label="Drawing colour regions" hidden></div>
@@ -114,6 +114,7 @@
       <button type="button" id="preview-cancel" class="btn" hidden>Cancel preview</button>
       <div id="overview-actions" hidden>
         <button type="button" id="overview-fit" class="link">Fit piece</button>
+        <button type="button" id="overview-export-svg" class="link" disabled>Export SVG</button>
       </div>
     </div>
     <div id="print-fit-warning" class="preview-fit small" role="alert" hidden><span id="print-fit-message"></span> <button type="button" class="link" id="print-fit-printer">Change printer</button></div>
@@ -369,6 +370,6 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-<script type="module" src="src/boot.js?v=20261027-toolbar-quiet"></script>
+<script type="module" src="src/boot.js?v=20261028-print-order"></script>
 </body>
 </html>

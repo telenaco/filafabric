@@ -15,6 +15,7 @@
 //   describe(state), generate(machine, material, state, { outline }), verdict(result, state),
 //   figure(result) → { value, unit, label }, summary(result) → text for the preview's accessible name.
 import { patternField, withPicture } from '../engine/picture.js';
+import { applyBeadSizes } from './nozzle-limits.js';
 import { THICKNESS_RANGES } from '../engine/pattern-effects.js';
 import { PRIMARY_DEFAULTS, sanitizePrimary } from './controls.js';
 import { SQUIGGLE, SQ_PATTERNS } from './squiggle-controls.js';
@@ -545,6 +546,9 @@ for (const card of DESIGNS) {
     ? { ...section, title: 'Directions', hint: '0/90 is soft on the bias; 60° grids feel similar in every direction.' }
     : section);
 }
+
+// Sizes that count in beads follow the nozzle: their minimum is a floor for the finest nozzle (ui/nozzle-limits.js).
+applyBeadSizes(DESIGNS);
 
 /**
  * The essentials: the structures to start from, listed first and in this order. Every other card is a variation, an

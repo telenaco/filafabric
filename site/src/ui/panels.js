@@ -133,11 +133,13 @@ export class SliderControl extends Control {
     const available = binding.available?.(def.key) !== false;
     this.input.disabled = !available;
     this.readout.disabled = !available;
+    // the ends follow the nozzle for sizes that count in beads (ui/nozzle-limits.js), so a change of printer moves them
+    const r = binding.range(def.key);
+    for (const attr of ['min', 'max', 'step']) if (this.input[attr] !== String(r[attr])) this.input[attr] = r[attr];
     if (document.activeElement !== this.input) this.input.value = String(binding.get(def.key));
     const text = binding.readout(def.key);
     this.input.setAttribute('aria-valuetext', text);
     this.readout.textContent = text;
-    const r = binding.range(def.key);
     const manual = binding.get(def.key) < r.min || binding.get(def.key) > r.max;
     this.readout.classList.toggle('manual-value', manual);
     this.readout.title = manual ? 'Manual value outside the slider range. Click to edit.' : 'Click to type an exact value';
