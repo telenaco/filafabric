@@ -27,7 +27,7 @@ Nothing here has been printed yet: every drape or handle description below is a 
 | **Auxetic mesh** | Rows of zigzag, each the mirror of the one below, with staircases of struts: honeycomb cells, or re-entrant bow-ties that widen when pulled | 2 | cell type, row spacing, cell width and depth |
 | **Dip weave** | Straight warp on the bed, straight weft that rides over each warp and dips back to the bed between | 1 (+ lift at crossings) | warp and weft spacing |
 | **Spiderweb** | One continuous spiral crossed by a radial zigzag out along one spoke and back along the next | 2 | turn spacing, spokes, centre (solid or open) and its radius, sawtooth |
-| **Ring mail** | Overlapping rings on a hexagonal lattice, a second layer of rings shifted into the triangular gaps | 2 | ring spacing, ring overlap |
+| **Rings · layered** (formerly Ring mail) | Overlapping rings on a hexagonal lattice, a second layer of rings shifted into the triangular gaps | 2 | ring spacing, ring overlap |
 | **Meander** | One strand that never crosses itself (Hilbert, Moore, Peano, Sierpiński, Gosper, a random maze, or a stipple tour through graded dots), held by a hatch at an angle | 2 | curve, fold size, hatch angle and spacing, pattern |
 | **Harmonograph** | A closed Lissajous curve that crosses itself in a diamond lattice, optionally with a phase-turned copy | 1 or 2 | lobes across and up, phase |
 | **Truchet tiles** | Random tiles per cell: diagonals (an X in every cell) or arcs that flow into curves, seeded | 2 | tile, size, pattern number |

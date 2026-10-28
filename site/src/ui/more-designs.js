@@ -438,7 +438,7 @@ MORE_DESIGNS.push(layered({
   variantGroup: 'rings',
   joins: "Rings on two layers overlap and fuse.", sources: {},
   optimizeTravel: true,
-  name: 'Ring mail',
+  name: 'Rings · layered',
   blurb: 'Overlapping rings, two layers, a chainmail look',
   about: 'Overlapping rings on a hexagonal lattice, with a second layer of rings shifted into the triangular gaps. Each ring of the second layer crosses three rings of the first twice, so the layers hold each other with no straight run of strand: near the same in every direction, with good drape.',
   file: 'chainmail',

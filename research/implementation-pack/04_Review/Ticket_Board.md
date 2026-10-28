@@ -1,10 +1,10 @@
 # Ticket board
 
-## Local integration — 27 October 2026
+## Where things stand — 28 October 2026
 
-All imported work and the remaining implementation are kept in **`filafabric-integration`**, under `fashionPrinting Tools/`. Branch names below are historical provenance. The integration merge is still uncommitted. Nothing has been pushed.
+Every ticket below is implemented in software and committed **locally** on `filafabric-integration` (under `fashionPrinting Tools/`, the main repository's history). Nothing is pushed, nothing is merged into `library`, and no ticket has been reviewed or approved by Luis yet. Branch names in the tables are historical provenance: the per-ticket branches of the separate Codex history were folded into one integration commit, with the later work on top. Full suite: 1,359 tests. See the [status note of 28 October](Status_2026-10-28.md) for the plan against what is built, what needs Luis, and what physical work remains, and the [integration QA](Integration_QA_2026-10-27.md) for the first full run.
 
-Tests were initially deferred while functionality was completed. Luis requested a full run on 27 October; testing has now resumed. See [integration QA](Integration_QA_2026-10-27.md) for the new failures, fixes, snapshot review and current verification results. Older “validation deferred” entries below are historical implementation status, not the latest test result. Physical validation is still pending; no card has been promoted to Tested.
+**How to read the State column now:** *In review (local)* and *Implemented locally* mean built and tested, waiting for Luis's review; *Done locally* means the same for work finished in the later passes. *Deferred* acceptance items need physical prints. Nothing is *Approved* or *Merged*.
 
 The single place to see what is ready, who has it and where it stands. The reviewer keeps the *State* column current; implementers fill in *Owner* and *PR* when they start. States: **Ready**, **Blocked** (dependencies not merged), **In progress**, **In review**, **Changes requested**, **Approved**, **Merged** (into `library`), **Printed** (cards, Phase 8) ([handbook §2.2](../01_Team_Handbook.md#22-ticket-lifecycle)).
 
@@ -76,7 +76,7 @@ The single place to see what is ready, who has it and where it stands. The revie
 | T4.2 | Bond control | Phase 0 | M | In review (local; bundle geometry and mask tests pass) | Codex | no push |
 | T4.3 | Lifted crossings | T4.1 | M | In review (local; focused acceptance tests pass) | Codex | no push |
 | T4.4 | Bridged crossings | T4.1 (shares T4.3 helper) | S | In review (local; focused acceptance tests pass) | Codex | no push |
-| T4.5 | Sliding channels | T4.1 | L | In review (local module; raised card remains gated on exportability/geometry) | Codex | no push |
+| T4.5 | Sliding channels | T4.1 | L | In review (local; the raised cards that use it, Grid · sliding channels and its checks, are built in T5.3) | Codex | no push |
 | T4.6 | Climbing overlaps | T4.1 | L | In review (local; focused acceptance tests pass) | Codex | no push |
 | T4.7 | Raised reporting and preview | T4.3–T4.6 | M | In review (local; focused diagnostics tests pass) | Codex | no push |
 
@@ -130,7 +130,7 @@ The single place to see what is ready, who has it and where it stands. The revie
 | Collapsible Flat / Layered / Raised shelves and Pattern controls | Luis | S | Implemented locally; Flat opens by default. |
 | ~~Resolve C13/T0.2 snapshot wording~~ **Resolved:** `families` stays in the snapshot schema. T0.0 records `[]`; T0.2 may change only the `families` field of every snapshot (every other field, including the G-code hash, must stay identical). Done that way. | T0.0 review, 26 Oct 2026 | S | Resolved |
 | Done 28 Oct 2026 (Luis): estimates on every card and preset at 100 x 100 mm, side-view strip and "How a drawing prints" removed, page fits the window, Export G-code, simplest-first order, finer cell width (Re-entrant mesh, Honeycomb · flat), name filter above the designs | Luis | S | Implemented locally (branch `filafabric-integration`). |
-| 2D view that plays the print order, with the G-code building in the background; SVG export of the 2D view; slider limits tied to the nozzle bead | Luis | M | Proposed as its own session (card in the app); not started. |
+| 2D view that plays the print order, with the G-code building in the background; SVG export of the 2D view; slider limits tied to the nozzle bead (Luis, 28 Oct 2026) | Luis | M | Implemented locally (`filafabric-integration`, commit `b78e7da4`). Checked in the browser; Luis has not tried it. |
 | Flat, single-layer versions of Truchet tiles, Turing stripes, Meander, Bouclé & picots and Parquet, without the backing (Luis, 28 Oct 2026). Each is the first layer on its own, marked **Needs a backing** (a new support label), with no backing controls. The backing itself is **not built**: Luis will supply it (a six-sack option for the back). | Luis | M | Implemented locally (branch `flat-variants`): `truchet-flat`, `turing-flat`, `meander-flat`, `parquet-flat`, `boucle-flat`. The two-layer cards are unchanged. |
 | Truly flat versions of the cards listed as Flat that print two layers (Luis, 28 Oct 2026). Looped rows, Figure-8 rows, Re-entrant mesh, Honeycomb, Star lattice and Harmonograph keep their two-layer card (Layered shelf, or Raised for the two rows cards, whose strand lifts over itself) and gain a flat card in one layer with the same settings, as variants. Honeycomb and Re-entrant mesh are rebuilt as rows plus struts that end on the rows; the others join every crossing in the plane. | Luis | M | Implemented locally (branch `flat-variants`): `honeycomb-planar`, `auxetic-flat`, `coil-flat`, `figure8-rows-flat`, `starlattice-flat`, `harmonograph-flat`. Print them to compare the flat and layered builds. |
 
@@ -141,7 +141,7 @@ The single place to see what is ready, who has it and where it stands. The revie
 | 1 | ~~Branch-and-PR workflow~~ **Confirmed 26 October 2026:** pull requests into `library`; `library` goes to `main` only when the whole plan is done; `CLAUDE.md` updated | branches + PRs into `library`; Luis merges | [Handbook §2.1](../01_Team_Handbook.md#21-branches-and-merging) |
 | 2 | Region borders: a printed seam line | seam on | [T7.6](../03_Tickets/Phase7_Drawing_Tools.md#t76-building-a-piece-from-regions-with-seams) |
 | 3 | Coil's non-loop shapes: legacy only | legacy only | [T1.4](../03_Tickets/Phase1_Move_Existing_Designs.md#t14-coil-looped-rows-and-figure-8-rows) |
-| 4 | Ring mail renamed Rings · layered | renamed | [T1.10](../03_Tickets/Phase1_Move_Existing_Designs.md#t110-move-the-remaining-cards) |
+| 4 | ~~Ring mail renamed Rings · layered~~ **Applied 28 October 2026:** the card (id `chainmail`) now reads *Rings · layered* | renamed | [T1.10](../03_Tickets/Phase1_Move_Existing_Designs.md#t110-move-the-remaining-cards) |
 | 5 | Parquet and Truchet visible with *Needs repair* | visible, never default | [T1.10](../03_Tickets/Phase1_Move_Existing_Designs.md#t110-move-the-remaining-cards) |
 | 6 | Graded cells and bond masks as options, not cards | options | [plan §1](../../reports/FilaFabric_Pattern_Library_Plan_of_Action.md#1-what-was-decided) |
 | 7 | *Print all variants* export | built | [T5.7](../03_Tickets/Phase5_Raised_Cards_and_Comparisons.md#t57-print-all-variants) |

@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "site/vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "59a4a6ceef0292305e1005856b798a1ed38354e501afb2a3ddecc2e2d319405a",
+  "archiveSha256": "f83b9f98b905d82e4c1f0f732758b377b013b46c75c10394e1ac753c94c8f00a",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -1511,8 +1511,8 @@
     },
     {
       "path": "docs/fabric-structures.md",
-      "bytes": 20087,
-      "sha256": "c0937897d8d026d1a65c619cb96b859df4c17bc0a186211c279d7a8ba24011b5"
+      "bytes": 20115,
+      "sha256": "21673400e1266c23922bb370a24d7f75e39546b43d015191245d284476559a43"
     },
     {
       "path": "docs/foamy-calibration.md",
@@ -2491,8 +2491,8 @@
     },
     {
       "path": "site/src/ui/more-designs.js",
-      "bytes": 55642,
-      "sha256": "68bd85509a7b574ce6b43c5ffb0adcb3fe64f3166f883af94fb789c8006d08cd"
+      "bytes": 55649,
+      "sha256": "7cd6f368a7d05197bd4d7c63d6bff7b6e21b227e3ef3d290ed64ae132555b402"
     },
     {
       "path": "site/src/ui/nozzle-limits.js",
