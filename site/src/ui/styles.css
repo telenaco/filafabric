@@ -208,7 +208,7 @@ h1, h2, h3 { margin: 0; }
 
 /* ---------- layout ---------- */
 .app { display: flex; align-items: stretch; min-height: calc(100% - 61px); }
-.designs { flex: 0 0 312px; padding: 20px 14px; border-right: 1px solid var(--line); }
+.designs { flex: 0 0 var(--designs-width, 312px); padding: 20px 14px; border-right: 1px solid var(--line); }
 .stage { flex: 1 1 auto; min-width: 0; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .settings {
   /* min-width 0: a long section summary is cut short with an ellipsis instead of widening the column */
@@ -364,7 +364,7 @@ input[type="range"] { width: 100%; height: 28px; margin: 0; accent-color: var(--
 .shelf-heading:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
 .shelf-title { font-size: 1rem; font-weight: 700; }
 .shelf-hint { margin-top: 2px; color: var(--muted); font-size: .78rem; }
-.shelf-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.shelf-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 6px; }
 .family-heading { grid-column: 1 / -1; margin: 2px 0 0; color: var(--muted); font-size: .72rem; font-weight: 600; letter-spacing: .04em; }
 .design-badges { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
 .design-badge { color: var(--muted); font-size: .64rem; line-height: 1.3; }
@@ -693,7 +693,7 @@ dialog p { margin: 6px 0; }
   .designs, .settings-body { overflow-y: auto; min-height: 0; }
 }
 @media (min-width: 901px) and (max-width: 1180px) {
-  .designs { flex-basis: 236px; padding: 16px 10px; }
+  .designs { flex-basis: var(--designs-width, 236px); padding: 16px 10px; }
   .design-list { gap: 8px; }
   .design-text { padding: 6px 8px 8px; }
   .design-name { font-size: 13px; }
@@ -864,3 +864,11 @@ body { min-height: 100vh; min-height: 100dvh; }
 .play:disabled { background: var(--muted); cursor: default; }
 #scrub:disabled { cursor: default; }
 #overview-actions .link:disabled { color: var(--muted); text-decoration: none; cursor: default; }
+
+/* the handle that widens the design list */
+.designs-resizer { flex: 0 0 8px; margin: 0 -4px; position: relative; z-index: 3; cursor: col-resize; touch-action: none; background: transparent; transition: background .12s; }
+.designs-resizer::after { content: ""; position: absolute; top: 50%; left: 50%; width: 3px; height: 40px; border-radius: 2px; transform: translate(-50%, -50%); background: var(--line-2); opacity: .55; }
+.designs-resizer:hover, .designs-resizer:focus-visible, body.resizing-designs .designs-resizer { background: var(--accent-soft, rgba(120, 140, 255, .18)); }
+.designs-resizer:hover::after, .designs-resizer:focus-visible::after, body.resizing-designs .designs-resizer::after { opacity: 1; }
+body.resizing-designs { cursor: col-resize; user-select: none; }
+@media (max-width: 900px) { .designs-resizer { display: none; } }

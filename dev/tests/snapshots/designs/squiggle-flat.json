@@ -1,0 +1,18 @@
+[
+  {
+    "card": "squiggle-flat",
+    "preset": "default",
+    "settingsHash": "99c7f8ff900e",
+    "gcodeSha256": "6c2a4518eba20fff2b206375f449a28554c53336534de72233c8319841ae5567",
+    "strands": 28,
+    "moves": 2573,
+    "extrudeMm": 1383.6,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  }
+]

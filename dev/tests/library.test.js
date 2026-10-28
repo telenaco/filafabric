@@ -83,14 +83,18 @@ test('all ready cards have the exact ticket metadata', () => {
     "   | `meander-flat` | flat | motif | needs-backing | untested | One space-filling curve in one layer, without a backing. |",
     "   | `parquet-flat` | flat | tiles | needs-backing | untested | Blocks of parallel lines joined by seams, in one layer without a backing. |",
     "   | `boucle-flat` | flat | rings | needs-backing | untested | Rings sit on a line, in one layer without the built-in backing. |",
+    "   | `squiggle-flat` | flat | waves | self | untested | Two wavy families meet in one layer, joined where they cross. |",
+    "   | `square-net-flat` | flat | waves | self | untested | Two square-wave families meet in one layer, joined where they cross. |",
+    "   | `figure8-net-flat` | flat | loops | self | untested | Two figure-8 families meet in one layer, joined where they cross. |",
+    "   | `zigzag-flat` | flat | waves | self | untested | Two zigzag layers fuse where they meet, joined in one layer. |",
     "   | `grid-lifted` | raised | grids | self | untested | Later strands lift over earlier ones at chosen crossings and land after cooling. |",
     "   | `grid-sliding` | raised | grids | self | untested | Printed channels hold one direction over the other while letting it slide. |",
     "   | `wave-bridged` | raised | waves | self | untested | The second family rises over the first on rounded bridges at every crossing. |",
     "   | `colour-exposure` | raised | textures | self | untested | The upper family sits higher where the picture is light, showing more of the lower colour. |",
   ].join("\n");
   const rows = [...brief.matchAll(/\| `([^`]+)` \| (flat|layered|raised) \| (\w+) \| (self|auto|built-in|needs-backing) \| (untested|needs-repair) \| ([^|]+) \|/g)];
-  assert.equal(rows.length, 76);
-  assert.equal(DESIGNS.filter(d => d.status === 'ready' && !d.id.endsWith('-legacy')).length, 76);
+  assert.equal(rows.length, 80);
+  assert.equal(DESIGNS.filter(d => d.status === 'ready' && !d.id.endsWith('-legacy')).length, 80);
   assert.deepEqual(DESIGNS.filter(d => d.id.endsWith('-legacy')).map(d=>d.id).sort(),['meander-legacy','truchet-legacy','turing-legacy']);
   assert.ok(DESIGNS.filter(d=>d.id.endsWith('-legacy')).every(d=>d.hidden&&d.status==='ready'));
   for (const [, id, shelf, family, support, state, joins] of rows) {

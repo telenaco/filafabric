@@ -8,6 +8,17 @@ import { maxAuxeticAmplitude } from './auxetic.js';
 // Truly flat versions of designs that print as two layers: one print layer, no strand lifted over another. Where two strands
 // meet they are joined in the plane (a designed joint, so the pipeline neither lifts one over the other nor counts a crossing).
 
+/**
+ * For strands already built (a card's transform hook): every point at the first layer height, and every place two strands meet
+ * joined there, so nothing is lifted over anything and no crossing is counted.
+ */
+export function joinedPlane(strands, cfg) {
+  const flat = onePlane(strands, cfg).map((strand) => ({ ...strand, joints: [...(strand.joints ?? [])] }));
+  const { found } = findCrossings(flat, { strandWidth: cfg.t.extrusion_width });
+  found.forEach((crossing, n) => { for (const index of new Set([crossing.sa, crossing.sb])) flat[index].joints.push({ id: `flat:${n}`, x: crossing.x, y: crossing.y }); });
+  return flat;
+}
+
 /** Every point at the first layer height: a flat card is one layer, whatever the pipeline lifted at a crossing. */
 export const onePlane = (strands, cfg) => strands.map((strand) => ({ ...strand, pts: strand.pts.map(({ cls, lifted, ...point }) => ({ ...point, z: cfg.t.layer_height })) }));
 

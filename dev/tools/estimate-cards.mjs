@@ -24,7 +24,9 @@ const run = (design, settings) => {
 /** The three numbers a card tile shows. */
 export function summarise(result) {
   const seconds = printTimeSeconds(result.stats);
-  const layers = result.layerCount ?? new Set(result.strands.map((strand) => strand.layer ?? (strand.kind === 'base' ? 0 : 1))).size;
+  // a piece whose every point is at the first layer height is one layer, whatever its strands are called
+  const onePlane = result.construction?.z && result.construction.z.max <= result.cfg.t.layer_height + 0.011;
+  const layers = onePlane ? 1 : result.layerCount ?? new Set(result.strands.map((strand) => strand.layer ?? (strand.kind === 'base' ? 0 : 1))).size;
   return {
     min: seconds === null ? null : Math.round(seconds / 60 * (seconds < 600 ? 10 : 1)) / (seconds < 600 ? 10 : 1),
     g: Math.round(result.stats.filamentGrams * 100) / 100,

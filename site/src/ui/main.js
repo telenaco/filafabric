@@ -1,5 +1,6 @@
 import { PRINTABILITY } from './printability-data.js';
 import { CARD_ESTIMATES } from './card-estimates.js';
+import { initDesignsResizer } from './designs-resizer.js';
 import { estimateLine } from './estimate-line.js';
 import { validNumber } from './numeric.js';
 import { generate } from '../engine/generate.js';
@@ -2474,6 +2475,7 @@ function bindStatic() {
   $('#btn-undo').addEventListener('click', undo);
   $('#btn-redo').addEventListener('click', redo);
   $('#btn-export').addEventListener('click', () => { void exportGcode(); });
+  initDesignsResizer();
   $('#design-filter').addEventListener('input', applyDesignFilter);
   $('#design-filter').addEventListener('keydown', (event) => { if (event.key === 'Escape' && event.target.value) { event.target.value = ''; applyDesignFilter(); } });
   $('#btn-details').addEventListener('click', () => { state.details = !state.details; renderFigures(); });

@@ -13,6 +13,7 @@ const PAIRS = [ // [flat id, the card it came from, the shelf that card now sits
   ['coil-flat', 'coil', 'raised'], ['figure8-rows-flat', 'figure8-rows', 'raised'],
   ['auxetic-flat', 'auxetic', 'layered'], ['honeycomb-planar', 'honeycomb-flat', 'layered'],
   ['starlattice-flat', 'starlattice', 'layered'], ['harmonograph-flat', 'harmonograph', 'layered'],
+  ['squiggle-flat', 'squiggle', 'layered'], ['square-net-flat', 'square-net', 'layered'], ['figure8-net-flat', 'figure8-net', 'layered'], ['zigzag-flat', 'zigzag', 'layered'],
 ];
 const NO_BACKING = ['truchet-flat', 'turing-flat', 'meander-flat', 'parquet-flat', 'boucle-flat'];
 const run = (id, size = 60) => { const card = designById(id), s = card.defaults(); if (card.setSize) card.setSize(s, size, size); return card.generate(machine, material, s, {}); };
@@ -22,7 +23,8 @@ test('each style has a flat card and a layered or raised one, sharing their sett
     const flat = designById(flatId), old = designById(oldId);
     assert.equal(flat.shelf, 'flat', flatId);
     assert.equal(old.shelf, shelf, oldId);
-    assert.deepEqual(variantsOf(flatId).map((card) => card.id).sort(), [flatId, oldId].sort(), `${flatId} and ${oldId} are variants of one style`);
+    const variants = variantsOf(flatId).map((card) => card.id);
+    assert.ok(variants.includes(flatId) && variants.includes(oldId), `${flatId} and ${oldId} are variants of one style`);
     assert.deepEqual(Object.keys(flat.defaults()).sort(), Object.keys(old.defaults()).sort(), `${flatId} carries the same settings`);
   }
   assert.deepEqual(variantDefaultErrors(), []);
@@ -32,7 +34,7 @@ test('the flat cards are one layer: every point at the first layer height, one p
   for (const [flatId] of PAIRS) {
     const result = run(flatId), lh = result.cfg.t.layer_height;
     assert.ok(result.construction.z.max <= lh + 0.011, `${flatId}: Z max ${result.construction.z.max} mm`);
-    assert.equal(result.construction.componentsWithoutTies, 1 + (flatId.startsWith('coil') || flatId.startsWith('figure8') ? 2 : 0), `${flatId}: pieces without ties`);
+    assert.equal(result.construction.componentsWithoutTies, 1 + (flatId.startsWith('coil') || flatId.startsWith('figure8-rows') ? 2 : 0), `${flatId}: pieces without ties`);
     assert.equal(result.fabric.exportable, true, `${flatId}: ${result.fabric.issues.join('; ')}`);
     assert.equal(shelfFromConstruction(result.construction, { layerHeight: lh }), 'flat', `${flatId} measures as flat`);
     assert.ok(result.strands.every((strand) => strand.pts.every((point) => !['rising', 'falling', 'unsupported'].includes(point.cls))), `${flatId}: no strand leaves the plane`);

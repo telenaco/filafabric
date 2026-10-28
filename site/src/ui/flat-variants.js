@@ -76,10 +76,13 @@ export function makeFlatVariants(designs) {
     }));
   }
 
-  // 3. Star lattice and Harmonograph: the same strands, every crossing joined in the plane and all of them in one layer
+  // 3. Star lattice, Harmonograph and Zigzag mesh: the same strands, every crossing joined in the plane and all of them in one layer
+  const zigzagCard = find('zigzag');
+  if (zigzagCard) zigzagCard.settingsKey ??= 'zigzag';
   for (const [id, flatId, label, about] of [
     ['starlattice', 'starlattice-flat', 'Star lattice · flat', 'The same star straps as the layered card, but where two straps meet they are joined in the plane, and every strap is in one layer.'],
     ['harmonograph', 'harmonograph-flat', 'Harmonograph · flat', 'The same Lissajous curve as the layered card, but where the curve meets itself it is joined in the plane, so the whole piece is one layer thick.'],
+    ['zigzag', 'zigzag-flat', 'Zigzag mesh · flat', 'The same two zigzag families as the layered card, in one layer: where a line meets one of the other family they are joined there.'],
   ]) {
     const base = find(id);
     if (!base?.def) continue;

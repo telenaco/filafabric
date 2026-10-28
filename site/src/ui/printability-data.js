@@ -43,6 +43,27 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "zigzag-flat",
+    "score": 0.05,
+    "components": 1,
+    "joints": 1,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 0,
+    "maxSlopeDeg": 0,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 1,
+    "moves": 2445,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 138.9938651455091,
+      "afterMm": 138.9938651455091
+    }
+  },
+  {
     "id": "starlattice-flat",
     "score": 0.6,
     "components": 1,
@@ -163,6 +184,69 @@ export const PRINTABILITY = [
     "routing": {
       "beforeMm": 461.6966730434792,
       "afterMm": 415.2027144147512
+    }
+  },
+  {
+    "id": "figure8-net-flat",
+    "score": 3.95,
+    "components": 1,
+    "joints": 79,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 0,
+    "maxSlopeDeg": 0,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 79,
+    "moves": 42481,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 302.0964263384302,
+      "afterMm": 302.0964263384302
+    }
+  },
+  {
+    "id": "square-net-flat",
+    "score": 3.95,
+    "components": 1,
+    "joints": 79,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 0,
+    "maxSlopeDeg": 0,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 79,
+    "moves": 38349,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 333.7994057304065,
+      "afterMm": 333.7994057304065
+    }
+  },
+  {
+    "id": "squiggle-flat",
+    "score": 3.95,
+    "components": 1,
+    "joints": 79,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 0,
+    "maxSlopeDeg": 0,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 79,
+    "moves": 20958,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 310.47983868756603,
+      "afterMm": 310.47983868756603
     }
   },
   {

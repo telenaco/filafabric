@@ -28,6 +28,7 @@ import {
 import { generateCoil } from '../engine/coil.js';
 import { generateSquiggle, generateSquiggleTextile, SAMPLERS } from '../engine/squiggle.js';
 import { bridgeCrossings } from '../engine/crossings.js';
+import { joinedPlane } from '../engine/flat-variants.js';
 import { acceptIssues } from '../engine/fabric-result.js';
 import { clearanceOrder } from '../engine/order.js';
 import { pictureDarkness } from '../engine/picture.js';
@@ -85,6 +86,16 @@ const squiggleShapeCards = [
   { id: 'looped-net', name: 'Looped net', shape: 'looped', family: 'loops', settingsKey: 'looped-net', shelf: 'raised', support: 'built-in', joins: 'Loops circle over themselves and lift over the earlier pass.' },
   { id: 'squiggle-rings', name: 'Squiggle rings (legacy)', shape: 'ring', family: 'rings', settingsKey: 'squiggle-rings', hidden: true, joins: 'Wavy ring families cross.' },
   { id: 'squiggle-zigzag', name: 'Squiggle zigzag (legacy)', shape: 'zigzag', family: 'waves', settingsKey: 'squiggle-zigzag', hidden: true, joins: 'Two zigzag families cross and fuse.' },
+  // the same strand shapes in one plane: the two families meet where they cross, and nothing is lifted over anything
+  { id: 'squiggle-flat', name: 'Wave net · flat', shape: 'wave', family: 'waves', settingsKey: 'wave', shelf: 'flat', flat: true, shared: BRIDGE_SHARED, file: 'squiggle-flat', transform: () => joinedPlane,
+    joins: 'Two wavy families meet in one layer, joined where they cross.', blurb: 'Two wavy families in one layer, joined where they cross',
+    about: 'The same two wavy families as the Wave net, but in one print layer: where a line meets one of the other family they are joined there, and neither is lifted over the other. The layered version is on the Layered shelf.' },
+  { id: 'square-net-flat', name: 'Square-wave net · flat', shape: 'square', family: 'waves', settingsKey: 'square-net', shelf: 'flat', flat: true, file: 'square-net-flat', transform: () => joinedPlane,
+    joins: 'Two square-wave families meet in one layer, joined where they cross.', blurb: 'Two square-wave families in one layer, joined where they cross',
+    about: 'The same two square-wave families as the Square-wave net, but in one print layer, joined where they cross. The layered version is on the Layered shelf.' },
+  { id: 'figure8-net-flat', name: 'Figure-8 net · flat', shape: 'figure8', family: 'loops', settingsKey: 'figure8-net', shelf: 'flat', flat: true, file: 'figure8-net-flat', transform: () => joinedPlane,
+    joins: 'Two figure-8 families meet in one layer, joined where they cross.', blurb: 'Two figure-8 families in one layer, joined where they cross',
+    about: 'The same two figure-8 families as the Figure-8 net, but in one print layer: every place a line meets another, or itself, it is joined there. The layered version is on the Layered shelf.' },
   { id: 'wave-bridged', name: 'Wave net · bridged crossings', shape: 'wave', family: 'waves', settingsKey: 'wave', shelf: 'raised', joins: 'The second family rises over the first on rounded bridges at every crossing.',
     blurb: 'Rounded bridges where the waves cross', about: "Where the second family crosses the first it rises over it on a rounded bridge instead of fusing flat. The bridge height follows its roundness: line thickness plus half the bridge radius, 0.7 mm at the default 1 mm. From Kim and Lee's continuous textile structures.",
     file: 'wave-bridged', sources: { papers: [31] }, shared: BRIDGE_SHARED,
@@ -150,7 +161,8 @@ function squiggleCard(def) {
   };
   const thumbSettings = { ...defaults(), width: 36, height: 22 };
   const thumbGeometry = generateSquiggleTextile({ ...thumbSettings, strandWidth: 0.4, layerHeight: 0.2 });
-  const thumbLayers = [[thumbGeometry.layer1], [thumbGeometry.layer2]];
+  // a flat card is one layer, so its picture is one colour; a layered one shows its two
+  const thumbLayers = def.flat ? [[thumbGeometry.layer1, thumbGeometry.layer2]] : [[thumbGeometry.layer1], [thumbGeometry.layer2]];
   return {
     id: def.id, name: def.name, blurb: def.blurb ?? 'A two-family textile net made from shaped strands', about: def.about ?? 'Two families of continuous shaped strands meet in a flat mesh. The selected card fixes the strand shape; Structure controls whether the families cross or run in parallel.', file: def.file ?? 'squiggle', status: 'ready',
     shelf: def.shelf ?? 'layered', family: def.family, support: def.support ?? 'self', state: 'untested', joins: def.joins, sources: def.sources ?? {},

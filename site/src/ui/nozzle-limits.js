@@ -72,6 +72,7 @@ export const BEAD_SIZES = Object.freeze({
   turing: { wavelength: null },
   'turing-legacy': { wavelength: null },
   'turing-flat': { wavelength: null },
+  'squiggle-flat': WAVES, 'square-net-flat': WAVES, 'figure8-net-flat': WAVES, 'zigzag-flat': WAVES,
   // the engine loses a layer cut to the shape below about 0.95 mm; 1.05 is the first step of the slider above that
   parquet: { block: 1.05 },
   'parquet-flat': { block: 1.05 },

@@ -210,7 +210,7 @@ export function validateCard(mod) {
  */
 export const SIMPLEST_FIRST = Object.freeze([
   // plain, regular patterns
-  'honeycomb-planar', 'auxetic-flat', 'rings-flat', 'coil-flat', 'figure8-rows-flat', 'honeycomb-flat', 'auxetic', 'zigzag', 'crosshatch', 'squiggle', 'square-net', 'rotated-stack',
+  'honeycomb-planar', 'auxetic-flat', 'rings-flat', 'coil-flat', 'figure8-rows-flat', 'zigzag-flat', 'squiggle-flat', 'square-net-flat', 'figure8-net-flat', 'honeycomb-flat', 'auxetic', 'zigzag', 'crosshatch', 'squiggle', 'square-net', 'rotated-stack',
   'rings-raised', 'coil', 'figure8-rows', 'loop-pile',
   // regular, with a little more to set
   'rotating-squares', 'rotating-triangles', 'arrowhead-band', 'starlattice', 'harmonograph', 'spiral-cells', 'kirigami', 'honeycomb-layered',
