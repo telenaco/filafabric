@@ -106,6 +106,48 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "isohedral-tiles",
+    "score": 1.35,
+    "components": 1,
+    "joints": 28,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 0,
+    "maxSlopeDeg": 0,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 27,
+    "moves": 2222,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 3955.204936520684,
+      "afterMm": 281.55070923108383
+    }
+  },
+  {
+    "id": "rings-flat",
+    "score": 1.75,
+    "components": 1,
+    "joints": 35,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 0,
+    "maxSlopeDeg": 0,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 35,
+    "moves": 10527,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 1492.7960849657889,
+      "afterMm": 1492.7960849657889
+    }
+  },
+  {
     "id": "rotated-stack",
     "score": 2.700000000005821,
     "components": 1,
@@ -124,10 +166,10 @@ export const PRINTABILITY = [
     "routing": null
   },
   {
-    "id": "isohedral-tiles",
-    "score": 3.15,
+    "id": "arrowhead-band",
+    "score": 3.05,
     "components": 1,
-    "joints": 78,
+    "joints": 61,
     "reversedCrossings": 0,
     "separatedCrossings": 0,
     "longestUnsupported": 0,
@@ -136,12 +178,12 @@ export const PRINTABILITY = [
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 63,
-    "moves": 2185,
+    "hops": 61,
+    "moves": 6902,
     "clearanceFlags": 0,
     "routing": {
-      "beforeMm": 3955.204936520684,
-      "afterMm": 573.4045841253995
+      "beforeMm": 2064.003672325682,
+      "afterMm": 353.54695723752417
     }
   },
   {
@@ -163,6 +205,27 @@ export const PRINTABILITY = [
     "routing": {
       "beforeMm": 1553.5958847258632,
       "afterMm": 546.7778054607352
+    }
+  },
+  {
+    "id": "spiral-cells",
+    "score": 3.55,
+    "components": 1,
+    "joints": 71,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 0,
+    "maxSlopeDeg": 0,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 71,
+    "moves": 6201,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 970.7939392393397,
+      "afterMm": 970.7939392061413
     }
   },
   {
@@ -272,9 +335,9 @@ export const PRINTABILITY = [
   },
   {
     "id": "meander-ties",
-    "score": 5.35,
+    "score": 4.95,
     "components": 1,
-    "joints": 107,
+    "joints": 99,
     "reversedCrossings": 0,
     "separatedCrossings": 0,
     "longestUnsupported": 0,
@@ -283,12 +346,33 @@ export const PRINTABILITY = [
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 107,
+    "hops": 99,
     "moves": 1065,
     "clearanceFlags": 0,
     "routing": {
       "beforeMm": 1257.5386645170383,
-      "afterMm": 736.6072703012946
+      "afterMm": 568.3789532080061
+    }
+  },
+  {
+    "id": "stochastic-net",
+    "score": 5.4,
+    "components": 1,
+    "joints": 108,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 0,
+    "maxSlopeDeg": 0,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 108,
+    "moves": 1422,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 4483.189926295114,
+      "afterMm": 616.2327347157363
     }
   },
   {
@@ -313,31 +397,10 @@ export const PRINTABILITY = [
     }
   },
   {
-    "id": "stochastic-net",
-    "score": 5.65,
-    "components": 1,
-    "joints": 124,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 0,
-    "maxSlopeDeg": 0,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 113,
-    "moves": 1413,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 4483.189926295114,
-      "afterMm": 843.9620829419442
-    }
-  },
-  {
     "id": "voronoi-cells",
-    "score": 6.35,
+    "score": 6.25,
     "components": 1,
-    "joints": 131,
+    "joints": 125,
     "reversedCrossings": 0,
     "separatedCrossings": 0,
     "longestUnsupported": 0,
@@ -346,12 +409,12 @@ export const PRINTABILITY = [
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 127,
+    "hops": 125,
     "moves": 574,
     "clearanceFlags": 0,
     "routing": {
       "beforeMm": 5235.746174257952,
-      "afterMm": 767.991950427377
+      "afterMm": 645.9547107688888
     }
   },
   {
@@ -376,10 +439,10 @@ export const PRINTABILITY = [
     }
   },
   {
-    "id": "arrowhead-band",
-    "score": 6.85,
+    "id": "kirigami",
+    "score": 7.1,
     "components": 1,
-    "joints": 189,
+    "joints": 142,
     "reversedCrossings": 0,
     "separatedCrossings": 0,
     "longestUnsupported": 0,
@@ -388,12 +451,12 @@ export const PRINTABILITY = [
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 137,
-    "moves": 4835,
+    "hops": 142,
+    "moves": 124836,
     "clearanceFlags": 0,
     "routing": {
-      "beforeMm": 2064.003672325682,
-      "afterMm": 240.01304380536968
+      "beforeMm": 62303.40544349381,
+      "afterMm": 473.58623298439454
     }
   },
   {
@@ -410,32 +473,11 @@ export const PRINTABILITY = [
     "exportable": true,
     "physicallyVerified": false,
     "hops": 142,
-    "moves": 8347,
+    "moves": 8508,
     "clearanceFlags": 0,
     "routing": {
       "beforeMm": 4962.123467287816,
-      "afterMm": 1024.105388862913
-    }
-  },
-  {
-    "id": "rings-flat",
-    "score": 11.1,
-    "components": 1,
-    "joints": 222,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 0,
-    "maxSlopeDeg": 0,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 222,
-    "moves": 11419,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 2854.52978363519,
-      "afterMm": 2854.52978363519
+      "afterMm": 781.7083926621906
     }
   },
   {
@@ -452,11 +494,11 @@ export const PRINTABILITY = [
     "exportable": true,
     "physicallyVerified": false,
     "hops": 224,
-    "moves": 3188,
+    "moves": 3171,
     "clearanceFlags": 0,
     "routing": {
-      "beforeMm": 3974.2972900603136,
-      "afterMm": 702.120407313339
+      "beforeMm": 1307.7320201054674,
+      "afterMm": 1307.7320201054674
     }
   },
   {
@@ -476,8 +518,8 @@ export const PRINTABILITY = [
     "moves": 3171,
     "clearanceFlags": 0,
     "routing": {
-      "beforeMm": 3173.4182265524087,
-      "afterMm": 1271.7521427875602
+      "beforeMm": 1345.4166077820905,
+      "afterMm": 1345.4166077820905
     }
   },
   {
@@ -494,11 +536,11 @@ export const PRINTABILITY = [
     "exportable": true,
     "physicallyVerified": false,
     "hops": 242,
-    "moves": 1479,
+    "moves": 1459,
     "clearanceFlags": 0,
     "routing": {
       "beforeMm": 2963.0849222228026,
-      "afterMm": 885.0271028224337
+      "afterMm": 803.9489233513633
     }
   },
   {
@@ -583,27 +625,6 @@ export const PRINTABILITY = [
     "routing": {
       "beforeMm": 6370.994544294652,
       "afterMm": 854.527194039521
-    }
-  },
-  {
-    "id": "spiral-cells",
-    "score": 15.95,
-    "components": 1,
-    "joints": 319,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 0,
-    "maxSlopeDeg": 0,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 319,
-    "moves": 6465,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 2719.137327728749,
-      "afterMm": 2719.137327728749
     }
   },
   {
@@ -851,11 +872,11 @@ export const PRINTABILITY = [
     "exportable": true,
     "physicallyVerified": false,
     "hops": 460,
-    "moves": 3284,
+    "moves": 3248,
     "clearanceFlags": 0,
     "routing": {
       "beforeMm": 4956.178117683842,
-      "afterMm": 1581.4648429130934
+      "afterMm": 1306.781085429253
     }
   },
   {
@@ -1532,27 +1553,6 @@ export const PRINTABILITY = [
     "moves": 44859,
     "clearanceFlags": 0,
     "routing": null
-  },
-  {
-    "id": "kirigami",
-    "score": 159.45,
-    "components": 1,
-    "joints": 3189,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 0,
-    "maxSlopeDeg": 0,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 3189,
-    "moves": 124663,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 62303.40544349381,
-      "afterMm": 1785.6915231222067
-    }
   },
   {
     "id": "loop-pile",

@@ -2499,6 +2499,8 @@ function bindStatic() {
   anchorPopover($('#more-menu'), $('#btn-more'));
   anchorPopover($('#view-menu'), $('#btn-view'));
   $('#btn-help').addEventListener('click', () => { closeMenus(); $('#help-dialog').showModal(); });
+  // what is counted lives inside the studio, behind the password, not on a page of its own that a search engine could find
+  document.querySelectorAll('[data-open-study]').forEach((button) => button.addEventListener('click', () => $('#study-dialog').showModal()));
   feedback = bindFeedback($('#feedback-dialog'), { context: feedbackContext, toast });
   $('#btn-feedback').addEventListener('click', () => feedback.open());
   $('#btn-save-file').addEventListener('click', () => { closeMenus(); saveFile(); });

@@ -65,8 +65,17 @@ test('the page has the privacy notice, its buttons and the menu item that brings
   assert.match(html, /no cookies/i);
 });
 
+test('what is counted is a dialog inside the studio, not a public page of its own', () => {
+  assert.equal(fs.existsSync(path.join(siteRoot, 'study.html')), false, 'a public page could be found and cached by a search engine');
+  const html = fs.readFileSync(path.join(siteRoot, 'index.html'), 'utf8');
+  assert.doesNotMatch(html, /study\.html/);
+  assert.ok(html.includes('id="study-dialog"'), 'the dialog');
+  assert.ok((html.match(/data-open-study/g) ?? []).length >= 2, 'both links open it');
+  assert.match(html, /What is recorded/);
+});
+
 test('no page loads its font or styles from another site', () => {
-  for (const file of ['index.html', 'study.html', path.join('src', 'ui', 'styles.css')]) {
+  for (const file of ['index.html', path.join('src', 'ui', 'styles.css')]) {
     const text = fs.readFileSync(path.join(siteRoot, file), 'utf8');
     assert.doesNotMatch(text, /fonts\.(googleapis|gstatic)\.com/, file);
     assert.doesNotMatch(text, /<link[^>]+href="https?:/, file);

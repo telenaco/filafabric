@@ -26,7 +26,7 @@ export function spiralCellsLayers(boundary,{cell=12,twist=2.2,armWidth=.45,hande
     }
     const ring=[];const n=Math.max(12,Math.ceil(2*Math.PI*width/.3));
     for(let k=0;k<=n;k++){const a=2*Math.PI*k/n;ring.push({x:cx+width*Math.cos(a),y:cy+width*Math.sin(a)});}
-    ring.family='arms';paths.push(densify(ring));
+    const loop=densify(ring);loop.rowOrder=(j*cols+i)*4+3.5;paths.push(loop);
   }
   const {found}=findCrossings(paths.map((p)=>({pts:p.map((q)=>({...q,z:0}))})),{strandWidth:width,cell:1});
   found.forEach((crossing,index)=>{

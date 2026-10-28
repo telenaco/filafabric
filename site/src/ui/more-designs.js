@@ -7,6 +7,7 @@ import { buildLayeredVerdict } from './verdict.js';
 import { thumbFromLayers, optionThumbFromLayers, shapeThumb } from './thumbs.js';
 import { OPTION_ICONS } from './option-thumbs.js';
 import { boundaryFor, layeredResult } from '../engine/layers.js';
+import { joinedPlane } from '../engine/flat-variants.js';
 import { acceptIssues } from '../engine/fabric-result.js';
 import { resolveConfig } from '../engine/params.js';
 import { SHAPES } from '../engine/shapes.js';
@@ -37,6 +38,7 @@ const shapeOptions = () => WAVY.map((id) => ({ id, label: SHAPES[id].label, hint
  */
 export function layered(def) {
   const { c } = def;
+  const singleLine = (extra) => (def.singleLine ? { ...extra, transform: (strands, cfg) => joinedPlane(extra.transform ? extra.transform(strands, cfg) ?? strands : strands, cfg) } : extra);
   // `bundle` names a choice that does the job of a "Start from" row: each of its options also sets the sizes and
   // angles of the preset that picks it, so there is one selector instead of two that mean the same thing
   let controls = def.controls;
@@ -114,7 +116,7 @@ export function layered(def) {
     fullSize: !!def.fullSize,
     panel: def.panel,
     svgNote: def.svgNote,
-    optimizeTravel: !!def.optimizeTravel,
+    optimizeTravel: !!(def.optimizeTravel || def.singleLine),
     // Display-only XY geometry: no travel planning, crossing analysis, stats or G-code allocation.
     overviewLayers: (s, boundary, context) => def.build(s, boundary, context).layers,
     generate: (machine, material, s, { outline = null, vector = null, vectorSize = null, vectorOffset = [0, 0], includeLines = true, picture = null, perimeters = 0, printedBoundary = false } = {}) => {
@@ -132,8 +134,9 @@ export function layered(def) {
         colorChange: !!s.colorChange,
         outline: built.outline ?? outline,
         inset: def.usesVector ? 0 : undefined,
-        optimizeTravel: !!def.optimizeTravel,
-        extra: { layerCount: built.layers.length, ...(built.extra ?? {}) },
+        optimizeTravel: !!(def.optimizeTravel || def.singleLine),
+        // a flat card that joins its lines into long strokes passes over its own junctions: it stays in the plane, joined there
+        extra: singleLine({ layerCount: built.layers.length, ...(built.extra ?? {}) }),
         planes: !!built.extra?.planes,
         ramp: def.ramp ?? 1.6,
       });

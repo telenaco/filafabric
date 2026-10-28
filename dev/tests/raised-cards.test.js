@@ -20,7 +20,7 @@ test('the grid, its lifted variant and its sliding variant share one settings ke
   assert.deepEqual(variantsOf('crosshatch').map((card) => card.id), ['crosshatch', 'grid-lifted', 'grid-sliding']);
   assert.deepEqual(variantDefaultErrors(), []);
   for (const id of ['grid-lifted', 'grid-sliding']) assert.equal(designById(id).shelf, 'raised');
-  assert.deepEqual(variantsOf('squiggle').map((card) => card.id), ['squiggle', 'wave-bridged']);
+  assert.deepEqual(variantsOf('squiggle').map((card) => card.id), ['squiggle-flat', 'squiggle', 'wave-bridged']);
 });
 
 test('grid · lifted: the report counts exactly the crossings that liftWhere selects', () => {

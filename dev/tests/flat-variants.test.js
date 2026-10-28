@@ -85,3 +85,59 @@ test('every card has a picture, and a flat card does not borrow its layered or r
   for (const card of DESIGNS.filter((entry) => entry.status === 'ready' && !entry.hidden)) assert.ok(pictureOf(card.id), `${card.id} has no picture`);
   for (const [flatId, oldId] of [...PAIRS.map(([flat, old]) => [flat, old]), ['boucle-flat', 'boucle']]) assert.notEqual(pictureOf(flatId), pictureOf(oldId), `${flatId} draws its own picture`);
 });
+
+// The print order is the layered card's: the nozzle follows one line as far as the design allows, and each family prints whole before the
+// next, so a flat card does not hop between a row, a few struts, the next row.
+const hop = (a, b) => Math.hypot(b.pts[0].x - a.pts.at(-1).x, b.pts[0].y - a.pts.at(-1).y);
+
+test('Honeycomb and Re-entrant mesh print every row first, then the struts a column at a time', () => {
+  for (const id of ['honeycomb-planar', 'auxetic-flat']) {
+    const { strands } = run(id, 100);
+    const firstStrut = strands.findIndex((strand) => strand.family === 'struts');
+    assert.ok(firstStrut > 0, `${id}: rows come first`);
+    assert.ok(strands.slice(0, firstStrut).every((strand) => strand.family === 'rows'), `${id}: only rows before the first strut`);
+    assert.ok(strands.slice(firstStrut).every((strand) => strand.family === 'struts'), `${id}: only struts after the first strut`);
+    // a column of struts is walked up, the next one down: the nozzle never crosses the sheet between two struts of a column
+    const struts = strands.slice(firstStrut), hops = struts.slice(1).map((strand, i) => hop(struts[i], strand)).sort((a, b) => a - b);
+    assert.ok(hops[Math.floor(hops.length * 0.8)] < 9, `${id}: 80 % of the hops between struts are short (${hops[Math.floor(hops.length * 0.8)].toFixed(1)} mm)`);
+    // and each row is one whole stroke across the sheet, alternating direction
+    const rows = strands.slice(0, firstStrut);
+    assert.ok(rows.every((row, i) => i === 0 || Math.sign(row.pts.at(-1).x - row.pts[0].x) === -Math.sign(rows[i - 1].pts.at(-1).x - rows[i - 1].pts[0].x)), `${id}: rows alternate direction`);
+  }
+});
+
+test('the families of a flat card with two print directions print one after the other', () => {
+  for (const id of ['squiggle-flat', 'square-net-flat', 'figure8-net-flat']) {
+    const { strands } = run(id, 100), families = strands.map((strand) => strand.family);
+    assert.equal(families.filter((family, i) => i && family !== families[i - 1]).length, 1, `${id}: one change of family`);
+  }
+});
+
+test('strokesPerGroup joins lines that meet into one stroke and keeps the groups in order', async () => {
+  const { strokesPerGroup } = await import('../../site/src/engine/flat-variants.js');
+  const line = (...pts) => pts.map(([x, y]) => ({ x, y }));
+  const square = [line([0, 0], [10, 0]), line([10, 0], [10, 10]), line([10, 10], [0, 10]), line([0, 10], [0, 0])];
+  const apart = [line([40, 0], [50, 0]), line([40, 5], [50, 5])];
+  const out = strokesPerGroup([...apart.map((l) => Object.assign(l, { g: 1 })), ...square.map((l) => Object.assign(l, { g: 0 }))], (l) => l.g);
+  assert.equal(out.length, 3, 'four sides of a square are one stroke; two separate lines stay two');
+  assert.deepEqual(out.map((stroke) => stroke.rowOrder), [0, 1, 2]);
+  assert.equal(Math.round(out[0].reduce((n, p, i) => (i ? n + Math.hypot(p.x - out[0][i - 1].x, p.y - out[0][i - 1].y) : n), 0)), 40, 'the square is printed once round');
+  assert.ok(out[0].every((p) => p.x <= 10), 'the first group prints first');
+});
+
+test('Rings · flat prints a row of rings as one line, not ring by ring', () => {
+  const { strands } = run('rings-flat', 100);
+  assert.ok(strands.length < 60, `${strands.length} strokes for the whole sheet`);
+  const ring = Math.PI * 8;
+  assert.ok(strands.some((strand) => strand.pts.reduce((n, p, i) => (i ? n + Math.hypot(p.x - strand.pts[i - 1].x, p.y - strand.pts[i - 1].y) : n), 0) > 4 * ring), 'a stroke runs through several rings');
+});
+
+test('the flat cards that join their lines stay in one plane and use fewer strokes', () => {
+  const before = { 'spiral-cells': 300, 'arrowhead-band': 150, 'isohedral-tiles': 60, kirigami: 1000 };
+  for (const [id, many] of Object.entries(before)) {
+    const result = run(id, 100), lh = result.cfg.t.layer_height;
+    assert.ok(result.strands.length < many, `${id}: ${result.strands.length} strokes`);
+    assert.ok(result.construction.z.max <= lh + 0.011, `${id}: Z max ${result.construction.z.max} mm`);
+    assert.deepEqual(result.fabric.issues, [], id);
+  }
+});

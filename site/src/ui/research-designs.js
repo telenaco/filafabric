@@ -14,7 +14,7 @@ import { kirigamiLayers } from '../engine/kirigami.js';
 import { starMetricLayers } from '../engine/star-metric.js';
 import { isohedralLayers, isohedralParameterCount, isohedralMaterialClass } from '../engine/isohedral.js';
 import { climbOverlaps } from '../engine/climb.js';
-import { planarLayers, onePlane } from '../engine/flat-variants.js';
+import { planarLayers, onePlane, joinedPlane, strokesPerGroup } from '../engine/flat-variants.js';
 import { buildLayeredVerdict } from './verdict.js';
 import { stepLaceLayers } from '../engine/step-lace.js';
 import { pairedLoopsLayers } from '../engine/paired-loops.js';
@@ -208,7 +208,9 @@ export const RESEARCH_DESIGNS = [layered({
     const field = patternField(s.pattern, { scale: s.patternScale, picture: ctx?.picture });
     const built = ringsLayers(boundary, { lattice: s.lattice, ringSize: s.ringSize, overlap: s.overlap, sizeField: field, bead: ctx?.bead ?? .45 });
     // one plane: where two rings overlap they fuse there, and no ring is lifted over another
-    return { layers: planarLayers([...built], { bead: ctx?.bead ?? .45 }), families: built.families, extra: { ...built.extra, flat: true, transform: onePlane } };
+    // a row of overlapping rings is one connected line: the nozzle goes round a ring and carries on into the next, row by row
+    const [planar] = planarLayers([...built], { bead: ctx?.bead ?? .45 });
+    return { layers: [Object.assign(strokesPerGroup(planar, (ring) => Math.round((ring.centre?.y ?? 0) * 1000)), { family: planar.family })], families: built.families, extra: { ...built.extra, flat: true, transform: onePlane } };
   },
   summary: result => `rings in one pass, ${result.report.crossings} joins`,
 }), layered({
@@ -224,7 +226,7 @@ export const RESEARCH_DESIGNS = [layered({
   summary:result=>`rings build up to ${result.construction.levels?.max??1} levels`,
 }), layered({
   id: 'rotating-squares', name: 'Rotating squares', blurb: 'Alternating squares linked at their corners', about: 'Alternating squares turn in opposite directions and join only at their corners through short necks. Pulling the sheet makes the units counter-rotate; the border band closes the free edge. The reported auxetic result used ABS squares on a pre-stretched knit, so this single-material version remains untested.', file: 'rotating-squares', c: SQUARE_UNITS,
-  shelf: 'flat', family: 'lattices', support: 'self', state: 'untested', settingsKey: 'rotating-units',
+  shelf: 'flat', singleLine: true, family: 'lattices', support: 'self', state: 'untested', settingsKey: 'rotating-units',
   joins: 'Alternating square outlines meet only through corner necks and a border band.', sources: { catalogue: ['S4'], papers: [55] },
   controls: [
     { kind: 'presets', title: 'Start from' },
@@ -245,7 +247,7 @@ export const RESEARCH_DESIGNS = [layered({
   summary: result => `rotating squares with ${result.report.joints} joins`,
 }), layered({
   id: 'rotating-triangles', name: 'Rotating triangles', blurb: 'Alternating triangles linked at their corners', about: 'Equilateral triangles occupy two interleaved sublattices and connect through three short corner necks per interior unit. At zero inclination, the paired corner links form a kagome-like network; a perimeter band closes the free edge. This single-material version is untested, and published mechanisms do not qualify its physical behaviour.', file: 'rotating-triangles', c: TRIANGLE_UNITS,
-  shelf: 'flat', family: 'lattices', support: 'self', state: 'untested', settingsKey: 'rotating-triangles',
+  shelf: 'flat', singleLine: true, family: 'lattices', support: 'self', state: 'untested', settingsKey: 'rotating-triangles',
   joins: 'Alternating triangular outlines meet through corner necks and a border band.', sources: { papers: [6, 34] },
   controls: [
     { kind: 'presets', title: 'Start from' },
@@ -266,7 +268,7 @@ export const RESEARCH_DESIGNS = [layered({
   summary: result => `rotating triangles with ${result.construction.joints} corner joins`,
 }), layered({
   id: 'arrowhead-band', name: 'Arrowhead band', blurb: 'Nested re-entrant cells held by side rails', about: 'Rows of hollow arrowhead outlines nest into the row below. Two continuous side rails anchor the edge cells; without them the free edges may fray. This is a flat single-plane interpretation of published re-entrant bands and remains untested.', file: 'arrowhead-band', c: ARROWHEAD,
-  shelf: 'flat', family: 'lattices', support: 'self', state: 'untested', settingsKey: 'arrowhead',
+  shelf: 'flat', singleLine: true, family: 'lattices', support: 'self', state: 'untested', settingsKey: 'arrowhead',
   joins: 'Arrowhead arms nest across rows and continuous side rails retain the edges.', sources: { papers: [1, 68] },
   controls: [
     { kind: 'presets', title: 'Start from' },
@@ -301,11 +303,11 @@ export const RESEARCH_DESIGNS = [layered({
     { kind: 'pattern', key: 'pattern', title: 'Pattern', hint: 'Twist changes by cell: darker areas tighten the spiral arms; lighter areas loosen them.', picture: 'positive', pictureHint: 'Darker tones increase twist, tightening each spiral; lighter tones reduce twist and loosen the arms.', scale: { key: 'patternScale', label: 'Pattern size', help: 'Stretches the picture across the sheet.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false } },
     COLOUR,
   ],
-  build: (s,boundary,ctx) => { const field=patternField(s.pattern,{scale:s.patternScale,picture:ctx?.picture});const built=spiralCellsLayers(boundary,{...s,tone:field});return {layers:[...built],families:built.families,extra:{...built.extra,spiralNote:s.spiralNote},warnings:s.spiralNote?[s.spiralNote]:[]}; },
+  build: (s,boundary,ctx) => { const field=patternField(s.pattern,{scale:s.patternScale,picture:ctx?.picture});const built=spiralCellsLayers(boundary,{...s,tone:field});const perRow=4*built.extra.columns;return {layers:[Object.assign(strokesPerGroup(built[0],(line)=>Math.floor(line.rowOrder/perRow)),{family:'arms'})],families:built.families,extra:{...built.extra,spiralNote:s.spiralNote,transform:joinedPlane},warnings:s.spiralNote?[s.spiralNote]:[]}; },
   summary: result => `four spiral arms per cell in ${result.rows} rows`,
 }), layered({
   id: 'voronoi-cells', name: 'Voronoi cells', blurb: 'A single family of closed cell walls', about: 'The Voronoi walls from Voronoi lace, printed alone as a flat cellular net. The optional perimeter line closes boundary cells. Site placement and seed match the existing layered Voronoi card.', file: 'voronoi-cells', c: VORONOI,
-  shelf: 'flat', family: 'cells', support: 'self', state: 'untested', settingsKey: 'voronoi',
+  shelf: 'flat', singleLine: true, family: 'cells', support: 'self', state: 'untested', settingsKey: 'voronoi',
   joins: 'Voronoi cell walls meet at shared vertices and close against the perimeter.', sources: { papers: [44] },
   patternEffects: ['size'], patterns: withPicture(['none',...FIELD_IDS]),
   controls: [
@@ -324,7 +326,7 @@ export const RESEARCH_DESIGNS = [layered({
   summary:result=>`${result.sites} Voronoi cells`,
 }), layered({
   id:'stochastic-net',name:'Stochastic net',blurb:'Seeded links with a preferred direction',about:'A repeatable jittered node field connected by anisotropic k-nearest links. The stretched metric biases link lengths along the chosen direction; a boundary strand catches edge nodes. This procedural net is an untested starting point, not a calibrated stiffness guarantee.',file:'stochastic-net',c:STOCHASTIC,
-  shelf:'flat',family:'grids',support:'self',state:'untested',settingsKey:'stochastic-net',
+  shelf:'flat',singleLine:true,family:'grids',support:'self',state:'untested',settingsKey:'stochastic-net',
   patternEffects:['size'],patterns:withPicture(['none',...FIELD_IDS]),
   joins:'K-nearest links meet at shared nodes; the perimeter anchors the edge.',sources:{catalogue:['S6'],papers:[44,45]},
   controls:[
@@ -358,7 +360,7 @@ export const RESEARCH_DESIGNS = [layered({
   summary:result=>`${result.motifCount} lace motifs with ${result.neckCount} joins`,
 }), layered({
   id:'meander-ties',name:'Meander with ties',blurb:'A space-filling curve joined without a backing',about:'The existing Meander curves are printed without their backing. Sparse, designed in-plane ties join nearby parallel portions of the curve; these are native geometry, not automatic repair ties.',file:'meander-ties',c:MEANDER_TIES,
-  shelf:'flat',family:'curves',support:'self',state:'untested',settingsKey:'meander-ties',joins:'Designed ties bridge nearby folds of one space-filling curve.',sources:{catalogue:['S3']},
+  shelf:'flat',singleLine:true,family:'curves',support:'self',state:'untested',settingsKey:'meander-ties',joins:'Designed ties bridge nearby folds of one space-filling curve.',sources:{catalogue:['S3']},
   controls:[
     {kind:'presets',title:'Start from'},{kind:'size',title:'Size and shape'},
     {kind:'choice',key:'curve',title:'Curve',hint:'Select the space-filling path.',options:CURVE_IDS.map(id=>({id,label:CURVES[id].label,hint:CURVES[id].hint}))},
@@ -373,7 +375,7 @@ export const RESEARCH_DESIGNS = [layered({
   summary:result=>`a meander held by ${result.ties} designed ties`,
 }), layered({
   id:'kirigami',name:'Kirigami sheet',blurb:'Solid fill with staggered slits',about:'A filled sheet with staggered, rounded-ended slits. Two orthogonal fill passes form a solid piece around the cuts; the slit-to-interval ratio is exposed for TPU experimentation. This toolpath estimate needs physical validation.',file:'kirigami',c:KIRIGAMI,
-  shelf:'flat',family:'lattices',support:'self',state:'untested',settingsKey:'kirigami',joins:'The remaining solid sheet joins the slit pattern as one filled piece.',sources:{catalogue:['S4'],papers:[48]},
+  shelf:'flat',singleLine:true,family:'lattices',support:'self',state:'untested',settingsKey:'kirigami',joins:'The remaining solid sheet joins the slit pattern as one filled piece.',sources:{catalogue:['S4'],papers:[48]},
   controls:[
     {kind:'presets',title:'Start from'},{kind:'size',title:'Size and shape'},
     {kind:'choice',key:'passes',title:'Fill passes',hint:'Two orthogonal passes make the filled sheet more robust.',options:[{id:1,label:'One'},{id:2,label:'Two'}]},
@@ -388,7 +390,7 @@ export const RESEARCH_DESIGNS = [layered({
   summary:result=>`solid fill around ${result.slits} staggered slits`,
 }), layered({
   id:'star-metric',name:'Star-metric cells',blurb:'Petal-shaped cells with radial symmetry',about:'Voronoi cells grow under a periodic star-shaped metric. The lattice and symmetry set the repeating material class; each petal handle changes the radial spans. Pattern grading assigns a nearby metric at each site rather than blending neighbouring cells.',file:'star-metric',c:STAR_METRIC,
-  shelf:'flat',family:'cells',support:'self',state:'untested',settingsKey:'star-metric',patterns:withPicture(['none',...FIELD_IDS]),joins:'Metric cell walls meet at shared vertices and close against the perimeter.',sources:{catalogue:['S7'],papers:[46]},
+  shelf:'flat',singleLine:true,family:'cells',support:'self',state:'untested',settingsKey:'star-metric',patterns:withPicture(['none',...FIELD_IDS]),joins:'Metric cell walls meet at shared vertices and close against the perimeter.',sources:{catalogue:['S7'],papers:[46]},
   controls:[
     {kind:'presets',title:'Start from'},{kind:'size',title:'Size and shape'},
     {kind:'choice',key:'lattice',title:'Lattice',hint:'Choose the arrangement of cell centres.',options:[{id:'triangular',label:'Triangular'},{id:'honeycomb',label:'Honeycomb'},{id:'square',label:'Square'},{id:'diagonal-square',label:'Diagonal square'}]},
@@ -404,7 +406,7 @@ export const RESEARCH_DESIGNS = [layered({
   summary:result=>`${result.sites} star-metric sites`,
 }), layered({
   id:'isohedral-tiles',name:'Isohedral tiles',blurb:'A repeating network of tile edges',about:'TactileJS supplies the periodic tile geometry for the selected isohedral family. Edges are straightened for this first printable study; the expected symmetry class is a geometric prediction, not a measured material property.',file:'isohedral-tiles',c:ISOHEDRAL,
-  shelf:'flat',family:'lattices',support:'self',state:'untested',settingsKey:'isohedral-tiles',joins:'Shared prototile edges are deduplicated and joined into a repeating net.',sources:{catalogue:['S7'],papers:[47,54]},
+  shelf:'flat',singleLine:true,family:'lattices',support:'self',state:'untested',settingsKey:'isohedral-tiles',joins:'Shared prototile edges are deduplicated and joined into a repeating net.',sources:{catalogue:['S7'],papers:[47,54]},
   controls:[{kind:'presets',title:'Start from'},{kind:'size',title:'Size and shape'},
     {kind:'choice',key:'family',title:'Tile family',hint:'The initial curated set uses TactileJS families; more than 80 are available in the library.',options:['IH28','IH21','IH1','IH41','IH84','IH2','IH3','IH7','IH10','IH14','IH18','IH20'].map(id=>({id,label:id,hint:`Predicted symmetry class: ${isohedralMaterialClass(id)}; geometric expectation, not a physical result.`}))},
     {kind:'sliders',title:'Shape and scale',items:[{key:'scale',label:'Tile scale',help:'Approximate repeat scale.',lo:'Small',hi:'Large',unit:'mm',edit:true},...[1,2,3,4,5,6].map(i=>({key:`shape${i}`,label:`Shape ${i}`,help:'Isohedral prototile parameter (−1 to 2).',lo:'−1',hi:'2',unit:'',edit:true}))]},COLOUR],

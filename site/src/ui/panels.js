@@ -1028,19 +1028,19 @@ export class DesignPanel extends Control {
     this.mod = mod;
     this.joins = mod.joins ? el('p', { class: 'panel-joins', text: mod.joins }) : null;
     this.badges = el('div', { class: 'panel-badges', 'aria-label': 'Card status' },
-      el('span', { class: 'design-badge', text: ({ self: 'Holds itself', auto: 'Uses a carrier', 'built-in': 'Built-in carrier' })[mod.support] ?? 'Support not set' }),
+      el('span', { class: 'design-badge', text: ({ self: 'Holds itself', auto: 'Uses a carrier', 'built-in': 'Built-in carrier', 'needs-backing': 'Needs a backing' })[mod.support] ?? 'Support not set' }),
       el('span', { class: `design-badge state-${mod.state ?? 'untested'}`, text: ({ tested: 'Tested', untested: 'Untested', 'needs-repair': 'Needs repair' })[mod.state] ?? 'Untested' }));
     const variants = variantsOf(mod.id).filter((card) => card.id !== mod.id);
-    this.printVariants = variants.length ? el('button', { type: 'button', class: 'btn small', text: 'Print all variants', title: 'Place each variant on one bed for a side-by-side comparison' }) : null;
+    this.printVariants = variants.length ? el('button', { type: 'button', class: 'link small', text: 'Print all variants', title: 'Place each variant on one bed for a side-by-side comparison' }) : null;
     this.printVariants?.addEventListener('click', () => this.host.printVariants?.(mod.id));
     this.alsoOn = variants.length ? el('nav', { class: 'variant-links', 'aria-label': 'Also on' },
       el('span', { class: 'small muted', text: 'Also on:' }), ...variants.map((card) => {
         const button = el('button', { type: 'button', class: 'link small', text: SHELVES[card.shelf].label });
         button.addEventListener('click', () => this.host.switchDesign?.(card.id));
         return button;
-      })) : null;
+      }), el('span', { class: 'small muted', 'aria-hidden': 'true', text: '·' }), this.printVariants) : null;
     this.node = el('div', { id: `panel-${mod.id}`, class: 'panel', hidden: true },
-      el('header', { class: 'panel-head' }, el('h1', { class: 'title', text: mod.name }), this.badges, ...(this.joins ? [this.joins] : []), ...(this.alsoOn ? [this.alsoOn] : []), ...(this.printVariants ? [this.printVariants] : [])));
+      el('header', { class: 'panel-head' }, el('h1', { class: 'title', text: mod.name }), this.badges, ...(this.joins ? [this.joins] : []), ...(this.alsoOn ? [this.alsoOn] : [])));
     this.sections = [];
     let sliderGroup = 0;
     mod.controls.forEach((spec, index) => {

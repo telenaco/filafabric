@@ -70,8 +70,8 @@ anonymous export statistics in `docs/STUDY_SETUP.md`.
 
 The site sets no cookies and loads nothing from other sites (its font, Instrument Sans, is served from
 `site/vendor/fonts/instrument-sans/` under the SIL Open Font License). A first visit shows a short *Cookies and privacy* notice
-(`site/src/ui/privacy.js`): it says what stays in the browser and that exports are counted anonymously, links to `site/study.html`
-and to the feedback form, and *Don't count my exports* turns the statistics off for that browser. ⋯ › *Privacy and
+(`site/src/ui/privacy.js`): it says what stays in the browser and that exports are counted anonymously, opens the same details in a dialog inside the studio (there is no public page for it, so a search engine cannot find it)
+and links to the feedback form, and *Don't count my exports* turns the statistics off for that browser. ⋯ › *Privacy and
 cookies* brings it back. Bump `PRIVACY_VERSION` there to show the notice again to everyone after changing what is counted.
 
 ## Check the geometry: Fix it

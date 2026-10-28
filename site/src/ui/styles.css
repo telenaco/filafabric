@@ -112,10 +112,6 @@ h1, h2, h3 { margin: 0; }
 .site-credit { margin: 14px 0 4px; font-size: 11px; color: var(--muted); }
 .site-credit a { color: inherit; text-decoration: none; }
 .site-credit a:hover { text-decoration: underline; }
-.study-page { max-width: 720px; margin: 0 auto; padding: 40px 24px 64px; }
-.study-page h1 { font-size: 30px; margin-top: 28px; }
-.study-page h2 { font-size: 19px; margin-top: 28px; }
-.study-page p { margin: 12px 0; }
 .export-group .export { gap: 10px; font-size: 16px; min-height: 52px; }
 .export-mode { width: 100%; margin: 14px 0; }
 .export-mode button { min-height: 44px; }
