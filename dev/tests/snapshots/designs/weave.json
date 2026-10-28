@@ -2,11 +2,11 @@
   {
     "card": "weave",
     "preset": "default",
-    "settingsHash": "c0f4d0b4c91d",
-    "gcodeSha256": "477611db510783b6887493361ac9b95bc48b5dffe9c60e254d34e5b5f5bbbdcf",
-    "strands": 160,
-    "moves": 1632,
-    "extrudeMm": 621.4,
+    "settingsHash": "d3264149406a",
+    "gcodeSha256": "3ebbe103014e43373f188a0a9aac7799800121ec9e2ae300c0ac23c9900daeca",
+    "strands": 864,
+    "moves": 5258,
+    "extrudeMm": 1459.5,
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [

@@ -90,6 +90,11 @@ export const BEAD_SIZES = Object.freeze({
 
 /** Lengths above 0.8 mm that do not count in beads, and why: the test asks every such slider to be in one list or the other. */
 export const NOT_IN_BEADS = Object.freeze({
+  'trapezoid-net.wavelength': 'localized slack length is bounded in millimetres for these first comparison trials',
+  ...Object.fromEntries(['sliding-squares.pitch','sliding-circles.pitch'].map(key => [key, 'loop spacing is constrained by the channel leg footprint, not bead width alone'])),
+  ...Object.fromEntries(['sliding-squares.channelLift','sliding-circles.channelLift'].map(key => [key, 'a channel apex height constrained to clear the captive strand'])),
+  ...Object.fromEntries(['strain-wave-cells.cell','auxetic-star.cell','auxetic-floral.cell'].map(key => [key, 'source-geometry comparison size retained in millimetres; this new reconstruction is not nozzle-calibrated'])),
+  ...Object.fromEntries(['slub','pearls','couch','tuck','floats','drawn','tufts'].map(id => [`experiment-${id}.spacing`, 'experimental carrier-node spacing retained in millimetres for comparison trials'])),
   'wave-bridged.wavelength': 'its bridges are not yet fully connected with a 0.2 mm nozzle, even at the default wavelength',
   'fringe.length': 'the length of a hair: the engine wants a loop longer than half its width, which is not a bead measure',
   'grid-lifted.liftLength': 'the run of a ramp upward, set by the height it climbs',

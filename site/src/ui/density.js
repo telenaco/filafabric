@@ -13,6 +13,10 @@ export const GRAMS_BAND = Object.freeze([TARGET_GRAMS * (1 - TOLERANCE), TARGET_
 export const DENSITY_EXCEPTIONS = Object.freeze({
   'zigzag-flat': 'Luis chose its settings himself (4 mm apart, 4 mm each way, 12 mm per wave) for a loose first layer that takes a backing: both families together weigh about 0.83 g, the first layer alone about 0.42 g.',
   'turing-flat': 'The stripes come from a reaction-diffusion simulation whose finest stripe is about 4 mm wide, set by the size of its grid; below that the slider changes nothing. Reaching 1.2 g needs a simulation four times finer (about ten seconds a rebuild).',
+  svgdesign: 'Weight depends on the imported drawing, its stroke widths and filled areas. The empty-card estimate contains only the carrier; tuning that to 1.2 g would not normalize a real drawing.',
+  'rotated-stack': 'The three-plane construction and Lu-derived gap range are retained. At the widest gap (2 times strand width) it is about 2.38 g; reaching 1.2 g would require a different layer count or a gap beyond the source range.',
+  conformal: 'Denser hole-map lines are pruned by the existing geometry pipeline: a spacing sweep from 0.8 to 1.8 mm peaks near 1.06 g, then loses material. The default uses that peak; repairing the mapping is separate from tuning its weight.',
+  'auxetic-star': 'This new source-geometry study retains Kabir\'s approximately 15.24 mm cell diagonal for the first comparison prints; it was added after the Flat weight pass and has not been density-normalized.',
 });
 
 /**
@@ -42,14 +46,45 @@ export const FLAT_DENSITY = Object.freeze({
   'boucle-flat': { set: { size: 1.2, pitch: 2.4, rowPitch: 2.1 } },
 });
 
+// Layered constructions retain their native passes. Carrier settings are retuned before the common Support wrapper is built.
+export const LAYERED_DENSITY = Object.freeze({
+  weave: { set: { pitch: 1.7 } },
+  spiral: { set: { spacing: 1.3 } },
+  boucle: { set: { size: 1.8, pitch: 3.6, rowPitch: 3.1 } },
+  crosshatch: { set: { spacing: 1.7 } },
+  auxetic: { set: { rowPitch: 2.4, period: 3, amplitude: 0.75 } },
+  'honeycomb-flat': { set: { rowPitch: 1.8, period: 2.5, amplitude: 0.5 } },
+  web: { set: { spacing: 1.1, spokes: 48 } },
+  chainmail: { set: { spacing: 9, ringSize: 13.5, overlap: 4.5 } },
+  meander: { set: { cell: 2.2, spacing: 1.9, backingDepth: 0.7, backingLength: 3.5 }, patches: { stipple: { cell: 2.7 } } },
+  harmonograph: { set: { a: 22, b: 17 }, coprime: ['a', 'b'] },
+  truchet: { set: { size: 2.7 } },
+  voronoi: { set: { spacing: 4.1 } },
+  'rotated-stack': { set: { gapFactor: 2 }, keep: ['wearable', 'open-60', 'fine-45'] },
+  'moire-net': { set: { pitchA: 1.7, pitchDiff: 0.08 } },
+  turing: { set: { spacing: 1.3, backingDepth: 0.5, backingLength: 3 } },
+  'step-lace': { set: { spacing: 5.7, tieLength: 11.5, tieDepth: 6.3 } },
+  scales: { set: { pitch: 4, gap: 2, scaleLayers: 1, carrier: 'net' } },
+  'lace-backing': { set: { scale: 5, spacing: 1.5 } },
+  conformal: { set: { spacing: 1.5 } },
+  sunflower: { set: { spacing: 1.8 } },
+  rosette: { set: { spacing: 1.7, depth: 0.6 } },
+  flowlines: { set: { spacing: 1.7 } },
+  bubbles: { set: { size: 5.5 } },
+  parquet: { set: { block: 10.6, spacing: 2.7 } },
+  spirograph: { set: { spacing: 2.8 } },
+  starlattice: { set: { size: 2.5 } },
+});
+
 /**
  * The cards whose defaults moved to the standard weight, and the revision of that move. What a visitor had saved for them is dropped once
  * (when the saved session has an older densityRevision), so they open at the new weight instead of the old settings; a shared link keeps
  * its own settings, because a link means exactly the design that was shared. Raise the revision when more cards move.
  */
-export const DENSITY_REVISION = 1;
+export const DENSITY_REVISION = 2;
 export const RETUNED_CARDS = Object.freeze([
   ...Object.keys(FLAT_DENSITY),
+  ...Object.keys(LAYERED_DENSITY),
   'rotating-squares', 'rotating-triangles', 'arrowhead-band', 'spiral-cells', 'stochastic-net', 'connected-lace', 'meander-ties', 'kirigami', 'star-metric', 'isohedral-tiles',
 ]);
 

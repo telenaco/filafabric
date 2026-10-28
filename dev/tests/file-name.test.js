@@ -176,8 +176,8 @@ test('panel names describe one-filament output without modifying the supplied se
 
 test('demo names reflect the fixed-shape cards and retain ordinary zero-angle shorthand', () => {
   const cases = [
-    ['crosshatch', 'isogrid', {}, '01_crosshatch_isogrid_100x100mm_directions-0-60-120_spacing3.5_pattern-none_scale1.gcode'],
-    ['starlattice', 'stars', {}, '02_starlattice_stars_100x100mm_tiling-square_size8_angle67.5_pattern-none_scale1.gcode' /* the star lattice took a pattern on 2026-10-21 */],
+    ['crosshatch', 'isogrid', {}, '01_crosshatch_isogrid_100x100mm_directions-0-60-120_spacing1.7_pattern-none_scale1.gcode'],
+    ['starlattice', 'stars', {}, '02_starlattice_stars_100x100mm_tiling-square_size2.5_angle67.5_pattern-none_scale1.gcode' /* density-retuned default */],
     ['dipweave', null, {}, '03_dipweave_default_100x100mm_warpPitch3.5_weftPitch3.5.gcode'],
     ['weave', null, { binding: 'plain', pitch: 4 }, '04_weave_plain_100x100mm_binding-plain_pitch4.gcode'],
     ['weave', null, { binding: 'diamond', pitch: 4 }, '05_weave_diamond_100x100mm_binding-diamond_pitch4.gcode'],
@@ -189,9 +189,9 @@ test('demo names reflect the fixed-shape cards and retain ordinary zero-angle sh
     ['svgdesign', 'two-layer', {}, '11_svgdesign_two-layer_100x100mm_mode-both_fill-concentric_fillSp2.5_backing-two_area-swatch_b1-gyroid_b1Sp4_b2-triangles_b2Sp6_b2Ang15.gcode'],
     ['svgdesign', 'lightning-badge', {}, '12_svgdesign_lightning-badge_100x100mm_mode-both_fill-honeycomb_fillSp3_fillAng0_backing-one_area-shape_b1-lightning_b1Sp4_b1Ang0.gcode'],
     ['svgdesign', null, { mode: 'both', designPattern: 'hilbert', designSpacing: 3.5, designAngle: 0, backing: 'one', backingArea: 'box', backing1Pattern: 'cubic', backing1Spacing: 5, backing1Angle: 0 }, '13_svgdesign_custom_100x100mm_mode-both_fill-hilbert_fillSp3.5_fillAng0_backing-one_area-box_b1-cubic_b1Sp5_b1Ang0.gcode'],
-    ['auxetic', 're-entrant', {}, '14_auxetic_re-entrant_100x100mm_rowPitch6_period8_amplitude1.75.gcode'],
-    ['spiral', null, {}, '15_spiral_standard_100x100mm_second-none_spacing3.gcode'],
-    ['meander', null, {}, '16_meander_hilbert_100x100mm_curve-hilbert_cell6_angle45_spacing5_seed1_backing-wave_backingDepth2_backingLength10_backingLayers-one_pattern-none.gcode'],
+    ['auxetic', 're-entrant', {}, '14_auxetic_re-entrant_100x100mm_rowPitch2.4_period3_amplitude0.75.gcode'],
+    ['spiral', null, {}, '15_spiral_standard_100x100mm_second-none_spacing1.3.gcode'],
+    ['meander', null, {}, '16_meander_hilbert_100x100mm_curve-hilbert_cell2.2_angle45_spacing1.9_seed1_backing-wave_backingDepth0.7_backingLength3.5_backingLayers-one_pattern-none.gcode'],
     ['coil', 'overlapping', {}, '17_coil_overlapping_100x100mm_size3_pitch5_overlap30_lift0.25_pattern-none_scale1.gcode'],
     ['spacer', 'thin', {}, '18_spacer_thin_100x100mm_pitch6_layers4_radius1_every1.gcode'],
     ['pillarweave', 'close', {}, '19_pillarweave_close_100x100mm_pitch4_layers5_radius0.8.gcode'],

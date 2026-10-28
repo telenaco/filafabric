@@ -2,11 +2,11 @@
   {
     "card": "turing",
     "preset": "default",
-    "settingsHash": "e2c7505d9a96",
-    "gcodeSha256": "23fc41c24ef875860751427c54d16cb711e9448e3b3821f48c7204338fc0b9cb",
-    "strands": 17,
-    "moves": 849,
-    "extrudeMm": 565.9,
+    "settingsHash": "2774fae72b65",
+    "gcodeSha256": "9f873d0b1a2f5453d3d14e01953f51ee85fa33b789f50cc17598cbe5d742cbf5",
+    "strands": 52,
+    "moves": 3617,
+    "extrudeMm": 1349.2,
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
@@ -14,16 +14,16 @@
       "motif",
       "ties"
     ],
-    "ties": 4
+    "ties": 12
   },
   {
     "card": "turing",
     "preset": "fine",
-    "settingsHash": "4a16ddee9531",
-    "gcodeSha256": "952f8a83f68848168955407141fc1e18917be0c82128a48575440991c24acb46",
-    "strands": 20,
-    "moves": 1237,
-    "extrudeMm": 723.3,
+    "settingsHash": "216b1bd860c7",
+    "gcodeSha256": "f9596baf9b0e6c4d999973e2075ce3037ddb22dfedc28f272452748bf1595091",
+    "strands": 65,
+    "moves": 5049,
+    "extrudeMm": 1764.8,
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
@@ -31,16 +31,16 @@
       "motif",
       "ties"
     ],
-    "ties": 3
+    "ties": 10
   },
   {
     "card": "turing",
     "preset": "coral",
-    "settingsHash": "5cdf21655d42",
-    "gcodeSha256": "64e29f82daf8234ac202a95e2ff9a3bfff3d21edd65a360b0485b3c4d35dde43",
-    "strands": 15,
-    "moves": 835,
-    "extrudeMm": 544.1,
+    "settingsHash": "a68bb8107ca4",
+    "gcodeSha256": "dc2d4d937ceed9ab487ee487e3dee2962bf806ffd3dd45cef6794d2700187a9a",
+    "strands": 55,
+    "moves": 3611,
+    "extrudeMm": 1331.3,
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
@@ -48,23 +48,23 @@
       "motif",
       "ties"
     ],
-    "ties": 3
+    "ties": 16
   },
   {
     "card": "turing",
     "preset": "bold",
-    "settingsHash": "cdffade918af",
-    "gcodeSha256": "6d0aa0e53dcd967923163765614d753c048dae39737069eee8866d3d15513654",
-    "strands": 12,
-    "moves": 543,
-    "extrudeMm": 363.1,
+    "settingsHash": "4b415635d64f",
+    "gcodeSha256": "ea339514fdd987a8eee7a124129fea9770e2f094ba57e41bb8475cf9a76d49f9",
+    "strands": 40,
+    "moves": 2245,
+    "extrudeMm": 856.4,
     "zMin": 0.2,
-    "zMax": 0.4,
+    "zMax": 0.4909055047747708,
     "families": [
       "carrier-1",
       "motif",
       "ties"
     ],
-    "ties": 4
+    "ties": 14
   }
 ]

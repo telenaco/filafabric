@@ -28,7 +28,7 @@ export function summarise(result) {
   const onePlane = result.construction?.z && result.construction.z.max <= result.cfg.t.layer_height + 0.011;
   const layers = onePlane ? 1 : result.layerCount ?? new Set(result.strands.map((strand) => strand.layer ?? (strand.kind === 'base' ? 0 : 1))).size;
   return {
-    min: seconds === null ? null : Math.round(seconds / 60 * (seconds < 600 ? 10 : 1)) / (seconds < 600 ? 10 : 1),
+    min: seconds === null ? null : Math.round(seconds / 6) / 10,
     g: Math.round(result.stats.filamentGrams * 100) / 100,
     layers: Math.max(1, layers),
   };

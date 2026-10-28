@@ -15,6 +15,7 @@
 // listed from the plainest to the most involved: a picker shows them in this order
 export const SHAPES = Object.freeze({
   wave: { id: 'wave', label: 'Wave', hint: 'A smooth sine wave' },
+  trapezoid: { id: 'trapezoid', label: 'Localized trapezoid', hint: 'A slack wave between straight strand sections' },
   zigzag: { id: 'zigzag', label: 'Zigzag', hint: 'Straight diagonals, soft corners' },
   square: { id: 'square', label: 'Square', hint: 'Steps with rounded corners' },
   honeycomb: { id: 'honeycomb', label: 'Honeycomb', hint: 'Flat tops and bottoms, so neighbouring layers stack' },
@@ -34,6 +35,12 @@ const RING_WINDOW = 0.4; // mm of progress along the lane spent walking round a 
 export function shapeAt(shape, s, { pitch, size }) {
   const theta = (s * 2 * Math.PI) / pitch;
   switch (shape) {
+    case 'trapezoid': {
+      const t = ((s / pitch) % 1 + 1) % 1;
+      // Straight approach, ramp, plateau, descent, straight exit. Whole repeats meet at zero offset.
+      const rise = t < 0.2 || t > 0.8 ? 0 : t < 0.4 ? (t - 0.2) / 0.2 : t <= 0.6 ? 1 : (0.8 - t) / 0.2;
+      return { v: size * rise, du: 0 };
+    }
     case 'wave':
       return { v: size * Math.sin(theta), du: 0 };
     case 'zigzag':

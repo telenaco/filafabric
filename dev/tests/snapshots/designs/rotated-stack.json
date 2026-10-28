@@ -2,11 +2,11 @@
   {
     "card": "rotated-stack",
     "preset": "default",
-    "settingsHash": "6a2657220bc3",
-    "gcodeSha256": "b205858238a58b10657937f01fc28b1e05c0c2beeb990277803f3d58df19f8bd",
+    "settingsHash": "6fcc7b9077af",
+    "gcodeSha256": "e25f8b00d4579397c39c10948ea623b1cba0fb4221e3511f1f36ead3c9437342",
     "strands": 3,
-    "moves": 7971,
-    "extrudeMm": 3960,
+    "moves": 5241,
+    "extrudeMm": 2599.2,
     "zMin": 0.2,
     "zMax": 0.6000000000000001,
     "families": [

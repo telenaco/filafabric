@@ -2,13 +2,13 @@
   {
     "card": "bubbles",
     "preset": "default",
-    "settingsHash": "b58fc5cacc67",
-    "gcodeSha256": "6371e2182116438b0f161fe4ff38d750eeeca8d6a2b074a4d50b6a88e250eff6",
-    "strands": 3,
-    "moves": 4429,
-    "extrudeMm": 1601.1,
+    "settingsHash": "3dc1ccf1ac6d",
+    "gcodeSha256": "88cdeed0c9a27a82f9642e0bca34b58ce906fc04f60a8ff8e2eec310e80fe935",
+    "strands": 2,
+    "moves": 2956,
+    "extrudeMm": 1162.7,
     "zMin": 0.2,
-    "zMax": 0.6000000000000001,
+    "zMax": 0.5777481715989676,
     "families": [
       "L1",
       "L2"
@@ -18,13 +18,13 @@
   {
     "card": "bubbles",
     "preset": "foam",
-    "settingsHash": "b58fc5cacc67",
-    "gcodeSha256": "6371e2182116438b0f161fe4ff38d750eeeca8d6a2b074a4d50b6a88e250eff6",
-    "strands": 3,
-    "moves": 4429,
-    "extrudeMm": 1601.1,
+    "settingsHash": "3dc1ccf1ac6d",
+    "gcodeSha256": "88cdeed0c9a27a82f9642e0bca34b58ce906fc04f60a8ff8e2eec310e80fe935",
+    "strands": 2,
+    "moves": 2956,
+    "extrudeMm": 1162.7,
     "zMin": 0.2,
-    "zMax": 0.6000000000000001,
+    "zMax": 0.5777481715989676,
     "families": [
       "L1",
       "L2"
@@ -34,13 +34,13 @@
   {
     "card": "bubbles",
     "preset": "froth",
-    "settingsHash": "9c61b83bb9c4",
-    "gcodeSha256": "a53df32d3a022da4147cd42b2e94637606bf2f6b0176460f7abb987c9faab1fc",
-    "strands": 4,
-    "moves": 4147,
-    "extrudeMm": 1552.2,
+    "settingsHash": "9eac9f828030",
+    "gcodeSha256": "a71e9204cc6147c0aec82aca0b3dbd87ce06bb4606ae098402538f7ad32ac6ed",
+    "strands": 2,
+    "moves": 3305,
+    "extrudeMm": 1278.7,
     "zMin": 0.2,
-    "zMax": 0.5845299170253379,
+    "zMax": 0.5654412866234135,
     "families": [
       "L1",
       "L2"
@@ -50,13 +50,13 @@
   {
     "card": "bubbles",
     "preset": "big",
-    "settingsHash": "2c7655965548",
-    "gcodeSha256": "3f0774d4b9fe87fbab1f525e6ca1c1491716b58ef053abc7dcae67aff943a536",
-    "strands": 5,
-    "moves": 2515,
-    "extrudeMm": 1021.5,
+    "settingsHash": "649bd28a90ce",
+    "gcodeSha256": "aac4a52ac4234208cdc6d939042ccc77889df20e32e54366a86b381c044af3b2",
+    "strands": 6,
+    "moves": 1494,
+    "extrudeMm": 647.7,
     "zMin": 0.2,
-    "zMax": 0.5759220428545101,
+    "zMax": 0.5917418435251443,
     "families": [
       "L1",
       "L2"
@@ -66,13 +66,13 @@
   {
     "card": "bubbles",
     "preset": "graded",
-    "settingsHash": "0e159bd6e636",
-    "gcodeSha256": "4a8892289e1df03d83b5c7b24e287f15e9550576c1a348133171fb91164b2a49",
+    "settingsHash": "99c82a4aa604",
+    "gcodeSha256": "ea2908505b1af4ba60c196b6e72d74159c2cf2542a6ddce8fe8f5774bd05ab12",
     "strands": 3,
-    "moves": 2575,
-    "extrudeMm": 1038.5,
+    "moves": 1874,
+    "extrudeMm": 791.8,
     "zMin": 0.2,
-    "zMax": 0.5871953311134763,
+    "zMax": 0.49550623602242544,
     "families": [
       "L1",
       "L2"

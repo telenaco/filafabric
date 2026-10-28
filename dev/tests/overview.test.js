@@ -65,7 +65,7 @@ test('the 2D drawing of a garment-size coil has the same strand density as the r
 
 test('a design that cannot build the whole piece at once is drawn larger, and the drawing says by how much', () => {
   const mod = designById('bubbles');
-  const result = buildOverview({ ...defaultProfiles(), design: mod.id, settings: mod.defaults(), width: 460, height: 408 });
+  const result = buildOverview({ ...defaultProfiles(), design: mod.id, settings: { ...mod.defaults(), size: 4 }, width: 460, height: 408 });
   assert.ok(result.factor > 1, 'more bubbles than the design allows at true scale');
   assert.ok(OVERVIEW_FACTORS.includes(result.factor));
   assert.match(result.issue, /bubbles/);

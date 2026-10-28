@@ -85,22 +85,46 @@ export const PRINTABILITY = [
     }
   },
   {
-    "id": "rotated-stack",
-    "score": 2.700000000005821,
+    "id": "auxetic-floral",
+    "score": 2.35,
     "components": 1,
-    "joints": 2,
+    "joints": 47,
     "reversedCrossings": 0,
-    "separatedCrossings": 220,
-    "longestUnsupported": 1.3000000000029104,
+    "separatedCrossings": 0,
+    "longestUnsupported": 0,
     "maxSlopeDeg": 0,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 2,
-    "moves": 66935,
+    "hops": 47,
+    "moves": 7353,
     "clearanceFlags": 0,
-    "routing": null
+    "routing": {
+      "beforeMm": 2291.03988192011,
+      "afterMm": 286.11133394704365
+    }
+  },
+  {
+    "id": "auxetic-star",
+    "score": 2.65,
+    "components": 1,
+    "joints": 53,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 0,
+    "maxSlopeDeg": 0,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 53,
+    "moves": 3738,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 2030.1688919390501,
+      "afterMm": 118.56555789354799
+    }
   },
   {
     "id": "figure8-net-flat",
@@ -271,6 +295,27 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "crosshatch",
+    "score": 6.443432321222299,
+    "components": 1,
+    "joints": 1,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 2.1068965517265497,
+    "maxSlopeDeg": 2.1796392177691994,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 1,
+    "moves": 7089,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 139.6878099049038,
+      "afterMm": 139.6878099049038
+    }
+  },
+  {
     "id": "halftone",
     "score": 6.801772622272901,
     "components": 1,
@@ -292,6 +337,24 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "rotated-stack",
+    "score": 7.200000000000818,
+    "components": 1,
+    "joints": 2,
+    "reversedCrossings": 0,
+    "separatedCrossings": 144,
+    "longestUnsupported": 3.5500000000004093,
+    "maxSlopeDeg": 0,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 2,
+    "moves": 44237,
+    "clearanceFlags": 0,
+    "routing": null
+  },
+  {
     "id": "boucle-flat",
     "score": 11.3,
     "components": 1,
@@ -310,69 +373,6 @@ export const PRINTABILITY = [
     "routing": {
       "beforeMm": 5541.240530522812,
       "afterMm": 755.0191484337882
-    }
-  },
-  {
-    "id": "starlattice",
-    "score": 12.32421262207659,
-    "components": 1,
-    "joints": 51,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 2.943718711520063,
-    "maxSlopeDeg": 3.886775199036464,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 51,
-    "moves": 2603,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 561.2576935164811,
-      "afterMm": 559.6748599903522
-    }
-  },
-  {
-    "id": "honeycomb-flat",
-    "score": 13.064217028316488,
-    "components": 1,
-    "joints": 29,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 3.5154936058801383,
-    "maxSlopeDeg": 4.583229816556211,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 29,
-    "moves": 7085,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 1348.8147151851392,
-      "afterMm": 198.01004242194062
-    }
-  },
-  {
-    "id": "crosshatch",
-    "score": 16.132735537483622,
-    "components": 1,
-    "joints": 1,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 3.9357142857147664,
-    "maxSlopeDeg": 8.211306966054089,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 1,
-    "moves": 1744,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 139.0455409631488,
-      "afterMm": 139.0455409631488
     }
   },
   {
@@ -418,6 +418,27 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "honeycomb-flat",
+    "score": 16.582025627887234,
+    "components": 1,
+    "joints": 95,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 1.8289660926165254,
+    "maxSlopeDeg": 8.174093442654181,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 95,
+    "moves": 26625,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 4046.890013129198,
+      "afterMm": 207.43964444325223
+    }
+  },
+  {
     "id": "zigzag",
     "score": 16.590174745695993,
     "components": 1,
@@ -439,46 +460,22 @@ export const PRINTABILITY = [
     }
   },
   {
-    "id": "web",
-    "score": 17.945960039887574,
+    "id": "experiment-slub",
+    "score": 17.900000000000013,
     "components": 1,
-    "joints": 32,
+    "joints": 38,
     "reversedCrossings": 0,
     "separatedCrossings": 0,
-    "longestUnsupported": 2.6195583366925135,
-    "maxSlopeDeg": 11.106843366502543,
+    "longestUnsupported": 8.000000000000007,
+    "maxSlopeDeg": 0,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 32,
-    "moves": 7970,
+    "hops": 38,
+    "moves": 10028,
     "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 1557.459010832547,
-      "afterMm": 558.4549020682958
-    }
-  },
-  {
-    "id": "meander",
-    "score": 19.50321421257502,
-    "components": 1,
-    "joints": 29,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 3.5855230820034905,
-    "maxSlopeDeg": 10.882168048568039,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 29,
-    "moves": 5569,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 187.7738233351317,
-      "afterMm": 187.7738233351317
-    }
+    "routing": null
   },
   {
     "id": "honeycomb-layered",
@@ -499,6 +496,27 @@ export const PRINTABILITY = [
     "routing": {
       "beforeMm": 330.4525276095523,
       "afterMm": 330.4525276095523
+    }
+  },
+  {
+    "id": "web",
+    "score": 20.494148052508233,
+    "components": 1,
+    "joints": 98,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 2.2500780128775872,
+    "maxSlopeDeg": 11.093992026753059,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 98,
+    "moves": 22197,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 4934.638102144716,
+      "afterMm": 532.7068660198971
     }
   },
   {
@@ -565,6 +583,27 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "starlattice",
+    "score": 21.236330489319556,
+    "components": 1,
+    "joints": 159,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 1.9134171625644782,
+    "maxSlopeDeg": 9.4594961641906,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 159,
+    "moves": 14239,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 587.0552172937898,
+      "afterMm": 587.2553669130492
+    }
+  },
+  {
     "id": "figure8-net",
     "score": 21.346847314612575,
     "components": 1,
@@ -586,6 +625,69 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "trapezoid-net",
+    "score": 21.36734276457986,
+    "components": 1,
+    "joints": 79,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 3.1993404857798424,
+    "maxSlopeDeg": 11.018661793020176,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 79,
+    "moves": 18019,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 294.35188797850293,
+      "afterMm": 294.35188797850293
+    }
+  },
+  {
+    "id": "auxetic",
+    "score": 21.471632819634603,
+    "components": 1,
+    "joints": 114,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 3.941047981152124,
+    "maxSlopeDeg": 7.889536857330356,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 114,
+    "moves": 30814,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 3566.991540547604,
+      "afterMm": 299.693722996275
+    }
+  },
+  {
+    "id": "meander",
+    "score": 21.832284044357415,
+    "components": 1,
+    "joints": 79,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 3.431656712342864,
+    "maxSlopeDeg": 11.018970619671688,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 79,
+    "moves": 32992,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 198.46966686303367,
+      "afterMm": 198.46966686303367
+    }
+  },
+  {
     "id": "squiggle",
     "score": 22.677957056154245,
     "components": 1,
@@ -604,69 +706,6 @@ export const PRINTABILITY = [
     "routing": {
       "beforeMm": 306.70299730487017,
       "afterMm": 306.70299730487017
-    }
-  },
-  {
-    "id": "truchet",
-    "score": 23.50285085902528,
-    "components": 1,
-    "joints": 132,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 2.991874323259904,
-    "maxSlopeDeg": 10.91910221250547,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 132,
-    "moves": 11038,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 5271.1781898950485,
-      "afterMm": 1009.4372052938505
-    }
-  },
-  {
-    "id": "step-lace",
-    "score": 23.658825361605032,
-    "components": 1,
-    "joints": 132,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 3.0413812670973357,
-    "maxSlopeDeg": 10.976062827410363,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 132,
-    "moves": 9690,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 3478.959263513968,
-      "afterMm": 384.3608068824663
-    }
-  },
-  {
-    "id": "conformal",
-    "score": 24.33428099406511,
-    "components": 1,
-    "joints": 98,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 4.179005919491651,
-    "maxSlopeDeg": 11.076269155081812,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 98,
-    "moves": 7435,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 3638.2312972330783,
-      "afterMm": 505.3748924546515
     }
   },
   {
@@ -775,46 +814,22 @@ export const PRINTABILITY = [
     }
   },
   {
-    "id": "turing",
-    "score": 26.109758632098448,
+    "id": "experiment-pearls",
+    "score": 26.350000000000016,
     "components": 1,
-    "joints": 38,
+    "joints": 207,
     "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 6.624850363371024,
-    "maxSlopeDeg": 10.9600579053564,
+    "separatedCrossings": 338,
+    "longestUnsupported": 8.000000000000007,
+    "maxSlopeDeg": 0,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 38,
-    "moves": 6775,
+    "hops": 207,
+    "moves": 10288,
     "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 725.195542904383,
-      "afterMm": 579.2868113877632
-    }
-  },
-  {
-    "id": "rosette",
-    "score": 29.367222634930346,
-    "components": 1,
-    "joints": 56,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 4.633546605802934,
-    "maxSlopeDeg": 17.300129423324478,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 56,
-    "moves": 10043,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 3311.9353116084926,
-      "afterMm": 983.5378028137563
-    }
+    "routing": null
   },
   {
     "id": "spiral-cells",
@@ -835,6 +850,27 @@ export const PRINTABILITY = [
     "routing": {
       "beforeMm": 2570.500243870339,
       "afterMm": 2570.500243870339
+    }
+  },
+  {
+    "id": "sunflower",
+    "score": 31.653623682366387,
+    "components": 1,
+    "joints": 278,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 3.324748457181034,
+    "maxSlopeDeg": 11.104126768004319,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 278,
+    "moves": 9246,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 9949.842478705736,
+      "afterMm": 915.3081019990886
     }
   },
   {
@@ -859,45 +895,108 @@ export const PRINTABILITY = [
     }
   },
   {
-    "id": "sunflower",
-    "score": 32.72617415292316,
+    "id": "rosette",
+    "score": 32.51090855120894,
     "components": 1,
-    "joints": 133,
+    "joints": 123,
     "reversedCrossings": 0,
     "separatedCrossings": 0,
-    "longestUnsupported": 7.496284848919679,
-    "maxSlopeDeg": 11.083604455083803,
+    "longestUnsupported": 4.923522088753271,
+    "maxSlopeDeg": 16.513864373702404,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 133,
-    "moves": 2935,
+    "hops": 123,
+    "moves": 19731,
     "clearanceFlags": 0,
     "routing": {
-      "beforeMm": 5636.151071706467,
-      "afterMm": 963.2745012018777
+      "beforeMm": 7508.072564023757,
+      "afterMm": 1095.5203825266003
     }
   },
   {
-    "id": "auxetic",
-    "score": 32.83999183148575,
+    "id": "strain-wave-cells",
+    "score": 32.8078869547132,
     "components": 1,
-    "joints": 44,
+    "joints": 160,
     "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 9.859372845527389,
-    "maxSlopeDeg": 10.921246140430966,
+    "separatedCrossings": 31,
+    "longestUnsupported": 2.6683328000000004,
+    "maxSlopeDeg": 19.4712213547132,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 44,
-    "moves": 8047,
+    "hops": 160,
+    "moves": 4235,
     "clearanceFlags": 0,
     "routing": {
-      "beforeMm": 1608.0641933339898,
-      "afterMm": 287.31990721184786
+      "beforeMm": 3812.0617769939927,
+      "afterMm": 560.1523335629948
+    }
+  },
+  {
+    "id": "conformal",
+    "score": 33.13446916068983,
+    "components": 1,
+    "joints": 219,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 3.937161107423343,
+    "maxSlopeDeg": 14.31014694584315,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 219,
+    "moves": 17014,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 11676.056298514377,
+      "afterMm": 570.3485190316964
+    }
+  },
+  {
+    "id": "harmonograph",
+    "score": 33.58247702463984,
+    "components": 1,
+    "joints": 1,
+    "reversedCrossings": 0,
+    "separatedCrossings": 2,
+    "longestUnsupported": 4.266238512319887,
+    "maxSlopeDeg": 25.000000000000068,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 1,
+    "moves": 10875,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 3.007227831373754,
+      "afterMm": 0.10378247917498194
+    }
+  },
+  {
+    "id": "parquet",
+    "score": 33.58708656138712,
+    "components": 1,
+    "joints": 296,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 3.9749999971039123,
+    "maxSlopeDeg": 10.837086567179293,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 296,
+    "moves": 17307,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 3633.757239759182,
+      "afterMm": 1010.1090815085406
     }
   },
   {
@@ -922,6 +1021,45 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "turing",
+    "score": 35.02239706550505,
+    "components": 1,
+    "joints": 132,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 3.3610397798114136,
+    "maxSlopeDeg": 21.70031750588222,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 132,
+    "moves": 30515,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 1092.886227458949,
+      "afterMm": 747.1670939506233
+    }
+  },
+  {
+    "id": "experiment-drawn",
+    "score": 35.31428594728684,
+    "components": 1,
+    "joints": 181,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 8.000000000000007,
+    "maxSlopeDeg": 17.414285947286828,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 38,
+    "moves": 15044,
+    "clearanceFlags": 0,
+    "routing": null
+  },
+  {
     "id": "corrugation",
     "score": 35.414288643431185,
     "components": 1,
@@ -940,45 +1078,24 @@ export const PRINTABILITY = [
     "routing": null
   },
   {
-    "id": "harmonograph",
-    "score": 36.16216762250649,
+    "id": "spirograph",
+    "score": 35.48995321112649,
     "components": 1,
-    "joints": 1,
+    "joints": 94,
     "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 12.884372883434025,
-    "maxSlopeDeg": 10.34342185563844,
+    "separatedCrossings": 80,
+    "longestUnsupported": 2.8949766055477983,
+    "maxSlopeDeg": 25.00000000003089,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 1,
-    "moves": 2399,
+    "hops": 94,
+    "moves": 53186,
     "clearanceFlags": 0,
     "routing": {
-      "beforeMm": 8.95458506721495,
-      "afterMm": 1.2768063643906724
-    }
-  },
-  {
-    "id": "parquet",
-    "score": 36.22227798439768,
-    "components": 1,
-    "joints": 447,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 3.000000000000064,
-    "maxSlopeDeg": 7.872277984397545,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 447,
-    "moves": 21037,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 4354.476334373116,
-      "afterMm": 1248.98021365729
+      "beforeMm": 1706.527094440192,
+      "afterMm": 981.026415572558
     }
   },
   {
@@ -1024,24 +1141,24 @@ export const PRINTABILITY = [
     }
   },
   {
-    "id": "spirograph",
-    "score": 37.918339321689444,
+    "id": "truchet",
+    "score": 37.96736198963295,
     "components": 1,
-    "joints": 81,
+    "joints": 375,
     "reversedCrossings": 0,
-    "separatedCrossings": 68,
-    "longestUnsupported": 4.4341696608439065,
-    "maxSlopeDeg": 25.00000000000163,
+    "separatedCrossings": 0,
+    "longestUnsupported": 4.2290486284296165,
+    "maxSlopeDeg": 10.759264732773715,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 81,
-    "moves": 21858,
+    "hops": 375,
+    "moves": 34628,
     "clearanceFlags": 0,
     "routing": {
-      "beforeMm": 1311.7141315016875,
-      "afterMm": 1000.8837751693904
+      "beforeMm": 11823.100356126653,
+      "afterMm": 1834.980538462179
     }
   },
   {
@@ -1066,45 +1183,45 @@ export const PRINTABILITY = [
     }
   },
   {
-    "id": "boucle",
-    "score": 39.24064973407649,
+    "id": "step-lace",
+    "score": 38.81298772689263,
     "components": 1,
-    "joints": 81,
+    "joints": 71,
     "reversedCrossings": 0,
-    "separatedCrossings": 26,
-    "longestUnsupported": 5.095324867038201,
-    "maxSlopeDeg": 25.000000000000092,
+    "separatedCrossings": 0,
+    "longestUnsupported": 12.129208442326501,
+    "maxSlopeDeg": 11.004570842239628,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 81,
-    "moves": 16531,
+    "hops": 71,
+    "moves": 5488,
     "clearanceFlags": 0,
     "routing": {
-      "beforeMm": 659.1160698559463,
-      "afterMm": 605.9466002097058
+      "beforeMm": 2088.4016888799024,
+      "afterMm": 335.84546869475327
     }
   },
   {
-    "id": "chainmail",
-    "score": 40.07807239254639,
+    "id": "boucle",
+    "score": 39.75301253876082,
     "components": 1,
-    "joints": 1,
+    "joints": 133,
     "reversedCrossings": 0,
-    "separatedCrossings": 471,
-    "longestUnsupported": 7.514036196273082,
-    "maxSlopeDeg": 25.00000000000023,
+    "separatedCrossings": 56,
+    "longestUnsupported": 4.051506269380269,
+    "maxSlopeDeg": 25.000000000000288,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 1,
-    "moves": 49467,
+    "hops": 133,
+    "moves": 26834,
     "clearanceFlags": 0,
     "routing": {
-      "beforeMm": 88.62745098039215,
-      "afterMm": 84.44777738291765
+      "beforeMm": 683.3988266448214,
+      "afterMm": 631.6872097800591
     }
   },
   {
@@ -1129,85 +1246,160 @@ export const PRINTABILITY = [
     }
   },
   {
-    "id": "flowlines",
-    "score": 40.92986551408148,
+    "id": "experiment-couch",
+    "score": 40.480488496910056,
     "components": 1,
-    "joints": 84,
+    "joints": 193,
     "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 5.864932757040734,
-    "maxSlopeDeg": 25.000000000000007,
+    "separatedCrossings": 468,
+    "longestUnsupported": 10.296726557469762,
+    "maxSlopeDeg": 17.387035381970527,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 84,
-    "moves": 7505,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 1027.627267011143,
-      "afterMm": 719.4450577130141
-    }
-  },
-  {
-    "id": "bubbles",
-    "score": 41.043442602114744,
-    "components": 1,
-    "joints": 2,
-    "reversedCrossings": 0,
-    "separatedCrossings": 64,
-    "longestUnsupported": 7.971721301055368,
-    "maxSlopeDeg": 25.000000000004007,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 2,
-    "moves": 40774,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 16706.996132363238,
-      "afterMm": 115.32523572819093
-    }
-  },
-  {
-    "id": "scales",
-    "score": 43.04409092542675,
-    "components": 1,
-    "joints": 432,
-    "reversedCrossings": 0,
-    "separatedCrossings": 32978,
-    "longestUnsupported": 10.722045462713375,
-    "maxSlopeDeg": 0,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 432,
-    "moves": 19178,
+    "hops": 50,
+    "moves": 14792,
     "clearanceFlags": 0,
     "routing": null
   },
   {
     "id": "spiral",
-    "score": 45.48528137423821,
+    "score": 40.96988662896004,
     "components": 1,
     "joints": 40,
     "reversedCrossings": 0,
-    "separatedCrossings": 22,
-    "longestUnsupported": 9.242640687119092,
-    "maxSlopeDeg": 25.00000000000003,
+    "separatedCrossings": 7,
+    "longestUnsupported": 6.984943314480006,
+    "maxSlopeDeg": 25.000000000000025,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
     "hops": 40,
-    "moves": 10452,
+    "moves": 12291,
     "clearanceFlags": 0,
     "routing": {
       "beforeMm": 384.41738019439936,
-      "afterMm": 264.2418877117315
+      "afterMm": 262.19022851526313
     }
+  },
+  {
+    "id": "flowlines",
+    "score": 40.992021793486224,
+    "components": 1,
+    "joints": 148,
+    "reversedCrossings": 0,
+    "separatedCrossings": 3,
+    "longestUnsupported": 4.296010896743098,
+    "maxSlopeDeg": 25.000000000000025,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 148,
+    "moves": 16478,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 1033.9623592196835,
+      "afterMm": 705.6310680112332
+    }
+  },
+  {
+    "id": "experiment-floats",
+    "score": 42.823527935951454,
+    "components": 1,
+    "joints": 97,
+    "reversedCrossings": 0,
+    "separatedCrossings": 72,
+    "longestUnsupported": 16,
+    "maxSlopeDeg": 8.923527935951455,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 38,
+    "moves": 14276,
+    "clearanceFlags": 0,
+    "routing": null
+  },
+  {
+    "id": "bubbles",
+    "score": 42.97138736432669,
+    "components": 1,
+    "joints": 1,
+    "reversedCrossings": 0,
+    "separatedCrossings": 47,
+    "longestUnsupported": 8.960693682162855,
+    "maxSlopeDeg": 25.000000000000984,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 1,
+    "moves": 31750,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 11557.079667851245,
+      "afterMm": 2.3658596460730155
+    }
+  },
+  {
+    "id": "experiment-tufts",
+    "score": 45.1801023541565,
+    "components": 1,
+    "joints": 421,
+    "reversedCrossings": 0,
+    "separatedCrossings": 396,
+    "longestUnsupported": 8.000000000000007,
+    "maxSlopeDeg": 8.130102354156492,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 421,
+    "moves": 15317,
+    "clearanceFlags": 0,
+    "routing": null
+  },
+  {
+    "id": "chainmail",
+    "score": 45.22170872532938,
+    "components": 1,
+    "joints": 1,
+    "reversedCrossings": 0,
+    "separatedCrossings": 13,
+    "longestUnsupported": 10.085854362664577,
+    "maxSlopeDeg": 25.000000000000227,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 1,
+    "moves": 20924,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 83.2969696969697,
+      "afterMm": 77.48508996596685
+    }
+  },
+  {
+    "id": "experiment-tuck",
+    "score": 45.75708708368022,
+    "components": 1,
+    "joints": 181,
+    "reversedCrossings": 0,
+    "separatedCrossings": 432,
+    "longestUnsupported": 14.29003458420962,
+    "maxSlopeDeg": 8.127017915260973,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 181,
+    "moves": 14838,
+    "clearanceFlags": 0,
+    "routing": null
   },
   {
     "id": "paired-loops",
@@ -1228,24 +1420,42 @@ export const PRINTABILITY = [
     "routing": null
   },
   {
-    "id": "voronoi",
-    "score": 60.254252173320346,
+    "id": "scales",
+    "score": 53.43374818273341,
     "components": 1,
-    "joints": 153,
+    "joints": 924,
     "reversedCrossings": 0,
-    "separatedCrossings": 86,
-    "longestUnsupported": 13.802126086659953,
-    "maxSlopeDeg": 25.000000000000437,
+    "separatedCrossings": 0,
+    "longestUnsupported": 3.6168740913667037,
+    "maxSlopeDeg": 0,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 153,
-    "moves": 2124,
+    "hops": 924,
+    "moves": 27297,
+    "clearanceFlags": 0,
+    "routing": null
+  },
+  {
+    "id": "lace-backing",
+    "score": 59.63112153062201,
+    "components": 1,
+    "joints": 449,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 14.542372659897865,
+    "maxSlopeDeg": 8.096376210826284,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 449,
+    "moves": 26097,
     "clearanceFlags": 0,
     "routing": {
-      "beforeMm": 6657.137726491318,
-      "afterMm": 882.3454638061482
+      "beforeMm": 4263.789871573484,
+      "afterMm": 1906.401092394853
     }
   },
   {
@@ -1291,22 +1501,46 @@ export const PRINTABILITY = [
     }
   },
   {
-    "id": "weave",
-    "score": 73.1165700188966,
+    "id": "voronoi",
+    "score": 75.84553172776745,
     "components": 1,
-    "joints": 1249,
+    "joints": 564,
     "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 2,
-    "maxSlopeDeg": 6.716570018896605,
+    "separatedCrossings": 344,
+    "longestUnsupported": 11.322765778990117,
+    "maxSlopeDeg": 25.000000169787214,
     "outsideSegments": 0,
     "issues": [],
     "exportable": true,
     "physicallyVerified": false,
-    "hops": 1248,
-    "moves": 12596,
+    "hops": 564,
+    "moves": 8104,
     "clearanceFlags": 0,
-    "routing": null
+    "routing": {
+      "beforeMm": 23221.752818368568,
+      "afterMm": 1833.2900202414232
+    }
+  },
+  {
+    "id": "moire-net",
+    "score": 76.52723448510318,
+    "components": 1,
+    "joints": 3,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 32.68845001606678,
+    "maxSlopeDeg": 11.000334452969609,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 3,
+    "moves": 1641,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 168.01494855633968,
+      "afterMm": 168.01494855633968
+    }
   },
   {
     "id": "fringe",
@@ -1348,48 +1582,6 @@ export const PRINTABILITY = [
     "routing": {
       "beforeMm": 51645.58939936961,
       "afterMm": 2656.775414943206
-    }
-  },
-  {
-    "id": "moire-net",
-    "score": 87.06177472863264,
-    "components": 1,
-    "joints": 3,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 37.96457014262808,
-    "maxSlopeDeg": 10.982634443376488,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 3,
-    "moves": 1645,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 178.98877667786115,
-      "afterMm": 178.98877667786115
-    }
-  },
-  {
-    "id": "lace-backing",
-    "score": 89.74413914609322,
-    "components": 1,
-    "joints": 116,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 29.47206957304661,
-    "maxSlopeDeg": 25.000000000000007,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 116,
-    "moves": 7943,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 1984.1580451630966,
-      "afterMm": 991.7530984165957
     }
   },
   {
@@ -1633,6 +1825,66 @@ export const PRINTABILITY = [
     "routing": {
       "beforeMm": 19693.227350086196,
       "afterMm": 4796.870774311032
+    }
+  },
+  {
+    "id": "sliding-circles",
+    "score": 341.8512371072487,
+    "components": 4,
+    "joints": 24,
+    "reversedCrossings": 0,
+    "separatedCrossings": 24,
+    "longestUnsupported": 140.72823360328385,
+    "maxSlopeDeg": 59.04476990068097,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 27,
+    "moves": 639,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 153.1370849898476,
+      "afterMm": 501.7193265813805
+    }
+  },
+  {
+    "id": "weave",
+    "score": 362.9737515566105,
+    "components": 1,
+    "joints": 6961,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 0.8474576271186578,
+    "maxSlopeDeg": 13.278836302373236,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 6960,
+    "moves": 42004,
+    "clearanceFlags": 0,
+    "routing": null
+  },
+  {
+    "id": "sliding-squares",
+    "score": 364.49872792063735,
+    "components": 5,
+    "joints": 23,
+    "reversedCrossings": 0,
+    "separatedCrossings": 16,
+    "longestUnsupported": 152.05624222635518,
+    "maxSlopeDeg": 59.03624346792698,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 27,
+    "moves": 141,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 153.1370849898476,
+      "afterMm": 461.1462291287568
     }
   },
   {

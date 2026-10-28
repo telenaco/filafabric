@@ -66,7 +66,7 @@ test('grid · lifted: the fan comes on for lifted strands, and the card warns wh
 test('grid · sliding: only two-direction sets are offered, and the spacing keeps neighbouring channels apart', () => {
   const card = designById('grid-sliding');
   const directions = card.controls.find((section) => section.key === 'directions');
-  for (const option of directions.options) assert.equal(!!option.disabled, ['0-60-120', 'kagome'].includes(option.id), option.id);
+  for (const option of directions.options) assert.equal(!!option.disabled, ['0-60-120', 'kagome', '0-45-90-135'].includes(option.id), option.id);
   assert.match(directions.options.find((option) => option.id === 'kagome').hint, /more than two strands/);
   assert.equal(card.sanitize({ ...card.defaults(), directions: 'kagome' }).directions, '0-90');
   assert.deepEqual(card.presets.map((preset) => preset.id), ['square', 'diagonal']);
@@ -106,11 +106,12 @@ test('grid · sliding: each slide mask chooses its own direction and the fused s
   assert.ok(patterned.fusedCrossings > 0 && patterned.slidingCrossings > 0, 'dark crossings are fused, the rest slide');
 });
 
-test('wave net · bridged: crossings rise to line thickness plus half the radius, and nothing else changes', () => {
+test('wave net · bridged: independent height changes the apex while rounding preserves it', () => {
   const flat = run('squiggle', {}, 40), bridged = run('wave-bridged', { filletRadius: 1 }, 40);
   assert.ok(Math.abs(bridged.construction.z.max - (LH + 0.5)) <= 0.03, `Z max ${bridged.construction.z.max}`);
-  assert.ok(Math.abs(run('wave-bridged', { filletRadius: 2 }, 40).construction.z.max - (LH + 1)) <= 0.03);
-  assert.match(designById('wave-bridged').verdict(bridged, make('wave-bridged', { filletRadius: 1 }, 40)).body, /h = line thickness \+ R\/2 = 0\.70 mm/);
+  assert.ok(Math.abs(run('wave-bridged', { filletRadius: 2 }, 40).construction.z.max - bridged.construction.z.max) <= 0.03);
+  assert.ok(run('wave-bridged', { bridgeHeight: 1.2 }, 40).construction.z.max > bridged.construction.z.max);
+  assert.match(designById('wave-bridged').verdict(bridged, make('wave-bridged', { filletRadius: 1 }, 40)).body, /Bridge height 0.7 mm/);
   // the same waves: every point of the plain net is on the bridged one, and the bridged Z differs only near a crossing
   const key = (point) => `${point.x.toFixed(3)},${point.y.toFixed(3)}`;
   const has = new Set(bridged.strands.flatMap((strand) => strand.pts.map(key)));

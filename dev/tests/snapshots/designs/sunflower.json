@@ -2,11 +2,11 @@
   {
     "card": "sunflower",
     "preset": "default",
-    "settingsHash": "4313f36fb40e",
-    "gcodeSha256": "97a22ba0d95db919254ca07a49014ccc1d54028dc7b1ff9e82b2430af6590cdc",
-    "strands": 43,
-    "moves": 714,
-    "extrudeMm": 570.3,
+    "settingsHash": "1faaed60ab8d",
+    "gcodeSha256": "258187dc5307d76c10801ce9fd4b15360d4607648c87f70bb89f85a54dade402",
+    "strands": 96,
+    "moves": 1420,
+    "extrudeMm": 1351.3,
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
@@ -19,11 +19,11 @@
   {
     "card": "sunflower",
     "preset": "sunflower",
-    "settingsHash": "4313f36fb40e",
-    "gcodeSha256": "97a22ba0d95db919254ca07a49014ccc1d54028dc7b1ff9e82b2430af6590cdc",
-    "strands": 43,
-    "moves": 714,
-    "extrudeMm": 570.3,
+    "settingsHash": "1faaed60ab8d",
+    "gcodeSha256": "258187dc5307d76c10801ce9fd4b15360d4607648c87f70bb89f85a54dade402",
+    "strands": 96,
+    "moves": 1420,
+    "extrudeMm": 1351.3,
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
@@ -36,11 +36,11 @@
   {
     "card": "sunflower",
     "preset": "fine",
-    "settingsHash": "191348be0f41",
-    "gcodeSha256": "7d7ec876da280bdd3b60c9a43b2510691e2efca269f05ac624bafd489791bd9b",
-    "strands": 51,
-    "moves": 815,
-    "extrudeMm": 780.7,
+    "settingsHash": "d5a6657aaa8b",
+    "gcodeSha256": "81a79ef734ad39f16aad1deb0bd9c301c830b89b0be8e9031f7900388e3b4d62",
+    "strands": 123,
+    "moves": 2013,
+    "extrudeMm": 1759.3,
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
@@ -52,17 +52,18 @@
   {
     "card": "sunflower",
     "preset": "open",
-    "settingsHash": "09c969cd37d7",
-    "gcodeSha256": "2058aa911ffb2d6448f482e3fb84d16fe77fddc2490563d86b74725850449aec",
-    "strands": 24,
-    "moves": 480,
-    "extrudeMm": 299.5,
+    "settingsHash": "261b4f45d7bf",
+    "gcodeSha256": "2e1dbd127ef14ecdbb29bbb7f178d5fdfcc80dddb905a928cbe1ba2bad5235e3",
+    "strands": 62,
+    "moves": 713,
+    "extrudeMm": 717.7,
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
       "L1",
-      "L2"
+      "L2",
+      "ties"
     ],
-    "ties": 0
+    "ties": 2
   }
 ]

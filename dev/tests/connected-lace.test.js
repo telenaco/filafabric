@@ -67,7 +67,7 @@ test('the lace border is attached to the lattice all the way round, not floating
 
 test('every lace island crosses its motif-first default carrier at least twice',()=>{
   const card=designById('lace-backing'),{machine,material}=defaultProfiles();
-  assert.equal(card.defaults().support.openness,3);
+  assert.equal(card.defaults().support.openness,1.5);
   const settings=card.sanitize(card.defaults()),boundary=boundaryFor(settings.width,settings.height);
   const layers=laceOnCarrierLayers(boundary,{...settings,support:settings.support});
   assert.deepEqual(layers.families,['motif','carrier-1']);

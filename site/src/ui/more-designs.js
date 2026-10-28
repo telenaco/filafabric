@@ -29,7 +29,7 @@ import { BACKING_STYLES, BACKING_LAYER_COUNTS } from '../engine/backing.js';
 import { thicknessAlong, THICKNESS_RANGES } from '../engine/pattern-effects.js';
 
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
-const WAVY = ['looped', 'figure8', 'zigzag', 'honeycomb', 'wave', 'square'];
+const WAVY = ['looped', 'figure8', 'zigzag', 'honeycomb', 'wave', 'square', 'trapezoid'];
 const COLOUR = { kind: 'switch', key: 'colorChange', label: 'Two colours', help: 'Pause after the first layer so you can load a second filament (M600).' };
 const shapeOptions = () => WAVY.map((id) => ({ id, label: SHAPES[id].label, hint: SHAPES[id].hint, thumb: shapeThumb(id) }));
 

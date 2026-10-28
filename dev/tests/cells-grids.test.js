@@ -20,7 +20,8 @@ test('Auxetic is fixed to Re-entrant and flat honeycomb has its own cell setting
 test('Grid & isogrid is visible and straight; old wavy settings retain the hidden compatibility card', () => {
   const grid = designById('crosshatch'), legacy = designById('crosshatch-wavy');
   assert.equal(grid.hidden, false);
-  assert.equal(grid.settingsKey, 'grid');
+  assert.equal(grid.settingsKey, 'crosshatch');
+  assert.equal(grid.variantGroup, 'grid');
   assert.equal(grid.controls.some((section) => section.key === 'shape' || section.items?.some((item) => ['size', 'pitch'].includes(item.key))), false);
   assert.equal(grid.sanitize({ shape: 'wave', size: 1.25 }).size, 0);
   assert.equal(legacy.hidden, true);

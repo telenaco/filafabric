@@ -35,7 +35,7 @@ import { pictureDarkness } from '../engine/picture.js';
 import { loopsClose } from '../engine/shapes.js';
 import { FIELD_IDS, createField } from '../engine/fields.js';
 import { generateRelief, reliefPlacements } from '../engine/relief.js';
-import { hatch } from '../engine/layers.js';
+import { hatch, boundaryFor } from '../engine/layers.js';
 import { generateFringe } from '../engine/fringe.js';
 import { generateSpiral } from '../engine/spiral.js';
 import { generateWeave, WEAVE_BINDINGS, WEAVE_BINDING_IDS, WEAVE_DRAFT_PRESETS, draftBinding } from '../engine/weave.js';
@@ -44,7 +44,11 @@ import { OPTION_ICONS } from './option-thumbs.js';
 import { MORE_DESIGNS } from './more-designs.js';
 import { RESEARCH_DESIGNS } from './research-designs.js';
 import { RAISED_DESIGNS } from './raised-designs.js';
+import { SLIDING_LOOP_DESIGNS } from './sliding-loop-designs.js';
+import { RESEARCH_CELL_DESIGNS } from './research-cell-designs.js';
+import { EXPERIMENTAL_DESIGNS } from './experimental-designs.js';
 import { makeFlatVariants } from './flat-variants.js';
+import { LAYERED_DENSITY, retuneCard } from './density.js';
 import { LINE_DESIGNS } from './line-designs.js';
 import { SVG_DESIGNS } from './svg-design.js';
 import { PUBLICATION_DESIGNS } from './pub-designs.js';
@@ -76,11 +80,12 @@ const setSizeOf = (s, w, h) => { s.width = w; s.height = h; };
 const SCALE_SLIDER = { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false };
 
 // the Wave net and its bridged variant share one settings key, so both carry the bridge radius
-const BRIDGE_SHARED = { defaults: { filletRadius: 1 }, ranges: { filletRadius: { min: 0.4, max: 3, step: 0.1 } } };
+const BRIDGE_SHARED = { defaults: { filletRadius: 1, bridgeHeight: 0.7 }, ranges: { filletRadius: { min: 0.4, max: 3, step: 0.1 }, bridgeHeight: { min: 0.3, max: 2, step: 0.1 } } };
 
 const squiggleShapeCards = [
   { id: 'squiggle', name: 'Wave net', shape: 'wave', family: 'waves', settingsKey: 'wave', joins: 'Two wavy families cross and fuse where they meet.', shared: BRIDGE_SHARED },
   { id: 'square-net', name: 'Square-wave net', shape: 'square', family: 'waves', settingsKey: 'square-net', joins: 'Two square-wave families cross and fuse.' },
+  { id: 'trapezoid-net', name: 'Trapezoid-wave net', shape: 'trapezoid', family: 'waves', settingsKey: 'trapezoid-net', joins: 'Two families with localized trapezoidal waves cross and fuse.', sources: { papers: [66] }, about: 'Straight strand sections alternate with localized trapezoidal slack waves. Inspired by Pattinson 2019; not a calibrated strain-response prediction.' },
   { id: 'honeycomb-layered', name: 'Honeycomb · layered', shape: 'honeycomb', family: 'cells', settingsKey: 'honeycomb', joins: 'Two half-hexagon families meet as cells.' },
   { id: 'figure8-net', name: 'Figure-8 net', shape: 'figure8', family: 'loops', settingsKey: 'figure8-net', joins: 'Two figure-8 families cross and fuse.' },
   { id: 'looped-net', name: 'Looped net', shape: 'looped', family: 'loops', settingsKey: 'looped-net', shelf: 'raised', support: 'built-in', joins: 'Loops circle over themselves and lift over the earlier pass.' },
@@ -97,15 +102,15 @@ const squiggleShapeCards = [
     joins: 'Two figure-8 families meet in one layer, joined where they cross.', blurb: 'Two figure-8 families in one layer, joined where they cross',
     about: 'The same two figure-8 families as the Figure-8 net, but in one print layer: every place a line meets another, or itself, it is joined there. The layered version is on the Layered shelf.' },
   { id: 'wave-bridged', name: 'Wave net · bridged crossings', shape: 'wave', family: 'waves', settingsKey: 'wave', shelf: 'raised', joins: 'The second family rises over the first on rounded bridges at every crossing.',
-    blurb: 'Rounded bridges where the waves cross', about: "Where the second family crosses the first it rises over it on a rounded bridge instead of fusing flat. The bridge height follows its roundness: line thickness plus half the bridge radius, 0.7 mm at the default 1 mm. From Kim and Lee's continuous textile structures.",
+    blurb: 'Rounded bridges where the waves cross', about: 'The second family rises over the first on rounded bridges. Height and rounding are independent; ramps lengthen to limit slope. A toolpath adaptation of Kim and Lee\'s CAD geometry, not their demonstrated slicing process.',
     file: 'wave-bridged', sources: { papers: [31] }, shared: BRIDGE_SHARED,
-    slider: { key: 'filletRadius', label: 'Bridge roundness', help: 'Radius of each rounded bridge. The crossing height is shown, not set: line thickness + radius / 2.', lo: 'Tight', hi: 'Round', unit: 'mm', edit: true },
-    describe: (s, layerHeight = 0.2) => ({ filletRadius: `${Math.round(s.filletRadius * 10) / 10} mm, crossing height ${Math.round((layerHeight + s.filletRadius / 2) * 100) / 100} mm` }),
+    sliders: [{ key: 'filletRadius', label: 'Bridge roundness', help: 'Rounding length, independent of height. Slope limits can make the ramp longer.', lo: 'Tight', hi: 'Round', unit: 'mm', edit: true }, { key: 'bridgeHeight', label: 'Bridge height', help: 'Crossing-height parameter, independent of rounding.', lo: 'Low', hi: 'High', unit: 'mm', edit: true }],
+    describe: s => ({ filletRadius: `${s.filletRadius} mm`, bridgeHeight: `${s.bridgeHeight} mm` }),
     transform: (s) => (strands, cfg) => {
-      const bridged = bridgeCrossings(strands, { filletRadius: s.filletRadius, lineThickness: cfg.t.layer_height, bead: cfg.t.extrusion_width });
+      const bridged = bridgeCrossings(strands, { filletRadius: s.filletRadius, height: s.bridgeHeight ?? null, lineThickness: cfg.t.layer_height, bead: cfg.t.extrusion_width });
       return clearanceOrder(bridged.strands, { tipRadius: cfg.t.nozzle_tip_radius, coneHalfAngle: cfg.t.nozzle_cone_half_angle, layerHeight: cfg.t.layer_height, bead: cfg.t.extrusion_width, maxSplits: 8, workBudget: 1.5e5 }).strands;
     },
-    verdict: (result, settings) => { const v = buildSquiggleVerdict(result.stats, { colorChange: settings.colorChange }); v.body += ` Crossing height h = line thickness + R/2 = ${(result.cfg.t.layer_height + settings.filletRadius / 2).toFixed(2)} mm.`; return v; } },
+    verdict: (result, settings) => { const v = buildSquiggleVerdict(result.stats, { colorChange: settings.colorChange }); v.body += ` Bridge height ${settings.bridgeHeight} mm; rounding ${settings.filletRadius} mm.`; return v; } },
   { id: 'colour-exposure', name: 'Colour exposure texture', shape: 'wave', family: 'textures', shelf: 'raised', joins: 'The upper family sits higher where the picture is light, showing more of the lower colour.',
     blurb: 'The upper colour sits higher or lower with the picture', about: 'Two coloured line families (two-colour halftone) where the upper family follows the picture in both thickness and height, so more or less of the lower colour shows through. The height range is small, 0 to 0.4 mm; calibrate the halftone first.',
     // where the picture is light the upper family stands above the lower one and touches it less: loose regions are part of the effect
@@ -143,6 +148,7 @@ function squiggleCard(def) {
       { key: 'amplitude', label: 'Amplitude', help: 'Side-to-side swing of each line.', lo: 'Shallow', hi: 'Deep', unit: 'mm', edit: true },
       { key: 'wavelength', label: 'Wavelength', help: 'Distance between successive waves.', lo: 'Short', hi: 'Long', unit: 'mm', edit: true },
       ...(def.slider ? [def.slider] : []),
+      ...(def.sliders ?? []),
       {key:'bundle',label:'Strands per bundle',help:'Parallel neighbouring strands. Touching bundles fuse; gapped bundles flex separately.',lo:'Single',hi:'Five',unit:'',edit:true},
       {key:'bundleGap',label:'Gap inside bundle',help:'Separation between neighbouring strands when not bonded.',lo:'Narrow',hi:'Wide',unit:'mm',edit:true,when:s=>s.bundle>1},
     ] },
@@ -472,6 +478,29 @@ const figure8Rows = {
 DESIGNS.splice(DESIGNS.indexOf(coil) + 1, 0, figure8Rows, coilShapeCard);
 // cards that printed as two layers go to the Layered shelf; a truly flat card takes each one's place on the Flat shelf
 DESIGNS.push(...makeFlatVariants(DESIGNS));
+DESIGNS.push(...SLIDING_LOOP_DESIGNS);
+DESIGNS.push(...RESEARCH_CELL_DESIGNS);
+DESIGNS.push(...EXPERIMENTAL_DESIGNS);
+// Tune only the finished Layered cards, after their Flat/Raised twins have been copied.
+for (const card of DESIGNS) {
+  const tuning = card.shelf === 'layered' && LAYERED_DENSITY[card.id];
+  if (!tuning) continue;
+  const group = card.variantGroup ?? card.settingsKey;
+  if (group) {
+    for (const twin of DESIGNS) if (card.settingsKey && twin !== card && twin.settingsKey === card.settingsKey) twin.variantGroup ??= group;
+    card.variantGroup ??= group;
+  }
+  Object.assign(card, retuneCard(card, tuning), { settingsKey: card.id });
+  if (card.id === 'chainmail') {
+    const aliases = s => ({ ...s, ringSize: s.spacing * s.ratio, overlap: s.spacing * (s.ratio - 1) });
+    const defaults = card.defaults, sanitize = card.sanitize;
+    card.defaults = () => aliases(defaults());
+    card.sanitize = raw => aliases(sanitize(raw));
+  }
+  if (card.def) {
+    try { card.thumb = thumbFromLayers(card.def.build({ ...card.defaults(), width: 36, height: 22 }, boundaryFor(36, 22)).layers, 36, 22); } catch { /* keep the existing thumbnail */ }
+  }
+}
 // every card has a picture: Corrugation had none
 const corrugationCard = DESIGNS.find((card) => card.id === 'corrugation');
 if (corrugationCard && !corrugationCard.thumb) corrugationCard.thumb = rowsThumb('wave');

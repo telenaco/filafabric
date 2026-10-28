@@ -4,8 +4,8 @@ import { SHAPES, SHAPE_IDS, shapeAt, lanePoints, lanePeriods, loopCount, loopsCl
 
 const opts = { pitch: 6, size: 3 };
 
-test('the seven shapes are registered with labels', () => {
-  assert.deepEqual([...SHAPE_IDS].sort(), ['figure8', 'honeycomb', 'looped', 'ring', 'square', 'wave', 'zigzag']);
+test('strand shapes including localized trapezoids are registered with labels', () => {
+  assert.deepEqual([...SHAPE_IDS].sort(), ['figure8', 'honeycomb', 'looped', 'ring', 'square', 'trapezoid', 'wave', 'zigzag']);
   for (const id of SHAPE_IDS) assert.ok(SHAPES[id].label && SHAPES[id].hint, id);
 });
 

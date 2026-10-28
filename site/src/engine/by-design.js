@@ -4,6 +4,14 @@
  * instead of being quietly loosened. Keys: `regions` (separate fabric regions) and `slope` (extrusion slope over the planning limit).
  */
 export const BY_DESIGN = Object.freeze({
+  'sliding-squares': {
+    regions: 'Closed loops are held captive by channels rather than fused into one contact component.',
+    slope: 'Li-inspired channel legs are intentionally steeper than ordinary supported extrusion ramps.',
+  },
+  'sliding-circles': {
+    regions: 'Closed loops are held captive by channels rather than fused into one contact component.',
+    slope: 'Li-inspired channel legs are intentionally steeper than ordinary supported extrusion ramps.',
+  },
   'grid-sliding': {
     regions: 'The two directions are held by printed channels, not fused, so the contact check counts them as separate regions; that is how the structure slides.',
     slope: "Li's channel legs rise 2 mm over 1.7 mm; the steepness is part of the published geometry.",

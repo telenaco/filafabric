@@ -125,6 +125,7 @@ export const SHELVES = Object.freeze({
   flat: { label: 'Flat', hint: 'One layer that joins in the plane' },
   layered: { label: 'Layered', hint: 'Flat layers that cross at different heights, or a motif on a backing' },
   raised: { label: 'Raised', hint: 'Strands that deliberately leave the plane' },
+  experimental: { label: 'Experimental', hint: 'Research-inspired strand, flow and texture trials · unvalidated' },
 });
 export const FAMILIES = Object.freeze({
   "waves": {
@@ -222,6 +223,8 @@ export const SIMPLEST_FIRST = Object.freeze([
   'colour-exposure', 'dipweave', 'pillarweave', 'spacer', 'grid-sliding', 'svgdesign',
   // layers on their own, without a backing yet
   'starlattice-flat', 'harmonograph-flat', 'boucle-flat', 'meander-flat', 'parquet-flat', 'truchet-flat', 'turing-flat',
+  'trapezoid-net', 'strain-wave-cells', 'auxetic-star', 'sliding-squares', 'sliding-circles',
+  'experiment-slub', 'experiment-pearls', 'experiment-couch', 'experiment-tuck', 'experiment-floats', 'experiment-drawn', 'experiment-tufts', 'auxetic-floral',
 ]);
 
 /** @param cards  cards of one shelf @returns {object[]} the same cards, simplest first */

@@ -51,6 +51,7 @@ export function rawLayers(input, shape, factor) {
   const picture = input.image ? { image: input.image, size: [width, height], offset: [0, 0] } : null;
   const context = { vector: input.vector, bead, vectorSize: [width, height], vectorOffset: [0, 0], includeLines: false, picture };
   if (mod.overviewLayers) return mod.overviewLayers(s, boundary, context);
+  if (mod.id === 'trapezoid-net') return [generateSquiggleTextile({ ...s, shape: 'trapezoid', boundary, planCrossings: false }).strands.map(strand => strand.pts)];
   const layersOf = result => [result.strands.map(s => s.pts)];
   if (input.design === 'spacer') return layersOf(spacerStrands(boundary, { ...s, layers: 1 }));
   if (input.design === 'pillarweave') return layersOf(pillarWeaveStrands(boundary, { ...s, layers: 2 }));

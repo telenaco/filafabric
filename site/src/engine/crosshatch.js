@@ -12,6 +12,7 @@ export const DIRECTIONS = Object.freeze({
   '60-120': { label: '60° and 120°', hint: 'Two directions, leaning', angles: [60, 120] },
   '0-60-120': { label: 'Three ways', hint: 'Isogrid: three layers 60° apart meeting in triangles', angles: [0, 60, 120], offsets: [0, 0, 0] },
   kagome: { label: 'Kagome', hint: 'Three ways in hexagons and triangles: never more than two strands at a crossing', angles: [0, 60, 120], offsets: [0, 0.5, 0] },
+  '0-45-90-135': { label: 'Four ways', hint: 'Four planar passes, 45° apart', angles: [0, 45, 90, 135], offsets: [0, 0, 0, 0] },
 });
 
 export const DIRECTION_IDS = Object.freeze(Object.keys(DIRECTIONS));

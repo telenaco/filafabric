@@ -22,14 +22,14 @@ function closestOnSegment(p,a,b){
 }
 
 /** Motif outlines without connecting necks, also used by motif-on-carrier tickets. */
-export function laceMotifs(boundary,{motif='petal',scale=12,openness=.5,lattice='hex'}={}){
+export function laceMotifs(boundary,{motif='petal',scale=12,openness=.5,lattice='hex',inset=0}={}){
   const box=boundary.bbox(),pitch=Math.max(3,Number(scale)||12),open=Math.max(.3,Math.min(.8,Number(openness)||.5)),diameter=pitch*open,radius=diameter/2,rowStep=lattice==='hex'?pitch*Math.sqrt(3)/2:pitch;
   const rows=Math.ceil((box.maxY-box.minY)/rowStep),cols=Math.ceil((box.maxX-box.minX)/pitch);
   if(rows*cols*100>MAX_MOVES)throw new ConfigError(['This lace layout exceeds the move budget. Use larger motifs or a smaller swatch.']);
   const motifs=[];
   for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){
-    const cx=box.minX+radius+i*pitch+(lattice==='hex'&&j%2?pitch/2:0),cy=box.minY+radius+j*rowStep;
-    if(cx+radius>box.maxX||cy+radius>box.maxY)continue;
+    const cx=box.minX+radius+inset+i*pitch+(lattice==='hex'&&j%2?pitch/2:0),cy=box.minY+radius+inset+j*rowStep;
+    if(cx+radius>box.maxX-inset||cy+radius>box.maxY-inset)continue;
     const path=motifPoints(cx,cy,diameter,motif);path.family='motifs';path.center={x:cx,y:cy};motifs.push(path);
   }
   return motifs;
@@ -85,8 +85,8 @@ export function laceLayers(boundary,{motif='petal',scale=12,neck=.9,openness=.5,
 }
 
 /** Decorative lace printed face-down first, then held by one or two configurable carrier passes. */
-export function laceOnCarrierLayers(boundary,{motif='petal',scale=12,openness=.5,lattice='hex',support={}}={}){
-  const motifs=laceMotifs(boundary,{motif,scale,openness,lattice}).map(path=>{path.family='motif';path.role='motif';return path;});
+export function laceOnCarrierLayers(boundary,{motif='petal',scale=12,openness=.5,lattice='hex',support={},bead=.45}={}){
+  const motifs=laceMotifs(boundary,{motif,scale,openness,lattice,inset:bead/2+.05}).map(path=>{path.family='motif';path.role='motif';return path;});
   const carrier=carrierLayers(boundary,{...support,order:'motif-first'});
   const layers=[motifs,...carrier];
   layers.families=['motif',...carrier.map((_,i)=>`carrier-${i+1}`)];

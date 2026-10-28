@@ -94,7 +94,9 @@ test('all ready cards have the exact ticket metadata', () => {
   ].join("\n");
   const rows = [...brief.matchAll(/\| `([^`]+)` \| (flat|layered|raised) \| (\w+) \| (self|auto|built-in|needs-backing) \| (untested|needs-repair) \| ([^|]+) \|/g)];
   assert.equal(rows.length, 80);
-  assert.equal(DESIGNS.filter(d => d.status === 'ready' && !d.id.endsWith('-legacy')).length, 80);
+  const additions = ['trapezoid-net', 'strain-wave-cells', 'auxetic-star', 'auxetic-floral', 'sliding-squares', 'sliding-circles', 'experiment-slub', 'experiment-pearls', 'experiment-couch', 'experiment-tuck', 'experiment-floats', 'experiment-drawn', 'experiment-tufts'];
+  assert.equal(DESIGNS.filter(d => d.status === 'ready' && !d.id.endsWith('-legacy')).length, 80 + additions.length);
+  for (const id of additions) assert.deepEqual(validateCard(DESIGNS.find(d => d.id === id)), [], id);
   assert.deepEqual(DESIGNS.filter(d => d.id.endsWith('-legacy')).map(d=>d.id).sort(),['meander-legacy','truchet-legacy','turing-legacy']);
   assert.ok(DESIGNS.filter(d=>d.id.endsWith('-legacy')).every(d=>d.hidden&&d.status==='ready'));
   for (const [, id, shelf, family, support, state, joins] of rows) {
@@ -148,7 +150,7 @@ test('visible ready cards occur once on their shelf, grouped by family', () => {
     return cards;
   }));
   assert.deepEqual(cards.map(d => d.id).sort(), DESIGNS.filter(d => d.status === 'ready' && !d.hidden).map(d => d.id).sort());
-  assert.deepEqual(libraryGroups([{ status: 'preset' }, { status: 'planned' }]), { flat: [], layered: [], raised: [] });
+  assert.deepEqual(libraryGroups([{ status: 'preset' }, { status: 'planned' }]), { flat: [], layered: [], raised: [], experimental: [] });
 });
 
 test('library groups order cards by print state and then name', () => {

@@ -59,7 +59,7 @@ test('planned and preset tiles are not loadable designs, unknown ids are not rea
 
 test('the library holds every structure of the catalogue, all of them ready', () => {
   const ready = DESIGNS.filter((d) => d.status === 'ready').map((d) => d.id);
-  assert.deepEqual(ready.slice(0, 8), ['loop-pile', 'squiggle', 'square-net', 'honeycomb-layered', 'figure8-net', 'looped-net', 'squiggle-rings', 'squiggle-zigzag']);
+  assert.deepEqual(ready.slice(0, 9), ['loop-pile', 'squiggle', 'square-net', 'trapezoid-net', 'honeycomb-layered', 'figure8-net', 'looped-net', 'squiggle-rings', 'squiggle-zigzag']);
   assert.deepEqual(DESIGNS.filter((d) => d.status === 'planned'), []);
 });
 

@@ -210,8 +210,8 @@ export function resolveCrossings(strands, opts = {}) {
 }
 
 /** Lift the later strand over each selected crossing using tangent-continuous cosine fillets. */
-export function bridgeCrossings(strands,{filletRadius=1,lineThickness=.2,layerHeight=lineThickness,bead=.45,mask=null}={}){
-  const radius=Math.max(.1,Number(filletRadius)||1),thickness=Math.max(.05,Number(lineThickness)||Number(layerHeight)||.2),crossingHeight=thickness+radius/2,rampLength=Math.max(radius,3.5*crossingHeight),plateau=Math.max(.1,bead+.2),events=crossingEvents(strands,{bead,mask}),byStrand=strands.map(()=>[]);
+export function bridgeCrossings(strands,{filletRadius=1,height=null,lineThickness=.2,layerHeight=lineThickness,bead=.45,mask=null}={}){
+  const radius=Math.max(.1,Number(filletRadius)||1),thickness=Math.max(.05,Number(lineThickness)||Number(layerHeight)||.2),crossingHeight=height === null ? thickness+radius/2 : Math.max(thickness, Number(height)||thickness),rampLength=Math.max(radius,3.5*crossingHeight),plateau=Math.max(.1,bead+.2),events=crossingEvents(strands,{bead,mask}),byStrand=strands.map(()=>[]);
   const arcs=strands.map(s=>{const a=[0];for(let i=1;i<s.pts.length;i++)a.push(a.at(-1)+Math.hypot(s.pts[i].x-s.pts[i-1].x,s.pts[i].y-s.pts[i-1].y));return a;});
   for(const event of events)byStrand[event.later].push({...event,start:event.arc-plateau/2-rampLength,flatStart:event.arc-plateau/2,flatEnd:event.arc+plateau/2,end:event.arc+plateau/2+rampLength});
   const out=strands.map((strand,si)=>{

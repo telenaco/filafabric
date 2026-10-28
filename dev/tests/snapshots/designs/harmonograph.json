@@ -2,13 +2,13 @@
   {
     "card": "harmonograph",
     "preset": "default",
-    "settingsHash": "86af64176dbc",
-    "gcodeSha256": "6d60f0b665c328e932a50c010323bb0499975904e0e80b52202d45dfc8d0697c",
+    "settingsHash": "98fc58b15d2f",
+    "gcodeSha256": "2e0a89ae6e2733d4161d5901d7a7bcad85b9d8d98a17e50940fb2c268a21dbb8",
     "strands": 2,
-    "moves": 1602,
-    "extrudeMm": 1387.7,
+    "moves": 8749,
+    "extrudeMm": 4277.4,
     "zMin": 0.2,
-    "zMax": 0.4084338660458242,
+    "zMax": 0.8343283033493594,
     "families": [
       "L1",
       "L2"
@@ -18,13 +18,13 @@
   {
     "card": "harmonograph",
     "preset": "fine",
-    "settingsHash": "86af64176dbc",
-    "gcodeSha256": "6d60f0b665c328e932a50c010323bb0499975904e0e80b52202d45dfc8d0697c",
+    "settingsHash": "98fc58b15d2f",
+    "gcodeSha256": "2e0a89ae6e2733d4161d5901d7a7bcad85b9d8d98a17e50940fb2c268a21dbb8",
     "strands": 2,
-    "moves": 1602,
-    "extrudeMm": 1387.7,
+    "moves": 8749,
+    "extrudeMm": 4277.4,
     "zMin": 0.2,
-    "zMax": 0.4084338660458242,
+    "zMax": 0.8343283033493594,
     "families": [
       "L1",
       "L2"
@@ -34,13 +34,13 @@
   {
     "card": "harmonograph",
     "preset": "coarse",
-    "settingsHash": "4a2e1d328a51",
-    "gcodeSha256": "774eee0d126bb491cedb5f12c8b7fac7cd2088315d168111ee71d3224ca8929e",
+    "settingsHash": "7d0d48e37890",
+    "gcodeSha256": "29afaf9b8088afecc1a3e4c9f0f270b6c30db4f47ea44a491b122f6f91dba971",
     "strands": 2,
-    "moves": 1088,
-    "extrudeMm": 761.8,
+    "moves": 3430,
+    "extrudeMm": 2433.6,
     "zMin": 0.2,
-    "zMax": 0.5998349270890124,
+    "zMax": 0.6247429763898987,
     "families": [
       "L1",
       "L2"
@@ -50,13 +50,13 @@
   {
     "card": "harmonograph",
     "preset": "lens",
-    "settingsHash": "b55f55f3f60e",
-    "gcodeSha256": "b520e0f1e8ecb505813ff7fe66e47d256a7036c831db84e01d88a03627750f8a",
+    "settingsHash": "2991d550b641",
+    "gcodeSha256": "49ce2fec76189c0eaf19e48352a362bb077d2d6d761fe478792f1ab3baa5d295",
     "strands": 2,
-    "moves": 702,
-    "extrudeMm": 553.5,
+    "moves": 2126,
+    "extrudeMm": 1739.6,
     "zMin": 0.2,
-    "zMax": 0.5973277307034177,
+    "zMax": 0.558636692121786,
     "families": [
       "L1",
       "L2"

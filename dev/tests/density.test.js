@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DESIGNS, designById } from '../../site/src/ui/designs.js';
 import { CARD_ESTIMATES } from '../../site/src/ui/card-estimates.js';
-import { GRAMS_BAND, DENSITY_EXCEPTIONS, FLAT_DENSITY, TARGET_GRAMS, retuneC } from '../../site/src/ui/density.js';
+import { GRAMS_BAND, DENSITY_EXCEPTIONS, FLAT_DENSITY, LAYERED_DENSITY, TARGET_GRAMS, retuneC } from '../../site/src/ui/density.js';
 import { defaultProfiles } from './helpers.js';
 
 // Every card opens at about the same weight, so cards can be compared and a sheet is a fabric that holds. Luis set the standard on
@@ -10,6 +10,12 @@ import { defaultProfiles } from './helpers.js';
 
 const { machine, material } = defaultProfiles();
 const flat = DESIGNS.filter((card) => card.status === 'ready' && !card.hidden && card.shelf === 'flat');
+test('retuned Layered defaults stay in the weight band or record an explicit exception', () => {
+  for (const id of Object.keys(LAYERED_DENSITY)) {
+    if (DENSITY_EXCEPTIONS[id]) continue;
+    assert.ok(CARD_ESTIMATES[id].g >= GRAMS_BAND[0] - .005 && CARD_ESTIMATES[id].g <= GRAMS_BAND[1] + .005, id);
+  }
+});
 
 test('every Flat card opens at about 1.2 g on a 100 x 100 mm sheet, or is a listed exception', () => {
   for (const card of flat) {
@@ -20,9 +26,9 @@ test('every Flat card opens at about 1.2 g on a 100 x 100 mm sheet, or is a list
   }
 });
 
-test('each exception is a Flat card and says why', () => {
+test('each exception is a visible card and says why', () => {
   for (const [id, reason] of Object.entries(DENSITY_EXCEPTIONS)) {
-    assert.ok(flat.some((card) => card.id === id), `${id} is on the Flat shelf`);
+    assert.ok(DESIGNS.some((card) => card.id === id && !card.hidden), `${id} is in the library`);
     assert.ok(reason.length > 40, `${id} gives a reason`);
   }
 });

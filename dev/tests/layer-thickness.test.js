@@ -59,7 +59,7 @@ test('a slicer export brings its nozzle with it', () => {
 });
 
 test('strand shapes are listed from the plainest to the most involved, with the sine wave first', () => {
-  assert.deepEqual([...SHAPE_IDS], ['wave', 'zigzag', 'square', 'honeycomb', 'figure8', 'ring', 'looped']);
+  assert.deepEqual([...SHAPE_IDS], ['wave', 'trapezoid', 'zigzag', 'square', 'honeycomb', 'figure8', 'ring', 'looped']);
 });
 
 test('squiggle patterns are listed plainest first, and the design opens as symmetric and undeformed', () => {

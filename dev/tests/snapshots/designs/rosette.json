@@ -2,11 +2,11 @@
   {
     "card": "rosette",
     "preset": "default",
-    "settingsHash": "f9ea1726e491",
-    "gcodeSha256": "a2e8526de81defb1a5c6ccc725fa1cfcd2c9df068e8fd5dcbbccd2226f51dfd1",
-    "strands": 33,
-    "moves": 2524,
-    "extrudeMm": 979.6,
+    "settingsHash": "0639b285f30c",
+    "gcodeSha256": "67b63e1a2c3d996191feb2a20445b9abdce4c48cc153c7dfecb323edf7cc03b5",
+    "strands": 52,
+    "moves": 5406,
+    "extrudeMm": 1638.6,
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
@@ -14,16 +14,16 @@
       "L2",
       "ties"
     ],
-    "ties": 2
+    "ties": 7
   },
   {
     "card": "rosette",
     "preset": "rosette",
-    "settingsHash": "f9ea1726e491",
-    "gcodeSha256": "a2e8526de81defb1a5c6ccc725fa1cfcd2c9df068e8fd5dcbbccd2226f51dfd1",
-    "strands": 33,
-    "moves": 2524,
-    "extrudeMm": 979.6,
+    "settingsHash": "0639b285f30c",
+    "gcodeSha256": "67b63e1a2c3d996191feb2a20445b9abdce4c48cc153c7dfecb323edf7cc03b5",
+    "strands": 52,
+    "moves": 5406,
+    "extrudeMm": 1638.6,
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
@@ -31,16 +31,16 @@
       "L2",
       "ties"
     ],
-    "ties": 2
+    "ties": 7
   },
   {
     "card": "rosette",
     "preset": "lace",
-    "settingsHash": "9ad821f0a56d",
-    "gcodeSha256": "217cd251d2af90cf525cc3b18601d7a09f904c0c240e7975009a2555277b74b9",
-    "strands": 44,
-    "moves": 4393,
-    "extrudeMm": 1258.6,
+    "settingsHash": "fa1b10410252",
+    "gcodeSha256": "e1dc2b1c5df1816cab20404aff2956887ff69d4ae3cdde59ee4bcfceb54bac9f",
+    "strands": 64,
+    "moves": 8916,
+    "extrudeMm": 2192.9,
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
@@ -52,11 +52,11 @@
   {
     "card": "rosette",
     "preset": "bold",
-    "settingsHash": "7bf73b0f8cc9",
-    "gcodeSha256": "7a25c5dc9d4c738452c028a89fc6e695a92aabbcc985f4c871656c546be55570",
-    "strands": 22,
-    "moves": 1303,
-    "extrudeMm": 704.7,
+    "settingsHash": "a552744ec516",
+    "gcodeSha256": "b1612cfb8a16bab321ef167e03d1208c7d03f6a0707d8ba9116b26e96ca7ec32",
+    "strands": 32,
+    "moves": 2786,
+    "extrudeMm": 1093.2,
     "zMin": 0.2,
     "zMax": 0.4,
     "families": [
@@ -64,6 +64,6 @@
       "L2",
       "ties"
     ],
-    "ties": 1
+    "ties": 4
   }
 ]

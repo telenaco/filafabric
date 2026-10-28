@@ -1756,7 +1756,7 @@ function renderTiles() {
     return details;
   };
   const groups = libraryGroups();
-  $('#design-list').replaceChildren(...['flat', 'layered', 'raised'].map((shelf) => shelfNode(shelf, groups[shelf])));
+  $('#design-list').replaceChildren(...Object.keys(SHELVES).map((shelf) => shelfNode(shelf, groups[shelf])));
   $('#experimental-design-list').replaceChildren(...(presets.length ? [el('section', { class: 'library-shelf quick-starts', 'aria-label': 'Quick starts' },
     el('h2', { class: 'family-heading', text: 'Quick starts' }), ...presets.map(makeTile))] : []));
   applyDesignFilter();

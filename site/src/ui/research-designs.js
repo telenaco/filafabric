@@ -101,7 +101,7 @@ const STOCHASTIC = withColour(defineControls({
   describe:s=>({density:`${r1(s.density*1000)/10} nodes/cm²`,k:`${s.k} neighbours`,stretch:`${r1(s.stretch)}×`,direction:`${s.direction}°`,seed:`#${s.seed}`}),
 }));
 const CONNECTED_LACE=withColour(defineControls({
-  ranges:{...SIZE,scale:{min:3,max:30,step:.1},neck:{min:.45,max:2,step:.05},openness:{min:.3,max:.8,step:.05}},
+  ranges:{...SIZE,scale:{min:3,max:30,step:.1},neck:{min:.45,max:2,step:.05},openness:{min:.3,max:.8,step:.05},spacing:{min:.8,max:10,step:.1}},
   defaults:{width:100,height:100,motif:'petal',scale:10,neck:.9,openness:.5,lattice:'hex',spacing:3,angle:45,backing:'straight',backingDepth:2,backingLength:10,backingLayers:'one',colorChange:false},
   enums:{motif:['ring','petal','scallop'],lattice:['hex','square']},bools:['colorChange'],
   presets:[
@@ -168,7 +168,7 @@ const SCALES=withColour(defineControls({
 export const RESEARCH_DESIGNS = [layered({
   id:'step-lace',name:'Step, ripple & petal lace',blurb:'Straight lines tied by decorative crossings',about:'Parallel base lines are held together by a second, decorative family: zigzag steps, hexagons, ripples or petals. The ties are the carrier. The design is a fused pseudo-textile, not sliding yarn.',file:'step-lace',c:STEP_LACE,
   shelf:'layered',family:'curves',support:'built-in',state:'untested',settingsKey:'step-lace',joins:'A second decorative family crosses the parallel base lines and holds them together.',sources:{catalogue:['M6'],papers:[10,37]},
-  sanitize(raw){const s=STEP_LACE.sanitize(raw);return {...s,tieDepth:Math.max(s.spacing,Math.min(3*s.spacing,s.tieDepth)),petals:Math.max(4,Math.min(10,Math.round(s.petals)))};},
+   sanitize(raw){const s=STEP_LACE.sanitize(raw);return {...s,tieLength:s.tie==='petal'?Math.max(s.tieLength,2*s.spacing):s.tieLength,tieDepth:Math.max(s.spacing,Math.min(3*s.spacing,s.tieDepth)),petals:Math.max(4,Math.min(10,Math.round(s.petals)))};},
   controls:[{kind:'presets',title:'Start from'},{kind:'size',title:'Size and shape'},{kind:'choice',key:'tie',title:'Tying pattern',options:[{id:'step',label:'Step'},{id:'hexagon',label:'Hexagon'},{id:'ripple',label:'Ripple'},{id:'petal',label:'Petal'}]},{kind:'sliders',title:'Look and feel',items:[{key:'spacing',label:'Line spacing',help:'Distance between parallel base lines.',lo:'Close',hi:'Open',unit:'mm',edit:true},{key:'tieLength',label:'Tie length',help:'Spacing of the decorative ties.',lo:'Short',hi:'Long',unit:'mm',edit:true},{key:'tieDepth',label:'Tie depth',help:'How far the ties reach across the base lines.',lo:'Shallow',hi:'Deep',unit:'mm',edit:true},{key:'petals',label:'Petals',help:'Lobes in each rosette; used for petal ties.',lo:'Four',hi:'Ten',unit:'',edit:true,when:s=>s.tie==='petal'}]},COLOUR],
   build:(s,boundary)=>{const built=stepLaceLayers(boundary,s);return {layers:built,families:built.families,extra:built.extra};},
   summary:r=>`${r.baseLines} base lines held by ${r.ties} decorative ties`,
@@ -424,6 +424,6 @@ export const RESEARCH_DESIGNS = [layered({
       {key:'openness',label:'Openness',help:'Motif outline size as a fraction of the lattice pitch.',lo:'Compact',hi:'Open',unit:'×',edit:true},
     ]},
   ],
-  build:(s,boundary)=>{const built=laceOnCarrierLayers(boundary,{...s,support:s.support});return {layers:built,families:built.families,extra:built.extra};},
+   build:(s,boundary,ctx)=>{const built=laceOnCarrierLayers(boundary,{...s,support:s.support,bead:ctx?.bead??.45});return {layers:built,families:built.families,extra:built.extra};},
   summary:result=>`${result.motifs} motifs on ${result.carrierPasses} carrier passes`,
 })];

@@ -37,17 +37,44 @@ const KNOBS = {
   'meander-flat': { keys: ['cell'], floor: { cell: 0.8 } },
   'parquet-flat': { keys: ['block', 'spacing'], floor: { block: 1.05, spacing: 0.8 } },
   'boucle-flat': { keys: ['size', 'pitch', 'rowPitch'], floor: { size: 0.8, pitch: 0.8, rowPitch: 0.8 } },
+  weave: { keys: ['pitch'] },
+  spiral: { keys: ['spacing'] },
+  boucle: { keys: ['size', 'pitch', 'rowPitch'] },
+  crosshatch: { keys: ['spacing'] },
+  auxetic: { keys: ['rowPitch', 'period', 'amplitude'] },
+  'honeycomb-flat': { keys: ['rowPitch', 'period', 'amplitude'] },
+  web: { keys: ['spacing'], extra: (f) => ({ spokes: Math.min(48, Math.round(24 / f / 4) * 4) }) },
+  chainmail: { keys: ['spacing'] },
+  meander: { keys: ['cell', 'spacing', 'backingDepth', 'backingLength'] },
+  harmonograph: { keys: [], slope: 1, extra: (f) => { const a = Math.min(24, Math.round(7 * f)); let b = Math.min(24, Math.round(6 * f)); while (b > 2 && gcd(a, b) > 1) b--; return { a, b }; } },
+  truchet: { keys: ['size'] },
+  voronoi: { keys: ['spacing'] },
+  'moire-net': { keys: ['pitchA', 'pitchDiff'] },
+  turing: { keys: ['spacing', 'backingDepth', 'backingLength'] },
+  'step-lace': { keys: ['spacing', 'tieLength', 'tieDepth'] },
+  'lace-backing': { keys: ['scale', 'spacing'] },
+  conformal: { keys: ['spacing'] },
+  sunflower: { keys: ['spacing'] },
+  rosette: { keys: ['spacing', 'depth'] },
+  flowlines: { keys: ['spacing'] },
+  bubbles: { keys: ['size'] },
+  parquet: { keys: ['block', 'spacing'] },
+  spirograph: { keys: ['spacing'] },
+  starlattice: { keys: ['size'] },
 };
 
+const gcd = (a, b) => b ? gcd(b, a % b) : a;
 const stepOf = (card, key) => card.ranges?.[key]?.step ?? 0.1;
 const apply = (card, base, spec, f) => {
   const settings = { ...base };
   for (const key of spec.keys) {
     const step = stepOf(card, key);
-    const value = Math.max(spec.floor?.[key] ?? 0, base[key] * f);
+    const value = Math.max(spec.floor?.[key] ?? card.ranges?.[key]?.min ?? 0, base[key] * f);
     settings[key] = +(Math.round(value / step) * step).toFixed(4);
   }
-  return Object.assign(settings, spec.extra?.(f, settings) ?? {});
+  Object.assign(settings, spec.extra?.(f, settings) ?? {});
+  if (base.support && settings.spacing !== base.spacing) settings.support = { ...base.support, openness: settings.spacing, depth: settings.backingDepth, wavelength: settings.backingLength };
+  return card.sanitize(settings);
 };
 const evaluate = (card, settings) => {
   const sized = { ...settings };
