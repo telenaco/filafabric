@@ -20,7 +20,7 @@ const circle = (cx, cy, diameter, segments) => {
 /** One-pass overlapping loops on a square or staggered hexagonal lattice. */
 export function ringsLayers(boundary, {
   lattice = 'hex', ringSize = 8, overlap = .9, segments = 48, order = 'rows',
-  sizeField = null, bead = .45,
+  sizeField = null, bead = .45, centred = false,
 } = {}) {
   const box = boundary.bbox();
   const diameter = Math.max(3, Number(ringSize) || 8);
@@ -34,10 +34,10 @@ export function ringsLayers(boundary, {
   const cols = Math.ceil((box.maxX - box.minX) / pitch) + 2;
   const rings = [], centres = [];
   for (let row = -1; row <= rows; row++) {
-    const y = box.minY + row * rowStep;
+    const y = centred ? (box.minY + box.maxY) / 2 + (row - (rows - 1) / 2) * rowStep : box.minY + row * rowStep;
     const rowOffset = lattice === 'hex' && Math.abs(row % 2) === 1 ? pitch / 2 : 0;
     for (let col = -1; col <= cols; col++) {
-      const x = box.minX + col * pitch + rowOffset;
+      const x = centred ? (box.minX + box.maxX) / 2 + (col - (cols - 1) / 2) * pitch + rowOffset : box.minX + col * pitch + rowOffset;
       const tone = sizeField ? Math.max(0, Math.min(1, Number(sizeField(x, y)) || 0)) : .5;
       // Fixed centres keep the lattice regular; each locally graded ring retains at least one bead of contact.
       const localDiameter = sizeField

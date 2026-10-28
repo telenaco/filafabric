@@ -85,7 +85,7 @@ test('a bright tone makes smaller cells, so more strand there', () => {
 
 test('too many cells is refused plainly, and fast', () => {
   const started = Date.now();
-  assert.throws(() => voronoiLayers(boundaryFor(240, 200), { spacing: 4 }), (e) => e.name === 'ConfigError' && /cells/.test(e.message));
+  assert.throws(() => voronoiLayers(boundaryFor(240, 200), { spacing: 2 }), (e) => e.name === 'ConfigError' && /cells/.test(e.message));
   assert.ok(Date.now() - started < 1000);
 });
 

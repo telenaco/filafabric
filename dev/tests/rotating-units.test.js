@@ -6,12 +6,12 @@ import { shelfFromConstruction } from '../../site/src/engine/construction-report
 import { designById } from '../../site/src/ui/designs.js';
 import { defaultProfiles } from './helpers.js';
 
-test('alternating square units, two-pass necks and border are deterministic and in bounds',()=>{
+test('alternating square units and two-pass necks are deterministic and in bounds, with no border band',()=>{
   const boundary=boundaryFor(100,100),first=rotatingSquaresLayers(boundary),again=rotatingSquaresLayers(boundary);
   assert.deepEqual(first,again);
-  assert.deepEqual(first.families,['squares','necks','border']);
-  assert.equal(first.length,1,'all three flat families share one physical plane');
-  assert.ok(first[0].some(p=>p.family==='border'));
+  assert.deepEqual(first.families,['squares','necks']);
+  assert.equal(first.length,1,'both flat families share one physical plane');
+  assert.equal(first[0].some(p=>p.family==='border'),false);
   assert.ok(first[0].every(line=>line.every(p=>boundary.contains(p.x,p.y))));
   const necks=first[0].filter(line=>line.family==='necks');
   assert.ok(necks.length>0);
@@ -30,7 +30,7 @@ test('rotating-square card is one flat connected sheet without ties',()=>{
   assert.ok(result.construction.maxValence<=3);
   assert.equal(result.construction.families.some(f=>f.role==='tie'),false);
   assert.equal(shelfFromConstruction(result.construction),'flat');
-  assert.deepEqual(new Set(result.construction.families.map(f=>f.family)),new Set(['squares','necks','border']));
+  assert.deepEqual(new Set(result.construction.families.map(f=>f.family)),new Set(['squares','necks']));
 });
 
 test('the opening-angle extremes generate usable geometry with at least two neighbour links per unit',()=>{
@@ -88,15 +88,14 @@ test('rotating squares and triangles stay one piece at the extremes of the neck,
   }
 });
 
-test('the outer squares reach the border whatever the corner rounding', () => {
+test('the squares run to the swatch edge whatever the corner rounding, and the edge cuts them', () => {
   const boundary = boundaryFor(100, 100);
   for (const fillet of [0, 0.8, 2]) {
     const layers = rotatingSquaresLayers(boundary, { fillet });
-    const border = layers[0].find((line) => line.family === 'border');
-    const squares = layers[0].filter((line) => line.family === 'squares');
-    const nearest = Math.min(...squares.flatMap((line) => line.map((p) => Math.min(p.x, p.y, 100 - p.x, 100 - p.y))));
-    assert.ok(border);
-    assert.ok(nearest - 0.225 < 0.45, `fillet ${fillet}: the outermost square is ${(nearest - 0.225).toFixed(2)} mm from the border line`);
+    const points = layers[0].flat();
+    const nearest = Math.min(...points.map((p) => Math.min(p.x, p.y, 100 - p.x, 100 - p.y)));
+    assert.ok(nearest < 0.6, `fillet ${fillet}: the pattern comes within ${nearest.toFixed(3)} mm of the edge`);
+    assert.ok(points.every((p) => boundary.contains(p.x, p.y)), `fillet ${fillet}: nothing outside the swatch`);
   }
 });
 

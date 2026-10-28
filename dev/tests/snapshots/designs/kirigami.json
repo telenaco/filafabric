@@ -2,11 +2,11 @@
   {
     "card": "kirigami",
     "preset": "default",
-    "settingsHash": "0af6ecd4f8ff",
-    "gcodeSha256": "dc73fd9fb57c686e6c5e6d849ab6ce1efc81ce731539ef837a0171b891a653e0",
-    "strands": 15,
-    "moves": 20995,
-    "extrudeMm": 6492.8,
+    "settingsHash": "1e8f3a5b22b0",
+    "gcodeSha256": "ed679e98cb9f7fa19a2422f72bcf0d5c0c8331543477aded0ec28512edc682f8",
+    "strands": 92,
+    "moves": 4846,
+    "extrudeMm": 1479.5,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
@@ -18,11 +18,11 @@
   {
     "card": "kirigami",
     "preset": "robust-two-pass",
-    "settingsHash": "0af6ecd4f8ff",
-    "gcodeSha256": "dc73fd9fb57c686e6c5e6d849ab6ce1efc81ce731539ef837a0171b891a653e0",
-    "strands": 15,
-    "moves": 20995,
-    "extrudeMm": 6492.8,
+    "settingsHash": "1e8f3a5b22b0",
+    "gcodeSha256": "ed679e98cb9f7fa19a2422f72bcf0d5c0c8331543477aded0ec28512edc682f8",
+    "strands": 92,
+    "moves": 4846,
+    "extrudeMm": 1479.5,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
@@ -34,26 +34,27 @@
   {
     "card": "kirigami",
     "preset": "single-pass",
-    "settingsHash": "92b2572a1efe",
-    "gcodeSha256": "f982df605bfe1f1fae13273391b761baa9779835a2cb31f7e54bf62b6f49d2f0",
-    "strands": 9,
-    "moves": 12922,
-    "extrudeMm": 3194.9,
+    "settingsHash": "6f25139d84c2",
+    "gcodeSha256": "64d3a50c4605ec156cf48ee34bbde79beed732dd6063e50ad3dab1e8bc40f3d7",
+    "strands": 133,
+    "moves": 6388,
+    "extrudeMm": 1586.2,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
-      "fill-0"
+      "fill-0",
+      "ties"
     ],
-    "ties": 0
+    "ties": 88
   },
   {
     "card": "kirigami",
     "preset": "open",
-    "settingsHash": "8322e9baddae",
-    "gcodeSha256": "c82fe167111b0b3ca62c143c81bb84b8e6cb69209ca63d94ec2c53dd26b083f6",
-    "strands": 7,
-    "moves": 23378,
-    "extrudeMm": 6562.1,
+    "settingsHash": "251b7b73d12d",
+    "gcodeSha256": "9da9e21a4c5527d82b3e1065663bdee986af1d9d1eea8d1aae363b419d3ac848",
+    "strands": 46,
+    "moves": 4144,
+    "extrudeMm": 1144.7,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [

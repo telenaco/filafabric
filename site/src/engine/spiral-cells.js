@@ -2,13 +2,15 @@ import { densify } from './layers.js';
 import { ConfigError } from './params.js';
 import { MAX_MOVES } from './tiler.js';
 import { findCrossings } from './crossings.js';
+import { clipLines, tidyEdge } from './flat-variants.js';
 
 /** Four inward Archimedean spiral arms per square cell, terminating on shared edge midpoints. */
-export function spiralCellsLayers(boundary,{cell=12,twist=2.2,armWidth=.45,handedness=1,tone=null}={}){
-  const box=boundary.bbox(),s=Math.max(10,Number(cell)||12),phi=Math.max(.5,Math.min(4,Number(twist)||2.2)),width=Math.max(.45,Number(armWidth)||.45),sign=handedness<0?-1:1;
-  const cols=Math.max(1,Math.floor((box.maxX-box.minX)/s)),rows=Math.max(1,Math.floor((box.maxY-box.minY)/s));
-  const pitchX=cols===1?Math.min(s,box.maxX-box.minX):s,pitchY=rows===1?Math.min(s,box.maxY-box.minY):s;
-  const startX=box.minX+((box.maxX-box.minX)-(cols-1)*pitchX)/2,startY=box.minY+((box.maxY-box.minY)-(rows-1)*pitchY)/2;
+export function spiralCellsLayers(boundary,{cell=12,twist=2.2,armWidth=.45,handedness=1,tone=null,bead=0}={}){
+  const box=boundary.bbox(),s=Math.max(4,Number(cell)||12),phi=Math.max(.5,Math.min(4,Number(twist)||2.2)),width=Math.max(.45,Number(armWidth)||.45),sign=handedness<0?-1:1;
+  // the cells are centred and enough of them to cover the swatch: the ones that run past its edge are cut by it, so the pattern fills it
+  const cols=Math.max(1,Math.ceil((box.maxX-box.minX)/s-1e-9)),rows=Math.max(1,Math.ceil((box.maxY-box.minY)/s-1e-9));
+  const pitchX=s,pitchY=s;
+  const startX=(box.minX+box.maxX)/2-(cols-1)*pitchX/2,startY=(box.minY+box.maxY)/2-(rows-1)*pitchY/2;
   if(cols*rows*4*Math.ceil(s*phi/.35)>MAX_MOVES)throw new ConfigError(['This spiral-cell sheet exceeds the move limit. Use larger cells or a smaller swatch.']);
   const paths=[];
   for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){
@@ -28,12 +30,13 @@ export function spiralCellsLayers(boundary,{cell=12,twist=2.2,armWidth=.45,hande
     for(let k=0;k<=n;k++){const a=2*Math.PI*k/n;ring.push({x:cx+width*Math.cos(a),y:cy+width*Math.sin(a)});}
     const loop=densify(ring);loop.rowOrder=(j*cols+i)*4+3.5;paths.push(loop);
   }
-  const {found}=findCrossings(paths.map((p)=>({pts:p.map((q)=>({...q,z:0}))})),{strandWidth:width,cell:1});
+  const cut=tidyEdge(clipLines(paths,boundary,{minLength:1,inset:bead/2}),boundary);
+  const {found}=findCrossings(cut.map((p)=>({pts:p.map((q)=>({...q,z:0}))})),{strandWidth:width,cell:1});
   found.forEach((crossing,index)=>{
     const id=`spiral-cell-joint:${index}`;
-    for(const pathIndex of [crossing.sa,crossing.sb]){paths[pathIndex].joints??=[];paths[pathIndex].joints.push({id,x:crossing.x,y:crossing.y});}
+    for(const pathIndex of [crossing.sa,crossing.sb]){cut[pathIndex].joints??=[];cut[pathIndex].joints.push({id,x:crossing.x,y:crossing.y});}
   });
-  const layers=[paths];layers.families=['arms'];layers.extra={families:['arms'],rows,columns:cols};
+  const layers=[cut];layers.families=['arms'];layers.extra={families:['arms'],rows,columns:cols};
   return layers;
 }
 
@@ -43,7 +46,7 @@ export function spiralMinimumGap({cell=12,twist=2.2}={}){
 }
 
 export function sanitizeSpiralTwist(settings,{bead=.45}={}){
-  const minimum=bead+.2,cell=Math.max(10,Number(settings.cell)||12),maxTwist=Math.max(.5,Math.min(4,Math.PI*cell/minimum));
+  const minimum=bead+.2,cell=Math.max(4,Number(settings.cell)||12),maxTwist=Math.max(.5,Math.min(4,Math.PI*cell/minimum));
   const twist=Math.min(maxTwist,Math.max(.5,Number(settings.twist)||2.2));
   const out={...settings,twist};
   if(twist!==settings.twist)out.spiralNote='Twist was reduced to preserve at least one bead plus 0.2 mm between turns.';

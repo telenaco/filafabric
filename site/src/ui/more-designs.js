@@ -8,6 +8,7 @@ import { thumbFromLayers, optionThumbFromLayers, shapeThumb } from './thumbs.js'
 import { OPTION_ICONS } from './option-thumbs.js';
 import { boundaryFor, layeredResult } from '../engine/layers.js';
 import { joinedPlane } from '../engine/flat-variants.js';
+import { withDensity } from './density.js';
 import { acceptIssues } from '../engine/fabric-result.js';
 import { resolveConfig } from '../engine/params.js';
 import { SHAPES } from '../engine/shapes.js';
@@ -36,7 +37,8 @@ const shapeOptions = () => WAVY.map((id) => ({ id, label: SHAPES[id].label, hint
  * @param def  { id, name, blurb, about, file, c (a defineControls result), controls (panel description),
  *               build(settings, boundary) → { layers, extra? }, verdict?, figure?, summary(result), thumbSize? }
  */
-export function layered(def) {
+export function layered(definition) {
+  const def = withDensity(definition);
   const { c } = def;
   const singleLine = (extra) => (def.singleLine ? { ...extra, transform: (strands, cfg) => joinedPlane(extra.transform ? extra.transform(strands, cfg) ?? strands : strands, cfg) } : extra);
   // `bundle` names a choice that does the job of a "Start from" row: each of its options also sets the sizes and
@@ -531,7 +533,7 @@ const MEANDER_CARD = {
 MORE_DESIGNS.push(layered(MEANDER_CARD),layered({...MEANDER_CARD,id:'meander-legacy',name:'Meander (legacy)',file:'meander-legacy',hidden:true,build:(s,b,ctx)=>meanderLayers(b,{...s,legacy:true,tone:patternField(s.pattern,{scale:s.patternScale,picture:ctx?.picture})})}));
 
 const HARMONOGRAPH = defineControls({
-  ranges: { ...SIZE, a: { min: 2, max: 14, step: 1 }, b: { min: 2, max: 14, step: 1 }, phase: { min: 0, max: 90, step: 5 } },
+  ranges: { ...SIZE, a: { min: 2, max: 24, step: 1 }, b: { min: 2, max: 24, step: 1 }, phase: { min: 0, max: 90, step: 5 } },
   defaults: { width: 100, height: 100, a: 7, b: 6, phase: 30, second: true, colorChange: false },
   bools: ['second', 'colorChange'],
   presets: [

@@ -5,6 +5,7 @@ import { shapeAt } from './shapes.js';
 import { chainPolylines, clipPolyline, densify, markRowOrder } from './layers.js';
 import { maxAuxeticAmplitude } from './auxetic.js';
 import { joinNetwork } from './network.js';
+import { clipStrands } from './fabric.js';
 
 // Truly flat versions of designs that print as two layers: one print layer, no strand lifted over another. Where two strands
 // meet they are joined in the plane (a designed joint, so the pipeline neither lifts one over the other nor counts a crossing).
@@ -24,6 +25,86 @@ export function joinedPlane(strands, cfg) {
 export const onePlane = (strands, cfg) => strands.map((strand) => ({ ...strand, pts: strand.pts.map(({ cls, lifted, ...point }) => ({ ...point, z: cfg.t.layer_height })) }));
 
 const gap = (p, q) => Math.hypot(p.x - q.x, p.y - q.y);
+
+/** How far a point is from the boundary's outline. */
+const edgeDistance = (boundary, p) => {
+  let best = Infinity;
+  for (const ring of boundary.rings ?? []) for (let i = 0; i < ring.length; i++) best = Math.min(best, distanceToSegment(p, ring[i], ring[(i + 1) % ring.length]));
+  return best;
+};
+
+const sampled = (line, step) => {
+  const out = [];
+  for (let i = 0; i < line.length; i++) {
+    out.push(line[i]);
+    if (i + 1 < line.length) { const n = Math.floor(gap(line[i], line[i + 1]) / step); for (let k = 1; k <= n; k++) out.push({ x: line[i].x + (line[i + 1].x - line[i].x) * k / (n + 1), y: line[i].y + (line[i + 1].y - line[i].y) * k / (n + 1) }); }
+  }
+  return out;
+};
+
+/**
+ * What the swatch edge leaves loose, taken away: a pattern cut by the edge can leave a piece with an end that touches nothing (its
+ * neighbour was cut away) or a piece that touches nothing at all. Open lines whose two ends each meet another line, or the edge, stay
+ * (a closed line has no ends); the rest go, round after round, and then everything not joined to the largest connected piece. What is
+ * left is one sheet with no dangling end, whose cells at the edge are cut by it.
+ * @param touch  how close two lines must run to count as touching: a little under a bead, as the construction report counts it
+ */
+export function tidyEdge(lines, boundary, { touch = 0.4 } = {}) {
+  const cellOf = (v) => Math.floor(v / touch);
+  const index = (list) => {
+    const grid = new Map();
+    list.forEach((line, i) => { for (const p of sampled(line, touch / 2)) { const key = `${cellOf(p.x)},${cellOf(p.y)}`; let bucket = grid.get(key); if (!bucket) grid.set(key, bucket = []); bucket.push([i, p]); } });
+    return grid;
+  };
+  const near = (grid, p, i, visit) => {
+    const cx = cellOf(p.x), cy = cellOf(p.y);
+    for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (const [j, q] of grid.get(`${cx + dx},${cy + dy}`) ?? []) if (j !== i && gap(p, q) <= touch && visit(j)) return true;
+    return false;
+  };
+  let list = lines;
+  for (let round = 0; round < 12; round++) {
+    const grid = index(list);
+    const joined = (p, i) => near(grid, p, i, () => true) || edgeDistance(boundary, p) <= touch;
+    const kept = list.filter((line, i) => gap(line[0], line.at(-1)) < 1e-6 || (joined(line[0], i) && joined(line.at(-1), i)));
+    if (kept.length === list.length) break;
+    list = kept;
+  }
+  if (list.length < 2) return list;
+  const grid = index(list), parent = list.map((_, i) => i), root = (i) => (parent[i] === i ? i : (parent[i] = root(parent[i])));
+  list.forEach((line, i) => { for (const p of sampled(line, touch / 2)) near(grid, p, i, (j) => { parent[root(j)] = root(i); return false; }); });
+  const length = new Map();
+  list.forEach((line, i) => length.set(root(i), (length.get(root(i)) ?? 0) + line.reduce((n, p, k) => (k ? n + gap(p, line[k - 1]) : n), 0)));
+  const [largest] = [...length.entries()].sort((a, b) => b[1] - a[1])[0];
+  return list.filter((_, i) => root(i) === largest);
+}
+
+const onLine = (line, p, tolerance = 0.05) => {
+  for (let i = 1; i < line.length; i++) if (distanceToSegment(p, line[i - 1], line[i]) < tolerance) return true;
+  return false;
+};
+
+/**
+ * Lines cut to the boundary, so a pattern can run past the swatch edge and the edge cuts it: a line wholly inside stays as it is, a
+ * line that leaves it becomes the pieces inside it. Every piece keeps the line's family and the joints that lie on it; a line with
+ * nothing inside it disappears.
+ * @param lines  polylines of { x, y }, with properties such as `family` and `joints`
+ * @param inset  how far inside the outline a line stops: half a bead, as the pipeline will cut it, so a line cut at a shallow angle
+ *               ends where it will print and not a little short of its neighbour
+ */
+export function clipLines(lines, boundary, { minLength = 1, inset = 0 } = {}) {
+  const out = [];
+  for (const line of lines) {
+    const pieces = line.every((p) => (boundary.contains(p.x, p.y) || edgeDistance(boundary, p) < 1e-6) && edgeDistance(boundary, p) >= inset - 1e-6) ? [line]
+      : inset > 0 ? clipStrands([{ pts: densify(line).map((p) => ({ ...p, z: 0 })) }], boundary, inset).map((s) => s.pts.map(({ z, ...p }) => p)).filter((run) => run.reduce((n, p, i) => n + (i ? gap(p, run[i - 1]) : 0), 0) >= minLength)
+      : clipPolyline(line, boundary, minLength);
+    for (const piece of pieces) {
+      if (piece !== line) for (const key of Object.keys(line)) if (Number.isNaN(Number(key)) && key !== 'joints') piece[key] = line[key];
+      if (line.joints?.length && piece !== line) piece.joints = line.joints.filter((joint) => onLine(piece, joint));
+      out.push(piece);
+    }
+  }
+  return out;
+}
 
 /**
  * The fewest strokes the lines of each group allow, no line printed twice. Lines that meet or cross form a graph (network.js) and an

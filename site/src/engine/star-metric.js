@@ -28,7 +28,7 @@ export function starMetricLayers(boundary,{lattice='triangular',spans=[1,.6,1],s
   const box=boundary.bbox(),step=Math.max(.1,Number(raster)||.2),cols=Math.ceil((box.maxX-box.minX)/step),rows=Math.ceil((box.maxY-box.minY)/step),
     metricSym=[3,4,6].includes(Number(symmetry))?Number(symmetry):3,shape=(Array.isArray(spans)?spans:[1,.6,1]).slice(0,7).map(v=>Math.max(.3,Math.min(1.5,Number(v)||1)));
   if(cols*rows>MAX_MOVES)throw new ConfigError(['This star-metric raster is too large. Use a coarser grid or a smaller swatch.']);
-  const cellSize=Math.max(5,Number(cell)||10),pts=sitesFor(box,lattice,cellSize),labels=new Int16Array(cols*rows),siteFactors=pts.map(p=>{
+  const cellSize=Math.max(2.5,Number(cell)||10),pts=sitesFor(box,lattice,cellSize),labels=new Int16Array(cols*rows),siteFactors=pts.map(p=>{
     const value=tone?Math.max(0,Math.min(1,tone(p.x-box.minX,p.y-box.minY,box.maxX-box.minX,box.maxY-box.minY))):.5;
     const local=shape.map((v,i)=>Math.max(.3,Math.min(1.5,v+(value-.5)*(i===0||i===shape.length-1?0:.4))));
     return Float32Array.from({length:720},(_,a)=>starFactor(a*Math.PI/360,local,metricSym,smooth));

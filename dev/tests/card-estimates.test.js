@@ -38,8 +38,10 @@ test('the numbers are what a fresh run gives (checked on two quick cards)', () =
 
 test('the estimate line reads in plain words, and says nothing when there is no estimate', () => {
   assert.equal(estimateLine({ min: 13, g: 1.1, layers: 2 }), '13 min · 1.1 g · 2 layers');
+  assert.equal(estimateLine({ min: 13, g: 1.2, layers: 2 }), '13 min · 1.2 g · 2 layers', 'no trailing zero');
   assert.equal(estimateLine({ min: 1.5, g: 0.25, layers: 1 }), '1.5 min · 0.25 g · 1 layer');
-  assert.equal(estimateLine({ min: 125, g: 12.04, layers: 3 }), '2 h 5 min · 12 g · 3 layers');
+  assert.equal(estimateLine({ min: 1.5, g: 0.374, layers: 1 }), '1.5 min · 0.37 g · 1 layer', 'two decimals at most');
+  assert.equal(estimateLine({ min: 125, g: 12.04, layers: 3 }), '2 h 5 min · 12.04 g · 3 layers');
   assert.equal(estimateLine({ min: null, g: 4, layers: 2 }), '4 g · 2 layers');
   assert.equal(estimateLine(undefined), '');
 });

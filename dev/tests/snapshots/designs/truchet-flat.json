@@ -2,11 +2,11 @@
   {
     "card": "truchet-flat",
     "preset": "default",
-    "settingsHash": "9b3e4506e737",
-    "gcodeSha256": "166c81f75ebe11161c9ae351afcb40bee90af03cd0751edb9574439b5bc94119",
-    "strands": 24,
-    "moves": 712,
-    "extrudeMm": 529.6,
+    "settingsHash": "2f2f36e2b4f7",
+    "gcodeSha256": "77087b964f84d819dde8d342dbd1c3770da55bb15d1b744ffa1ad657a81cd9b8",
+    "strands": 171,
+    "moves": 7048,
+    "extrudeMm": 1514.4,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
@@ -14,16 +14,16 @@
       "border",
       "ties"
     ],
-    "ties": 6
+    "ties": 80
   },
   {
     "card": "truchet-flat",
     "preset": "arcs",
-    "settingsHash": "9b3e4506e737",
-    "gcodeSha256": "166c81f75ebe11161c9ae351afcb40bee90af03cd0751edb9574439b5bc94119",
-    "strands": 24,
-    "moves": 712,
-    "extrudeMm": 529.6,
+    "settingsHash": "2f2f36e2b4f7",
+    "gcodeSha256": "77087b964f84d819dde8d342dbd1c3770da55bb15d1b744ffa1ad657a81cd9b8",
+    "strands": 171,
+    "moves": 7048,
+    "extrudeMm": 1514.4,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
@@ -31,16 +31,16 @@
       "border",
       "ties"
     ],
-    "ties": 6
+    "ties": 80
   },
   {
     "card": "truchet-flat",
     "preset": "diagonals",
-    "settingsHash": "d7e9b8f5c11c",
-    "gcodeSha256": "d48476cf0b43ae6b35720018fdc4a49edd07962bdfe826893c70ec39c38c5426",
-    "strands": 16,
-    "moves": 909,
-    "extrudeMm": 482.8,
+    "settingsHash": "c5627669501f",
+    "gcodeSha256": "a76cbe0ad83e846f8e9a55d2b13f7a370a54484bd4fb4876ce710678fc7dac3f",
+    "strands": 218,
+    "moves": 1605,
+    "extrudeMm": 1381.2,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
@@ -48,16 +48,16 @@
       "border",
       "ties"
     ],
-    "ties": 2
+    "ties": 32
   },
   {
     "card": "truchet-flat",
     "preset": "big-arcs",
-    "settingsHash": "03bd0e75429e",
-    "gcodeSha256": "18c398efd4db5d7ee3db0895d5509198c57304939fd4f3939e95c20c4c69fff3",
-    "strands": 13,
-    "moves": 324,
-    "extrudeMm": 384,
+    "settingsHash": "facbc3f5d697",
+    "gcodeSha256": "0b3843cfb2f3160c6e7c36be11c42e1af60d9598ab19a8fbba4eeb1a7334c766",
+    "strands": 62,
+    "moves": 2874,
+    "extrudeMm": 1004.2,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
@@ -65,6 +65,6 @@
       "border",
       "ties"
     ],
-    "ties": 2
+    "ties": 18
   }
 ]

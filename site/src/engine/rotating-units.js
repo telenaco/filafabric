@@ -1,6 +1,10 @@
 import { densify } from './layers.js';
 import { ConfigError } from './params.js';
 import { MAX_MOVES } from './tiler.js';
+import { clipLines, tidyEdge } from './flat-variants.js';
+
+// the smallest cell: a unit of four walls round an open middle, joined by a neck, needs about this much room at the standard bead
+export const MIN_UNIT_CELL = 1.5;
 
 const rotate = (p, angle, center) => {
   const c=Math.cos(angle),s=Math.sin(angle),x=p.x-center.x,y=p.y-center.y;
@@ -132,30 +136,35 @@ function borderLoop(boundary, inset) {
   return (boundary.rings??[]).map(ring=>ring.map(p=>({...p})));
 }
 
-/** Alternating rotating squares, corner-link necks, and a border band for free edges. */
+/**
+ * Alternating rotating squares and corner-link necks. The lattice is centred on the swatch and runs past its edges, so a square at
+ * the edge is cut by it: the pattern fills the whole swatch instead of stopping short of it. There is no border band: what the edge
+ * leaves loose is taken away (tidyEdge), and a line can be drawn where an edge needs holding.
+ */
 export function rotatingSquaresLayers(boundary,{cell=10,angle=15,neck=.9,neckLength=1.2,fillet=.8,outline=true,bead=.45}={}){
   const box=boundary.bbox(),a=Math.max(0,Math.min(35,Number(angle)||0))*Math.PI/180;
-  const cellSize=Math.max(5,Number(cell)||10),length=Math.max(.6,Number(neckLength)||1.2),width=Math.max(bead,Number(neck)||.9);
+  const cellSize=Math.max(MIN_UNIT_CELL,Number(cell)||10),length=Math.max(.6,Number(neckLength)||1.2),width=Math.max(bead,Number(neck)||.9);
   const sideEstimate=Math.max(1,cellSize-length);
   const prototypeA={i:0,j:0,x:0,y:0},prototypeB={i:1,j:0,x:cellSize,y:0};
   const side=solveSquareSide(prototypeA,prototypeB,a,cellSize,length,fillet);
   if(side>sideEstimate*1.3)throw new ConfigError(['The requested corner necks do not fit between these squares. Increase cell size or reduce neck length.']);
-  // measured on the rounded outline: rounding pulls a corner back, and squares placed by the sharp corner would stop short of the border
+  // measured on the rounded outline: rounding pulls a corner back
   const reach=Math.max(...roundedSquare({x:0,y:0},side,a,fillet).map(p=>Math.max(Math.abs(p.x),Math.abs(p.y))));
-  const extent=reach+bead/2+.15;
-  const nx=Math.max(0,Math.floor((box.maxX-box.minX-2*extent)/cellSize)+1),ny=Math.max(0,Math.floor((box.maxY-box.minY-2*extent)/cellSize)+1);
+  const spanX=box.maxX-box.minX,spanY=box.maxY-box.minY,centreX=(box.minX+box.maxX)/2,centreY=(box.minY+box.maxY)/2;
+  const nx=Math.ceil((spanX+2*reach)/cellSize)+1,ny=Math.ceil((spanY+2*reach)/cellSize)+1;
   if(nx*ny*Math.ceil(cellSize*4/.5)>MAX_MOVES)throw new ConfigError(['This rotating-square sheet exceeds the move limit. Use larger cells or a smaller swatch.']);
-  if(nx<1||ny<1)throw new ConfigError(['The swatch is too small for a rotating-square cell.']);
   const cells=[];
-  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++)cells.push({i,j,x:box.minX+extent+i*cellSize,y:box.minY+extent+j*cellSize});
-  const squares=[],necks=[],squareByCell=new Map();
+  for(let j=0;j<ny;j++)for(let i=0;i<nx;i++)cells.push({i,j,x:centreX+(i-(nx-1)/2)*cellSize,y:centreY+(j-(ny-1)/2)*cellSize});
+  const squares=[],necks=[],squareByCell=new Map(),kept=[];
   for(const cellAt of cells){
     const theta=(cellAt.i+cellAt.j)%2?-a:a;
-    const path=roundedSquare(cellAt,side,theta,fillet);
-    if(outline){const line=path.map(p=>({...p}));line.family='squares';line.joints=[];squares.push(line);squareByCell.set(`${cellAt.i},${cellAt.j}`,line);}
+    const line=roundedSquare(cellAt,side,theta,fillet).map(p=>({...p}));line.family='squares';line.joints=[];
+    if(!clipLines([line],boundary,{minLength:bead*3,inset:bead/2}).length)continue; // wholly outside the swatch
+    kept.push(cellAt);
+    if(outline){squares.push(line);squareByCell.set(`${cellAt.i},${cellAt.j}`,line);}
   }
-  const byIndex=new Map(cells.map(c=>[`${c.i},${c.j}`,c]));
-  for(const c of cells)for(const [di,dj] of [[1,0],[0,1]]){
+  const byIndex=new Map(kept.map(c=>[`${c.i},${c.j}`,c]));
+  for(const c of kept)for(const [di,dj] of [[1,0],[0,1]]){
     const n=byIndex.get(`${c.i+di},${c.j+dj}`);if(!n)continue;
     const pair=squareContactPair(c,n,side,a,fillet);
     if(Math.abs(pair.distance-length)>.05)continue;
@@ -164,33 +173,36 @@ export function rotatingSquaresLayers(boundary,{cell=10,angle=15,neck=.9,neckLen
     squareByCell.get(`${n.i},${n.j}`)?.joints.push({id:jointB,x:pair.b.x,y:pair.b.y});
     necks.push(...neckPasses(pair.a,pair.b,width,bead,jointA,jointB,squareByCell.get(`${c.i},${c.j}`),squareByCell.get(`${n.i},${n.j}`)));
   }
-  const border=borderLoop(boundary,bead/2).map(r=>{const line=densify(r);line.family='border';return line;});
-  const layers=[[...squares,...necks,...border]];
-  layers.families=['squares','necks','border'];
+  const cut=clipLines([...squares,...necks],boundary,{minLength:bead*3,inset:bead/2});
+  const layers=[tidyEdge(cut,boundary)];
+  layers.families=['squares','necks'];
   layers.extra={families:layers.families,cellSide:side};
   return layers;
 }
 
-/** Alternating regular triangles on an equilateral lattice with corner necks and a closing edge band. */
+/**
+ * Alternating regular triangles on an equilateral lattice with corner necks. The lattice is centred on the swatch and runs past its
+ * edges, so a triangle at the edge is cut by it. There is no border band: what the edge leaves loose is taken away (tidyEdge).
+ */
 export function rotatingTrianglesLayers(boundary,{cell=10,angle=15,neck=.9,neckLength=1.2,fillet=.6,bead=.45}={}){
-  const box=boundary.bbox(),cellSize=Math.max(5,Number(cell)||10),inclination=Math.max(-30,Math.min(30,Number(angle)||0))*Math.PI/180;
+  const box=boundary.bbox(),cellSize=Math.max(MIN_UNIT_CELL,Number(cell)||10),inclination=Math.max(-30,Math.min(30,Number(angle)||0))*Math.PI/180;
   const length=Math.max(.6,Number(neckLength)||1.2),width=Math.max(bead,Number(neck)||.9),rowStep=cellSize*Math.sqrt(3)/2;
   const sampleA={i:0,j:0,x:0,y:0,orientation:0,turnSign:1},sampleB={i:0,j:0,x:cellSize,y:0,orientation:Math.PI/3,turnSign:-1};
-  const side=solveTriangleSide(sampleA,sampleB,cellSize,length,fillet,inclination),radius=side/Math.sqrt(3),extent=radius+bead/2+.15;
-  const iMin=Math.floor((box.minX-2*cellSize)/(1.5*cellSize))-1,iMax=Math.ceil((box.maxX+2*cellSize)/(1.5*cellSize))+1;
-  const jMin=Math.floor((box.minY-2*cellSize)/(Math.sqrt(3)*cellSize))-1,jMax=Math.ceil((box.maxY+2*cellSize)/(Math.sqrt(3)*cellSize))+1;
-  if((iMax-iMin+1)*(jMax-jMin+1)*Math.ceil(cellSize*5/.5)>MAX_MOVES)throw new ConfigError(['This rotating-triangle sheet exceeds the move limit. Use larger cells or a smaller swatch.']);
+  const side=solveTriangleSide(sampleA,sampleB,cellSize,length,fillet,inclination);
+  const centreX=(box.minX+box.maxX)/2,centreY=(box.minY+box.maxY)/2,halfX=(box.maxX-box.minX)/2+2*cellSize,halfY=(box.maxY-box.minY)/2+2*cellSize;
+  const iMax=Math.ceil(halfX/(1.5*cellSize))+1,iMin=-iMax,jMax=Math.ceil(halfY/(2*rowStep))+Math.ceil(iMax/2)+1,jMin=-jMax;
+  if((iMax-iMin+1)*(jMax-jMin+1)*Math.ceil(cellSize*5/.5)>MAX_MOVES*4)throw new ConfigError(['This rotating-triangle sheet exceeds the move limit. Use larger cells or a smaller swatch.']);
   const cells=[];
   for(let i=iMin;i<=iMax;i++)for(let j=jMin;j<=jMax;j++){
-    const ax=box.minX+(i*1.5*cellSize),ay=box.minY+(i+2*j)*rowStep;
+    const ax=centreX+i*1.5*cellSize,ay=centreY+(i+2*j)*rowStep;
+    if(Math.abs(ax-centreX)>halfX+cellSize||Math.abs(ay-centreY)>halfY+cellSize)continue;
     cells.push({i,j,sub:'a',x:ax,y:ay,orientation:0,turnSign:1});
     cells.push({i,j,sub:'b',x:ax+cellSize,y:ay,orientation:Math.PI/3,turnSign:-1});
   }
   const shapes=new Map(),triangles=[],necks=[],insideCell=new Map();
   for(const c of cells){
-    const corners=triangleCorners(c,side,inclination);
-    if(corners.some(p=>!boundary.contains(p.x,p.y)))continue;
-    const path=roundedPolygon(corners,fillet);path.family='triangles';path.joints=[];
+    const path=roundedPolygon(triangleCorners(c,side,inclination),fillet);path.family='triangles';path.joints=[];
+    if(!clipLines([path],boundary,{minLength:bead*3,inset:bead/2}).length)continue; // wholly outside the swatch
     shapes.set(`${c.i},${c.j},${c.sub}`,path);triangles.push(path);insideCell.set(`${c.i},${c.j},${c.sub}`,c);
   }
   const degree=new Map([...insideCell.keys()].map(key=>[key,0])),linkedCells=[];
@@ -207,22 +219,9 @@ export function rotatingTrianglesLayers(boundary,{cell=10,angle=15,neck=.9,neckL
     degree.set(aKey,degree.get(aKey)+1);degree.set(bKey,degree.get(bKey)+1);
     linkedCells.push([aKey,bKey]);
   }
-  let border;
-  const boundaryRing=boundary.rings?.[0]??[],boundaryBox=boundary.bbox();
-  const rectangular=boundary.isRectangle||(boundaryRing.length===4&&boundaryRing.every(p=>[boundaryBox.minX,boundaryBox.maxX].includes(p.x)&&[boundaryBox.minY,boundaryBox.maxY].includes(p.y)));
-  if(rectangular&&triangles.length){
-    const points=triangles.flat(),minX=Math.min(...points.map(p=>p.x)),maxX=Math.max(...points.map(p=>p.x)),minY=Math.min(...points.map(p=>p.y)),maxY=Math.max(...points.map(p=>p.y));
-    const line=densify([{x:minX,y:minY},{x:maxX,y:minY},{x:maxX,y:maxY},{x:minX,y:maxY},{x:minX,y:minY}]);
-    line.family='border';line.joints=[];
-    for(let i=0;i<triangles.length;i++)for(const p of triangles[i]){
-      if(Math.min(Math.abs(p.x-minX),Math.abs(p.x-maxX),Math.abs(p.y-minY),Math.abs(p.y-maxY))>1e-7)continue;
-      const id=`triangle-border:${i}:${p.x.toFixed(4)},${p.y.toFixed(4)}`;
-      triangles[i].joints.push({id,x:p.x,y:p.y});line.joints.push({id,x:p.x,y:p.y});
-    }
-    border=[line];
-  }else border=borderLoop(boundary,bead/2).map(r=>{const line=densify(r);line.family='border';return line;});
-  const layers=[[...triangles,...necks,...border]];
-  layers.families=['triangles','necks','border'];
+  const cut=clipLines([...triangles,...necks],boundary,{minLength:bead*3,inset:bead/2});
+  const layers=[tidyEdge(cut,boundary)];
+  layers.families=['triangles','necks'];
   // Each fully interior hinge joins two corners of closed triangle outlines;
   // those paired corners contribute two contour branches apiece at the node.
   const interiorNodeDegrees=linkedCells.filter(([a,b])=>degree.get(a)===3&&degree.get(b)===3).map(()=>4);

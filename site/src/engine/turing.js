@@ -105,9 +105,10 @@ function chainLoops(loops, boundary, jog) {
  * @param angle       angle of the hatch laid across it, degrees
  * @param spacing     spacing of the hatch, mm
  */
-export function turingLayers(boundary, { wavelength = 7, seed = 1, angle = 45, spacing = 5, backing = 'straight', backingDepth = 2, backingLength = 10, backingLayers = 'one', whole = true, support = null, bead=.45, legacy=false } = {}) {
+export function turingLayers(boundary, { wavelength = 7, seed = 1, angle = 45, spacing = 5, backing = 'straight', backingDepth = 2, backingLength = 10, backingLayers = 'one', whole = true, support = null, bead=.45, legacy=false, bleed = 0 } = {}) {
   const box = boundary.bbox();
-  const field = growField(box, { wavelength, seed, legacy });
+  // `bleed` grows the field past the swatch edge, so the stripes run to the edge and the edge cuts them
+  const field = growField(bleed ? { minX: box.minX - bleed, minY: box.minY - bleed, maxX: box.maxX + bleed, maxY: box.maxY + bleed } : box, { wavelength, seed, legacy });
   let max = 0;
   for (const value of field.data) if (value > max) max = value;
   if (whole && max > 0) {
@@ -127,7 +128,8 @@ export function turingLayers(boundary, { wavelength = 7, seed = 1, angle = 45, s
   const strands = chainLoops(loops, boundary, wavelength * 1.2);
   const layer1 = strands.flatMap((s) => clipPolyline(s, boundary));
   const stack = support ? carrierLayers(boundary, support) : backingStack(boundary, { style: backing, angle, spacing, depth: backingDepth, wavelength: backingLength }, backingLayers);
-  if(legacy)return {layers:[layer1,...stack],extra:{loops:loops.length}};
+  // the flat card is the stripes alone, to be backed later: nothing to attach them to
+  if(legacy||bleed)return {layers:[layer1,...stack],extra:{loops:loops.length}};
   const attached=attachMotifs(layer1,stack,boundary,{bead,reach:Math.max(wavelength,spacing)*4,merge:true});
   if(attached.unattached)throw new ConfigError([`${attached.unattached} long Turing fragments cannot reach two carrier contacts inside the outline. Use a denser or crossed two-layer Support carrier.`]);
   return {layers:[attached.paths,...stack],extra:{loops:loops.length,attachment:{dropped:attached.dropped,extended:attached.extended,unattached:attached.unattached}},warnings:attached.dropped||attached.extended?[`Carrier attachment: ${attached.dropped} stripe fragments dropped, ${attached.extended} extended.`]:[]};

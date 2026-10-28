@@ -2,11 +2,11 @@
   {
     "card": "zigzag-flat",
     "preset": "default",
-    "settingsHash": "8a73f5c2586c",
-    "gcodeSha256": "b9b5cf7d607cc17a721b258e2aa67a491521de63f9e4ca2760931b81d6b79ab6",
+    "settingsHash": "8f0d117d464d",
+    "gcodeSha256": "51100678dbdadace9486f21168e14cabb614265ea95ee46c7339c60afc460499",
     "strands": 2,
-    "moves": 349,
-    "extrudeMm": 1395.5,
+    "moves": 143,
+    "extrudeMm": 1015.5,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [

@@ -28,7 +28,8 @@ test('the order follows the cell size', () => {
   assert.equal(curveOrder('hilbert', 64, 8), 3);
   assert.equal(curveOrder('hilbert', 64, 4), 4);
   assert.equal(curveOrder('peano', 54, 6), 2);
-  assert.ok(curveOrder('hilbert', 1000, 1) <= 6, 'capped');
+  assert.ok(curveOrder('hilbert', 1000, 1) <= 7, 'capped');
+  assert.equal(curveOrder('hilbert', 100, 0.8), 7, 'a 100 mm sheet at the finest cell is the seventh order');
 });
 
 test('layer 1 never crosses itself and layer 2 crosses it everywhere', () => {

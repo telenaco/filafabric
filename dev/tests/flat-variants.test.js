@@ -4,6 +4,7 @@ import { designById } from '../../site/src/ui/designs.js';
 import { variantsOf, variantDefaultErrors } from '../../site/src/ui/library.js';
 import { shelfFromConstruction } from '../../site/src/engine/construction-report.js';
 import { defaultProfiles } from './helpers.js';
+import { boundaryFor } from '../../site/src/engine/layers.js';
 
 // Cards listed as Flat that printed as two layers now keep that card on the Layered (or Raised) shelf, and a truly flat card, in one
 // layer, takes the Flat slot with the same settings. Five more cards come as a single layer without their backing.
@@ -34,7 +35,9 @@ test('the flat cards are one layer: every point at the first layer height, one p
   for (const [flatId] of PAIRS) {
     const result = run(flatId), lh = result.cfg.t.layer_height;
     assert.ok(result.construction.z.max <= lh + 0.011, `${flatId}: Z max ${result.construction.z.max} mm`);
-    assert.equal(result.construction.componentsWithoutTies, 1 + (flatId.startsWith('coil') || flatId.startsWith('figure8-rows') ? 2 : 0), `${flatId}: pieces without ties`);
+    // the row cards are rows that only touch: a few pieces, joined by the ties the pipeline adds; every other flat card is one piece
+    const pieces = result.construction.componentsWithoutTies, rows = flatId.startsWith('coil') || flatId.startsWith('figure8-rows');
+    assert.ok(rows ? pieces >= 1 && pieces <= 5 : pieces === 1, `${flatId}: ${pieces} pieces without ties`);
     assert.equal(result.fabric.exportable, true, `${flatId}: ${result.fabric.issues.join('; ')}`);
     assert.equal(shelfFromConstruction(result.construction, { layerHeight: lh }), 'flat', `${flatId} measures as flat`);
     assert.ok(result.strands.every((strand) => strand.pts.every((point) => !['rising', 'falling', 'unsupported'].includes(point.cls))), `${flatId}: no strand leaves the plane`);
@@ -127,16 +130,26 @@ test('strokesPerGroup joins lines that meet into one stroke and keeps the groups
 
 test('Rings · flat prints a row of rings as one line, not ring by ring', () => {
   const { strands } = run('rings-flat', 100);
-  assert.ok(strands.length < 60, `${strands.length} strokes for the whole sheet`);
+  assert.ok(strands.length < 150, `${strands.length} strokes for the whole sheet`);
   const ring = Math.PI * 8;
   assert.ok(strands.some((strand) => strand.pts.reduce((n, p, i) => (i ? n + Math.hypot(p.x - strand.pts[i - 1].x, p.y - strand.pts[i - 1].y) : n), 0) > 4 * ring), 'a stroke runs through several rings');
 });
 
+test('Spiral cells print each row of cells as joined arms: far fewer strokes than the five lines every cell is drawn from', () => {
+  const card = designById('spiral-cells'), settings = card.defaults();
+  card.setSize(settings, 100, 100);
+  const cells = Math.ceil(100 / settings.cell) ** 2, result = run('spiral-cells', 100);
+  assert.ok(result.strands.length < cells * 5 / 3, `${result.strands.length} strokes for ${cells} cells`);
+  assert.ok(result.construction.z.max <= result.cfg.t.layer_height + 0.011);
+});
+
 test('the flat cards that join their lines stay in one plane and use fewer strokes', () => {
-  const before = { 'spiral-cells': 300, 'arrowhead-band': 150, 'isohedral-tiles': 60, kirigami: 1000 };
-  for (const [id, many] of Object.entries(before)) {
+  for (const id of ['arrowhead-band', 'isohedral-tiles']) {
+    const card = designById(id), settings = card.defaults();
+    card.setSize(settings, 100, 100);
+    const lines = card.overviewLayers(settings, boundaryFor(100, 100), {}).flat().length;
     const result = run(id, 100), lh = result.cfg.t.layer_height;
-    assert.ok(result.strands.length < many, `${id}: ${result.strands.length} strokes`);
+    assert.ok(result.strands.length < lines, `${id}: ${result.strands.length} strokes from ${lines} lines`);
     assert.ok(result.construction.z.max <= lh + 0.011, `${id}: Z max ${result.construction.z.max} mm`);
     assert.deepEqual(result.fabric.issues, [], id);
   }

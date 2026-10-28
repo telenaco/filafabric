@@ -23,11 +23,11 @@ import { scalesLayers } from '../engine/scales.js';
 const SIZE = { width: { min: 10, max: 240, step: 5 }, height: { min: 10, max: 200, step: 5 } };
 const COLOUR = { kind: 'switch', key: 'colorChange', label: 'Two colours', help: 'Pause after the first layer so you can load a second filament (M600).' };
 const ISOHEDRAL = withColour(defineControls({
-  ranges:{...SIZE,scale:{min:5,max:30,step:.5},shape1:{min:-1,max:2,step:.05},shape2:{min:-1,max:2,step:.05},shape3:{min:-1,max:2,step:.05},shape4:{min:-1,max:2,step:.05},shape5:{min:-1,max:2,step:.05},shape6:{min:-1,max:2,step:.05}},
-  defaults:{width:100,height:100,family:'IH28',scale:10,shape1:0,shape2:0,shape3:0,shape4:0,shape5:0,shape6:0,colorChange:false},
+  ranges:{...SIZE,scale:{min:1,max:30,step:.1},shape1:{min:-1,max:2,step:.05},shape2:{min:-1,max:2,step:.05},shape3:{min:-1,max:2,step:.05},shape4:{min:-1,max:2,step:.05},shape5:{min:-1,max:2,step:.05},shape6:{min:-1,max:2,step:.05}},
+  defaults:{width:100,height:100,family:'IH28',scale:1.1,shape1:0,shape2:0,shape3:0,shape4:0,shape5:0,shape6:0,colorChange:false},
   enums:{family:['IH28','IH21','IH1','IH41','IH84','IH2','IH3','IH7','IH10','IH14','IH18','IH20']},
   bools:['colorChange'],
-  presets:[{id:'square',name:'Square symmetry',blurb:'A fourfold repeating tile',patch:{family:'IH28'}},{id:'hexagonal',name:'Hexagonal symmetry',blurb:'A sixfold repeating tile',patch:{family:'IH21'}},{id:'triangle',name:'Triangular symmetry',blurb:'A threefold repeating tile',patch:{family:'IH1'}}],
+  presets:[{id:'square',name:'Square symmetry',blurb:'A fourfold repeating tile',patch:{family:'IH28',scale:1.1}},{id:'hexagonal',name:'Hexagonal symmetry',blurb:'A sixfold repeating tile',patch:{family:'IH21',scale:3}},{id:'triangle',name:'Triangular symmetry',blurb:'A threefold repeating tile',patch:{family:'IH1',scale:18}}],
   describe:s=>({family:s.family,scale:`${r1(s.scale)} mm`}),
 }));
 
@@ -45,63 +45,63 @@ const RINGS = withColour(defineControls({
 }));
 
 const SQUARE_UNITS = withColour(defineControls({
-  ranges: { ...SIZE, cell: { min: 5, max: 25, step: .5 }, angle: { min: 0, max: 35, step: 1 }, neck: { min: .45, max: 2, step: .05 }, neckLength: { min: .6, max: 4, step: .1 }, fillet: { min: 0, max: 2, step: .1 } },
-  defaults: { width: 100, height: 100, cell: 10, angle: 15, neck: .9, neckLength: 1.2, fillet: .8, colorChange: false },
+  ranges: { ...SIZE, cell: { min: 2.5, max: 25, step: .1 }, angle: { min: 0, max: 35, step: 1 }, neck: { min: .45, max: 2, step: .05 }, neckLength: { min: .6, max: 4, step: .1 }, fillet: { min: 0, max: 2, step: .1 } },
+  defaults: { width: 100, height: 100, cell: 3, angle: 15, neck: .9, neckLength: 1.2, fillet: .8, colorChange: false },
   bools: ['colorChange'],
   presets: [
-    { id: 'soft-open', name: 'Soft opening', blurb: 'A gentle rotating-square lattice', patch: { cell: 10, angle: 15, neck: .9, neckLength: 1.2, fillet: .8 } },
-    { id: 'broad', name: 'Broad cells', blurb: 'Larger cells with wider joins', patch: { cell: 15, angle: 20, neck: 1.1, neckLength: 1.5, fillet: 1 } },
-    { id: 'closed', name: 'Closed', blurb: 'Squares aligned to the grid', patch: { cell: 10, angle: 0, neck: .9, neckLength: 1.2, fillet: .8 } },
+    { id: 'soft-open', name: 'Soft opening', blurb: 'A gentle rotating-square lattice', patch: { cell: 3, angle: 15, neck: .9, neckLength: 1.2, fillet: .8 } },
+    { id: 'broad', name: 'Broad cells', blurb: 'Larger cells with wider joins', patch: { cell: 4.5, angle: 20, neck: 1.1, neckLength: 1.5, fillet: 1 } },
+    { id: 'closed', name: 'Closed', blurb: 'Squares aligned to the grid', patch: { cell: 3, angle: 0, neck: .9, neckLength: 1.2, fillet: .8 } },
   ],
   describe: s => ({ cell: `${r1(s.cell)} mm`, angle: `${s.angle}°` }),
 }));
 const TRIANGLE_UNITS = withColour(defineControls({
-  ranges: { ...SIZE, cell: { min: 5, max: 25, step: .5 }, angle: { min: -30, max: 30, step: 1 }, neck: { min: .45, max: 2, step: .05 }, neckLength: { min: .6, max: 4, step: .1 }, fillet: { min: 0, max: 2, step: .1 } },
-  defaults: { width: 100, height: 100, cell: 10, angle: 15, neck: .9, neckLength: 1.2, fillet: .6, colorChange: false },
+  ranges: { ...SIZE, cell: { min: 2, max: 25, step: .1 }, angle: { min: -30, max: 30, step: 1 }, neck: { min: .45, max: 2, step: .05 }, neckLength: { min: .6, max: 4, step: .1 }, fillet: { min: 0, max: 2, step: .1 } },
+  defaults: { width: 100, height: 100, cell: 2.1, angle: 15, neck: .9, neckLength: 1.2, fillet: .6, colorChange: false },
   bools: ['colorChange'],
   presets: [
-    { id: 'kagome', name: 'Kagome', blurb: 'Corner-linked triangular units', patch: { cell: 10, angle: 0, neck: .9, neckLength: 1.2, fillet: .6 } },
-    { id: 'tilted', name: 'Tilted', blurb: 'A gentle alternating inclination', patch: { cell: 10, angle: 15, neck: .9, neckLength: 1.2, fillet: .6 } },
-    { id: 'maximum', name: 'Maximum inclination', blurb: 'Triangles at thirty degrees', patch: { cell: 12, angle: 30, neck: 1, neckLength: 1.5, fillet: .6 } },
+    { id: 'kagome', name: 'Kagome', blurb: 'Corner-linked triangular units', patch: { cell: 2.1, angle: 0, neck: .9, neckLength: 1.2, fillet: .6 } },
+    { id: 'tilted', name: 'Tilted', blurb: 'A gentle alternating inclination', patch: { cell: 2.1, angle: 15, neck: .9, neckLength: 1.2, fillet: .6 } },
+    { id: 'maximum', name: 'Maximum inclination', blurb: 'Triangles at thirty degrees', patch: { cell: 2.5, angle: 30, neck: 1, neckLength: 1.5, fillet: .6 } },
   ],
   describe: s => ({ cell: `${r1(s.cell)} mm`, angle: `${s.angle}°` }),
 }));
 const ARROWHEAD = withColour(defineControls({
-  ranges: { ...SIZE, columns: { min: 1, max: 12, step: 1 }, cellHeight: { min: 6, max: 30, step: .5 }, hingeAngle: { min: 30, max: 110, step: 1 }, depth: { min: .2, max: .7, step: .05 }, rail: { min: 0, max: 10, step: .5 } },
-  defaults: { width: 100, height: 100, columns: 4, cellHeight: 15, hingeAngle: 60, depth: .45, rail: 5, colorChange: false },
+  ranges: { ...SIZE, columns: { min: 1, max: 12, step: 1 }, cellHeight: { min: 3, max: 30, step: .5 }, hingeAngle: { min: 30, max: 110, step: 1 }, depth: { min: .2, max: .7, step: .05 } },
+  defaults: { width: 100, height: 100, columns: 6, cellHeight: 10, hingeAngle: 60, depth: .45, colorChange: false },
   bools: ['colorChange'],
   presets: [
-    { id: 'ariel-band', name: 'Ariel band', blurb: 'Re-entrant cells with continuous side rails', patch: { columns: 4, cellHeight: 15, hingeAngle: 60, depth: .45, rail: 5 } },
-    { id: 'spahiu-panel', name: 'Spahiu panel', blurb: 'Four columns without side rails', patch: { columns: 4, cellHeight: 16, hingeAngle: 60, depth: .45, rail: 0 } },
+    { id: 'ariel-band', name: 'Ariel band', blurb: 'Re-entrant cells, six across', patch: { columns: 6, cellHeight: 10, hingeAngle: 60, depth: .45 } },
+    { id: 'spahiu-panel', name: 'Spahiu panel', blurb: 'Six columns of slightly taller cells', patch: { columns: 6, cellHeight: 10.5, hingeAngle: 60, depth: .45 } },
   ],
   describe: s => ({ columns: `${s.columns} across`, cellHeight: `${r1(s.cellHeight)} mm` }),
 }));
 const SPIRAL_CELLS_BASE = defineControls({
-  ranges: { ...SIZE, cell: { min: 10, max: 30, step: .5 }, twist: { min: .5, max: 4, step: .1 }, armWidth: { min: .45, max: 1.2, step: .05 }, patternScale: { min: .5, max: 2, step: .25 } },
-  defaults: { width: 100, height: 100, cell: 12, twist: 2.2, armWidth: .45, handedness: 1, pattern: 'none', patternScale: 1, colorChange: false },
+  ranges: { ...SIZE, cell: { min: 4, max: 30, step: .1 }, twist: { min: .5, max: 4, step: .1 }, armWidth: { min: .45, max: 1.2, step: .05 }, patternScale: { min: .5, max: 2, step: .25 } },
+  defaults: { width: 100, height: 100, cell: 4.2, twist: 3.8, armWidth: .45, handedness: 1, pattern: 'none', patternScale: 1, colorChange: false },
   enums: { handedness: [1,-1], pattern: withPicture(['none',...FIELD_IDS]) },
   bools: ['colorChange'],
   presets: [
-    { id: 'balanced', name: 'Balanced', blurb: 'Four gentle spiral arms', patch: { cell: 12, twist: 2.2, handedness: 1 } },
-    { id: 'tight', name: 'Tight', blurb: 'More turns within each cell', patch: { cell: 12, twist: 3.2, handedness: 1 } },
-    { id: 'reverse', name: 'Reverse', blurb: 'The same cell turning the other way', patch: { cell: 12, twist: 2.2, handedness: -1 } },
+    { id: 'balanced', name: 'Balanced', blurb: 'Four gentle spiral arms', patch: { cell: 4.2, twist: 3.8, handedness: 1 } },
+    { id: 'tight', name: 'Tight', blurb: 'More turns within each cell', patch: { cell: 4.2, twist: 4, handedness: 1 } },
+    { id: 'reverse', name: 'Reverse', blurb: 'The same cell turning the other way', patch: { cell: 4.2, twist: 3.8, handedness: -1 } },
   ],
   describe: s => ({ cell: `${r1(s.cell)} mm`, twist: `${r1(s.twist)} rad`, handedness: s.handedness>0?'Clockwise':'Anticlockwise' }),
 });
 const SPIRAL_CELLS = withColour({ ...SPIRAL_CELLS_BASE, sanitize(raw) { return { ...SPIRAL_CELLS_BASE.sanitize(raw), ...sanitizeSpiralTwist(SPIRAL_CELLS_BASE.sanitize(raw)) }; } });
 const STOCHASTIC = withColour(defineControls({
-  ranges:{...SIZE,density:{min:.01,max:.2,step:.005},k:{min:3,max:8,step:1},stretch:{min:1,max:3,step:.1},direction:{min:0,max:180,step:5},seed:{min:1,max:9999,step:1},patternScale:{min:.5,max:2,step:.25}},
-  defaults:{width:100,height:100,density:.04,k:5,stretch:1.5,direction:0,seed:1,border:true,pattern:'none',patternScale:1,colorChange:false},
+  ranges:{...SIZE,density:{min:.01,max:.4,step:.01},k:{min:3,max:8,step:1},stretch:{min:1,max:3,step:.1},direction:{min:0,max:180,step:5},seed:{min:1,max:9999,step:1},patternScale:{min:.5,max:2,step:.25}},
+  defaults:{width:100,height:100,density:.23,k:5,stretch:1.5,direction:0,seed:1,border:true,pattern:'none',patternScale:1,colorChange:false},
   enums:{pattern:withPicture(['none',...FIELD_IDS])},bools:['border','colorChange'],
   presets:[
-    {id:'balanced',name:'Balanced',blurb:'Moderate links with directional stretch',patch:{density:.04,k:5,stretch:1.5,direction:0}},
-    {id:'soft',name:'Soft net',blurb:'Fewer, longer links',patch:{density:.025,k:4,stretch:1.2,direction:0}},
-    {id:'stiff',name:'Directional',blurb:'Dense net stretched along one axis',patch:{density:.06,k:6,stretch:2,direction:45}},
+    {id:'balanced',name:'Balanced',blurb:'Moderate links with directional stretch',patch:{density:.23,k:5,stretch:1.5,direction:0}},
+    {id:'soft',name:'Soft net',blurb:'Fewer, longer links',patch:{density:.14,k:4,stretch:1.2,direction:0}},
+    {id:'stiff',name:'Directional',blurb:'Dense net stretched along one axis',patch:{density:.3,k:6,stretch:2,direction:45}},
   ],
   describe:s=>({density:`${r1(s.density*1000)/10} nodes/cm²`,k:`${s.k} neighbours`,stretch:`${r1(s.stretch)}×`,direction:`${s.direction}°`,seed:`#${s.seed}`}),
 }));
 const CONNECTED_LACE=withColour(defineControls({
-  ranges:{...SIZE,scale:{min:6,max:30,step:.5},neck:{min:.45,max:2,step:.05},openness:{min:.3,max:.8,step:.05}},
+  ranges:{...SIZE,scale:{min:3,max:30,step:.1},neck:{min:.45,max:2,step:.05},openness:{min:.3,max:.8,step:.05}},
   defaults:{width:100,height:100,motif:'petal',scale:10,neck:.9,openness:.5,lattice:'hex',spacing:3,angle:45,backing:'straight',backingDepth:2,backingLength:10,backingLayers:'one',colorChange:false},
   enums:{motif:['ring','petal','scallop'],lattice:['hex','square']},bools:['colorChange'],
   presets:[
@@ -113,32 +113,32 @@ const CONNECTED_LACE=withColour(defineControls({
 }));
 const MEANDER_TIES=withColour(defineControls({
   ranges:{...SIZE,cell:{min:.8,max:14,step:.1},angle:{min:15,max:75,step:5},tieInterval:{min:2,max:20,step:.5},seed:{min:1,max:999,step:1}},
-  defaults:{width:100,height:100,curve:'hilbert',cell:6,angle:45,tieInterval:6,seed:1,colorChange:false},enums:{curve:CURVE_IDS},bools:['colorChange'],
+  defaults:{width:100,height:100,curve:'hilbert',cell:1,angle:45,tieInterval:6,seed:1,colorChange:false},enums:{curve:CURVE_IDS},bools:['colorChange'],
   presets:[
-    {id:'hilbert',name:'Hilbert ties',blurb:'Fine folds with sparse joins',patch:{curve:'hilbert',cell:6,tieInterval:6}},
-    {id:'peano',name:'Peano ties',blurb:'Serpentine folds with ties',patch:{curve:'peano',cell:6,tieInterval:8}},
-    {id:'maze',name:'Maze ties',blurb:'Seeded maze folds',patch:{curve:'maze',cell:6,tieInterval:6}},
+    {id:'hilbert',name:'Hilbert ties',blurb:'Fine folds with sparse joins',patch:{curve:'hilbert',cell:1,tieInterval:6}},
+    {id:'peano',name:'Peano ties',blurb:'Serpentine folds with ties',patch:{curve:'peano',cell:1.2,tieInterval:8}},
+    {id:'maze',name:'Maze ties',blurb:'Seeded maze folds',patch:{curve:'maze',cell:1,tieInterval:6}},
   ],
   describe:s=>({curve:CURVES[s.curve].label,cell:`${r1(s.cell)} mm`,tieInterval:`${r1(s.tieInterval)} mm`}),
 }));
 const KIRIGAMI=withColour(defineControls({
-  ranges:{...SIZE,slitLength:{min:4,max:30,step:.5},slitGap:{min:1,max:3,step:.1},interval:{min:2,max:15,step:.5},endSpacing:{min:2,max:20,step:.5}},
-  defaults:{width:100,height:100,slitLength:15,slitGap:1,interval:5,endSpacing:10,passes:2,colorChange:false},enums:{passes:[1,2]},bools:['colorChange'],
+  ranges:{...SIZE,slitLength:{min:4,max:30,step:.5},slitGap:{min:1,max:3,step:.1},interval:{min:2,max:15,step:.5},endSpacing:{min:2,max:20,step:.5},spacing:{min:.4,max:5,step:.1}},
+  defaults:{width:100,height:100,slitLength:15,slitGap:1,interval:5,endSpacing:10,passes:2,spacing:1.5,colorChange:false},enums:{passes:[1,2]},bools:['colorChange'],
   presets:[
-    {id:'robust-two-pass',name:'Robust · two pass',blurb:'Staggered cuts with orthogonal fill',patch:{slitLength:15,slitGap:1,interval:5,endSpacing:10,passes:2}},
-    {id:'single-pass',name:'Single pass',blurb:'One-direction solid fill',patch:{slitLength:15,slitGap:1,interval:5,endSpacing:10,passes:1}},
-    {id:'open',name:'More open',blurb:'Wider slit spacing',patch:{slitLength:20,slitGap:1.5,interval:6,endSpacing:12,passes:2}},
+    {id:'robust-two-pass',name:'Robust · two pass',blurb:'Staggered cuts with orthogonal fill',patch:{slitLength:15,slitGap:1,interval:5,endSpacing:10,passes:2,spacing:1.5}},
+    {id:'single-pass',name:'Single pass',blurb:'One-direction fill',patch:{slitLength:15,slitGap:1,interval:5,endSpacing:10,passes:1,spacing:.75}},
+    {id:'open',name:'More open',blurb:'Wider slit spacing',patch:{slitLength:20,slitGap:1.5,interval:6,endSpacing:12,passes:2,spacing:2}},
   ],
-  describe:s=>({slitLength:`${r1(s.slitLength)} mm`,slitGap:`${r1(s.slitGap)} mm`,ratio:`h/i = ${r1(s.slitGap/s.interval)}`,passes:`${s.passes} passes`}),
+  describe:s=>({slitLength:`${r1(s.slitLength)} mm`,slitGap:`${r1(s.slitGap)} mm`,ratio:`h/i = ${r1(s.slitGap/s.interval)}`,passes:`${s.passes} passes`,spacing:`fill every ${r1(s.spacing)} mm`}),
 }));
 const STAR_METRIC_BASE=defineControls({
-  ranges:{...SIZE,cell:{min:5,max:25,step:.5},wall:{min:.45,max:1.2,step:.05},patternScale:{min:.5,max:2,step:.25}},
-  defaults:{width:100,height:100,lattice:'triangular',symmetry:3,spans:[1,.6,1],cell:10,wall:.45,smooth:true,pattern:'none',patternScale:1,colorChange:false},
+  ranges:{...SIZE,cell:{min:2.5,max:25,step:.1},wall:{min:.45,max:1.2,step:.05},patternScale:{min:.5,max:2,step:.25}},
+  defaults:{width:100,height:100,lattice:'triangular',symmetry:3,spans:[1,.6,1],cell:2.5,wall:.45,smooth:true,pattern:'none',patternScale:1,colorChange:false},
   enums:{lattice:['triangular','honeycomb','square','diagonal-square'],symmetry:[3,4,6],pattern:withPicture(['none',...FIELD_IDS])},bools:['smooth','colorChange'],
   presets:[
-    {id:'tri-petal',name:'Triangular · threefold',blurb:'Three-fold radial metric',patch:{lattice:'triangular',symmetry:3,spans:[1,.6,1],cell:10}},
-    {id:'square-petal',name:'Square · fourfold',blurb:'Four-fold metric on a square lattice',patch:{lattice:'square',symmetry:4,spans:[1,.7,1],cell:10}},
-    {id:'hex-petal',name:'Hexagonal · sixfold',blurb:'Six-fold radial metric',patch:{lattice:'honeycomb',symmetry:6,spans:[1,.65,1],cell:10}},
+    {id:'tri-petal',name:'Triangular · threefold',blurb:'Three-fold radial metric',patch:{lattice:'triangular',symmetry:3,spans:[1,.6,1],cell:2.5}},
+    {id:'square-petal',name:'Square · fourfold',blurb:'Four-fold metric on a square lattice',patch:{lattice:'square',symmetry:4,spans:[1,.7,1],cell:2.5}},
+    {id:'hex-petal',name:'Hexagonal · sixfold',blurb:'Six-fold radial metric',patch:{lattice:'honeycomb',symmetry:6,spans:[1,.65,1],cell:2.5}},
   ],
   describe:s=>({lattice:s.lattice,symmetry:`${s.symmetry}-fold`,cell:`${r1(s.cell)} mm`}),
 });
@@ -206,7 +206,7 @@ export const RESEARCH_DESIGNS = [layered({
   ],
   build: (s, boundary, ctx) => {
     const field = patternField(s.pattern, { scale: s.patternScale, picture: ctx?.picture });
-    const built = ringsLayers(boundary, { lattice: s.lattice, ringSize: s.ringSize, overlap: s.overlap, sizeField: field, bead: ctx?.bead ?? .45 });
+    const built = ringsLayers(boundary, { lattice: s.lattice, ringSize: s.ringSize, overlap: s.overlap, sizeField: field, bead: ctx?.bead ?? .45, centred: true });
     // one plane: where two rings overlap they fuse there, and no ring is lifted over another
     // a row of overlapping rings is one connected line: the nozzle goes round a ring and carries on into the next, row by row
     const [planar] = planarLayers([...built], { bead: ctx?.bead ?? .45 });
@@ -225,9 +225,9 @@ export const RESEARCH_DESIGNS = [layered({
   verdict:(result,s)=>{const v=buildLayeredVerdict(result);if(result.clipped>0)v.body+=` Some rings could not climb higher and fuse into the layer below (${result.clipped}).`;return v;},
   summary:result=>`rings build up to ${result.construction.levels?.max??1} levels`,
 }), layered({
-  id: 'rotating-squares', name: 'Rotating squares', blurb: 'Alternating squares linked at their corners', about: 'Alternating squares turn in opposite directions and join only at their corners through short necks. Pulling the sheet makes the units counter-rotate; the border band closes the free edge. The reported auxetic result used ABS squares on a pre-stretched knit, so this single-material version remains untested.', file: 'rotating-squares', c: SQUARE_UNITS,
+  id: 'rotating-squares', name: 'Rotating squares', blurb: 'Alternating squares linked at their corners', about: 'Alternating squares turn in opposite directions and join only at their corners through short necks. Pulling the sheet makes the units counter-rotate; the pattern runs past the swatch edge and the edge cuts it, with no border band (draw a line where an edge needs holding). The reported auxetic result used ABS squares on a pre-stretched knit, so this single-material version remains untested.', file: 'rotating-squares', c: SQUARE_UNITS,
   shelf: 'flat', singleLine: true, family: 'lattices', support: 'self', state: 'untested', settingsKey: 'rotating-units',
-  joins: 'Alternating square outlines meet only through corner necks and a border band.', sources: { catalogue: ['S4'], papers: [55] },
+  joins: 'Alternating square outlines meet only through corner necks.', sources: { catalogue: ['S4'], papers: [55] },
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
@@ -246,9 +246,9 @@ export const RESEARCH_DESIGNS = [layered({
   },
   summary: result => `rotating squares with ${result.report.joints} joins`,
 }), layered({
-  id: 'rotating-triangles', name: 'Rotating triangles', blurb: 'Alternating triangles linked at their corners', about: 'Equilateral triangles occupy two interleaved sublattices and connect through three short corner necks per interior unit. At zero inclination, the paired corner links form a kagome-like network; a perimeter band closes the free edge. This single-material version is untested, and published mechanisms do not qualify its physical behaviour.', file: 'rotating-triangles', c: TRIANGLE_UNITS,
+  id: 'rotating-triangles', name: 'Rotating triangles', blurb: 'Alternating triangles linked at their corners', about: 'Equilateral triangles occupy two interleaved sublattices and connect through three short corner necks per interior unit. At zero inclination, the paired corner links form a kagome-like network; the pattern runs past the swatch edge and the edge cuts it, with no border band. This single-material version is untested, and published mechanisms do not qualify its physical behaviour.', file: 'rotating-triangles', c: TRIANGLE_UNITS,
   shelf: 'flat', singleLine: true, family: 'lattices', support: 'self', state: 'untested', settingsKey: 'rotating-triangles',
-  joins: 'Alternating triangular outlines meet through corner necks and a border band.', sources: { papers: [6, 34] },
+  joins: 'Alternating triangular outlines meet through corner necks.', sources: { papers: [6, 34] },
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
@@ -267,9 +267,9 @@ export const RESEARCH_DESIGNS = [layered({
   },
   summary: result => `rotating triangles with ${result.construction.joints} corner joins`,
 }), layered({
-  id: 'arrowhead-band', name: 'Arrowhead band', blurb: 'Nested re-entrant cells held by side rails', about: 'Rows of hollow arrowhead outlines nest into the row below. Two continuous side rails anchor the edge cells; without them the free edges may fray. This is a flat single-plane interpretation of published re-entrant bands and remains untested.', file: 'arrowhead-band', c: ARROWHEAD,
+  id: 'arrowhead-band', name: 'Arrowhead band', blurb: 'Nested re-entrant cells in a band', about: 'Rows of hollow arrowhead outlines nest into the row below, across the whole swatch: the columns fill its width and the rows run past its top and bottom, where the edge cuts them. There are no side rails; draw a line where an edge needs holding. This is a flat single-plane interpretation of published re-entrant bands and remains untested.', file: 'arrowhead-band', c: ARROWHEAD,
   shelf: 'flat', singleLine: true, family: 'lattices', support: 'self', state: 'untested', settingsKey: 'arrowhead',
-  joins: 'Arrowhead arms nest across rows and continuous side rails retain the edges.', sources: { papers: [1, 68] },
+  joins: 'Arrowhead arms nest across rows and join the columns beside them.', sources: { papers: [1, 68] },
   controls: [
     { kind: 'presets', title: 'Start from' },
     { kind: 'size', title: 'Size and shape' },
@@ -278,13 +278,12 @@ export const RESEARCH_DESIGNS = [layered({
       { key: 'cellHeight', label: 'Cell size', help: 'Vertical height of each hollow arrowhead.', lo: 'Small', hi: 'Large', unit: 'mm', edit: true },
       { key: 'hingeAngle', label: 'Hinge angle', help: 'Controls the opening of the V arms.', lo: 'Acute', hi: 'Open', unit: '°', edit: true },
       { key: 'depth', label: 'Notch depth', help: 'Depth of the re-entrant notch as a fraction of cell height.', lo: 'Shallow', hi: 'Deep', unit: '×', edit: true },
-      { key: 'rail', label: 'Side rails', help: 'Continuous edge rails hold the outer cells. Zero leaves free edges that may fray.', lo: 'None', hi: 'Wide', unit: 'mm', edit: true },
     ] },
     COLOUR,
   ],
   build: (s,boundary,ctx) => {
     const built=arrowheadLayers(boundary,{...s,strand:ctx?.bead??.45});
-    return {layers:[...built],families:built.families,extra:built.extra,warnings:built.extra.edgeWarning?[built.extra.edgeWarning]:[]};
+    return {layers:[...built],families:built.families,extra:built.extra};
   },
   summary: result => `nested arrowheads in ${result.rows} rows`,
 }), layered({
@@ -296,14 +295,14 @@ export const RESEARCH_DESIGNS = [layered({
     { kind: 'presets', title: 'Start from' }, { kind: 'size', title: 'Size and shape' },
     { kind: 'choice', key: 'handedness', title: 'Turning', hint: 'Choose clockwise or anticlockwise arms.', options: [{id:1,label:'Clockwise'},{id:-1,label:'Anticlockwise'}] },
     { kind: 'sliders', title: 'Look and feel', items: [
-      { key: 'cell', label: 'Cell size', help: 'Keep cells at least 10 mm for the source design’s robustness floor.', lo: 'Small', hi: 'Large', unit: 'mm', edit: true },
+      { key: 'cell', label: 'Cell size', help: 'Smaller cells make a denser sheet; below about 4 mm the turns of the arms are too close to print.', lo: 'Small', hi: 'Large', unit: 'mm', edit: true },
       { key: 'twist', label: 'Twist', help: 'Angular travel of each inward arm. The generator preserves the minimum turn gap.', lo: 'Loose', hi: 'Tight', unit: 'rad', edit: true },
       { key: 'armWidth', label: 'Arm width', help: 'Width of the central joining loop.', lo: 'Thin', hi: 'Thick', unit: 'mm', edit: true },
     ] },
     { kind: 'pattern', key: 'pattern', title: 'Pattern', hint: 'Twist changes by cell: darker areas tighten the spiral arms; lighter areas loosen them.', picture: 'positive', pictureHint: 'Darker tones increase twist, tightening each spiral; lighter tones reduce twist and loosen the arms.', scale: { key: 'patternScale', label: 'Pattern size', help: 'Stretches the picture across the sheet.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false } },
     COLOUR,
   ],
-  build: (s,boundary,ctx) => { const field=patternField(s.pattern,{scale:s.patternScale,picture:ctx?.picture});const built=spiralCellsLayers(boundary,{...s,tone:field});const perRow=4*built.extra.columns;return {layers:[Object.assign(strokesPerGroup(built[0],(line)=>Math.floor(line.rowOrder/perRow)),{family:'arms'})],families:built.families,extra:{...built.extra,spiralNote:s.spiralNote,transform:joinedPlane},warnings:s.spiralNote?[s.spiralNote]:[]}; },
+  build: (s,boundary,ctx) => { const field=patternField(s.pattern,{scale:s.patternScale,picture:ctx?.picture});const built=spiralCellsLayers(boundary,{...s,tone:field,bead:ctx?.bead??.45});const perRow=4*built.extra.columns;return {layers:[Object.assign(strokesPerGroup(built[0],(line)=>Math.floor(line.rowOrder/perRow)),{family:'arms'})],families:built.families,extra:{...built.extra,spiralNote:s.spiralNote,transform:joinedPlane},warnings:s.spiralNote?[s.spiralNote]:[]}; },
   summary: result => `four spiral arms per cell in ${result.rows} rows`,
 }), layered({
   id: 'voronoi-cells', name: 'Voronoi cells', blurb: 'A single family of closed cell walls', about: 'The Voronoi walls from Voronoi lace, printed alone as a flat cellular net. The optional perimeter line closes boundary cells. Site placement and seed match the existing layered Voronoi card.', file: 'voronoi-cells', c: VORONOI,
@@ -344,7 +343,7 @@ export const RESEARCH_DESIGNS = [layered({
   build:(s,boundary,ctx)=>{const tone=patternField(s.pattern,{scale:s.patternScale,picture:ctx?.picture});const built=stochasticNetLayers(boundary,{...s,tone});return {layers:[...built],families:built.families,extra:built.extra};},
   summary:result=>`a seeded net of ${result.nodes} nodes`,
 }), layered({
-  id:'connected-lace',name:'Connected lace',blurb:'Motifs joined into a single sheet',about:'Ring, six-petal rosette or scallop motifs are placed on a square or staggered lattice and linked by in-plane necks. A perimeter line closes the edge; this card is a flat, backing-free interpretation.',file:'connected-lace',c:CONNECTED_LACE,
+  id:'connected-lace',name:'Connected lace',singleLine:true,blurb:'Motifs joined into a single sheet',about:'Ring, six-petal rosette or scallop motifs are placed on a square or staggered lattice and linked by in-plane necks. A perimeter line closes the edge; this card is a flat, backing-free interpretation.',file:'connected-lace',c:CONNECTED_LACE,
   shelf:'flat',family:'lattices',support:'self',state:'untested',settingsKey:'connected-lace',joins:'Each motif links to lattice neighbours through necks; a perimeter line closes the boundary.',sources:{catalogue:['S1'],papers:[59,60,58]},
   controls:[
     {kind:'presets',title:'Start from'},{kind:'size',title:'Size and shape'},
@@ -374,7 +373,7 @@ export const RESEARCH_DESIGNS = [layered({
   build:(s,boundary,ctx)=>{const built=meanderTiesLayers(boundary,{...s,bead:ctx?.bead??.45});return {layers:[...built],families:built.families,extra:built.extra};},
   summary:result=>`a meander held by ${result.ties} designed ties`,
 }), layered({
-  id:'kirigami',name:'Kirigami sheet',blurb:'Solid fill with staggered slits',about:'A filled sheet with staggered, rounded-ended slits. Two orthogonal fill passes form a solid piece around the cuts; the slit-to-interval ratio is exposed for TPU experimentation. This toolpath estimate needs physical validation.',file:'kirigami',c:KIRIGAMI,
+  id:'kirigami',name:'Kirigami sheet',blurb:'An open net with staggered slits',about:'A sheet of fill lines with staggered, rounded-ended slits. Two orthogonal fill passes make a net around the cuts (a fill spacing near 0.4 mm makes it a solid sheet); the slit-to-interval ratio is exposed for TPU experimentation. This toolpath estimate needs physical validation.',file:'kirigami',c:KIRIGAMI,
   shelf:'flat',singleLine:true,family:'lattices',support:'self',state:'untested',settingsKey:'kirigami',joins:'The remaining solid sheet joins the slit pattern as one filled piece.',sources:{catalogue:['S4'],papers:[48]},
   controls:[
     {kind:'presets',title:'Start from'},{kind:'size',title:'Size and shape'},
@@ -383,11 +382,12 @@ export const RESEARCH_DESIGNS = [layered({
       {key:'slitLength',label:'Slit length',help:'Length of each rounded-ended cut.',lo:'Short',hi:'Long',unit:'mm',edit:true},
       {key:'slitGap',label:'Slit width',help:'Minimum printable slit width is 1 mm.',lo:'Narrow',hi:'Wide',unit:'mm',edit:true},
       {key:'interval',label:'Row spacing',help:'Distance used for the h/i comparison ratio.',lo:'Close',hi:'Wide',unit:'mm',edit:true},
-      {key:'endSpacing',label:'Gap between slit ends',help:'Solid material between adjacent cuts.',lo:'Small',hi:'Large',unit:'mm',edit:true},
+      {key:'endSpacing',label:'Gap between slit ends',help:'Material between adjacent cuts.',lo:'Small',hi:'Large',unit:'mm',edit:true},
+      {key:'spacing',label:'Fill spacing',help:'Gap between the fill lines. About 0.4 mm is a solid sheet; wider makes an open net, lighter and quicker to print.',lo:'Solid',hi:'Open',unit:'mm',edit:true},
     ]},COLOUR,
   ],
   build:(s,boundary,ctx)=>{const built=kirigamiLayers(boundary,{...s,strandWidth:ctx?.bead??.45});return {layers:[...built],families:built.families,extra:built.extra};},
-  summary:result=>`solid fill around ${result.slits} staggered slits`,
+  summary:result=>`a fill net around ${result.slits} staggered slits`,
 }), layered({
   id:'star-metric',name:'Star-metric cells',blurb:'Petal-shaped cells with radial symmetry',about:'Voronoi cells grow under a periodic star-shaped metric. The lattice and symmetry set the repeating material class; each petal handle changes the radial spans. Pattern grading assigns a nearby metric at each site rather than blending neighbouring cells.',file:'star-metric',c:STAR_METRIC,
   shelf:'flat',singleLine:true,family:'cells',support:'self',state:'untested',settingsKey:'star-metric',patterns:withPicture(['none',...FIELD_IDS]),joins:'Metric cell walls meet at shared vertices and close against the perimeter.',sources:{catalogue:['S7'],papers:[46]},

@@ -10,7 +10,7 @@ const edgeKey=(a,b)=>{const key=p=>`${p.x.toFixed(5)},${p.y.toFixed(5)}`,x=key(a
 
 /** Generate one copy of every straightened Tactile prototile edge, clipped to the swatch. */
 export function isohedralLayers(boundary,{family='IH28',params=[],scale=10,line=.45,border=true}={}){
-  const type=validType(family),size=Math.max(5,Math.min(30,Number(scale)||10)),width=Math.max(.3,Number(line)||.45),tiling=new IsohedralTiling(type),defaults=tiling.getParameters();
+  const type=validType(family),size=Math.max(1,Math.min(30,Number(scale)||10)),width=Math.max(.3,Number(line)||.45),tiling=new IsohedralTiling(type),defaults=tiling.getParameters();
   if(Array.isArray(params)&&params.length===defaults.length)tiling.setParameters(params.map(value=>Math.max(-1,Math.min(2,Number(value)||0))));
   const box=boundary.bbox(),x0=box.minX/size-3,x1=box.maxX/size+3,y0=box.minY/size-3,y1=box.maxY/size+3,edges=new Map();
   for(const tile of tiling.fillRegionBounds(x0,y0,x1,y1))for(const side of tiling.shape()){

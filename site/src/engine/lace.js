@@ -23,7 +23,7 @@ function closestOnSegment(p,a,b){
 
 /** Motif outlines without connecting necks, also used by motif-on-carrier tickets. */
 export function laceMotifs(boundary,{motif='petal',scale=12,openness=.5,lattice='hex'}={}){
-  const box=boundary.bbox(),pitch=Math.max(6,Number(scale)||12),open=Math.max(.3,Math.min(.8,Number(openness)||.5)),diameter=pitch*open,radius=diameter/2,rowStep=lattice==='hex'?pitch*Math.sqrt(3)/2:pitch;
+  const box=boundary.bbox(),pitch=Math.max(3,Number(scale)||12),open=Math.max(.3,Math.min(.8,Number(openness)||.5)),diameter=pitch*open,radius=diameter/2,rowStep=lattice==='hex'?pitch*Math.sqrt(3)/2:pitch;
   const rows=Math.ceil((box.maxY-box.minY)/rowStep),cols=Math.ceil((box.maxX-box.minX)/pitch);
   if(rows*cols*100>MAX_MOVES)throw new ConfigError(['This lace layout exceeds the move budget. Use larger motifs or a smaller swatch.']);
   const motifs=[];
@@ -38,7 +38,7 @@ export function laceMotifs(boundary,{motif='petal',scale=12,openness=.5,lattice=
 /** Connected ring, rosette or scallop lace with contact necks and an optional perimeter. */
 export function laceLayers(boundary,{motif='petal',scale=12,neck=.9,openness=.5,lattice='hex',bead=.45}={}){
   if(!['ring','petal','scallop'].includes(motif))throw new ConfigError(['Choose ring, petal or scallop motifs.']);
-  const pitch=Math.max(6,Number(scale)||12),open=Math.max(.3,Math.min(.8,Number(openness)||.5)),width=Math.max(bead,Number(neck)||.9),radius=pitch*open/2;
+  const pitch=Math.max(3,Number(scale)||12),open=Math.max(.3,Math.min(.8,Number(openness)||.5)),width=Math.max(bead,Number(neck)||.9),radius=pitch*open/2;
   const motifs=laceMotifs(boundary,{motif,scale:pitch,openness:open,lattice}),links=[];
   const edgeKeys=new Set();
   for(let ai=0;ai<motifs.length;ai++){

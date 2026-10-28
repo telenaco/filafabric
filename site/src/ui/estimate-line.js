@@ -1,6 +1,7 @@
 // The one line a card or preset shows for its pre-computed print: time, filament and layers. Pure, so it is tested in Node.
 
-const grams = (g) => (g >= 10 ? String(Math.round(g)) : String(Math.round(g * 100) / 100).replace(/(\.\d)0$/, '$1'));
+// weight to two decimals, without a trailing zero (1.2 g, 0.37 g, 4 g), the same on a tile and in the summary
+const grams = (g) => String(Math.round(g * 100) / 100);
 
 /** @param entry {{min: number|null, g: number, layers: number}} from card-estimates.js @returns {string} '' when there is none */
 export function estimateLine(entry) {

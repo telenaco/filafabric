@@ -57,6 +57,7 @@ import { conformalGuideRegion } from '../engine/conformal.js';
 import { windowRings } from '../engine/window.js';
 import { bindPanelExport } from './panel-ui.js';
 import { createStudyRecorder } from './study.js';
+import { DENSITY_REVISION, RETUNED_CARDS } from './density.js';
 import { buildSwatch } from './export-builder.js';
 import { classifyBuildError, DiagnosticLog, suggestRecovery, safeMetadata } from './diagnostics.js';
 import { bindFeedback, problemReport } from './feedback.js';
@@ -250,6 +251,7 @@ function snapshot() {
   return {
     v: 4,
     geometryRevision: 2,
+    densityRevision: DENSITY_REVISION,
     sampleDefaults: 100,
     design: state.design,
     machine: state.machine,
@@ -275,7 +277,7 @@ function toast(message, { kind = 'info' } = {}) {
   toast.timer = setTimeout(() => { t.hidden = true; }, 3600);
 }
 
-const grams = (g) => (g < 1 ? g.toFixed(2) : g.toFixed(1));
+const grams = (g) => String(Math.round(g * 100) / 100); // two decimals, no trailing zero, to match the tiles
 
 /* ---------- history (undo / redo) ---------- */
 function snapshotKey() {
@@ -2570,6 +2572,10 @@ async function init() {
   if (initial && !fromLink) for (const [id, oldHub] of [['web', 3], ['rosette', 4], ['spirograph', 4], ['sunflower', 3]]) {
     const settings = initial.designs?.[id];
     if (settings && !settings.hubStyle && settings.hub === oldHub) settings.hub = 0.6;
+  }
+  // cards whose defaults moved to the standard weight open at it: what this browser saved for them is dropped, once
+  if (initial && !fromLink && initial.densityRevision !== DENSITY_REVISION) {
+    for (const id of RETUNED_CARDS) delete initial.designs?.[designById(id)?.settingsKey ?? id];
   }
   let pictureDropped = false;
   if (initial && !fromLink && initial.sampleDefaults !== 100) {

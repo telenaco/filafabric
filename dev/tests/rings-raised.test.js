@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import { designById } from '../../site/src/ui/designs.js';
 import { defaultProfiles } from './helpers.js';
 
-test('raised rings share ring settings and build bounded levels with safe clearance order',()=>{
+test('raised rings are a variant of the flat rings (each keeps its own settings) and build bounded levels with safe clearance order',()=>{
   const card=designById('rings-raised'),flat=designById('rings-flat'),{machine,material}=defaultProfiles();
-  assert.equal(card.settingsKey,flat.settingsKey);
+  assert.equal(card.variantGroup,flat.variantGroup);
+  assert.notEqual(card.settingsKey,flat.settingsKey,'the flat rings open at their own weight');
   const settings=card.sanitize({...card.defaults(),width:30,height:30,ringSize:8,overlap:.9,maxLevels:3,levelHeight:.2,rampLength:1.5});
   const result=card.generate(machine,material,settings);
   assert.ok(result.construction.levels.max<=3);

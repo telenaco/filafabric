@@ -8,7 +8,7 @@ import { clipPolyline } from './layers.js';
  */
 const TAU = Math.PI * 2;
 
-export function lissajousCurve(box, { a = 5, b = 4, phase = 30, margin = 1 } = {}) {
+export function lissajousCurve(box, { a = 5, b = 4, phase = 30, margin = 0.3 } = {}) {
   const cx = (box.minX + box.maxX) / 2, cy = (box.minY + box.maxY) / 2;
   const rx = Math.max(1, (box.maxX - box.minX) / 2 - margin);
   const ry = Math.max(1, (box.maxY - box.minY) / 2 - margin);

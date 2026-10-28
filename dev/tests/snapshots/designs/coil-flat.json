@@ -2,59 +2,27 @@
   {
     "card": "coil-flat",
     "preset": "default",
-    "settingsHash": "793bd00e7304",
-    "gcodeSha256": "2eb639bfe69e09f92840fb81c717470c60285479fe7a567b85e9eda90be0d4e4",
-    "strands": 47,
-    "moves": 1371,
-    "extrudeMm": 662.3,
+    "settingsHash": "045319e444db",
+    "gcodeSha256": "24a4c66b3d09d1076f7ac683a0f879c3279892b0156c325600f2167a77d5901d",
+    "strands": 42,
+    "moves": 3519,
+    "extrudeMm": 1189.6,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
       "L1",
       "ties"
     ],
-    "ties": 23
+    "ties": 6
   },
   {
     "card": "coil-flat",
     "preset": "open-chain",
-    "settingsHash": "f5de624fe1cf",
-    "gcodeSha256": "666c90fec546b2e298776ea3a5f27b6321bca71952079ae17d8e150ad1ecef33",
-    "strands": 28,
-    "moves": 1027,
-    "extrudeMm": 439.4,
-    "zMin": 0.2,
-    "zMax": 0.2,
-    "families": [
-      "L1",
-      "ties"
-    ],
-    "ties": 15
-  },
-  {
-    "card": "coil-flat",
-    "preset": "overlapping",
-    "settingsHash": "5aa4ff8833ae",
-    "gcodeSha256": "2eb639bfe69e09f92840fb81c717470c60285479fe7a567b85e9eda90be0d4e4",
-    "strands": 47,
-    "moves": 1371,
-    "extrudeMm": 662.3,
-    "zMin": 0.2,
-    "zMax": 0.2,
-    "families": [
-      "L1",
-      "ties"
-    ],
-    "ties": 23
-  },
-  {
-    "card": "coil-flat",
-    "preset": "dense",
-    "settingsHash": "afa75202a180",
-    "gcodeSha256": "d466fcdc3c27d2960f7a1f391b2582eaba8ae06b3f5520806fea42a363fd6387",
-    "strands": 36,
-    "moves": 2028,
-    "extrudeMm": 978.9,
+    "settingsHash": "f285adc6f227",
+    "gcodeSha256": "6ddabdcdcbf5cf5628cf972b073d2b25198b354e2eb38e8eda019976f1ae6f98",
+    "strands": 30,
+    "moves": 1476,
+    "extrudeMm": 742,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
@@ -62,5 +30,37 @@
       "ties"
     ],
     "ties": 4
+  },
+  {
+    "card": "coil-flat",
+    "preset": "overlapping",
+    "settingsHash": "5806ad0c1c35",
+    "gcodeSha256": "24a4c66b3d09d1076f7ac683a0f879c3279892b0156c325600f2167a77d5901d",
+    "strands": 42,
+    "moves": 3519,
+    "extrudeMm": 1189.6,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1",
+      "ties"
+    ],
+    "ties": 6
+  },
+  {
+    "card": "coil-flat",
+    "preset": "dense",
+    "settingsHash": "ceb3906950a5",
+    "gcodeSha256": "7f00a5ba59c64822d380c673c80f5dd70602b84ed16d56234d83f8f565d14b3a",
+    "strands": 52,
+    "moves": 5072,
+    "extrudeMm": 1716.3,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1",
+      "ties"
+    ],
+    "ties": 6
   }
 ]

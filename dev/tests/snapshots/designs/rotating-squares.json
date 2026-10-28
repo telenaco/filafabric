@@ -2,15 +2,14 @@
   {
     "card": "rotating-squares",
     "preset": "default",
-    "settingsHash": "576e526f5398",
-    "gcodeSha256": "e70f7d5322584340bbcd1059918c09fcf32fb68df2c50bd582ec6042bb5d0edf",
-    "strands": 47,
-    "moves": 377,
-    "extrudeMm": 525.9,
+    "settingsHash": "79f8413bec8d",
+    "gcodeSha256": "127239b5ddc76ebf37432627b55a5172466f0b867ed2a072be1af96a4e9249a9",
+    "strands": 604,
+    "moves": 4087,
+    "extrudeMm": 1356.1,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
-      "border",
       "necks",
       "squares"
     ],
@@ -19,15 +18,14 @@
   {
     "card": "rotating-squares",
     "preset": "soft-open",
-    "settingsHash": "576e526f5398",
-    "gcodeSha256": "e70f7d5322584340bbcd1059918c09fcf32fb68df2c50bd582ec6042bb5d0edf",
-    "strands": 47,
-    "moves": 377,
-    "extrudeMm": 525.9,
+    "settingsHash": "79f8413bec8d",
+    "gcodeSha256": "127239b5ddc76ebf37432627b55a5172466f0b867ed2a072be1af96a4e9249a9",
+    "strands": 604,
+    "moves": 4087,
+    "extrudeMm": 1356.1,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
-      "border",
       "necks",
       "squares"
     ],
@@ -36,15 +34,14 @@
   {
     "card": "rotating-squares",
     "preset": "broad",
-    "settingsHash": "5f84278b7980",
-    "gcodeSha256": "25ae09ea983e0a9f73e3d2a569b1e64aec5c71dcd455084cccc30b9661b3e0d8",
-    "strands": 13,
-    "moves": 126,
-    "extrudeMm": 319.7,
+    "settingsHash": "1ad529027726",
+    "gcodeSha256": "14032146dacef2785a6693ddb7bfdd45dc5619f1f43cf67b816847334df59122",
+    "strands": 256,
+    "moves": 1853,
+    "extrudeMm": 836.7,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
-      "border",
       "necks",
       "squares"
     ],
@@ -53,15 +50,14 @@
   {
     "card": "rotating-squares",
     "preset": "closed",
-    "settingsHash": "1ffc96b4d401",
-    "gcodeSha256": "5318f986576c3c3e242043249ca1253b3a47767e3c22cf14f4a8c1b33c12f67f",
-    "strands": 36,
-    "moves": 391,
-    "extrudeMm": 602.8,
+    "settingsHash": "4b1704a74ea0",
+    "gcodeSha256": "14a7eb69800718c7b3a67553c635c9f4389c38bce27a8f1577b607ba339e11be",
+    "strands": 579,
+    "moves": 4721,
+    "extrudeMm": 1655.1,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
-      "border",
       "necks",
       "squares"
     ],

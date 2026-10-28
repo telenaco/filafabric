@@ -11,8 +11,8 @@ function capsule(cx,cy,length,width,segments=8){
   return ring;
 }
 
-/** A filled sheet with staggered rounded slits and one or two orthogonal solid-fill passes. */
-export function kirigamiLayers(boundary,{slitLength=15,slitGap=1,interval=5,endSpacing=10,passes=2,strandWidth=.45}={}){
+/** A sheet of fill lines with staggered rounded slits, one or two orthogonal passes; a fill spacing near a bead's width is a solid sheet. */
+export function kirigamiLayers(boundary,{slitLength=15,slitGap=1,interval=5,endSpacing=10,passes=2,spacing=null,strandWidth=.45}={}){
   const box=boundary.bbox(),length=Math.max(4,Number(slitLength)||15),gap=Math.max(1,Number(slitGap)||1),rowGap=Math.max(2,Number(interval)||5),ends=Math.max(2,Number(endSpacing)||10),passCount=Number(passes)===1?1:2,bead=Math.max(.3,Number(strandWidth)||.45);
   const dx=length+ends,dy=rowGap+gap,rows=Math.ceil((box.maxY-box.minY)/dy)+1,cols=Math.ceil((box.maxX-box.minX)/dx)+1;
   if(rows*cols>MAX_MOVES)throw new ConfigError(['This kirigami layout exceeds the slit limit. Use larger spacing or a smaller swatch.']);
@@ -26,7 +26,7 @@ export function kirigamiLayers(boundary,{slitLength=15,slitGap=1,interval=5,endS
     // A slit is capsule-shaped; the region boolean tests its polygon using an even-odd point test.
     let inside=false;for(let i=0,j=r.length-1;i<r.length;j=i++){const a=r[i],b=r[j];if((a.y>y)!==(b.y>y)&&x<(b.x-a.x)*(y-a.y)/(b.y-a.y)+a.x)inside=!inside;}return inside;
   }));
-  const region=new PolygonBoundary(rings),passesOut=[],pitch=Math.max(.3,bead*.82);
+  const region=new PolygonBoundary(rings),passesOut=[],pitch=Math.max(.3,Number.isFinite(Number(spacing))&&Number(spacing)>0?Number(spacing):bead*.82);
   for(let pass=0;pass<passCount;pass++){
     const lines=[],vertical=pass===1;
     const start=vertical?box.minX:box.minY,end=vertical?box.maxX:box.maxY;

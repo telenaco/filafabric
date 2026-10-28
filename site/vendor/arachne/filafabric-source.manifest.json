@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "site/vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "6ecaa8fb62f7e5adecaeb7d8b900bd8a6e17eec14ad6677646087aed95104c1f",
+  "archiveSha256": "d076c9878943f60dfe4d8c30aed8c347fe7b9985e82c5480121e5d953bca5b6e",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -46,8 +46,8 @@
     },
     {
       "path": "dev/tests/arrowhead.test.js",
-      "bytes": 3513,
-      "sha256": "4f4f2af0a867c0652ac36355ced74572e29caf990d2b098a2c9b2de5afb39339"
+      "bytes": 3582,
+      "sha256": "dd1f15b91a9acb9332d100d39eb792d0b4fb3c19963b8e2d332aa388eee91a73"
     },
     {
       "path": "dev/tests/auxetic.test.js",
@@ -106,8 +106,8 @@
     },
     {
       "path": "dev/tests/card-estimates.test.js",
-      "bytes": 2671,
-      "sha256": "6d21728f3b011dfa2a904ee4209fea990ffcf678fa0ac1195a6d00810d4c4b75"
+      "bytes": 2908,
+      "sha256": "4d7c5bddfc6f5e3727193a1169740a158dec1e830ecb6d21df9a64237efd1f72"
     },
     {
       "path": "dev/tests/card-readouts.test.js",
@@ -195,6 +195,11 @@
       "sha256": "6c1c570ac5672905976e56ea1a5b92b707a65cc07c9f36cca1f6fde4770f0925"
     },
     {
+      "path": "dev/tests/density.test.js",
+      "bytes": 7251,
+      "sha256": "2becafb512fee2cabaf5b50c77fd4612fdd2104e90d959d459c9f067fb3cbf76"
+    },
+    {
       "path": "dev/tests/design-export.test.js",
       "bytes": 14051,
       "sha256": "aeb6451076a413956e79a75756558ef5baf51b7e90ac4fc9811e793c6b473636"
@@ -216,8 +221,8 @@
     },
     {
       "path": "dev/tests/diagnostics.test.js",
-      "bytes": 16766,
-      "sha256": "d96e5b5e1255b8b049d5331a7fbb1c0a79eb0dd94e5caa023a8e1e7d565df16a"
+      "bytes": 16787,
+      "sha256": "ddb521f2116b860e1672a4129ae57b9ff574d1fccc736c2bb1e9279f6fce4399"
     },
     {
       "path": "dev/tests/dipweave.test.js",
@@ -336,8 +341,8 @@
     },
     {
       "path": "dev/tests/flat-variants.test.js",
-      "bytes": 10396,
-      "sha256": "521d0deff92d75044203aa8277613f0d233a7736313830f6dd1cb483ac26e972"
+      "bytes": 11292,
+      "sha256": "4685a4c880d4b58b735517cc8412408bec5dae1caf4f5eb2e7eaa25e893bfd08"
     },
     {
       "path": "dev/tests/flowlines.test.js",
@@ -431,8 +436,8 @@
     },
     {
       "path": "dev/tests/library.test.js",
-      "bytes": 25225,
-      "sha256": "7adb7b67ed03a4e348fe04df1a8b8c2adcbec6701582f333c4b9000a09c75afd"
+      "bytes": 25195,
+      "sha256": "f02d1a09b33640f197b6b9281a82e0a7a81a06bbdb4fe076c97e74d6707ff5d3"
     },
     {
       "path": "dev/tests/lift.test.js",
@@ -466,8 +471,8 @@
     },
     {
       "path": "dev/tests/meander.test.js",
-      "bytes": 5707,
-      "sha256": "c727f56bc0faa6885e98db3f718c94d1b5127d80ef458a7532433051aa904467"
+      "bytes": 5817,
+      "sha256": "848b3d08477d863aed524826af2bdf31233a2a479cc623744391dcd670cf2e81"
     },
     {
       "path": "dev/tests/moire.test.js",
@@ -666,8 +671,8 @@
     },
     {
       "path": "dev/tests/rings-raised.test.js",
-      "bytes": 1353,
-      "sha256": "3d17d670c6e656a6bf6ce68bdc4a71d726da86193753153583be6d3497d67055"
+      "bytes": 1493,
+      "sha256": "23688d7e841483894c172b9c19d110df230cd7f6894f2277523f9b3ac0de1c91"
     },
     {
       "path": "dev/tests/rings.test.js",
@@ -691,8 +696,8 @@
     },
     {
       "path": "dev/tests/rotating-units.test.js",
-      "bytes": 5997,
-      "sha256": "300e5157166e20d610683d88ead58274ade20f00c1ee39486bf24a55c766856e"
+      "bytes": 5949,
+      "sha256": "a3f789f9d924399882bcbe0d69244c91bfddd8cc0790e9a1c4d54e82f9ad6e1e"
     },
     {
       "path": "dev/tests/row-order.test.js",
@@ -766,13 +771,13 @@
     },
     {
       "path": "dev/tests/snapshots/designs/arrowhead-band.json",
-      "bytes": 1069,
-      "sha256": "d8dc0122e018e9c141c1b21bc58e57d82c74275c764c2e01454b6a8c571aab60"
+      "bytes": 1070,
+      "sha256": "f5c69212d866285e99191ead2e4f536c0476c2f653b3bc2062e73e1e27ed90f6"
     },
     {
       "path": "dev/tests/snapshots/designs/auxetic-flat.json",
-      "bytes": 1405,
-      "sha256": "721be149bacea97b1f15e2d0e579b060a398203968f785359c70ccad29567571"
+      "bytes": 1417,
+      "sha256": "44ea98201c0d355565ffae13dd09d4066b2e712bbf61d21e86d35639907b977d"
     },
     {
       "path": "dev/tests/snapshots/designs/auxetic.json",
@@ -781,8 +786,8 @@
     },
     {
       "path": "dev/tests/snapshots/designs/boucle-flat.json",
-      "bytes": 1362,
-      "sha256": "3991e33cdc4416158d729255b952e71dc291efdeff4dd961ade3f41b7758a8f5"
+      "bytes": 1342,
+      "sha256": "9a82f590e86ad1f4108c3faae02b871997dd4788c8c8f4078a76db60bb60d5f9"
     },
     {
       "path": "dev/tests/snapshots/designs/boucle.json",
@@ -801,8 +806,8 @@
     },
     {
       "path": "dev/tests/snapshots/designs/coil-flat.json",
-      "bytes": 1379,
-      "sha256": "445d2960cbfdf309a25586189a2dac2b5aedcde7df843c6ae90748b29776f5c2"
+      "bytes": 1377,
+      "sha256": "19ba525cfadec06e4cee745872d456d6887f35e0b045724b1c7d1c6cb554ef89"
     },
     {
       "path": "dev/tests/snapshots/designs/coil-shapes.json",
@@ -826,8 +831,8 @@
     },
     {
       "path": "dev/tests/snapshots/designs/connected-lace.json",
-      "bytes": 1513,
-      "sha256": "45fdc572107e942d0f7b58c7148d4b5101da452043a88bf69414b132db4434fe"
+      "bytes": 1489,
+      "sha256": "47be1e6e8d411ac60a0ac76467f93b8b40321ca5b0477f4fa928c132a5cab583"
     },
     {
       "path": "dev/tests/snapshots/designs/corrugation.json",
@@ -861,8 +866,8 @@
     },
     {
       "path": "dev/tests/snapshots/designs/figure8-rows-flat.json",
-      "bytes": 1381,
-      "sha256": "9a035ccfa574faf24c08861f7c8b40b142efc35c26cc25036355be49b65b42e5"
+      "bytes": 1383,
+      "sha256": "766d205723b6e0ea88bab7fe44b81f7f4bba0ce475948a1c69591686cefdc2ea"
     },
     {
       "path": "dev/tests/snapshots/designs/figure8-rows.json",
@@ -896,13 +901,13 @@
     },
     {
       "path": "dev/tests/snapshots/designs/harmonograph-flat.json",
-      "bytes": 1336,
-      "sha256": "7426b567fb7f2070c4b5654fb6bba2acd15a0bfd3df953b1f8040fb577b5ad8d"
+      "bytes": 1340,
+      "sha256": "fd12ffb17d0fba7ee843837efb127c33db466ea3752108c8683cfbe67ac708cc"
     },
     {
       "path": "dev/tests/snapshots/designs/harmonograph.json",
-      "bytes": 1421,
-      "sha256": "17d80102f0b9157b4033bb198917d889f3721ca7f2efcfba743828d9e5d50a5e"
+      "bytes": 1425,
+      "sha256": "b58b7d74a8618450254f43a6268a63a12cc5174451382f298e62639c24fa7b03"
     },
     {
       "path": "dev/tests/snapshots/designs/honeycomb-flat.json",
@@ -916,18 +921,18 @@
     },
     {
       "path": "dev/tests/snapshots/designs/honeycomb-planar.json",
-      "bytes": 1421,
-      "sha256": "73bf181f552b5f8b2a7215961763b3a21de670ca4f6b5ab032a10cde88068cc0"
+      "bytes": 1433,
+      "sha256": "225caae2cd80d1be8866862bbad8fa51edf471ef89fa463b637b3a62b4569fc3"
     },
     {
       "path": "dev/tests/snapshots/designs/isohedral-tiles.json",
-      "bytes": 1415,
-      "sha256": "a7b1d656f0d26decad83d846d18107f70316f5b9aa340d05cf93ad591a17599d"
+      "bytes": 1423,
+      "sha256": "96d51347ef4af2a80adb750d53658d293fc371f9dd8609738c261c54d25fe607"
     },
     {
       "path": "dev/tests/snapshots/designs/kirigami.json",
-      "bytes": 1393,
-      "sha256": "570ad3b4f4f53808d34f65c1ace9db5321b7ba6513c40313b5988203ab95426b"
+      "bytes": 1407,
+      "sha256": "235649f92915bd6d4605513735eea0f94f45464bb57a07c0d71c0f49173e0870"
     },
     {
       "path": "dev/tests/snapshots/designs/lace-backing.json",
@@ -946,8 +951,8 @@
     },
     {
       "path": "dev/tests/snapshots/designs/meander-flat.json",
-      "bytes": 2998,
-      "sha256": "c0e25334bc956be25b547d4f9c641540e40ad4d4a020092d5437c95dec1ffc8c"
+      "bytes": 3034,
+      "sha256": "693b1edfca8354dd8be482e6f75af03cfcee7584376b1def50cec06a6e613346"
     },
     {
       "path": "dev/tests/snapshots/designs/meander-legacy.json",
@@ -956,8 +961,8 @@
     },
     {
       "path": "dev/tests/snapshots/designs/meander-ties.json",
-      "bytes": 1422,
-      "sha256": "637c16745107974b4acbe5a636b7be24d5167fd95553d272340b6b561fd61835"
+      "bytes": 1429,
+      "sha256": "0afed524828bf86eb714c3044d1cdb730075a117bc4b8799950cc27dc38556f9"
     },
     {
       "path": "dev/tests/snapshots/designs/meander.json",
@@ -977,7 +982,7 @@
     {
       "path": "dev/tests/snapshots/designs/parquet-flat.json",
       "bytes": 1742,
-      "sha256": "a1b6c3c588643d54fdade519ce1bfbeecf3e4eabfbeb22daa25de5945d09fa99"
+      "sha256": "e791c6b42658ee6ef67bd7fc2bc2363a468b8643f7989482787563bb8b9b29f6"
     },
     {
       "path": "dev/tests/snapshots/designs/parquet.json",
@@ -996,8 +1001,8 @@
     },
     {
       "path": "dev/tests/snapshots/designs/rings-flat.json",
-      "bytes": 1319,
-      "sha256": "cea3d5a72789621b3c640b5a3d85e493a81c3e7fc03c261df32de6a9702db0b8"
+      "bytes": 1332,
+      "sha256": "6af07ba37c3ac48984d3155f98efdd66ee346fea5cbf1e7b3511ba77ad73a296"
     },
     {
       "path": "dev/tests/snapshots/designs/rings-raised.json",
@@ -1016,13 +1021,13 @@
     },
     {
       "path": "dev/tests/snapshots/designs/rotating-squares.json",
-      "bytes": 1482,
-      "sha256": "eebe06a952fb72790298aa9b815d9febabc2f422432bb6b1efa6cfe9b9f38fc3"
+      "bytes": 1429,
+      "sha256": "9427e5ae2f6955540734176b2aa9c6a87b2cc429001fd0ac955ccf0fd325a9ba"
     },
     {
       "path": "dev/tests/snapshots/designs/rotating-triangles.json",
-      "bytes": 1494,
-      "sha256": "892178925b6ceb9a59d46cf7d88164e80e35fe852ec1a8381284b41ffb07de60"
+      "bytes": 1445,
+      "sha256": "2c5822e40d2a35695159d60c5e99c66dc074dd4a4cf76acaf067ac642fd04b11"
     },
     {
       "path": "dev/tests/snapshots/designs/scales.json",
@@ -1036,8 +1041,8 @@
     },
     {
       "path": "dev/tests/snapshots/designs/spiral-cells.json",
-      "bytes": 1326,
-      "sha256": "d6f32477eb09652574ccdd8e19a81858fb1ca0a87734c67ddb5a4e38db37922c"
+      "bytes": 1336,
+      "sha256": "d9fb73782d9d77660633204ce5c31e23e36e15cca40e2d9d28052263ad7ab008"
     },
     {
       "path": "dev/tests/snapshots/designs/spiral.json",
@@ -1081,13 +1086,13 @@
     },
     {
       "path": "dev/tests/snapshots/designs/star-metric.json",
-      "bytes": 1406,
-      "sha256": "eabf87cb24cdbb4350056b66166b6b41cab09d62d25a9d798d0b6390081df259"
+      "bytes": 1415,
+      "sha256": "0f0c3a5dbf3efd1144824eac09e2826f137517cca61b1142f8ff195927a32f90"
     },
     {
       "path": "dev/tests/snapshots/designs/starlattice-flat.json",
-      "bytes": 1667,
-      "sha256": "858b54664911d454e9a777c402a95584e022275d275ba93785162a2e2478c8c5"
+      "bytes": 1679,
+      "sha256": "5c03998ac0b6ca142c930499be34723c504bedd849554e4347169e98d0ce0496"
     },
     {
       "path": "dev/tests/snapshots/designs/starlattice.json",
@@ -1101,8 +1106,8 @@
     },
     {
       "path": "dev/tests/snapshots/designs/stochastic-net.json",
-      "bytes": 1394,
-      "sha256": "4d7e816d85ac20458eac1cec0e3ec2fc5a792b4398d0d7d220d36c476ef5d1f9"
+      "bytes": 1401,
+      "sha256": "191f4a98efc09073dbdeda930ff34451ca9e6ea9ca63aba2ba1fd2cc02360cd3"
     },
     {
       "path": "dev/tests/snapshots/designs/sunflower.json",
@@ -1116,8 +1121,8 @@
     },
     {
       "path": "dev/tests/snapshots/designs/truchet-flat.json",
-      "bytes": 1441,
-      "sha256": "70829192ed7b1565bf90a7838441db2dca3b96e41373532f6b88e69fc6817bba"
+      "bytes": 1458,
+      "sha256": "b8083ae10ee4446e24a92353ef560ec2a99bce2635a6557a5b8da505cdd2f9d8"
     },
     {
       "path": "dev/tests/snapshots/designs/truchet-legacy.json",
@@ -1131,8 +1136,8 @@
     },
     {
       "path": "dev/tests/snapshots/designs/turing-flat.json",
-      "bytes": 1347,
-      "sha256": "356486df580e47608e011abe2e1faf1dd6ecfc04715def2ab7937b555200b9da"
+      "bytes": 1369,
+      "sha256": "e1c0064971a53f7f8e9ff90a1f7da08f5b91893972206b3cc7d3f464e78d407a"
     },
     {
       "path": "dev/tests/snapshots/designs/turing-legacy.json",
@@ -1146,8 +1151,8 @@
     },
     {
       "path": "dev/tests/snapshots/designs/voronoi-cells.json",
-      "bytes": 1393,
-      "sha256": "ae305e8b09a5f66f1034420fe7e033250d3e4d7a5129fd80f702dc6b69b1a890"
+      "bytes": 1411,
+      "sha256": "5c4ed09335f6a3d576017068cf20b1496fa54e34bc143b0cb9a720f292849b47"
     },
     {
       "path": "dev/tests/snapshots/designs/voronoi.json",
@@ -1172,7 +1177,7 @@
     {
       "path": "dev/tests/snapshots/designs/zigzag-flat.json",
       "bytes": 332,
-      "sha256": "e724633aaaed11a830fbdc946d1f0f678a264682930add1fdcc1faba2c365f06"
+      "sha256": "dff73566c36f8c55691b739166647c1ecdd4cd260cc745f871c1184146b5b771"
     },
     {
       "path": "dev/tests/snapshots/designs/zigzag.json",
@@ -1387,7 +1392,7 @@
     {
       "path": "dev/tests/voronoi.test.js",
       "bytes": 4739,
-      "sha256": "91580806b0fadcf6a6221e60f59569cfc4f73cbc145a602523409e72dce75b42"
+      "sha256": "0686be9a8132f81ea45fc1e663358be06b161734f5cd7946544c1b5318b18112"
     },
     {
       "path": "dev/tests/wave-edges.test.js",
@@ -1498,6 +1503,11 @@
       "path": "dev/tools/tally-exports.mjs",
       "bytes": 2599,
       "sha256": "05fc0153def020e361c7eeec464a14e4a6d2633147427591f7a2a41cecc091e6"
+    },
+    {
+      "path": "dev/tools/tune-density.mjs",
+      "bytes": 5360,
+      "sha256": "dc9fefdcf6b1ec8145064c8df24b88be7a480d72a777dcf0410a7eee3bc349b3"
     },
     {
       "path": "dev/tools/update-design-snapshots.mjs",
@@ -1861,8 +1871,8 @@
     },
     {
       "path": "site/src/engine/arrowhead.js",
-      "bytes": 3519,
-      "sha256": "dda5a19174dfae60973769bc0fabae5e344d558e40e5f6d688ec208fcb546997"
+      "bytes": 2768,
+      "sha256": "9fa6bb327671430f057131d24dcdf3cc1ce5ae0fde04cafaf82f66bf6f95d8a1"
     },
     {
       "path": "site/src/engine/auxetic.js",
@@ -1936,8 +1946,8 @@
     },
     {
       "path": "site/src/engine/construction-report.js",
-      "bytes": 14389,
-      "sha256": "e219d2b6be3952273c262efe0756ac622984563db815c5cd8920a8e183fc7673"
+      "bytes": 14533,
+      "sha256": "4ece92a408d992fc0afe63cae202f4d165fc0b708e3b159687e4c8ab41d278b9"
     },
     {
       "path": "site/src/engine/crosshatch.js",
@@ -2001,8 +2011,8 @@
     },
     {
       "path": "site/src/engine/flat-variants.js",
-      "bytes": 9340,
-      "sha256": "4ecc6922dcc47c963fa8dd2f64ed1b1ae0547a9748b02805712bc6d2ebab2767"
+      "bytes": 14096,
+      "sha256": "19dcd449c9fb4518a25ea07facf27a465193f20adc795c85cd3473ee4046d515"
     },
     {
       "path": "site/src/engine/flowlines.js",
@@ -2052,7 +2062,7 @@
     {
       "path": "site/src/engine/isohedral.js",
       "bytes": 5887,
-      "sha256": "eb7dfb8795cf6bc228a208aaa291a582984e24c1addb513f57d973c88bc26f96"
+      "sha256": "32f61d1b73fa784f62455d952771b1867d54af3a79a2a2dfcbc406ccf841039f"
     },
     {
       "path": "site/src/engine/isolines.js",
@@ -2061,13 +2071,13 @@
     },
     {
       "path": "site/src/engine/kirigami.js",
-      "bytes": 3434,
-      "sha256": "d5ad89219b5d162292d6b17c23ec8e9aa5f4fa9695badf5026eda397a6b6d736"
+      "bytes": 3561,
+      "sha256": "84880880d05fcd042e34a895ac6218cd53485229d8ec0efd0a3b0c9bfe0573ce"
     },
     {
       "path": "site/src/engine/lace.js",
       "bytes": 5894,
-      "sha256": "97bacab16d81ac424222b8072d6cf2e6723ce64ad95367c1314a68a2d817c5ae"
+      "sha256": "59cc7c9079ec50058d3a2149b02bd2f558103aaa58cf5a0148cee1a3c37e7d02"
     },
     {
       "path": "site/src/engine/layers.js",
@@ -2081,13 +2091,13 @@
     },
     {
       "path": "site/src/engine/lissajous.js",
-      "bytes": 1741,
-      "sha256": "35149f2616f30222491a9d871854cee426ece441d7c72f7ae1cb74d703a43a5c"
+      "bytes": 1743,
+      "sha256": "202e32e41d718458beb46d428697a22825c7858b12c6fb45910ea4655bcf1d1b"
     },
     {
       "path": "site/src/engine/meander.js",
       "bytes": 22780,
-      "sha256": "b07ac4d2aa338132e3c7b13efd253148f71d9ae378ae483c7bee9f74120959ba"
+      "sha256": "78dfc84d76cefa0ff96f158ee58c028e9aadb63ac08368ec5001b01deafbc89a"
     },
     {
       "path": "site/src/engine/moire.js",
@@ -2196,8 +2206,8 @@
     },
     {
       "path": "site/src/engine/rings.js",
-      "bytes": 4565,
-      "sha256": "629ff66e296db2f071d9f96b0a34fa812a24230e98bd3b29fc4ab831d7454bc7"
+      "bytes": 4738,
+      "sha256": "855004ec0dbf28045c73fe44ed8f7e08913eb678c35c952e41fabf08983d8771"
     },
     {
       "path": "site/src/engine/rng.js",
@@ -2221,8 +2231,8 @@
     },
     {
       "path": "site/src/engine/rotating-units.js",
-      "bytes": 14083,
-      "sha256": "a26337e68295e8514797a11870509931fa65fd50db669bf302aff0a6bc4a6f59"
+      "bytes": 13748,
+      "sha256": "966e27882731718377e9f205a85c51b0daa86c55beabe46a048591335a6a949b"
     },
     {
       "path": "site/src/engine/scales.js",
@@ -2256,8 +2266,8 @@
     },
     {
       "path": "site/src/engine/spiral-cells.js",
-      "bytes": 3217,
-      "sha256": "ca4ae6305a3d060de2a78d7cd8280f82ee1c8ba470ff6e5c815b7b0e4eb5befe"
+      "bytes": 3407,
+      "sha256": "33d75f6c331f9291e55833d9cc371706521e7212074ba07c4887bbed71da18d8"
     },
     {
       "path": "site/src/engine/spiral.js",
@@ -2281,8 +2291,8 @@
     },
     {
       "path": "site/src/engine/star-metric.js",
-      "bytes": 5102,
-      "sha256": "432d49a90381c214256351547dcd33833eced2b4802792b60301e39e3eb1c54c"
+      "bytes": 5104,
+      "sha256": "ecf6d4bc69e5d16197df2455c09ba0d8ef4702839a174cb19db598faab0dc21f"
     },
     {
       "path": "site/src/engine/starlattice.js",
@@ -2371,8 +2381,8 @@
     },
     {
       "path": "site/src/engine/turing.js",
-      "bytes": 7139,
-      "sha256": "27a6128c6150ece873a0a9a51a6480b78699ee858db67138743a41d8155c0bb7"
+      "bytes": 7458,
+      "sha256": "de604fd02de5fa6fef93597c9b236809e090c34a76ffabb4a010f53e19306393"
     },
     {
       "path": "site/src/engine/variant-export.js",
@@ -2382,7 +2392,7 @@
     {
       "path": "site/src/engine/voronoi.js",
       "bytes": 10864,
-      "sha256": "2809aba6171086ab1f3573ed7b82c1d8669e0a2ca3a25fa6030ed2b1df933461"
+      "sha256": "370671f6d636bad1de787a4fbbc1f4d945512c7ba6df908e008f47aa83e5d205"
     },
     {
       "path": "site/src/engine/wavegrid.js",
@@ -2421,8 +2431,8 @@
     },
     {
       "path": "site/src/ui/card-estimates.js",
-      "bytes": 15028,
-      "sha256": "fb31184fc181bcc0807fb4951e0bb713c1ac500aebcd440448ee75e93097891d"
+      "bytes": 14960,
+      "sha256": "26764605c9c053668f9a4d5d81f2e620f2d0cee1f19b2a8f4e780896159840a2"
     },
     {
       "path": "site/src/ui/coil-controls.js",
@@ -2433,6 +2443,11 @@
       "path": "site/src/ui/controls.js",
       "bytes": 7366,
       "sha256": "0ae457d52e794d58babfe388fa2beee7c64452fa35feecdbe0d9815a1309de1c"
+    },
+    {
+      "path": "site/src/ui/density.js",
+      "bytes": 6829,
+      "sha256": "483cad357c69a7a64e3f263582256e9df0b210035876d8abf73e25c148638be1"
     },
     {
       "path": "site/src/ui/designs-resizer.js",
@@ -2456,8 +2471,8 @@
     },
     {
       "path": "site/src/ui/estimate-line.js",
-      "bytes": 848,
-      "sha256": "b451adc967b834d54b9c46658fe2601b2bb1de858716dc715000a321bd415a18"
+      "bytes": 897,
+      "sha256": "a6ce09caf877f990354e32c4a76fedadf50451657eb5a09a422a87c56962758b"
     },
     {
       "path": "site/src/ui/export-builder.js",
@@ -2486,8 +2501,8 @@
     },
     {
       "path": "site/src/ui/flat-variants.js",
-      "bytes": 11263,
-      "sha256": "53c89caab0d0a3666b6e2d371841e62266283a6bc99798ef214e559c2d8ab26a"
+      "bytes": 14518,
+      "sha256": "c6ad622a5a4b2d54ed5e96117b89290f8b065978a7c53c904b3fcc21606082a6"
     },
     {
       "path": "site/src/ui/gate-config.json",
@@ -2516,13 +2531,13 @@
     },
     {
       "path": "site/src/ui/main.js",
-      "bytes": 141429,
-      "sha256": "26939bac571538fb02bb73c4428156295490b517820eb4d3ef1e7b6448670690"
+      "bytes": 141878,
+      "sha256": "84006630d397cc14f69538f01928f14b1800b2ab6a79449ef7aee911d8332df2"
     },
     {
       "path": "site/src/ui/more-designs.js",
-      "bytes": 56078,
-      "sha256": "21b1af64fbb0063f43787e53b43560f58a26d76574839f0b6a6e41828157dc83"
+      "bytes": 56168,
+      "sha256": "640c9a1e80a0e6ba397801c8c60a7d079bdd4c7de2cb3365782de6718333ef0e"
     },
     {
       "path": "site/src/ui/nozzle-limits.js",
@@ -2581,8 +2596,8 @@
     },
     {
       "path": "site/src/ui/printability-data.js",
-      "bytes": 38421,
-      "sha256": "2f92f49a2defda0f9b21820f2f294165132be0618e1b71a00aca53a64fa70a71"
+      "bytes": 38481,
+      "sha256": "ca33d0041c4153e9effc9948e25ece844371014196de49b04d18cb4b04552d29"
     },
     {
       "path": "site/src/ui/printability.js",
@@ -2621,8 +2636,8 @@
     },
     {
       "path": "site/src/ui/research-designs.js",
-      "bytes": 49136,
-      "sha256": "272ce74bafb03c8a5e0ede9fd58493359b91cae717a68dfc12bf3251dc91aa75"
+      "bytes": 49471,
+      "sha256": "4ad1e1ea8c9b898b9e7fcbeb3aa4be73cf18c4f31ef58a72cb4623a98c4327fe"
     },
     {
       "path": "site/src/ui/share.js",

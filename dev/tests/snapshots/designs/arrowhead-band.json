@@ -2,49 +2,49 @@
   {
     "card": "arrowhead-band",
     "preset": "default",
-    "settingsHash": "6b9c167a2c2a",
-    "gcodeSha256": "9412279a120eb2979e597a6ad972d7af2152e1bd9a5dec3d7f664bee5ddb0165",
-    "strands": 26,
-    "moves": 4619,
-    "extrudeMm": 2449.1,
-    "zMin": 0.2,
-    "zMax": 0.2,
-    "families": [
-      "arrows",
-      "rails"
-    ],
-    "ties": 0
-  },
-  {
-    "card": "arrowhead-band",
-    "preset": "ariel-band",
-    "settingsHash": "6b9c167a2c2a",
-    "gcodeSha256": "9412279a120eb2979e597a6ad972d7af2152e1bd9a5dec3d7f664bee5ddb0165",
-    "strands": 26,
-    "moves": 4619,
-    "extrudeMm": 2449.1,
-    "zMin": 0.2,
-    "zMax": 0.2,
-    "families": [
-      "arrows",
-      "rails"
-    ],
-    "ties": 0
-  },
-  {
-    "card": "arrowhead-band",
-    "preset": "spahiu-panel",
-    "settingsHash": "f2fc647114f4",
-    "gcodeSha256": "7991d3b53f2c0c0829bd675f8f86a07cbc3e722441e8f1acc697800b7b8fac3e",
-    "strands": 29,
-    "moves": 5067,
-    "extrudeMm": 1597.1,
+    "settingsHash": "5e1527049a51",
+    "gcodeSha256": "ae71d10317ce3d97150a8bd16793965725c03dafa61229f6c66de0e15a12f337",
+    "strands": 64,
+    "moves": 6619,
+    "extrudeMm": 2411.3,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
       "arrows",
       "ties"
     ],
-    "ties": 2
+    "ties": 14
+  },
+  {
+    "card": "arrowhead-band",
+    "preset": "ariel-band",
+    "settingsHash": "5e1527049a51",
+    "gcodeSha256": "ae71d10317ce3d97150a8bd16793965725c03dafa61229f6c66de0e15a12f337",
+    "strands": 64,
+    "moves": 6619,
+    "extrudeMm": 2411.3,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "arrows",
+      "ties"
+    ],
+    "ties": 14
+  },
+  {
+    "card": "arrowhead-band",
+    "preset": "spahiu-panel",
+    "settingsHash": "e3d9f6ffbfbe",
+    "gcodeSha256": "b47246352f7844b98fd2b4cd14a3a96699a1a880c83c48cc24adb31f870d98c7",
+    "strands": 68,
+    "moves": 6352,
+    "extrudeMm": 2387.2,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "arrows",
+      "ties"
+    ],
+    "ties": 14
   }
 ]

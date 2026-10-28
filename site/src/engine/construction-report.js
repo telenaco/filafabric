@@ -170,7 +170,8 @@ export function buildConstructionReport(result, {
     const first = strand.pts[0], last = strand.pts.at(-1);
     if (Math.hypot(first.x - last.x, first.y - last.y) < 1e-8) return;
     for (const point of [first, last]) {
-      if (boundaryDistance(point, boundary) > strandWidth && !touching(point, strandWidth, si).size) danglingEnds++;
+      // a line cut by the outline ends at it: the cut is made on points about half a millimetre apart, so the end can lie a point inside
+      if (boundaryDistance(point, boundary) > strandWidth * 2.5 && !touching(point, strandWidth, si).size) danglingEnds++;
     }
   });
   phase('ends');

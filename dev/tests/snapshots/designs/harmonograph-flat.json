@@ -2,11 +2,11 @@
   {
     "card": "harmonograph-flat",
     "preset": "default",
-    "settingsHash": "86af64176dbc",
-    "gcodeSha256": "9fc28fbeb7b047fc024653740e8070575e8d1f466343b9b82d96fff69600f84e",
+    "settingsHash": "430ffe0ce9ff",
+    "gcodeSha256": "faf8d5e2b0f3bd5faac00d1066cfbdd6b1113a29de281ea7cb114dfc84892411",
     "strands": 1,
-    "moves": 1588,
-    "extrudeMm": 1328.7,
+    "moves": 9652,
+    "extrudeMm": 4357.9,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
@@ -17,11 +17,11 @@
   {
     "card": "harmonograph-flat",
     "preset": "fine",
-    "settingsHash": "86af64176dbc",
-    "gcodeSha256": "9fc28fbeb7b047fc024653740e8070575e8d1f466343b9b82d96fff69600f84e",
+    "settingsHash": "430ffe0ce9ff",
+    "gcodeSha256": "faf8d5e2b0f3bd5faac00d1066cfbdd6b1113a29de281ea7cb114dfc84892411",
     "strands": 1,
-    "moves": 1588,
-    "extrudeMm": 1328.7,
+    "moves": 9652,
+    "extrudeMm": 4357.9,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
@@ -32,11 +32,11 @@
   {
     "card": "harmonograph-flat",
     "preset": "coarse",
-    "settingsHash": "4a2e1d328a51",
-    "gcodeSha256": "5db59d4bbf9befe014cdd3ef6c6ac71d15b5742765d52d2b9aa0a5d4fe11a3e3",
+    "settingsHash": "0af3d4f365e5",
+    "gcodeSha256": "489c32a3f72e869aec036597f8d35c275ba447b0006c38146c3c7291ac510682",
     "strands": 1,
-    "moves": 885,
-    "extrudeMm": 730.1,
+    "moves": 3717,
+    "extrudeMm": 2486.5,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
@@ -47,11 +47,11 @@
   {
     "card": "harmonograph-flat",
     "preset": "lens",
-    "settingsHash": "b55f55f3f60e",
-    "gcodeSha256": "8d9cf8722df9d0834905330f1dfc2a584d96998c6c141a91223d83d1fb32c7be",
+    "settingsHash": "2991d550b641",
+    "gcodeSha256": "14b3bb96f217c0566c46698668b838dee4bd026a09b20597b9d7b8b88130e079",
     "strands": 1,
-    "moves": 665,
-    "extrudeMm": 531.5,
+    "moves": 2123,
+    "extrudeMm": 1726.8,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [

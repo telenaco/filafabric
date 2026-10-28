@@ -262,7 +262,7 @@ function chaikin(pts) {
 /** The order that makes the cells about `cell` mm across over the larger side. */
 export function curveOrder(curve, size, cell) {
   const base = curve === 'peano' ? 3 : 2;
-  return Math.max(1, Math.min(curve === 'peano' ? 4 : 6, Math.round(Math.log(Math.max(size / cell, base)) / Math.log(base))));
+  return Math.max(1, Math.min(curve === 'peano' ? 4 : 7, Math.round(Math.log(Math.max(size / cell, base)) / Math.log(base))));
 }
 
 /**

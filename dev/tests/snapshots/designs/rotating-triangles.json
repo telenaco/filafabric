@@ -2,15 +2,14 @@
   {
     "card": "rotating-triangles",
     "preset": "default",
-    "settingsHash": "74590d6c613c",
-    "gcodeSha256": "6b97c3a654035af3a8e15bbf910da18c72ab3c889ddbb28502bd8cd1b192dc96",
-    "strands": 19,
-    "moves": 132,
-    "extrudeMm": 263.9,
+    "settingsHash": "21b8d70e5e6b",
+    "gcodeSha256": "075909e5bec14ad230185ab0ea32b316ad09b861c8f4b85a435b423fb0c16e88",
+    "strands": 322,
+    "moves": 4471,
+    "extrudeMm": 1434.2,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
-      "border",
       "necks",
       "triangles"
     ],
@@ -19,15 +18,14 @@
   {
     "card": "rotating-triangles",
     "preset": "kagome",
-    "settingsHash": "37f7137b0d53",
-    "gcodeSha256": "1f4e9e64fded312bc03e54282e7d630580fd999e2ac6a8e6e97c1b03d13d01e5",
-    "strands": 11,
-    "moves": 85,
-    "extrudeMm": 188.8,
+    "settingsHash": "e69f31b973cd",
+    "gcodeSha256": "221f0b0ee5539f5cd3892bd391e0bcf6ea789151a6050eb30faa2cf2f707f5a2",
+    "strands": 316,
+    "moves": 4363,
+    "extrudeMm": 1343.4,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
-      "border",
       "necks",
       "triangles"
     ],
@@ -36,15 +34,14 @@
   {
     "card": "rotating-triangles",
     "preset": "tilted",
-    "settingsHash": "74590d6c613c",
-    "gcodeSha256": "6b97c3a654035af3a8e15bbf910da18c72ab3c889ddbb28502bd8cd1b192dc96",
-    "strands": 19,
-    "moves": 132,
-    "extrudeMm": 263.9,
+    "settingsHash": "21b8d70e5e6b",
+    "gcodeSha256": "075909e5bec14ad230185ab0ea32b316ad09b861c8f4b85a435b423fb0c16e88",
+    "strands": 322,
+    "moves": 4471,
+    "extrudeMm": 1434.2,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
-      "border",
       "necks",
       "triangles"
     ],
@@ -53,15 +50,14 @@
   {
     "card": "rotating-triangles",
     "preset": "maximum",
-    "settingsHash": "91beaefdf0fd",
-    "gcodeSha256": "e1eb79a79de4d4061312de7bfc6cb94bf24a2be0da40f316fd36bfc05e84b69b",
-    "strands": 8,
-    "moves": 67,
-    "extrudeMm": 197.2,
+    "settingsHash": "8601d06018e7",
+    "gcodeSha256": "a1ea780d7146c3c18a568af2ac92f44153fe0ad1b0a27701feb0d4168883dd72",
+    "strands": 218,
+    "moves": 2982,
+    "extrudeMm": 1193.2,
     "zMin": 0.2,
     "zMax": 0.2,
     "families": [
-      "border",
       "necks",
       "triangles"
     ],

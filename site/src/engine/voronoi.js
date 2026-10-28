@@ -171,7 +171,7 @@ export function tessellate(points, box) {
  * @param seed     random seed
  * @param tone     optional (x, y, w, h) giving 0..1; cells are smaller where it is bright
  */
-export const MAX_SITES = 1500;
+export const MAX_SITES = 6000;
 
 /** Whether an outline is just its own bounding box (the plain swatch), so its edges are straight and square. */
 export function isBox(boundary) {
