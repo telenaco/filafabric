@@ -68,3 +68,18 @@ test('the cards without a backing are one layer, say they need one, and carry no
     assert.ok(!card.controls.some((section) => section.kind === 'support' || /^backing/.test(section.key ?? '')), `${id}: no backing controls yet`);
   }
 });
+
+test('Rings · flat is one plane too: every point at the first layer height, nothing crossing', () => {
+  const result = run('rings-flat', 100), lh = result.cfg.t.layer_height;
+  assert.ok(result.construction.z.max <= lh + 0.011, `Z max ${result.construction.z.max} mm`);
+  assert.equal(result.construction.crossings.total, 0, 'overlapping rings are joined in the plane');
+  assert.equal(shelfFromConstruction(result.construction, { layerHeight: lh }), 'flat');
+});
+
+test('every card has a picture, and a flat card does not borrow its layered or raised twin\'s', async () => {
+  const { DESIGNS } = await import('../../site/src/ui/designs.js');
+  const { THUMBS } = await import('../../site/src/ui/thumbs.js');
+  const pictureOf = (id) => { const card = DESIGNS.find((entry) => entry.id === id); return card.thumb ?? THUMBS[id]; };
+  for (const card of DESIGNS.filter((entry) => entry.status === 'ready' && !entry.hidden)) assert.ok(pictureOf(card.id), `${card.id} has no picture`);
+  for (const [flatId, oldId] of [...PAIRS.map(([flat, old]) => [flat, old]), ['boucle-flat', 'boucle']]) assert.notEqual(pictureOf(flatId), pictureOf(oldId), `${flatId} draws its own picture`);
+});

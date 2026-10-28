@@ -14,6 +14,7 @@ import { kirigamiLayers } from '../engine/kirigami.js';
 import { starMetricLayers } from '../engine/star-metric.js';
 import { isohedralLayers, isohedralParameterCount, isohedralMaterialClass } from '../engine/isohedral.js';
 import { climbOverlaps } from '../engine/climb.js';
+import { planarLayers, onePlane } from '../engine/flat-variants.js';
 import { buildLayeredVerdict } from './verdict.js';
 import { stepLaceLayers } from '../engine/step-lace.js';
 import { pairedLoopsLayers } from '../engine/paired-loops.js';
@@ -206,7 +207,8 @@ export const RESEARCH_DESIGNS = [layered({
   build: (s, boundary, ctx) => {
     const field = patternField(s.pattern, { scale: s.patternScale, picture: ctx?.picture });
     const built = ringsLayers(boundary, { lattice: s.lattice, ringSize: s.ringSize, overlap: s.overlap, sizeField: field, bead: ctx?.bead ?? .45 });
-    return { layers: [...built], families: built.families, extra: built.extra };
+    // one plane: where two rings overlap they fuse there, and no ring is lifted over another
+    return { layers: planarLayers([...built], { bead: ctx?.bead ?? .45 }), families: built.families, extra: { ...built.extra, flat: true, transform: onePlane } };
   },
   summary: result => `rings in one pass, ${result.report.crossings} joins`,
 }), layered({

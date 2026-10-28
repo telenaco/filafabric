@@ -1,6 +1,16 @@
 import { layered } from './more-designs.js';
 import { coilParams } from './coil-controls.js';
-import { generateCoil } from '../engine/coil.js';
+import { generateCoil, generateCoilTextile, coilRowPitch } from '../engine/coil.js';
+import { thumbFromLayers } from './thumbs.js';
+
+/** The card's picture, drawn from the flat build itself (rows that touch, one plane), not from the layered card's. */
+function flatCoilThumb({ shape, size, pitch, rowPitch = null }) {
+  try {
+    const bead = 0.45, rows = rowPitch ?? Math.max(1.5 * bead, coilRowPitch(size, 0, bead) - 1.4 * bead);
+    const built = generateCoilTextile({ width: 36, height: 22, shape, size, pitch, rowOverlap: 0, rowPitch: rows, layerHeight: 0.2, strandWidth: bead, planCrossings: false });
+    return thumbFromLayers([built.strands.map((strand) => strand.pts.filter((_, i) => i % 3 === 0 || i === strand.pts.length - 1))], 36, 22);
+  } catch { return ''; }
+}
 import { patternField } from '../engine/picture.js';
 
 /** The Bouclé card's own generator, in one plane. */
@@ -89,6 +99,7 @@ export function makeFlatVariants(designs) {
     if (!base) continue;
     out.push({
       ...base, id: flatId, shelf: 'flat', name: label, file: flatId, settingsKey: base.settingsKey,
+      thumb: flatCoilThumb({ shape: id === 'coil' ? 'looped' : 'figure8', size: 2, pitch: 3.6 }),
       blurb: 'One strand in rows, in one layer: the rows only touch',
       about: 'The same rows of one continuous strand, but every row only touches the next (the row overlap is not used here) and the strand stays in one layer, loops crossing themselves in the plane. The raised version, whose strand lifts over its own earlier passes and whose rows reach into each other, is on the Raised shelf.',
       joins: 'One strand in rows; each row touches the next, all in one layer.',
@@ -131,7 +142,7 @@ export function makeFlatVariants(designs) {
   const boucle = find('boucle');
   if (boucle) {
     out.push({
-      ...boucle, id: 'boucle-flat', shelf: 'flat', name: 'Bouclé & picots · flat', file: 'boucle-flat', settingsKey: undefined, support: 'needs-backing',
+      ...boucle, id: 'boucle-flat', shelf: 'flat', name: 'Bouclé & picots · flat', file: 'boucle-flat', thumb: flatCoilThumb({ shape: 'ring', size: 2.4, pitch: 4.5, rowPitch: 4 }), settingsKey: undefined, support: 'needs-backing',
       blurb: 'Rings on a line, in one layer', joins: 'Rings sit on a line, in one layer without the built-in backing.',
       about: `Rows of line with a round ring standing on it, alternately above and below, printed as one strand in one layer. Where a ring meets the next row it is joined in the plane. ${NOTE} The layered version, with its built-in backing, is on the Layered shelf.`,
       generate: (machine, material, s, { outline = null, picture = null } = {}) => boucleFlat(machine, material, s, { outline, picture }),

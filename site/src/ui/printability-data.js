@@ -334,6 +334,27 @@ export const PRINTABILITY = [
     }
   },
   {
+    "id": "rings-flat",
+    "score": 11.1,
+    "components": 1,
+    "joints": 222,
+    "reversedCrossings": 0,
+    "separatedCrossings": 0,
+    "longestUnsupported": 0,
+    "maxSlopeDeg": 0,
+    "outsideSegments": 0,
+    "issues": [],
+    "exportable": true,
+    "physicallyVerified": false,
+    "hops": 222,
+    "moves": 11419,
+    "clearanceFlags": 0,
+    "routing": {
+      "beforeMm": 2854.52978363519,
+      "afterMm": 2854.52978363519
+    }
+  },
+  {
     "id": "auxetic-flat",
     "score": 11.2,
     "components": 1,
@@ -1126,27 +1147,6 @@ export const PRINTABILITY = [
     "routing": {
       "beforeMm": 321.2115593445561,
       "afterMm": 321.2115593445561
-    }
-  },
-  {
-    "id": "rings-flat",
-    "score": 38.850923427676705,
-    "components": 1,
-    "joints": 222,
-    "reversedCrossings": 0,
-    "separatedCrossings": 0,
-    "longestUnsupported": 1.375461713838348,
-    "maxSlopeDeg": 25.00000000000001,
-    "outsideSegments": 0,
-    "issues": [],
-    "exportable": true,
-    "physicallyVerified": false,
-    "hops": 222,
-    "moves": 14219,
-    "clearanceFlags": 0,
-    "routing": {
-      "beforeMm": 2854.52978363519,
-      "afterMm": 2854.52978363519
     }
   },
   {

@@ -460,6 +460,9 @@ const figure8Rows = {
 DESIGNS.splice(DESIGNS.indexOf(coil) + 1, 0, figure8Rows, coilShapeCard);
 // cards that printed as two layers go to the Layered shelf; a truly flat card takes each one's place on the Flat shelf
 DESIGNS.push(...makeFlatVariants(DESIGNS));
+// every card has a picture: Corrugation had none
+const corrugationCard = DESIGNS.find((card) => card.id === 'corrugation');
+if (corrugationCard && !corrugationCard.thumb) corrugationCard.thumb = rowsThumb('wave');
 
 // Common colour state and panel for every card; old boolean links remain accepted.
 for (const mod of DESIGNS.filter(card => card.status === 'ready')) {
