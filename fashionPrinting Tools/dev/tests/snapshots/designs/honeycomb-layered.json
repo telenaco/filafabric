@@ -1,0 +1,18 @@
+[
+  {
+    "card": "honeycomb-layered",
+    "preset": "default",
+    "settingsHash": "0c440b79c348",
+    "gcodeSha256": "317077726f2c201c30d0dba4a5d0e66da6b93b3abf7182369d52acc922175d1a",
+    "strands": 28,
+    "moves": 4748,
+    "extrudeMm": 1373.8,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  }
+]

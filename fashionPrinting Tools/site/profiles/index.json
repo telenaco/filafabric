@@ -1,0 +1,18 @@
+{
+  "machines": [
+    "large-gantry-1000.json",
+    "prusa-mk3s.json"
+  ],
+  "materials": [
+    "filaflex-95-foamy.json",
+    "generic-abs.json",
+    "generic-flex-mk3.json",
+    "generic-hips.json",
+    "generic-petg.json",
+    "generic-pla-silk.json",
+    "generic-pla.json",
+    "generic-pva.json",
+    "generic-tpe.json",
+    "ninjatek-ninjaflex-85a.json"
+  ]
+}

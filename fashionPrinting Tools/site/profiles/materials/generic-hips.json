@@ -1,0 +1,48 @@
+{
+  "id": "generic-hips",
+  "name": "Generic HIPS",
+  "source": "PrusaResearch 2.5.12: Generic HIPS; Original Prusa i3 MK3S & MK3S+ reference",
+  "filament_diameter": 1.75,
+  "density": 1.04,
+  "temperature": {
+    "first_layer": 230,
+    "print": 230
+  },
+  "bed_temperature": 110,
+  "flow": {
+    "multiplier": 1,
+    "reference_line_width": null,
+    "foam_expansion": 1,
+    "max_volumetric_speed_nominal": 11
+  },
+  "retraction": {
+    "length": 0.8,
+    "speed": 35,
+    "deretract_speed": 35,
+    "lift_on_retract_only": true,
+    "z_hop": 0.4,
+    "min_travel": 1,
+    "restart_extra": 0
+  },
+  "fan": {
+    "default": 20
+  },
+  "travel_speed_hint": 150,
+  "pressure_advance_k": null,
+  "notes": "PrusaSlicer reference settings. Cooling is adapted to path roles; gradual layer cooling, filament startup commands and printer compatibility conditions are not reproduced. Match this reference to your printer and spool.",
+  "print_defaults": {
+    "fan_base": 0,
+    "fan_supported": 20,
+    "fan_nonplanar": 20,
+    "fan_unsupported": 20,
+    "fan_travel": 0
+  },
+  "provenance": {
+    "repository": "https://github.com/prusa3d/PrusaSlicer-settings-prusa-fff",
+    "bundle_version": "2.5.12",
+    "preset": "Generic HIPS",
+    "reference_printer": "Original Prusa i3 MK3S & MK3S+",
+    "source_url": "https://github.com/prusa3d/PrusaSlicer-settings-prusa-fff/blob/main/PrusaResearch/2.5.12.ini",
+    "physically_verified": false
+  }
+}

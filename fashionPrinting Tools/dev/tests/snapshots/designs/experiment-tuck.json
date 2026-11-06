@@ -1,0 +1,53 @@
+[
+  {
+    "card": "experiment-tuck",
+    "preset": "default",
+    "settingsHash": "3ee386c12f3f",
+    "gcodeSha256": "42a9f686ca9b1b8b857f5d47ea60bad25623b7f9e2e377c3e0f00f4531969125",
+    "strands": 24,
+    "moves": 1283,
+    "extrudeMm": 399.9,
+    "zMin": 0.2,
+    "zMax": 1.4000000000000001,
+    "families": [
+      "carrier-x",
+      "carrier-y",
+      "texture"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "experiment-tuck",
+    "preset": "gentle",
+    "settingsHash": "8fc4ccf80d4a",
+    "gcodeSha256": "3748113e77a38558e5cbe1d8dae49d7fb8ac81b11092a3a1f0d5ebd501b678c0",
+    "strands": 24,
+    "moves": 1283,
+    "extrudeMm": 399.1,
+    "zMin": 0.2,
+    "zMax": 1,
+    "families": [
+      "carrier-x",
+      "carrier-y",
+      "texture"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "experiment-tuck",
+    "preset": "open",
+    "settingsHash": "fa13e2edebde",
+    "gcodeSha256": "ef527b43910b90a430d11ce7bef4f681486dd5c99e53c13021c5f9a31cd13751",
+    "strands": 15,
+    "moves": 957,
+    "extrudeMm": 312.5,
+    "zMin": 0.2,
+    "zMax": 1.3998065129167956,
+    "families": [
+      "carrier-x",
+      "carrier-y",
+      "texture"
+    ],
+    "ties": 0
+  }
+]

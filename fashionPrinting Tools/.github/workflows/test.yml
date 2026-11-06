@@ -1,0 +1,20 @@
+# Runs the engine and UI-logic tests on every push and pull request, so a broken commit shows a red mark.
+# Publishing is separate: Cloudflare Pages deploys main (production) and every other branch (previews).
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test

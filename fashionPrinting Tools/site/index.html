@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Filafabric: textile G-code studio</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#171c26">
+<link rel="preload" href="vendor/fonts/instrument-sans/instrument-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="src/ui/styles.css?v=20261104-tour">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
+</script>
+</head>
+<body class="locked quiet-warnings">
+<main id="gate" class="gate" aria-labelledby="gate-title">
+  <div class="gate-card">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 22C3 8 12 8 12 22"/><path d="M10 22C10 8 19 8 19 22"/><path d="M17 22C17 8 26 8 26 22"/><path d="M2 26H28"/></svg>
+      <span class="brand-name">Filafabric</span>
+    </div>
+    <p class="gate-kicker">Coming soon</p>
+    <h1 id="gate-title" class="gate-title">Fabric you can print, designed in your browser</h1>
+    <p class="gate-lead">Filafabric is a design studio for flexible fabric structures (loops, coils, weaves, meshes and lace) that turns each one into G-code for a 3D printer and flexible filament. Pick a structure, shape it with a few sliders, check every strand in the preview, and export a file that is ready to print.</p>
+    <ul class="gate-list">
+      <li><strong>Flat, layered and raised structures</strong>, from soft loop pile to auxetic mesh, star lattices and Voronoi lace.</li>
+      <li><strong>A crossing report</strong> that says whether a design will hold together before you print it.</li>
+      <li><strong>A swatch code and a link</strong> on every sample, so any one can be made again.</li>
+    </ul>
+    <form id="gate-form" class="gate-form" autocomplete="off">
+      <label class="gate-label" for="gate-password">Password</label>
+      <div class="gate-row">
+        <input id="gate-password" type="password" required autocomplete="current-password" spellcheck="false" aria-describedby="gate-error">
+        <button id="gate-submit" type="submit" class="btn primary" disabled>Open the studio</button>
+      </div>
+      <p id="gate-error" class="gate-error" role="alert" hidden></p>
+      <label class="gate-remember"><input id="gate-remember" type="checkbox" checked> Stay unlocked on this device</label>
+    </form>
+    <p class="gate-note">An early preview for testers. If you were given a link and a password, this is the place for it.</p>
+    <p class="gate-access">For the latest updates, sign up on our <a href="https://www.3dpstef.eu/hub" target="_blank" rel="noopener">Filafabric Hub</a> or <a href="https://www.linkedin.com/in/jlberna/" target="_blank" rel="noopener">follow the progress on LinkedIn</a>.</p>
+    <p class="gate-access">If you would like to be a beta tester get in touch <a href="mailto:bubakidesign@gmail.com?subject=Filafabric%20access">bubakidesign@gmail.com</a>.</p>
+    <p class="site-credit"><a href="https://www.bubaki.com/" target="_blank" rel="noopener">© 2026 Bubaki</a></p>
+  </div>
+</main>
+
+<header class="topbar">
+  <div class="brand">
+    <svg width="28" height="28" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 22C3 8 12 8 12 22"/><path d="M10 22C10 8 19 8 19 22"/><path d="M17 22C17 8 26 8 26 22"/><path d="M2 26H28"/></svg>
+    <span class="brand-name">Filafabric</span>
+  </div>
+  <span class="sep" aria-hidden="true"></span>
+  <label class="docname" title="Rename this swatch">
+    <span class="visually-hidden">Swatch name</span>
+    <input id="doc-name" type="text" value="Untitled swatch" maxlength="60" autocomplete="off" spellcheck="false">
+    <svg class="pencil" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 2.5l2.5 2.5L5 13.5H2.5V11z"/></svg>
+  </label>
+  <div class="top-actions">
+    <button type="button" id="btn-printer" class="printer-chip" aria-haspopup="dialog">
+      <span class="status-dot" id="printer-dot" aria-hidden="true"></span>
+      <span class="pc-text"><span class="pc-name" id="printer-name">Printer</span><span class="pc-sub" id="printer-material">Filament</span></span>
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>
+    </button>
+    <span class="sep hide-narrow" aria-hidden="true"></span>
+    <button type="button" id="btn-undo" class="icon-btn" aria-label="Undo" title="Undo (Ctrl+Z)" disabled><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4L3 8l4 4"/><path d="M3 8h8a4 4 0 010 8H8"/></svg></button>
+    <button type="button" id="btn-redo" class="icon-btn" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4l4 4-4 4"/><path d="M15 8H7a4 4 0 000 8h3"/></svg></button>
+    <button type="button" id="btn-feedback" class="btn" aria-haspopup="dialog" aria-label="Feedback" title="Tell us what works and what doesn't, ask for a pattern, or report a problem"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7.5H7l-3 2.5V11H2.5z"/><path d="M5.5 6.5h5M5.5 8.5h3"/></svg><span class="btn-label">Feedback</span></button>
+    <button type="button" id="btn-share" class="btn" title="Copy a link that opens this design with these settings"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 9.5a3 3 0 004.2 0l2.3-2.3a3 3 0 00-4.2-4.2l-.9.9"/><path d="M9.5 6.5a3 3 0 00-4.2 0L3 8.8a3 3 0 004.2 4.2l.9-.9"/></svg><span class="btn-label">Share</span></button>
+    <!-- hidden: Export G-code is the button under the settings; this one still carries whether an export is ready -->
+    <button type="button" id="btn-export" class="btn primary" disabled hidden>Export G-code</button>
+    <button type="button" id="btn-more" class="icon-btn" popovertarget="more-menu" aria-label="More options"><svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><circle cx="4" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="14" cy="9" r="1.6"/></svg></button>
+  </div>
+</header>
+
+<div id="more-menu" class="menu" popover>
+  <a class="menu-item" href="./source.html" target="_blank" rel="noopener">Slicing engine source and licences</a>
+  <button type="button" class="menu-item" id="btn-panel">Export repeating garment panel…</button>
+  <button type="button" class="menu-item" id="btn-swatch-lab">Comparison & calibration swatches…</button>
+  <button type="button" class="menu-item" id="btn-swatch-record">Save blank print-evidence record</button>
+  <button type="button" class="menu-item" id="btn-help"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M6.2 6.2a1.9 1.9 0 113 1.5c-.8.5-1.2.9-1.2 1.7M8 11.6v.1"/></svg>Getting started</button>
+  <button type="button" class="menu-item" id="btn-privacy"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 1.8l5 2v4c0 3-2.2 5.3-5 6.4-2.8-1.1-5-3.4-5-6.4v-4z"/><path d="M5.8 8l1.6 1.6 2.9-3"/></svg>Privacy and cookies</button>
+  <div class="menu-sep" role="separator"></div>
+  <button type="button" class="menu-item" id="btn-save-file"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7M5 7l3 3 3-3M3 12.5h10"/></svg>Save settings file</button>
+  <button type="button" class="menu-item" id="btn-error-log" title="Downloads recent local errors and current settings, including the current drawing. Share this file only when you want to share that drawing."><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v7M5 7l3 3 3-3M3 12.5h10"/></svg>Download error log</button>
+  <label class="menu-item file-link"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 4.5h4l1.5 1.5h5.5v6.5h-11z"/></svg>Open settings file…<input type="file" id="file-open" accept=".json,application/json"></label>
+  <div class="menu-sep" role="separator"></div>
+  <button type="button" class="menu-item" id="btn-lock"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 015 0v2"/></svg>Lock the studio</button>
+  <div class="menu-sep" role="separator"></div>
+  <button type="button" class="menu-item" id="btn-reset"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a5 5 0 105-5H5"/><path d="M6.5 1.5L5 3l1.5 1.5"/></svg>Reset this design</button>
+</div>
+
+<div class="app">
+  <aside class="designs" aria-labelledby="designs-title">
+    <h2 class="eyebrow" id="designs-title" title="Essentials first, then the rest easiest first. Every design opens at 100 × 100 mm. The order ranks the default geometry by free spans, slopes, nozzle lifts and clearance flags; physical testing pending.">Designs</h2>
+    <input type="search" id="design-filter" class="design-filter" placeholder="Find a design by name" aria-label="Find a design by name" autocomplete="off" spellcheck="false">
+    <p class="design-filter-none small muted" id="design-filter-none" hidden>No design has that name.</p>
+    <div class="design-list" id="design-list"></div>
+    <div class="design-list" id="experimental-design-list"></div>
+    <p class="more-designs">More structures are on the way.</p>
+    <p class="site-credit"><a href="https://www.bubaki.com/" target="_blank" rel="noopener">© 2026 Bubaki</a></p>
+  </aside>
+  <div class="designs-resizer" id="designs-resizer" role="separator" aria-orientation="vertical" aria-label="Drag to make the design list wider or narrower" tabindex="0" title="Drag to show more designs side by side. Double-click to reset."></div>
+  <main class="stage" id="stage" aria-label="Preview">
+    <div class="preview-bar">
+      <div class="preview-mode-row">
+        <div class="seg" role="group" aria-label="Preview mode">
+          <button type="button" id="preview-full" aria-pressed="true" title="The real toolpath of the whole piece, as it prints, with print time and filament">3D</button>
+          <button type="button" id="preview-whole" aria-pressed="false" title="A flat drawing of the whole piece at the size it prints, shown at once. The G-code builds behind it: then print time and filament appear, the print order can be played, and the view can be saved as SVG.">2D</button>
+          <button type="button" id="preview-detail" aria-pressed="false" title="The real toolpath of a corner of the piece (100 mm), quick for large pieces">3D sample</button>
+        </div>
+        <div id="colour-bar" class="colour-bar" role="toolbar" aria-label="Drawing colour regions" hidden></div>
+      </div>
+      <button type="button" id="preview-cancel" class="btn" hidden>Cancel preview</button>
+      <div id="overview-actions" hidden>
+        <button type="button" id="overview-fit" class="link">Fit piece</button>
+        <button type="button" id="overview-export-svg" class="link" disabled>Export SVG</button>
+      </div>
+    </div>
+    <div id="print-fit-warning" class="preview-fit small" role="alert" hidden><span id="print-fit-message"></span> <button type="button" class="link" id="print-fit-printer">Change printer</button></div>
+    <p id="apply-status" class="small muted" role="status" aria-live="polite" hidden></p>
+    <p id="overview-status" class="small muted" role="status" aria-live="polite" hidden></p>
+    <div class="canvas-wrap" id="canvas-wrap">
+      <div id="preview" class="preview" role="img" aria-label="3D preview of the toolpath"></div>
+      <div id="overview" hidden></div>
+      <div class="canvas-tools">
+        <div class="seg glass" role="group" aria-label="Camera" id="camera-seg">
+          <button type="button" data-camera="top" aria-pressed="false">Top</button>
+          <button type="button" data-camera="angled" aria-pressed="true">Angled</button>
+          <button type="button" data-camera="side" aria-pressed="false">Side</button>
+        </div>
+        <button type="button" id="btn-view" class="tool-btn" popovertarget="view-menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M8 2l6 3-6 3-6-3z"/><path d="M2 8l6 3 6-3M2 11l6 3 6-3"/></svg>View</button>
+      </div>
+      <div class="canvas-note" id="canvas-note" hidden>Showing your last valid settings</div>
+      <div class="busy-chip" id="busy-chip" role="status" aria-live="polite" hidden>Updating…</div>
+      <div class="canvas-foot">
+        <div class="roles" role="group" aria-label="Colours in the preview: click one to hide or show it" id="roles"></div>
+        <p class="canvas-hint" aria-hidden="true"><span class="hint-mouse">Drag to turn · scroll to zoom</span><span class="hint-touch">Drag to turn · pinch to zoom</span></p>
+      </div>
+    </div>
+
+    <div class="playback">
+      <button type="button" id="btn-play" class="play" aria-label="Play the print order"><svg width="16" height="16" viewBox="0 0 18 18" fill="currentColor" aria-hidden="true"><path id="play-icon" d="M5 3l10 6-10 6z"/></svg></button>
+      <label for="scrub" class="scrub-label">Print order</label>
+      <input id="scrub" type="range" min="0" max="1000" step="1" value="1000">
+      <span class="time" id="time-label">0 of 0 min</span>
+    </div>
+  </main>
+
+  <div id="view-menu" class="menu view-menu" popover>
+    <p class="menu-title">Show in the preview</p>
+    <label class="menu-check"><input type="checkbox" data-layer="strand" checked><span><strong>Filament</strong><small>Strands at their true thickness</small></span></label>
+    <label class="menu-check"><input type="checkbox" data-layer="path"><span><strong>Nozzle path</strong><small>The exact centre line the G-code follows</small></span></label>
+    <label class="menu-check"><input type="checkbox" data-layer="travel"><span><strong>Travel moves</strong><small>Moves between strands, not printing</small></span></label>
+    <label class="menu-check"><input type="checkbox" data-layer="hops"><span><strong>Lifts</strong><small>Where the nozzle rises and drops between strands</small></span></label>
+    <div class="menu-sep" role="separator"></div>
+    <label class="menu-check"><input type="checkbox" id="exaggerate"><span><strong>Exaggerate height</strong><small>Stretch heights 2.5× to read the pile</small></span></label>
+    <label class="menu-check" id="tight-option"><input type="checkbox" id="show-violations"><span><strong>Tight spots</strong><small>Red marks where the nozzle passes close to a loop</small></span></label>
+  </div>
+
+  <aside class="settings" aria-label="Settings">
+    <div class="settings-body" id="settings-body">
+      <div class="errors" id="errors" role="alert" hidden></div>
+      <section id="region-header" class="region-header" aria-label="Selected drawing region" hidden></section>
+      <div id="region-import" hidden></div>
+
+      <div id="panel-loop-pile" class="panel">
+        <header class="panel-head">
+          <h1 class="title">Loop pile</h1>
+        </header>
+
+        <section class="group" aria-labelledby="lp-size-title">
+          <h2 class="eyebrow" id="lp-size-title">Size and shape</h2>
+          <div id="lp-size"></div>
+          <div class="ctl edge-ctl">
+            <div class="ctl-top"><span class="ctl-label" id="edge-label">Loops at the back edge</span><span class="ctl-readout" id="edge-value"></span></div>
+            <p class="ctl-help">Each loop reaches one loop length past its feet, so the last base lines either get loops that overhang the edge or none.</p>
+            <div class="seg two" role="group" aria-labelledby="edge-label" id="edge-seg">
+              <button type="button" data-edge="every" aria-pressed="true"><span class="seg-main">On every line</span><span class="seg-sub">The pile overhangs</span></button>
+              <button type="button" data-edge="inside" aria-pressed="false"><span class="seg-main">Inside the swatch</span><span class="seg-sub">Last lines bare</span></button>
+            </div>
+          </div>
+        </section>
+
+        <section class="group" aria-labelledby="lp-look-title">
+          <h2 class="eyebrow" id="lp-look-title">Look and feel</h2>
+          <div id="lp-sliders" class="controls"></div>
+          <div class="ctl">
+            <div class="ctl-top"><span class="ctl-label" id="room-label">Room between loops</span><span class="ctl-readout" id="room-value"></span></div>
+            <p class="ctl-help">Space where neighbouring loop feet meet, so the nozzle can pass.</p>
+            <div class="seg two" role="group" aria-labelledby="room-label" id="room-seg">
+              <button type="button" data-room="standard" aria-pressed="true">Standard</button>
+              <button type="button" data-room="roomy" aria-pressed="false">Roomy</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="group" aria-labelledby="lp-pattern-title">
+          <h2 class="eyebrow" id="lp-pattern-title">Pattern</h2>
+          <p class="group-hint">Raises some loops and lowers others: tall where the pattern is bright, short where it is dark.</p>
+          <div id="lp-pattern"></div>
+        </section>
+
+        <section class="group advanced">
+          <button type="button" id="btn-advanced" class="disclosure" aria-expanded="false" aria-controls="advanced-body">
+            <span class="disc-text"><span class="disc-title">Advanced settings</span><span class="disc-sub" id="advanced-count">Speeds, cooling, strand, nozzle and more</span></span>
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l5 5 5-5"/></svg>
+          </button>
+          <div id="advanced-body" hidden></div>
+        </section>
+      </div>
+
+    </div>
+
+    <footer class="summary" id="summary" aria-label="Print summary">
+      <div class="check" id="check" aria-live="polite"></div>
+      <div class="figures-row">
+        <div class="figures" id="figures"></div>
+        <button type="button" id="btn-details" class="link small" aria-expanded="false" aria-controls="details">Details</button>
+      </div>
+      <div class="details" id="details" hidden></div>
+      <div class="export-group">
+        <p id="study-notice" class="study-notice small muted" hidden>Exports and build failures share anonymous settings for research. Artwork and filenames stay on your device. <button type="button" class="link inline-link" data-open-study>Details</button></p>
+        <button type="button" id="btn-apply" class="btn primary export" disabled>Apply</button>
+      </div>
+    </footer>
+  </aside>
+</div>
+
+<dialog id="variants-dialog" class="variants-dialog" aria-labelledby="variants-title">
+  <h2 id="variants-title">Print all variants</h2>
+  <p id="variants-status" class="muted" role="status" aria-live="polite">Preparing variants…</p>
+  <div id="variants-preview" class="variants-preview" aria-label="Side-by-side variant preview"></div>
+  <ul id="variants-list" class="variants-list"></ul>
+  <p id="variants-note" class="small muted"></p>
+  <div class="dialog-actions">
+    <button type="button" class="btn" id="variants-cancel">Cancel</button>
+    <button type="button" class="btn primary" id="variants-download" disabled>Export one G-code file</button>
+  </div>
+</dialog>
+
+<dialog id="printer-dialog" aria-labelledby="printer-dialog-title">
+  <form method="dialog">
+    <h2 id="printer-dialog-title">Printer setup</h2>
+    <p class="muted">Choose your printer, filament and layers.</p>
+    <div class="field-row stacked profile-picker" id="machine-picker">
+      <label for="machine-search">Printer</label>
+      <div class="profile-input">
+        <input id="machine-search" type="text" role="combobox" autocomplete="off" spellcheck="false" placeholder="Choose or search printers…" aria-controls="machine-list" aria-expanded="false" aria-autocomplete="list">
+        <button type="button" class="profile-toggle" aria-label="Browse printers" aria-controls="machine-list" aria-expanded="false" tabindex="-1">▾</button>
+      </div>
+      <div id="machine-list" class="profile-options" role="listbox" aria-label="Printers" hidden></div>
+      <p class="profile-status small muted" role="status" hidden></p>
+    </div>
+    <div class="field-row stacked profile-picker" id="material-picker">
+      <label for="sel-material">Filament</label>
+      <div class="profile-input">
+        <input id="sel-material" type="text" role="combobox" autocomplete="off" spellcheck="false" placeholder="Choose or search filaments…" aria-controls="material-list" aria-expanded="false" aria-autocomplete="list">
+        <button type="button" class="profile-toggle" aria-label="Browse filaments" aria-controls="material-list" aria-expanded="false" tabindex="-1">▾</button>
+      </div>
+      <div id="material-list" class="profile-options" role="listbox" aria-label="Filaments" hidden></div>
+      <p class="profile-status small muted" role="status" hidden></p>
+    </div>
+    <fieldset class="filament-settings" id="filament-settings">
+      <legend>Filament settings</legend>
+      <div id="filament-fields"></div>
+      <button type="button" class="link small" id="filament-reset" disabled>Reset filament defaults</button>
+    </fieldset>
+    <p class="muted small" id="dialog-note"></p>
+    <div id="print-setup"></div>
+    <div class="profile-add">
+      <label class="btn" for="profile-file">Add a printer or filament file…</label>
+      <input type="file" id="profile-file" class="visually-hidden" accept=".ini,.json,.gcode" multiple>
+      <details class="profile-import-help small muted">
+        <summary>Which files can I import?</summary>
+        <p>Use a complete PrusaSlicer .ini or sliced .gcode, or a self-contained Bambu Studio / OrcaSlicer printer or filament .json. Process-only presets and files missing parent settings cannot be imported. Review any import warnings before printing.</p>
+      </details>
+      <p class="small"><a class="link" href="samples/printer-profile.ini" download>Download sample .ini</a> · <a class="link" href="samples/printer-profile.json" download>Sample .json</a> · <a class="link" href="profiles/README.md" target="_blank" rel="noopener">Profile requirements</a></p>
+      <ul class="profile-list" id="profile-list" hidden></ul>
+    </div>
+    <div class="dialog-actions"><button class="btn primary" value="close">Save and close</button></div>
+  </form>
+</dialog>
+
+<dialog id="panel-dialog" aria-labelledby="panel-title">
+  <h2 id="panel-title">Export repeating garment panel</h2>
+
+  <div id="export-panel-fields" hidden>
+    <p class="muted small">A continuous crossed backing with this texture repeated above it, exported in sections. The preview stays a swatch.</p>
+    <div class="panel-dimensions">
+      <label class="field-row stacked" for="panel-width"><span>Width (mm)</span><input id="panel-width" type="number" min="1" step="1" value="1000"></label>
+      <label class="field-row stacked" for="panel-height"><span>Height (mm)</span><input id="panel-height" type="number" min="1" step="1" value="1000"></label>
+      <label class="field-row stacked" for="panel-repeat"><span>Texture repeat (mm)</span><input id="panel-repeat" type="number" min="5" step="5" value="50"></label>
+      <label class="field-row stacked" for="panel-backing"><span>Backing spacing (mm)</span><input id="panel-backing" type="number" min="0.3" step="0.1" value="5"></label>
+    </div>
+    <p class="export-warn small" id="export-fit" role="alert" hidden></p>
+    <p class="small muted" id="panel-svg-note">Radial motifs repeat per section. Outlines and holes apply to the whole panel.</p>
+  </div>
+
+  <div class="export-setup">
+    <span class="status-dot ok" aria-hidden="true"></span>
+    <span class="export-setup-text"><strong id="export-setup-name"></strong><span class="small muted" id="export-setup-sub"></span></span>
+    <button type="button" class="btn" id="export-change-setup">Change</button>
+  </div>
+
+  <label class="field-row stacked" for="export-filename"><span>File name</span><input id="export-filename" type="text" maxlength="180" spellcheck="false" autocomplete="off"></label>
+
+  <progress id="panel-progress" max="1" value="0" hidden aria-label="Panel export progress"></progress>
+  <p id="panel-status" class="small" role="status" aria-live="polite"></p>
+  <div class="dialog-actions"><button type="button" id="panel-close" class="btn">Cancel</button><button type="button" id="panel-cancel" class="btn" hidden>Cancel export</button><button type="button" id="panel-start" class="btn primary">Save G-code</button></div>
+</dialog>
+
+<dialog id="study-dialog" class="help" aria-labelledby="study-title">
+  <form method="dialog">
+    <h2 id="study-title">Privacy and research statistics</h2>
+    <p>When the research notice is visible in the studio, exports and failed builds send a small record of the design settings to the study database. These statistics help us understand which fabric structures people choose and which settings need better support.</p>
+    <h3>What is recorded</h3>
+    <p>The selected design and pattern settings; width and height; layer and nozzle settings; estimated print time, filament and move count for exports; whether an SVG or image was used; numeric counts of SVG paths, points and green guides; and whether the action was a swatch, garment panel, settings file or failed build. Failures record a fixed error category and any known numeric limit, without the raw error message or stack. Records are grouped by UTC date.</p>
+    <h3>What stays on your device</h3>
+    <p>Uploaded SVG paths and images, filenames, document titles and saved settings files are not uploaded to the study database. The database stores no IP addresses, user accounts, browser fingerprints, cookies or persistent participant identifiers.</p>
+    <p>The hosting provider, Cloudflare, necessarily handles network requests to serve the site. Its infrastructure processing is separate from the export records stored by this application.</p>
+    <p>A separate error history stays in your browser, limited to the last 50 attempts. “Download error log” saves that history and your complete current design, including any drawing, locally. It is not sent to the study database; only share that file when you want to share its contents.</p>
+    <h3>Cookies and what is kept in your browser</h3>
+    <p>Filafabric sets no cookies and uses no advertising, analytics or tracking services. Its font is served from this site, not from a font service. Your browser's local storage keeps what the studio needs to work for you: your current design and settings, printers and filaments you added, whether you unlocked the preview, your last 50 build errors, and your answer to the privacy notice. None of it is sent anywhere by keeping it there, and clearing this site's data in your browser removes it.</p>
+    <h3>Turning the counting off</h3>
+    <p>The privacy notice shown on your first visit has a “Don't count my exports” button. You can change your answer at any time in the studio under ⋯ › Privacy and cookies. While counting is off, the research notice above Export is hidden and no export or failure record is sent from that browser.</p>
+    <h3>The feedback form</h3>
+    <p>Feedback is separate from these statistics and is only sent when you press Send. The form service, Formspree, emails it to the Filafabric team at Bubaki: what you wrote, the design you had open, the studio version and, only if you give it, your email address for a reply. A problem report can also carry the recent error history and the current settings, which you can read in full in the form before sending, or leave out. Your drawing, its file name and any picture are never sent by the form; a picture goes only if you choose to email it yourself.</p>
+    <h3>What an export means</h3>
+    <p>A record counts an export action, not a unique person, a completed print or a confirmed saved download. Repeated exports count separately. Cancelled panel jobs are not recorded. Statistics are not collected while the database is disconnected, and a collection failure never prevents an export.</p>
+    <p class="small muted">Notice version: 15 October 2026.</p>
+    <div class="dialog-actions"><button class="btn primary" value="close">Close</button></div>
+  </form>
+</dialog>
+
+<dialog id="feedback-dialog" aria-labelledby="feedback-title">
+  <form id="feedback-form" novalidate>
+    <h2 id="feedback-title">Send feedback</h2>
+    <p class="muted small">It goes straight to the Filafabric team at Bubaki, and every message is read.</p>
+    <div class="feedback-kinds" role="radiogroup" aria-label="What is it about?">
+      <label class="feedback-kind"><input type="radio" name="kind" value="opinion" checked><span><svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7.5H7l-3 2.5V11H2.5z"/><path d="M5.5 6.5h5M5.5 8.5h3"/></svg>What works, what doesn't</span></label>
+      <label class="feedback-kind"><input type="radio" name="kind" value="pattern"><span><svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 5c2-2.5 4 2.5 6 0s4 2.5 6 0M2 11c2-2.5 4 2.5 6 0s4 2.5 6 0"/><path d="M8 1.5v3M8 11.5v3"/></svg>Request a pattern</span></label>
+      <label class="feedback-kind"><input type="radio" name="kind" value="problem"><span><svg width="22" height="22" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2L14.5 13.5h-13z"/><path d="M8 6.5v3M8 11.5v.1"/></svg>Report a problem</span></label>
+    </div>
+    <label class="field-row stacked" for="feedback-message"><span id="feedback-prompt">What works well, and what doesn't?</span><textarea id="feedback-message" name="message" rows="5" maxlength="5000"></textarea></label>
+    <p id="feedback-picture" class="feedback-note small" hidden>Have a picture of it? <a id="feedback-mailto" href="mailto:bubakidesign@gmail.com">Email it with your picture</a> instead: your email app opens with this description filled in, so you only attach the image.</p>
+    <div id="feedback-report-box" class="feedback-report-box" hidden>
+      <label class="field-row inline"><input type="checkbox" id="feedback-include" checked><span>Include the error details and current settings</span></label>
+      <details class="feedback-report"><summary>See exactly what is sent</summary><pre id="feedback-report"></pre></details>
+      <p class="small muted">Your drawing itself is never sent. To share it, use More › Download error log and email the file to <a href="mailto:bubakidesign@gmail.com">bubakidesign@gmail.com</a>.</p>
+    </div>
+    <label class="field-row stacked" for="feedback-email"><span>Your email <span class="muted">(optional, for a reply)</span></span><input id="feedback-email" name="email" type="email" autocomplete="email" maxlength="200" spellcheck="false"></label>
+    <input type="text" name="_gotcha" class="visually-hidden" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <p id="feedback-status" class="feedback-status small" role="status" aria-live="polite"></p>
+    <div class="dialog-actions feedback-actions"><button type="button" class="btn" id="feedback-cancel">Cancel</button><button type="submit" class="btn primary" id="feedback-send">Send</button></div>
+  </form>
+</dialog>
+
+<section id="privacy-banner" class="privacy-banner" aria-labelledby="privacy-title" hidden>
+  <h2 id="privacy-title">Cookies and privacy</h2>
+  <p>Filafabric uses no cookies, ads or trackers. Your settings are kept in this browser, so the studio opens where you left it.</p>
+  <p>When you export, we anonymously count which design and settings you used, to see which structures get printed most over time and which tools matter. Your drawings and files are never part of it. <button type="button" class="link inline-link" data-open-study>What is counted</button></p>
+  <p>We would also love to hear what you make: <button type="button" class="link inline-link" id="privacy-feedback">send feedback</button>.</p>
+  <p id="privacy-state" class="privacy-state" hidden></p>
+  <div class="privacy-actions">
+    <button type="button" class="btn" id="privacy-decline">Don't count my exports</button>
+    <button type="button" class="btn primary" id="privacy-accept">OK, I'd love to contribute</button>
+  </div>
+</section>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script type="module" src="src/boot.js?v=20261104-tour"></script>
+</body>
+</html>

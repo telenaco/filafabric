@@ -1,0 +1,86 @@
+[
+  {
+    "card": "spiral",
+    "preset": "default",
+    "settingsHash": "c6064808c3d7",
+    "gcodeSha256": "1f8cd952d21081258892c8216afafccc7eb21329a3d384a41bc1492ae9493290",
+    "strands": 15,
+    "moves": 1567,
+    "extrudeMm": 1447,
+    "zMin": 0.2,
+    "zMax": 0.6000000000000001,
+    "families": [
+      "L1",
+      "carrier-1",
+      "carrier-2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "spiral",
+    "preset": "tight",
+    "settingsHash": "4c27916b0867",
+    "gcodeSha256": "dfebaf0a1e4b046cff176054909412ab949811cc79edb6c7f8c4be7936ffe276",
+    "strands": 15,
+    "moves": 1758,
+    "extrudeMm": 1834.1,
+    "zMin": 0.2,
+    "zMax": 0.6000000000000001,
+    "families": [
+      "L1",
+      "carrier-1",
+      "carrier-2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "spiral",
+    "preset": "standard",
+    "settingsHash": "c6064808c3d7",
+    "gcodeSha256": "1f8cd952d21081258892c8216afafccc7eb21329a3d384a41bc1492ae9493290",
+    "strands": 15,
+    "moves": 1567,
+    "extrudeMm": 1447,
+    "zMin": 0.2,
+    "zMax": 0.6000000000000001,
+    "families": [
+      "L1",
+      "carrier-1",
+      "carrier-2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "spiral",
+    "preset": "open",
+    "settingsHash": "10fa0d20b223",
+    "gcodeSha256": "9a83513e70901902a609e07ce852f900127d00d5c4606e765c12ad25347720ef",
+    "strands": 15,
+    "moves": 1380,
+    "extrudeMm": 1078.5,
+    "zMin": 0.2,
+    "zMax": 0.6000000000000001,
+    "families": [
+      "L1",
+      "carrier-1",
+      "carrier-2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "spiral",
+    "preset": "normals",
+    "settingsHash": "bc4506fd9eeb",
+    "gcodeSha256": "62a398cc8855b4b991cc9461c3cb4ce10eb06082ff5247422e7799b5810b5d7c",
+    "strands": 101,
+    "moves": 1842,
+    "extrudeMm": 1865,
+    "zMin": 0.2,
+    "zMax": 0.7470263308952136,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  }
+]

@@ -1,0 +1,66 @@
+[
+  {
+    "card": "rotating-triangles",
+    "preset": "default",
+    "settingsHash": "21b8d70e5e6b",
+    "gcodeSha256": "075909e5bec14ad230185ab0ea32b316ad09b861c8f4b85a435b423fb0c16e88",
+    "strands": 322,
+    "moves": 4471,
+    "extrudeMm": 1434.2,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "necks",
+      "triangles"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "rotating-triangles",
+    "preset": "kagome",
+    "settingsHash": "e69f31b973cd",
+    "gcodeSha256": "221f0b0ee5539f5cd3892bd391e0bcf6ea789151a6050eb30faa2cf2f707f5a2",
+    "strands": 316,
+    "moves": 4363,
+    "extrudeMm": 1343.4,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "necks",
+      "triangles"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "rotating-triangles",
+    "preset": "tilted",
+    "settingsHash": "21b8d70e5e6b",
+    "gcodeSha256": "075909e5bec14ad230185ab0ea32b316ad09b861c8f4b85a435b423fb0c16e88",
+    "strands": 322,
+    "moves": 4471,
+    "extrudeMm": 1434.2,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "necks",
+      "triangles"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "rotating-triangles",
+    "preset": "maximum",
+    "settingsHash": "8601d06018e7",
+    "gcodeSha256": "a1ea780d7146c3c18a568af2ac92f44153fe0ad1b0a27701feb0d4168883dd72",
+    "strands": 218,
+    "moves": 2982,
+    "extrudeMm": 1193.2,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "necks",
+      "triangles"
+    ],
+    "ties": 0
+  }
+]

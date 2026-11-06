@@ -1,0 +1,14 @@
+{
+  "type": "machine",
+  "name": "Bench X1 0.4 nozzle",
+  "from": "user",
+  "inherits": "Bambu Lab X1 Carbon 0.4 nozzle",
+  "printable_area": ["0x0", "256x0", "256x256", "0x256"],
+  "printable_height": "250",
+  "nozzle_diameter": ["0.4"],
+  "gcode_flavor": "marlin",
+  "machine_max_speed_x": ["500", "200"],
+  "machine_max_acceleration_x": ["20000", "20000"],
+  "machine_start_gcode": "M140 S[bed_temperature_initial_layer_single]\nG28\n{if filament_type[initial_extruder]==\"PLA\"}M900 K0.02{endif}\nM109 S[nozzle_temperature_initial_layer]\nG92 E0",
+  "machine_end_gcode": "M140 S0\nM104 S0\nG1 Z{max_layer_z + 2} F600\nM84"
+}
