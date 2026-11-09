@@ -516,6 +516,7 @@ const host = {
   vectorSize: () => (state.vector ? [state.vector.width, state.vector.height] : null),
   svg: () => svgSituation(),
   importSvg: (file) => importSvg(file),
+  fitSvgToBed: () => fitSvgToBed(),
   removeSvg: () => removeSvg(),
   setShapeOutline: (on) => setShapeOutline(on),
 };
@@ -596,6 +597,8 @@ function svgSituation() {
     allowsOutline: !state.regions?.length,
     hasShapes: !!(v && shapesOf(v)),
     outlineOn: registered,
+    // a drawing smaller than the bed is left as it is; this is the size it would become if asked to fit the bed
+    fitSize: v ? bedFitSize(v) : null,
     // Only detailed 3D may show a sample; the lightweight 2D view always shows the complete document.
     window: v && state.result && (v.width > state.result.cfg.t.sample_width || v.height > state.result.cfg.t.sample_height) ? [state.result.cfg.t.sample_width, state.result.cfg.t.sample_height] : null,
   };
@@ -643,10 +646,34 @@ async function importSvg(file) {
     commit();
     const size = `${state.vector.width.toFixed(1)} × ${state.vector.height.toFixed(1)} mm`;
     toast(scaled ? `Imported ${state.vector.name}, scaled down from ${drawn[0].toFixed(1)} × ${drawn[1].toFixed(1)} mm to ${size} to fit the ${shortMachine(state.machines.get(state.machine).name)} bed`
-      : `Imported ${state.vector.name}: ${size}`);
+      : `Imported ${state.vector.name}: ${size}${bedFitSize(state.vector) ? '. It is smaller than the bed: Fit to printer bed scales it up' : ''}`);
   } catch (e) {
     toast(`Could not import the SVG: ${e.message}`);
   }
+}
+
+/** The size a drawing would take if scaled, at its proportions, to the printer bed less a margin: null when that is not bigger than it is now. */
+function bedFitSize(vector) {
+  const limits = bedSizeLimits(state.machines.get(state.machine), printOverhang());
+  const [w, h] = fitToBed(limits, { w: vector.width, h: vector.height });
+  return w > vector.width + 0.5 || h > vector.height + 0.5 ? [w, h] : null;
+}
+
+/** Scales the imported drawing up to the printer bed (a smaller drawing is never scaled on its own: this is asked for). */
+function fitSvgToBed() {
+  const v = state.vector;
+  const size = v && bedFitSize(v);
+  if (!size) return;
+  state.vector = scaleDrawing(v, size[0] / v.width);
+  if (state.outline?.page) state.outline = shapesOf(state.vector);
+  followVectorSize();
+  $('#panel-width').value = state.vector.width;
+  $('#panel-height').value = state.vector.height;
+  syncControls();
+  renderRegions(true);
+  schedule();
+  commit();
+  toast(`${state.vector.name} is now ${state.vector.width.toFixed(1)} × ${state.vector.height.toFixed(1)} mm, the most the ${shortMachine(state.machines.get(state.machine).name)} bed takes at its proportions`);
 }
 
 function removeSvg() {

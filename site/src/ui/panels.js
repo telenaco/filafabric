@@ -1214,6 +1214,7 @@ export class SvgImportCard extends Control {
     this.dropHint = el('span', { class: 'small muted svg-drop-hint', text: 'or drop a file here', 'aria-hidden': 'true' });
     this.remove = el('button', { type: 'button', id: 'svg-lines-remove', class: 'link small', text: 'Remove SVG', hidden: true });
     this.info = el('p', { id: 'svg-lines-info', class: 'small muted' });
+    this.fit = el('button', { type: 'button', id: 'svg-fit-bed', class: 'link small', hidden: true });
     this.shapeSwitch = el('input', { type: 'checkbox', role: 'switch', id: 'svg-outline-switch' });
     this.shapeRow = el('label', { class: 'switch-row', hidden: true, title: 'Cut this pattern to the red SVG shapes, leaving blue holes empty. Pattern ends meet the printed borders.' }, this.shapeSwitch,
       el('span', {}, el('strong', { text: 'Fill its shapes with this pattern' })));
@@ -1228,7 +1229,7 @@ export class SvgImportCard extends Control {
       el('p', {}, 'or ', this.tryButton),
       el('p', {}, download));
     this.node = el('div', { class: 'svg-layer-control', 'aria-label': 'SVG import' },
-      el('div', { class: 'svg-layer-actions' }, this.pick, this.dropHint, this.remove), this.sample, this.info, this.shapeRow, this.note);
+      el('div', { class: 'svg-layer-actions' }, this.pick, this.dropHint, this.remove), this.sample, this.info, this.fit, this.shapeRow, this.note);
     this.tryButton.addEventListener('click', async () => {
       try {
         const res = await fetch(SAMPLE_SVG);
@@ -1242,6 +1243,7 @@ export class SvgImportCard extends Control {
     this.input.addEventListener('change', (e) => { if (e.target.files[0]) void host.importSvg(e.target.files[0]); e.target.value = ''; });
     this.pick.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.input.click(); } });
     this.remove.addEventListener('click', () => host.removeSvg());
+    this.fit.addEventListener('click', () => host.fitSvgToBed());
     this.shapeSwitch.addEventListener('change', () => host.setShapeOutline(this.shapeSwitch.checked));
     const node = this.node;
     node.addEventListener('dragover', (e) => { e.preventDefault(); node.classList.add('dragover'); });
@@ -1254,6 +1256,12 @@ export class SvgImportCard extends Control {
     const v = s.vector;
     this.info.textContent = v ? `${v.name} · ${fmt(v.width)} × ${fmt(v.height)} mm` : '';
     this.info.hidden = !v;
+    // smaller than the bed: left alone on import, but one click scales it up
+    this.fit.hidden = !(v && s.fitSize);
+    if (s.fitSize) {
+      this.fit.textContent = `Fit to printer bed (${fmt(s.fitSize[0])} × ${fmt(s.fitSize[1])} mm)`;
+      this.fit.dataset.tip = 'Scale the whole drawing up, at its proportions, to the most this printer bed takes.';
+    }
     this.pick.dataset.tip = v ? 'Replace the imported SVG drawing.' : 'Import an SVG drawing at its document size.';
     this.pick.setAttribute('aria-description', this.pick.dataset.tip);
     this.remove.hidden = !v;

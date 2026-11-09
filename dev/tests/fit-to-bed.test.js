@@ -20,3 +20,13 @@ test('scaleDrawing scales the page, every path and the line widths together', ()
   assert.equal(scaleDrawing(drawing, 1), drawing);
   assert.equal(drawing.width, 500); // the original is left as it was
 });
+
+test('a drawing smaller than the bed is only scaled up when asked: fitToBed gives its size, scaleDrawing applies it', () => {
+  const bed = { width: 250, height: 210 };
+  const small = { name: 'butterfly', width: 68.7917, height: 68.7917, paths: [[{ x: 0, y: 0 }, { x: 68.7917, y: 68.7917 }]], styles: [{ color: 'red', width: 0.5 }] };
+  const [w, h] = fitToBed(bed, { w: small.width, h: small.height });
+  assert.deepEqual([w, h], [200, 200]); // the depth limits it, at the drawing's proportions
+  const fitted = scaleDrawing(small, w / small.width);
+  assert.ok(Math.abs(fitted.width - 200) < 1e-3 && Math.abs(fitted.height - 200) < 1e-3);
+  assert.ok(Math.abs(fitted.styles[0].width - 0.5 * 200 / 68.7917) < 1e-3, 'line widths scale with it');
+});

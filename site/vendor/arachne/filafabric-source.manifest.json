@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "site/vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "37f9f9c1c8cd2fe663332c79d394be3472e60cc12ce99905413a8e1683304b1d",
+  "archiveSha256": "03a440155d20a26094133252556780f86163fb4a32a206dce74052956a75c167",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -311,8 +311,8 @@
     },
     {
       "path": "dev/tests/fit-to-bed.test.js",
-      "bytes": 1193,
-      "sha256": "b3852e96843c5904d14bdbaf69326932c66c4d734cca1d9aed6e5551098e54b3"
+      "bytes": 1946,
+      "sha256": "3d7f9baed4506ea73143f36be33f8ccd365c3bb0fb6cacf4f189a5b6579307fa"
     },
     {
       "path": "dev/tests/fix-geometry.test.js",
@@ -1197,7 +1197,7 @@
     {
       "path": "dev/tests/snapshots/designs/svgdesign.json",
       "bytes": 2549,
-      "sha256": "6842770d6db664ba2d855f76edbdd3bdcfee87db1c5b32a8ceeac565223df5fa"
+      "sha256": "bf470a06bee9e76e1549df1ab150241eaf4727a25bda5dfa63d83bbf0e6421c2"
     },
     {
       "path": "dev/tests/snapshots/designs/trapezoid-net.json",
@@ -1832,7 +1832,7 @@
     {
       "path": "site/precomputed/index.json",
       "bytes": 33892,
-      "sha256": "e4f5962d4998b1727332558e54e31f1e836e793792d4a23c23b51f773211e59a"
+      "sha256": "a5c2c16179bf9ec4ca27eaef5fde3f7a908431597c27f6530a4a8f4b3244cff3"
     },
     {
       "path": "site/profiles/MATERIAL_SOURCES.md",
@@ -2671,8 +2671,8 @@
     },
     {
       "path": "site/src/ui/main.js",
-      "bytes": 155509,
-      "sha256": "aa926756e7c6e2c011c42a2a46d46305f2eac2ae063e292f0eb5c1151a9f8bec"
+      "bytes": 156962,
+      "sha256": "7e45ed74d26f4f42ac386e708afa5226642b012ba154294e35aa9d81dd204651"
     },
     {
       "path": "site/src/ui/more-designs.js",
@@ -2716,8 +2716,8 @@
     },
     {
       "path": "site/src/ui/panels.js",
-      "bytes": 74829,
-      "sha256": "8cc16b533c2597e7d95ecfdd544a32f266534dd5004a73d4508348377d4e2504"
+      "bytes": 75371,
+      "sha256": "503d98e3da7d184b2ad62267e74dcdaf8b67864583cbc12559a91965552309fe"
     },
     {
       "path": "site/src/ui/param-schema.js",
@@ -2727,7 +2727,7 @@
     {
       "path": "site/src/ui/precomputed-version.js",
       "bytes": 198,
-      "sha256": "5c140cbec868ca70a9dae4c5ca0f0e5ab3184af8b34b087c72fe85539812f655"
+      "sha256": "c07bcf3287ea684f8fef92b045b07c2424cdb0bec30428c2d7b2e0a370b7d88f"
     },
     {
       "path": "site/src/ui/preview.js",
