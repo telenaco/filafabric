@@ -247,7 +247,7 @@ test('the reader is tolerant of an Inkscape or Illustrator file and strict about
   assert.equal(xml.children[0].children[0].attrs.id, 'a&b');
   assert.throws(() => parseSvg('hello'), /not readable SVG/);
   assert.throws(() => parseSvg(svg('<text>words</text>')), /No printable paths/);
-  assert.throws(() => parseSvg('<svg xmlns="http://www.w3.org/2000/svg" width="5000mm" height="10mm"><path d="M0 0L5 5" stroke="red"/></svg>'), /0–1000 mm/);
+  { const big = parseSvg('<svg xmlns="http://www.w3.org/2000/svg" width="5000mm" height="10mm"><path d="M0 0L5 5" stroke="red"/></svg>'); assert.deepEqual([big.width, big.height, big.scaledBy, big.drawnSize], [1000, 2, 0.2, [5000, 10]]); assert.deepEqual(big.paths[0].at(-1), { x: 0.2646, y: 1.7354 }); }
 });
 
 test('a saved drawing keeps its colours only when they line up with its paths', () => {

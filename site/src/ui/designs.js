@@ -549,6 +549,9 @@ for (const mod of DESIGNS.filter(card => card.status === 'ready')) {
   mod.colourModes = mod.patternEffects?.includes('thickness') ? ['one', 'face', 'per-layer', 'halftone2'] : ['one', 'face', 'per-layer'];
   if (mod.controls) {
     const controls = mod.controls.filter(section => !(section.kind === 'switch' && section.key === 'colorChange') && section.kind !== 'colour');
+    // Size and shape is always the first section, ahead of Start from
+    const sizeAt = controls.findIndex(section => section.kind === 'size');
+    if (sizeAt > 0) controls.unshift(...controls.splice(sizeAt, 1));
     const supportAt = controls.findIndex(section => section.kind === 'support');
     controls.splice(supportAt < 0 ? controls.length : supportAt, 0, { kind: 'colour', title: 'Colour' });
     // an extra backing under the design, just before its colour: not under a raised design (it has its own base) nor

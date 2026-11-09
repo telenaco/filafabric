@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="theme-color" content="#171c26">
 <link rel="preload" href="vendor/fonts/instrument-sans/instrument-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="src/ui/styles.css?v=20261028-print-order">
+<link rel="stylesheet" href="src/ui/styles.css?v=20261104-tour">
 <script type="importmap">
 { "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
 </script>
@@ -311,29 +311,6 @@
   <div class="dialog-actions"><button type="button" id="panel-close" class="btn">Cancel</button><button type="button" id="panel-cancel" class="btn" hidden>Cancel export</button><button type="button" id="panel-start" class="btn primary">Save G-code</button></div>
 </dialog>
 
-<dialog id="help-dialog" class="help" aria-labelledby="help-title">
-  <form method="dialog">
-    <h2 id="help-title">Getting started</h2>
-    <ol class="steps">
-      <li><strong>Pick a design</strong> on the left. Each one is a different kind of printed fabric.</li>
-      <li><strong>Shape it</strong> with the controls on the right: type a width and height, or drop an SVG outline and the pattern fills that shape. The preview updates as you go: drag it to turn, scroll to zoom, and press play to watch the print order.</li>
-      <li><strong>Check the summary</strong> above the Export button: print time, filament, and anything worth a second look.</li>
-      <li><strong>Apply and export.</strong> For a drawing with several pattern regions, select each colour to set its role and design, then Apply the whole piece. Export in the header saves one G-code file. A single design stays a one-click export.</li>
-    </ol>
-    <h3>Your first prints</h3>
-    <p class="muted">The filament profile is new, so build up in small steps and change one thing at a time.</p>
-    <ol class="steps small">
-      <li>A 30 × 30 mm test swatch (set the size: designs open at 100 × 100 mm) with the loops switched off (Advanced settings › What to print), to check adhesion and flow.</li>
-      <li>A 30 × 15 mm swatch with loops and <em>Loops at the back edge</em> set to Inside the swatch: one row, to check the feet bond and the loops hold their height.</li>
-      <li>The 30 × 30 mm test swatch with the defaults. Turn on <em>Tight spots</em> in View to compare with what you see.</li>
-      <li>A full 100 × 100 mm swatch.</li>
-    </ol>
-    <p class="muted small">If the loops come out thin, break or don't hold their shape, raise <em>Strand thickness</em> in steps of 10 to 20 % and compare. More flow also means more weight, so a tall pile can sag a little more.</p>
-    <p class="muted small">Every exported file lists its settings in comment lines, and Share copies a link that reopens this exact design.</p>
-    <div class="dialog-actions"><button class="btn primary" value="close">Got it</button></div>
-  </form>
-</dialog>
-
 <dialog id="study-dialog" class="help" aria-labelledby="study-title">
   <form method="dialog">
     <h2 id="study-title">Privacy and research statistics</h2>
@@ -394,6 +371,6 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-<script type="module" src="src/boot.js?v=20261028-print-order"></script>
+<script type="module" src="src/boot.js?v=20261104-tour"></script>
 </body>
 </html>

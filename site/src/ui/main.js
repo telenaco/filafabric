@@ -13,11 +13,11 @@ import { traceToSvg } from '../engine/trace-svg.js';
 import { bedSizeLimits, printSizeProblem } from './bed-size.js';
 import { PrintEstimates, printTimeSeconds } from './print-estimates.js';
 import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airStrandMm, fitAspect, pileLiftFactor } from './controls.js';
-import { PICTURE, withPicture } from '../engine/picture.js';
+import { PICTURE, withPicture, withContrast, PICTURE_CONTRAST } from '../engine/picture.js';
 import { buildVerdict, buildSquiggleVerdict, formatMinutes, constructionVerdict } from './verdict.js';
 import { refreshConstruction, assertConstructionExportable } from '../engine/construction-report.js';
 import { stateToHash, hashToState, sanitizeState, PRINT_DEFAULTS } from './share.js';
-import { FILAMENT_FIELDS, filamentValue, withFilamentSettings, setFilamentSetting, withoutFilamentSettings } from './filament-settings.js';
+import { FILAMENT_FIELDS, filamentValue, withFilamentSettings, setFilamentSetting, withoutFilamentSettings, sanitizeFilamentSettings } from './filament-settings.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
 import { $, $$, el, icon, ICONS, helpBubble } from './dom.js';
 import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, SectionFold, ColourSection, SupportSection } from './panels.js';
@@ -44,7 +44,7 @@ import { composeSvgLines, outlineFromVector, vectorPatternRings } from '../engin
 import { applySvgGuides, vectorGuides } from '../engine/svg-guides.js';
 import { applySvgSolids, solidOnly, withoutPattern } from '../engine/svg-solids.js';
 import { prepareAdaptiveSolids } from '../engine/adaptive-solids.js';
-import { summariseDrawing, describeDrawing, interpretDrawing } from '../engine/drawing.js';
+import { summariseDrawing, describeDrawing, interpretDrawing, scaleDrawing, fitToBed } from '../engine/drawing.js';
 import { addExtraLayers, nativeLayerInfo } from '../engine/stack.js';
 import { colourResult, strandLayer } from '../engine/colour-plan.js';
 import { generateDesignBase, compactDesignExport } from '../engine/design-export.js';
@@ -63,6 +63,8 @@ import { classifyBuildError, DiagnosticLog, suggestRecovery, safeMetadata } from
 import { bindFeedback, problemReport } from './feedback.js';
 import { bindPrivacyNotice, statsAllowed } from './privacy.js';
 import { describeFabric, fixCandidates, problemScore, describeChanges } from './fix-geometry.js';
+import { createTour } from './tour.js';
+import { sizeForAspect } from './squiggle-controls.js';
 
 // the release this page loaded (boot.js imports this file with ?v=), so feedback says which version it is about
 const RELEASE = new URL(import.meta.url).searchParams.get('v') ?? 'dev';
@@ -83,7 +85,7 @@ const LOOP_SLIDERS = [
 const PATTERN_SCALE = { key: 'patternScale', label: 'Pattern size', help: 'Stretches the pattern across the fabric.', lo: 'Fine', hi: 'Broad', unit: '×', edit: false };
 // plainest first: the first one leaves every wave the same, the last ones need a picture
 const PATTERNS = [
-  { id: 'uniform', label: 'Even' },
+  { id: 'uniform', label: 'None' },
   { id: 'gradientX', label: 'Fade across' },
   { id: 'gradientY', label: 'Fade up' },
   { id: 'centerSpot', label: 'Centre spot' },
@@ -133,7 +135,8 @@ const state = {
   advanced: {},
   // settings of every design newer than the loop pile and squiggle, by design id
   designs: initialDesignSettings(DESIGNS),
-  image: null, // { data: ImageData, name, px: [w, h], thumb: canvas }: stays on this computer, never in a link
+  image: null, // { data, original: ImageData, contrast, name, px: [w, h], thumb: canvas }: stays on this computer, never in a link
+  imageRevision: 0, // counts picture loads and contrast changes
   imageBoxOpen: false,
   outline: null, // { name, rings (flat, unit box), rotation }: shared by every design, travels in links
   vector: null,
@@ -281,10 +284,19 @@ function toast(message, { kind = 'info' } = {}) {
 const grams = (g) => String(Math.round(g * 100) / 100); // two decimals, no trailing zero, to match the tiles
 
 /* ---------- history (undo / redo) ---------- */
+/** What a page refresh keeps of the last session: the printer setup, nothing of the design. */
+function printerSetupOnly(saved) {
+  const print = { ...sanitizeFilamentSettings(saved?.print) };
+  if (saved?.print?.layerHeight !== undefined) print.layerHeight = saved.print.layerHeight;
+  return { v: saved?.v, geometryRevision: saved?.geometryRevision, densityRevision: saved?.densityRevision, sampleDefaults: saved?.sampleDefaults,
+    machine: saved?.machine, material: saved?.material, print };
+}
+
 function snapshotKey() {
-  if (state.regions?.length) return JSON.stringify({ m:state.machine, t:state.material, a:state.advanced, v:state.vector, r:state.regions, s:state.seam, y:state.print });
+  // `i` changes with the picture and its contrast: a built preview or G-code made from another picture is stale
+  if (state.regions?.length) return JSON.stringify({ m:state.machine, t:state.material, a:state.advanced, v:state.vector, r:state.regions, s:state.seam, y:state.print, i:state.imageRevision });
   // the layer setup is part of what is saved and undone, like everything else that changes the print
-  return JSON.stringify({ d: state.design, m: state.machine, t: state.material, p: state.primary, a: state.advanced, g: state.designs, o: state.outline, v: state.vector, y: state.print });
+  return JSON.stringify({ d: state.design, m: state.machine, t: state.material, p: state.primary, a: state.advanced, g: state.designs, o: state.outline, v: state.vector, y: state.print, i: state.imageRevision });
 }
 
 function commit() {
@@ -473,13 +485,20 @@ const PRINT_BINDING = {
   },
 };
 
+/** The guided tour (tour.js): offered on a first visit, and ⋯ › Getting started. */
+const tour = createTour({ design: () => state.design });
+
 /** What the panel classes need from the studio. */
 const host = {
   // the one uploaded picture, shared by every design whose pattern can be it (never in a link or a saved file)
   picture: () => state.image,
   loadPicture: (file, designId) => loadPicture(file, designId),
   clearPicture: () => clearPicture(),
+  pictureContrast: () => state.image?.contrast ?? 1,
+  setPictureContrast: (value) => setPictureContrast(value),
   pictureShape: (designId) => givePictureShape(designId),
+  rotatePicture: (designId) => rotatePicture(designId),
+  fillBed: (designId) => fillBed(designId),
   binding: (id) => (id === 'print' ? PRINT_BINDING : BINDINGS[id]),
   settings: (id) => settingsOf(id),
   presetPicture: (mod, preset) => presetThumb(mod, preset, { machine: state.machines.get(state.machine), material: printMaterial() }),
@@ -592,7 +611,16 @@ function followVectorSize() {
 
 async function importSvg(file) {
   try {
-    const drawing = await readSvgLines(file);
+    let drawing = await readSvgLines(file);
+    // bigger than this printer's bed: the whole drawing is scaled down to fit it, rather than refused
+    const drawn = drawing.drawnSize ?? [drawing.width, drawing.height];
+    const limits = bedSizeLimits(state.machines.get(state.machine), printOverhang());
+    if (drawing.width > limits.width || drawing.height > limits.height) {
+      const [w] = fitToBed(limits, { w: drawing.width, h: drawing.height });
+      drawing = scaleDrawing(drawing, w / drawing.width);
+    }
+    const scaled = drawing.width < drawn[0] - 0.05;
+    delete drawing.drawnSize; delete drawing.scaledBy;
     previewChoice = 'auto';
     const regions = regionsFromDrawing(drawing, { currentCard:state.design, currentSettings:settingsOf(state.design) });
     if(regions.length>REGION_LIMIT)throw new Error(`The drawing has ${regions.length} colours; reduce it to ${REGION_LIMIT} or fewer. Nothing was imported.`);
@@ -613,7 +641,9 @@ async function importSvg(file) {
     renderRegions(true); // the colours show at once, not when the first preview is done
     schedule();
     commit();
-    toast(`Imported ${state.vector.name}: ${state.vector.width.toFixed(1)} × ${state.vector.height.toFixed(1)} mm`);
+    const size = `${state.vector.width.toFixed(1)} × ${state.vector.height.toFixed(1)} mm`;
+    toast(scaled ? `Imported ${state.vector.name}, scaled down from ${drawn[0].toFixed(1)} × ${drawn[1].toFixed(1)} mm to ${size} to fit the ${shortMachine(state.machines.get(state.machine).name)} bed`
+      : `Imported ${state.vector.name}: ${size}`);
   } catch (e) {
     toast(`Could not import the SVG: ${e.message}`);
   }
@@ -1998,8 +2028,20 @@ function forgetPictureChoices() {
   return changed;
 }
 
+/** Picture contrast: pulls the picture's mid-greys apart, so a picture of close tones gives the design more range. */
+function setPictureContrast(value) {
+  if (!state.image) return;
+  const contrast = Math.round(Math.max(PICTURE_CONTRAST.min, Math.min(PICTURE_CONTRAST.max, Number(value) || 1)) * 10) / 10;
+  if (contrast === state.image.contrast) return;
+  state.image.contrast = contrast;
+  state.image.data = withContrast(state.image.original, contrast);
+  state.imageRevision++;
+  schedule();
+}
+
 function clearPicture() {
   state.image = null;
+  state.imageRevision++;
   state.imageBoxOpen = false;
   forgetPictureChoices();
   renderControls();
@@ -2011,12 +2053,57 @@ function clearPicture() {
 function givePictureShape(designId = state.design) {
   if (!state.image) return;
   const binding = BINDINGS[designId];
-  const [w, h] = sizeForAspect(...state.image.px, Math.max(...binding.size.get()));
+  let [w, h] = sizeForAspect(...state.image.px, Math.max(...binding.size.get()));
+  // never past the printer's bed: a tall picture on a wide piece is fitted, at its proportions, inside it
+  const limits = bedSizeLimits(state.machines.get(state.machine), printOverhang(designId));
+  if (w > limits.width || h > limits.height) [w, h] = fitToBed(limits, { w, h });
   binding.size.set(w, h);
   renderSizes();
   renderControls();
   schedule();
   commit();
+}
+
+/** The piece as big as this printer prints it, with a small margin; a picture pattern keeps the picture's proportions. */
+function fillBed(designId = state.design) {
+  const machine = state.machines.get(state.machine);
+  const limits = bedSizeLimits(machine, printOverhang(designId));
+  const picture = state.image && settingsOf(designId)?.pattern === PICTURE;
+  const [w, h] = fitToBed(limits, picture ? { w: state.image.px[0], h: state.image.px[1] } : {});
+  BINDINGS[designId].size.set(w, h, 'custom');
+  renderSizes();
+  renderControls();
+  schedule();
+  commit();
+  toast(`The piece is now ${w} × ${h} mm, the most the ${shortMachine(machine.name)} bed takes${picture ? ' at the picture\'s proportions' : ''}. A big piece takes a while to build and to print.`);
+}
+
+/** Turns the picture a quarter turn clockwise; the piece takes its new proportions (unless a drawing sets the size). */
+function rotatePicture(designId = state.design) {
+  if (!state.image) return;
+  const turn = (source, width, height) => {
+    const from = document.createElement('canvas');
+    from.width = width; from.height = height;
+    if (source instanceof HTMLCanvasElement) from.getContext('2d').drawImage(source, 0, 0);
+    else from.getContext('2d').putImageData(source, 0, 0);
+    const to = document.createElement('canvas');
+    to.width = height; to.height = width;
+    const ctx = to.getContext('2d');
+    ctx.translate(height, 0);
+    ctx.rotate(Math.PI / 2);
+    ctx.drawImage(from, 0, 0);
+    return to;
+  };
+  const { original, thumb } = state.image;
+  const turned = turn(original, original.width, original.height);
+  state.image.original = turned.getContext('2d').getImageData(0, 0, turned.width, turned.height);
+  state.image.data = withContrast(state.image.original, state.image.contrast ?? 1);
+  state.image.thumb = turn(thumb, thumb.width, thumb.height);
+  state.image.px = [state.image.px[1], state.image.px[0]];
+  state.image.rotation = ((state.image.rotation ?? 0) + 90) % 360;
+  state.imageRevision++;
+  if (!state.vector) givePictureShape(designId);
+  else { renderControls(); schedule(); }
 }
 
 function loadPicture(file, designId = 'squiggle') {
@@ -2041,17 +2128,18 @@ function loadPicture(file, designId = 'squiggle') {
     thumb.width = thumb.height = 112;
     const side = Math.min(natW, natH);
     thumb.getContext('2d').drawImage(img, (natW - side) / 2, (natH - side) / 2, side, side, 0, 0, 112, 112);
-    state.image = { data: ctx.getImageData(0, 0, canvas.width, canvas.height), name: file.name, px: [natW, natH], thumb };
-    // the picture adapts to the piece: the size you set stays, whatever the picture's own size
+    const original = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    state.image = { data: original, original, contrast: 1, name: file.name, px: [natW, natH], thumb };
+    state.imageRevision++;
     const target = settingsOf(designId);
     if (target) target.pattern = PICTURE;
     state.imageBoxOpen = false;
-      renderControls();
-    renderSizes();
-    schedule();
-    commit();
+    // the piece takes the picture's proportions, keeping its longer side, so the picture is not stretched; with a
+    // drawing, the drawing sets the size and the picture is laid over it
+    if (!state.vector) givePictureShape(designId);
+    else { renderControls(); renderSizes(); schedule(); commit(); }
     const [w, h] = BINDINGS[designId].size.get().map((n) => Math.round(n * 10) / 10);
-    toast(`Picture fitted to the ${w} × ${h} mm piece`);
+    toast(state.vector ? `Picture fitted to the ${w} × ${h} mm drawing` : `The piece is now ${w} × ${h} mm, the picture's proportions`);
   };
   img.onerror = () => { URL.revokeObjectURL(url); toast('That picture could not be opened.'); };
   img.src = url;
@@ -2582,7 +2670,8 @@ function bindStatic() {
 
   anchorPopover($('#more-menu'), $('#btn-more'));
   anchorPopover($('#view-menu'), $('#btn-view'));
-  $('#btn-help').addEventListener('click', () => { closeMenus(); $('#help-dialog').showModal(); });
+  // Getting started is the guided tour, on the real controls
+  $('#btn-help').addEventListener('click', () => { closeMenus(); tour.start(); });
   // what is counted lives inside the studio, behind the password, not on a page of its own that a search engine could find
   document.querySelectorAll('[data-open-study]').forEach((button) => button.addEventListener('click', () => $('#study-dialog').showModal()));
   feedback = bindFeedback($('#feedback-dialog'), { context: feedbackContext, toast });
@@ -2647,6 +2736,10 @@ async function init() {
   let initial = fromLink;
   if (!initial) {
     try { initial = JSON.parse(store.get(STORAGE_KEY) ?? 'null'); } catch { initial = null; }
+    // a refresh is a clean start: only the printer setup survives it (printer, filament, its temperatures and other
+    // filament settings, layer height); the design, its sizes, an imported drawing and every slider go back to the
+    // defaults. A shared link or a settings file still opens exactly what it holds.
+    if (initial) initial = printerSetupOnly(initial);
   }
   // a page that is opened (not a shared link) lands on the zigzag mesh, whatever was open last; what was set in the
   // other designs is kept for when they are chosen
@@ -2691,6 +2784,7 @@ async function init() {
   $('#doc-name').value = state.docName;
   regenerate();
   commit();
+  tour.offer();
   if (pictureDropped && fromLink) toast('This link was made with a picture, which links can\'t carry, so it opens with the centre spot pattern.', { kind:'warning' });
 }
 

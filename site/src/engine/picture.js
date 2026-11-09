@@ -51,6 +51,27 @@ export function pictureDarkness(image, width, height, { offsetX = 0, offsetY = 0
   };
 }
 
+/** The picture-contrast slider's range: 1 leaves the picture as it is. */
+export const PICTURE_CONTRAST = Object.freeze({ min: 1, max: 5, step: 0.1 });
+
+/**
+ * The picture with its contrast raised: its tones are first stretched to its own range (as every design reads it), then
+ * pulled apart around the middle grey, so close greys become clearly lighter or darker. A grey picture of the same size
+ * comes back ({ data, width, height }, like ImageData); `contrast` 1 returns the picture itself.
+ */
+export function withContrast(image, contrast = 1) {
+  if (!image || !(contrast > 1)) return image;
+  const { data, width, height } = image, { lo, hi } = pictureLevels(image), span = Math.max(1e-6, hi - lo);
+  const out = new Uint8ClampedArray(data.length);
+  for (let i = 0; i < data.length; i += 4) {
+    const dark = Math.max(0, Math.min(1, (1 - (0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2]) / 255 - lo) / span));
+    const grey = Math.round((1 - Math.max(0, Math.min(1, 0.5 + (dark - 0.5) * contrast))) * 255);
+    out[i] = out[i + 1] = out[i + 2] = grey;
+    out[i + 3] = 255;
+  }
+  return { data: out, width, height };
+}
+
 /**
  * A design's pattern as a field (x, y) -> 0..1, or null for no pattern. `picture` is { image, size: [w, h], offset } when
  * one is loaded; `polarity` says which way the design reads it: 'positive', the dark parts of the picture get more,

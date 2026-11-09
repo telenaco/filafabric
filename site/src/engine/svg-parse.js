@@ -13,7 +13,8 @@ const STEP_MM = 0.35; // curves are sampled about this finely
 const MAX_POINTS = 100000;
 const MAX_ELEMENTS = 20000;
 
-export function svgDimensions({ width, height, viewBox } = {}) {
+/** The page size the file states, in mm, however large, or null when it states none. */
+function statedSize({ width, height, viewBox } = {}) {
   const length = (s) => { const m = /^\s*([+\d.eE-]+)\s*(mm|cm|in|px|pt|pc|q)?\s*$/.exec(s ?? ''); return m && Number(m[1]) > 0 ? Number(m[1]) * MM[m[2] ?? ''] : null; };
   const box = String(viewBox ?? '').trim().split(/[\s,]+/).map(Number);
   const aspect = box.length === 4 && box.every(Number.isFinite) && box[2] > 0 && box[3] > 0 ? box[2] / box[3] : null;
@@ -21,8 +22,14 @@ export function svgDimensions({ width, height, viewBox } = {}) {
   if (w && !h && aspect) h = w / aspect;
   if (h && !w && aspect) w = h * aspect;
   if (!w && !h && aspect) { w = box[2] * MM.px; h = box[3] * MM.px; }
-  if (!(w > 0 && h > 0) || w > 1000 || h > 1000) throw new Error('SVG width and height must resolve to 0–1000 mm. Export with millimetre dimensions or a viewBox.');
-  return { width: Number(w.toFixed(8)), height: Number(h.toFixed(8)) };
+  return w > 0 && h > 0 && Number.isFinite(w + h) ? { w, h } : null;
+}
+const NO_SIZE = 'This SVG has no size. Export it with millimetre dimensions or a viewBox.';
+
+export function svgDimensions(attrs = {}) {
+  const s = statedSize(attrs);
+  if (!s || s.w > 1000 || s.h > 1000) throw new Error('SVG width and height must resolve to 0–1000 mm. Export with millimetre dimensions or a viewBox.');
+  return { width: Number(s.w.toFixed(8)), height: Number(s.h.toFixed(8)) };
 }
 
 /* ---------- XML ---------- */
@@ -365,12 +372,16 @@ export function parseSvg(text, name = 'SVG lines') {
   const doc = parseXml(String(text));
   const svg = findAll(doc, 'svg')[0];
   if (!svg) throw new Error('That file is not readable SVG.');
-  const size = svgDimensions({ width: svg.attrs.width, height: svg.attrs.height, viewBox: svg.attrs.viewBox });
+  const stated = statedSize({ width: svg.attrs.width, height: svg.attrs.height, viewBox: svg.attrs.viewBox });
+  if (!stated) throw new Error(NO_SIZE);
+  // a page over a metre is scaled down, whole, to a metre on its longer side (the studio then fits it to the bed)
+  const shrink = Math.min(1, 1000 / Math.max(stated.w, stated.h));
+  const size = { width: Number(Math.min(1000, stated.w * shrink).toFixed(8)), height: Number(Math.min(1000, stated.h * shrink).toFixed(8)) };
   // user units to millimetres, and where the viewBox sits on the page (xMidYMid meet, the default)
   const box = String(svg.attrs.viewBox ?? '').trim().split(/[\s,]+/).map(Number);
   const hasBox = box.length === 4 && box.every(Number.isFinite) && box[2] > 0 && box[3] > 0;
-  const view = hasBox ? box : [0, 0, size.width / MM.px, size.height / MM.px];
-  const unit = hasBox ? Math.min(size.width / view[2], size.height / view[3]) : MM.px;
+  const view = hasBox ? box : [0, 0, stated.w / MM.px, stated.h / MM.px];
+  const unit = hasBox ? Math.min(size.width / view[2], size.height / view[3]) : MM.px * shrink;
   const originX = (size.width - view[2] * unit) / 2, originY = (size.height - view[3] * unit) / 2;
   const round = (n) => Math.round(n * 1e4) / 1e4;
 
@@ -460,5 +471,7 @@ export function parseSvg(text, name = 'SVG lines') {
   if (!paths.length) throw new Error('No printable paths were found. Convert text to paths and export vector strokes.');
   const result = sanitizeSvgLines({ name, ...size, paths, styles });
   if (!result) throw new Error('The SVG contains invalid geometry.');
+  // how much it was scaled down to come in at a metre, and its size as drawn, so the studio can say so
+  if (shrink < 1) Object.assign(result, { scaledBy: shrink, drawnSize: [Number(stated.w.toFixed(1)), Number(stated.h.toFixed(1))] });
   return result;
 }

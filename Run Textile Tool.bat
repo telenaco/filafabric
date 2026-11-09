@@ -1,10 +1,10 @@
 @echo off
 setlocal
-set "FILAFABRIC_DIR=C:\Users\Luis\.codex\worktrees\t0-0-output-snapshots\Websites"
-if not exist "%FILAFABRIC_DIR%\dev\tools\serve.mjs" (
-  echo The active FilaFabric worktree was not found:
-  echo   %FILAFABRIC_DIR%
-  echo Open the current project worktree or update FILAFABRIC_DIR in this launcher.
+rem Starts the local studio from the folder this file sits in, whatever branch is checked out there.
+set "FILAFABRIC_DIR=%~dp0"
+if not exist "%FILAFABRIC_DIR%dev\tools\serve.mjs" (
+  echo The studio's server was not found next to this file:
+  echo   %FILAFABRIC_DIR%dev\tools\serve.mjs
   pause
   exit /b 1
 )
@@ -15,8 +15,8 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-echo Starting the latest local Textile G-code Generator from:
+echo Starting the local Filafabric studio from:
 echo   %CD%
-git branch --show-current
+git branch --show-current 2>nul
 node dev\tools\serve.mjs --open
 pause

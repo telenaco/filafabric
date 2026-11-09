@@ -1,43 +1,83 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Colour regions sample, 200 x 200 mm.
-  The whole piece is one red square (the pattern). Everything inside it is a different colour, so each colour
-  is its own region with its own role: blue = hole, green / yellow = solid, magenta / cyan / black = lines.
-  The dark red (#cc0000) and the orange (#ff8000) are not palette colours; they show how an off-palette shade is read.
-  Row 3 shows a lace: a green body with a blue opening and a red window (pattern inside the solid).
+  Filafabric sample drawing, 200 x 200 mm: four colours, so four regions to set.
+  Red = filled with the pattern, blue = a hole, yellow and green = solid shapes printed on top.
+  Change any colour's role in the studio after importing.
 -->
-<svg xmlns="http://www.w3.org/2000/svg" width="200mm" height="200mm" viewBox="0 0 200 200">
-  <!-- the piece: red = filled with the pattern -->
-  <rect id="piece-red" x="4" y="4" width="192" height="192" fill="#ff0000" stroke="none"/>
-
-  <!-- Row 1: one solid in each fill colour -->
-  <rect id="r1-blue-hole"   x="14"  y="14" width="30" height="30" fill="#0000ff" stroke="none"/>
-  <circle id="r1-green"     cx="75" cy="29" r="15"               fill="#00ff00" stroke="none"/>
-  <rect id="r1-yellow"      x="104" y="14" width="30" height="30" fill="#ffff00" stroke="none"/>
-  <rect id="r1-magenta"     x="142" y="14" width="22" height="30" fill="#ff00ff" stroke="none"/>
-  <rect id="r1-cyan"        x="170" y="14" width="16" height="30" fill="#00ffff" stroke="none"/>
-
-  <!-- Row 2: nesting and shades -->
-  <!-- a green button on a blue hole's neighbour, a red island inside a blue hole (pattern again) -->
-  <rect id="r2-blue-hole"   x="14"  y="58" width="30" height="30" fill="#0000ff" stroke="none"/>
-  <circle id="r2-red-island" cx="29" cy="73" r="8"               fill="#ff0000" stroke="none"/>
-  <rect id="r2-dark-red"    x="58"  y="58" width="30" height="30" fill="#cc0000" stroke="none"/>
-  <rect id="r2-orange"      x="102" y="58" width="30" height="30" fill="#ff8000" stroke="none"/>
-  <rect id="r2-green-a"     x="146" y="58" width="16" height="30" fill="#00ff00" stroke="none"/>
-  <rect id="r2-green-b"     x="170" y="58" width="16" height="30" fill="#00ff00" stroke="none"/>
-
-  <!-- Row 3: a lace (green body, blue opening, red window) then open lines and a ring -->
-  <rect id="r3-lace-body"   x="14" y="102" width="70" height="40" fill="#00ff00" stroke="none"/>
-  <circle id="r3-lace-open" cx="32" cy="122" r="8"                fill="#0000ff" stroke="none"/>
-  <circle id="r3-lace-win"  cx="62" cy="122" r="11"               fill="#ff0000" stroke="none"/>
-  <polyline id="r3-black-zigzag" points="96,138 112,108 128,138 144,108" fill="none" stroke="#000000" stroke-width="0.45"/>
-  <path id="r3-magenta-wave" d="M 96 142 C 104 130, 114 154, 124 142 S 144 130, 154 142" fill="none" stroke="#ff00ff" stroke-width="0.45"/>
-  <circle id="r3-cyan-ring" cx="174" cy="122" r="12" fill="none" stroke="#00ffff" stroke-width="0.45"/>
-
-  <!-- Row 4: line widths, then a yellow solid in a blue frame -->
-  <line id="r4-black-thin"  x1="14" y1="158" x2="74" y2="158" stroke="#000000" stroke-width="0.45"/>
-  <line id="r4-black-1.2"   x1="14" y1="168" x2="74" y2="168" stroke="#000000" stroke-width="1.2"/>
-  <line id="r4-magenta-1.2" x1="14" y1="178" x2="74" y2="178" stroke="#ff00ff" stroke-width="1.2"/>
-  <rect id="r4-blue-frame"  x="96" y="152" width="90" height="36" fill="#0000ff" stroke="none"/>
-  <rect id="r4-yellow-core" x="112" y="160" width="58" height="20" fill="#ffff00" stroke="none"/>
+<svg
+   width="200mm"
+   height="200mm"
+   viewBox="0 0 200 200"
+   version="1.1"
+   xmlns="http://www.w3.org/2000/svg">
+  <g
+     transform="translate(-5.0000017,-48.500002)">
+    <rect
+       style="fill:none;stroke:#ff0000;stroke-width:0.833981;stroke-opacity:1"
+       width="199.16602"
+       height="199.16602"
+       x="5.4169922"
+       y="48.916992" />
+    <path
+       style="fill:none;stroke:#0000ff;stroke-width:0.264583;stroke-opacity:1"
+       d="M 37.644445,55.488887 22.513006,47.570003 7.4113729,55.545585 10.266807,38.707661 -1.9850836,26.809746 14.911111,24.322221 22.440659,8.9933218 30.027648,24.293871 46.933055,26.718006 34.725877,38.66179 Z"
+       transform="matrix(3.3333334,0,0,3.3333333,30.08729,41.029772)" />
+    <ellipse
+       style="fill:none;stroke:#ff0000;stroke-width:0.881944;stroke-opacity:1"
+       cx="105"
+       cy="148.5"
+       rx="24.851852"
+       ry="24.851851" />
+    <path
+       style="fill:none;stroke:#ff0000;stroke-width:1.4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 130.17943,122.00932 -7.7205,8.80449" />
+    <path
+       style="fill:none;stroke:#ff0000;stroke-width:1.4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 79.791,122.10382 7.82045,8.64079" />
+    <path
+       style="fill:none;stroke:#ff0000;stroke-width:1.4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 104.8895,71.007481 105,123.64811" />
+    <path
+       style="fill:none;stroke:#ff0000;stroke-width:1.4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 186.5308,130.08975 129.85183,148.5" />
+    <path
+       style="fill:none;stroke:#ff0000;stroke-width:1.4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 155.56876,225.99274 118.16273,169.57976" />
+    <path
+       style="fill:none;stroke:#ff0000;stroke-width:1.4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 145.84019,169.9024 -18.88503,-9.75835" />
+    <path
+       style="fill:none;stroke:#ff0000;stroke-width:1.4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 105.13063,199.59643 105,173.35184" />
+    <path
+       style="fill:none;stroke:#ff0000;stroke-width:1.4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 54.79187,226.1817 90.92949,168.985" />
+    <path
+       style="fill:none;stroke:#ff0000;stroke-width:1.4;stroke-dasharray:none;stroke-opacity:1"
+       d="m 64.30997,170.0553 18.82625,-9.74049" />
+    <path
+       style="fill:none;stroke:#ff0000;stroke-width:1.4;stroke-dasharray:none;stroke-opacity:1"
+       d="M 23.470335,130.39557 80.66069,143.47876" />
+    <circle
+       style="fill:none;stroke:#ffff00;stroke-width:1.4;stroke-opacity:1"
+       cx="58.320274"
+       cy="94.710907"
+       r="12.160764" />
+    <circle
+       style="fill:none;stroke:#ffff00;stroke-width:1.4;stroke-opacity:1"
+       cx="167.20587"
+       cy="87.227356"
+       r="18.895956" />
+    <circle
+       style="fill:none;stroke:#00ff00;stroke-width:1.4;stroke-opacity:1"
+       cx="171.50891"
+       cy="194.80334"
+       r="8.2319012" />
+    <rect
+       style="fill:none;stroke:#00ff00;stroke-width:1.4;stroke-opacity:1"
+       width="31.013905"
+       height="24.321527"
+       x="14.023071"
+       y="171.60434" />
+  </g>
 </svg>

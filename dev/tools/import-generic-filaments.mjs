@@ -37,7 +37,7 @@ export function buildGenericFilaments(text) {
       bed_shape: undefined, printable_area: undefined, printer_settings_id: undefined,
     }), 'prusa-generic.json');
     material.id = name === 'Generic FLEX' ? 'generic-flex-mk3' : slug(name);
-    material.name = name === 'Generic FLEX' ? 'Generic FLEX (TPU, MK3, 0.4 mm)' : variant ? preset.name : name;
+    material.name = variant ? preset.name : name;
     const fan = String(values.cooling) === '0' && String(values.fan_always_on) !== '1' ? 0 : Number(values.min_fan_speed ?? 0);
     material.fan.default = fan;
     material.print_defaults = { fan_base: 0, fan_supported: fan, fan_nonplanar: fan, fan_unsupported: fan, fan_travel: 0 };

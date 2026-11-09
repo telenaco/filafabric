@@ -161,7 +161,8 @@ test('library groups order cards by print state and then name', () => {
 });
 
 test('panel order accepts six sections and optional Structure editors, and rejects legacy or repeated groups', () => {
-  assert.deepEqual(panelOrderErrors([{ kind: 'presets' }, { kind: 'size' }, { kind: 'choice' }, { kind: 'petal' }, { kind: 'choice' },
+  assert.ok(panelOrderErrors([{ kind: 'presets' }, { kind: 'size' }]).some((error) => error.includes('size is out of panel order')));
+  assert.deepEqual(panelOrderErrors([{ kind: 'size' }, { kind: 'presets' }, { kind: 'choice' }, { kind: 'petal' }, { kind: 'choice' },
     { kind: 'sliders' }, { kind: 'switch', key: 'link' }, { kind: 'pattern' }, { kind: 'colour' }, { kind: 'support' }]), []);
   assert.deepEqual(panelOrderErrors([{kind:'size'},{kind:'choice'},{kind:'draft'},{kind:'sliders'}]),[]);
   assert.ok(panelOrderErrors([{kind:'size'},{kind:'draft'},{kind:'draft'}]).some(error=>error.includes('draft appears more than once')));

@@ -375,6 +375,34 @@ export function cropToDrawing(vector, { margin = 3 } = {}) {
   };
 }
 
+/**
+ * The drawing scaled by `k` as a whole: its page, every path and every line width, so it prints as the same picture,
+ * smaller. For a drawing bigger than the printer's bed.
+ */
+export function scaleDrawing(vector, k) {
+  if (!(k > 0) || k === 1) return vector;
+  const round = (n) => Math.round(n * 1e4) / 1e4;
+  return {
+    ...vector,
+    width: round(vector.width * k),
+    height: round(vector.height * k),
+    paths: vector.paths.map((path) => path.map((p) => ({ x: round(p.x * k), y: round(p.y * k) }))),
+    ...(Array.isArray(vector.styles) ? { styles: vector.styles.map((s) => ({ ...s, width: Math.round(s.width * k * 1000) / 1000 })) } : {}),
+  };
+}
+
+/**
+ * The largest piece of a `w` x `h` proportion that fits `limits` ({ width, height } mm) with `margin` mm spare on each
+ * side, rounded down to a tenth of a mm. With no proportion given it is the whole usable bed.
+ */
+export function fitToBed(limits, { w = null, h = null, margin = 5 } = {}) {
+  const W = Math.max(1, limits.width - 2 * margin), H = Math.max(1, limits.height - 2 * margin);
+  const down = (n) => Math.max(1, Math.floor(n * 10 + 1e-9) / 10);
+  if (!(w > 0 && h > 0)) return [down(W), down(H)];
+  const k = Math.min(W / w, H / h);
+  return [down(w * k), down(h * k)];
+}
+
 /* ---------- what the import card says ---------- */
 
 /** { fills, holes, lines, passes } of a drawing: how many shapes are filled, how many holes, how many lines, the most passes any line takes. */

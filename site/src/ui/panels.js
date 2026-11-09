@@ -26,7 +26,7 @@
 import { el, svgEl, helpBubble } from './dom.js';
 import { validNumber } from './numeric.js';
 import { FIELDS, createField } from '../engine/fields.js';
-import { PICTURE } from '../engine/picture.js';
+import { PICTURE, PICTURE_CONTRAST } from '../engine/picture.js';
 import { offersDetail, DETAIL_RANGE } from './designs.js';
 import { PATTERN_EFFECTS } from '../engine/pattern-effects.js';
 import { SHAPES } from '../engine/shapes.js';
@@ -200,6 +200,11 @@ export class SizeControl extends Control {
       f.input.addEventListener('change', () => this.host.commit());
     }
     this.inputs = el('div', { class: 'size-inputs' }, this.width.field, el('span', { class: 'times', 'aria-hidden': 'true', text: '×' }), this.height.field);
+    // as big as the printer allows (at the picture's proportions when the pattern is a picture)
+    this.fill = el('button', { type: 'button', class: 'link small size-fill', id: `${designId}-fill-bed`, text: 'Fill the printer bed',
+      title: 'Make the piece as big as the selected printer can print, leaving a small margin round the edge' });
+    this.fill.addEventListener('click', () => this.host.fillBed?.(this.designId));
+    this.fillRow = el('p', { class: 'size-fill-row small' }, this.fill);
     this.note = el('p', { class: 'size-follows small muted', hidden: true });
     this.divider = el('div', { class: 'size-source-divider', text: 'or', 'aria-hidden': 'true' });
     this.svgSlot = el('div', { class: 'size-svg-slot' });
@@ -214,7 +219,7 @@ export class SizeControl extends Control {
     this.edgeAlign.addEventListener('change', () => { host.binding('print').set('edgeAlign', this.edgeAlign.value); this.host.nudge(); this.host.commit(); });
     this.edgeAlignRow = el('label', { class: 'field-row brim-control' }, el('span', { text: 'Outline sits' }), this.edgeAlign);
     this.warn = el('p', { class: 'ctl-warn small', hidden: true });
-    this.node = el('div', { class: 'size-control' }, this.inputs, this.divider, this.svgSlot, this.note, this.warn, this.error, this.brim.node, this.edgeAlignRow);
+    this.node = el('div', { class: 'size-control' }, this.inputs, this.fillRow, this.divider, this.svgSlot, this.note, this.warn, this.error, this.brim.node, this.edgeAlignRow);
   }
 
   update() {
@@ -227,6 +232,7 @@ export class SizeControl extends Control {
     }
     const follow = this.host.vectorSize();
     this.inputs.hidden = !!follow;
+    this.fillRow.hidden = !!follow || !this.host.fillBed;
     this.note.hidden = true;
     this.divider.hidden = !!follow;
     if (follow) {
@@ -468,9 +474,10 @@ export class PatternPicker extends Control {
     this.buttons = patterns.map((field) => {
       const canvas = el('canvas', { class: 'pattern-thumb', 'data-field': field, 'aria-hidden': 'true' });
       const picture = field === PICTURE;
-      const special = { uniform: ['Even', 'Every strand has the same shape.'], gradientX: ['Across', 'The pattern changes from left to right.'], gradientY: ['Down', 'The pattern changes from bottom to top.'], centerSpot: ['Centre spot', 'The pattern is strongest at the centre.'], waves: ['Waves', 'A repeating wave field across the fabric.'] }[field];
-      const label = picture ? 'Your picture' : field === 'none' ? 'Plain' : FIELDS[field]?.label ?? special?.[0] ?? field;
-      const title = picture ? (pictureHint || 'Use a picture of your own as the pattern') : field === 'none' ? 'Every loop the same' : FIELDS[field]?.hint ?? special?.[1] ?? '';
+      // "uniform" and "none" are both "no pattern": every strand or loop the same
+      const special = { uniform: ['None', 'No pattern: every strand has the same shape.'], gradientX: ['Across', 'The pattern changes from left to right.'], gradientY: ['Down', 'The pattern changes from bottom to top.'], centerSpot: ['Centre spot', 'The pattern is strongest at the centre.'], waves: ['Waves', 'A repeating wave field across the fabric.'] }[field];
+      const label = picture ? 'Your picture' : field === 'none' ? 'None' : FIELDS[field]?.label ?? special?.[0] ?? field;
+      const title = picture ? (pictureHint || 'Use a picture of your own as the pattern') : field === 'none' ? 'No pattern: every loop the same' : FIELDS[field]?.hint ?? special?.[1] ?? '';
       const btn = el('button', { type: 'button', class: 'pattern', 'data-choice': `${designId}:${key}:${field}`, 'aria-pressed': 'false', title }, canvas, el('span', { text: label }));
       btn.addEventListener('click', () => {
         if (picture && !host.picture?.()) { this.fileInput.click(); return; }
@@ -513,12 +520,14 @@ export class PatternPicker extends Control {
     choose.addEventListener('click', () => this.fileInput.click());
     this.shapeButton = el('button', { type: 'button', class: 'link small', text: 'Give the piece the picture\'s shape' });
     this.shapeButton.addEventListener('click', () => host.pictureShape(designId));
+    const rotate = el('button', { type: 'button', class: 'link small', text: 'Rotate 90°', title: 'Turn the picture a quarter turn clockwise; the piece turns with it' });
+    rotate.addEventListener('click', () => host.rotatePicture?.(designId));
     const remove = el('button', { type: 'button', class: 'link small', text: 'Remove picture' });
     remove.addEventListener('click', () => host.clearPicture());
     const box = el('div', { class: 'picture-box', id: `${designId}-picture-box` },
       pictureHint ? el('p', { class: 'small', text: pictureHint }) : null,
       this.pictureInfo,
-      el('div', { class: 'picture-actions' }, choose, this.shapeButton, remove));
+      el('div', { class: 'picture-actions' }, choose, rotate, this.shapeButton, remove));
     // a picture dropped on the box (or on the whole picker) replaces the one in use
     for (const target of [box, this.grid]) {
       target.addEventListener('dragover', (e) => { if (e.dataTransfer?.types?.includes('Files')) { e.preventDefault(); target.classList.add('dragover'); } });
@@ -893,12 +902,19 @@ export class PatternSection extends Section {
       set: (key, value) => { this.settings.detail = Math.round(Math.max(DETAIL_RANGE.min, Math.min(DETAIL_RANGE.max, value)) * 10) / 10; },
       range: () => DETAIL_RANGE, available: () => true, readout: () => `${this.settings.detail ?? 1}×`,
     }) }, `${this.mod.id}-detail`, { key: 'detail', label: 'Picture detail', info: true, help: 'How finely the design draws your picture. More detail brings the lines, cells or loops closer together, so the picture has more of them: slower to print, sharper to see.', lo: 'Coarse', hi: 'Fine', unit: '×', edit: true }) : null;
-    return [this.hint(), this.picker.node, this.detail?.node, this.effectPicker, this.thicknessNode];
+    // with your picture: how far apart its greys are read (the picture's own setting, shared by every design)
+    this.contrast = this.picker.pictureBox ? new SliderControl({ ...this.host, binding: () => ({
+      get: () => this.host.pictureContrast?.() ?? 1,
+      set: (key, value) => this.host.setPictureContrast?.(value),
+      range: () => PICTURE_CONTRAST, available: () => true, readout: () => `${this.host.pictureContrast?.() ?? 1}×`,
+    }) }, `${this.mod.id}-contrast`, { key: 'contrast', label: 'Picture contrast', info: true, help: 'For a picture whose greys are close together: more contrast pushes them apart, so light parts read lighter and dark parts darker, and the design changes more across the picture. At 1× the picture is read as it is.', lo: 'As it is', hi: 'Strong', unit: '×', edit: true }) : null;
+    return [this.hint(), this.picker.node, this.detail?.node, this.contrast?.node, this.effectPicker, this.thicknessNode];
   }
 
   refresh() {
     this.picker.update();
     if (this.detail) { this.detail.node.hidden = this.settings[this.spec.key] !== PICTURE; if (!this.detail.node.hidden) this.detail.update(); }
+    if (this.contrast) { this.contrast.node.hidden = this.settings[this.spec.key] !== PICTURE || !this.host.picture?.(); if (!this.contrast.node.hidden) this.contrast.update(); }
     const effect = this.settings.patternEffect ?? this.effects[0];
     for (const button of this.effectButtons) button.setAttribute('aria-pressed', String(button.dataset.patternEffect === effect));
     this.thicknessNode.hidden = effect !== 'thickness';
@@ -1039,7 +1055,8 @@ export class SupportSection extends Section {
 /** Returns panel-template contract violations for one card's controls list. */
 export function panelOrderErrors(controls = []) {
   const errors = [];
-  const groups = { presets: 0, size: 1, choice: 2, petal: 2, draft: 2, sliders: 3, switch: 3, pattern: 4, backing: 4.5, colour: 5, support: 6 };
+  // Size and shape always comes first: it is the first thing anyone sets (and the onboarding tour starts there)
+  const groups = { size: 0, presets: 1, choice: 2, petal: 2, draft: 2, sliders: 3, switch: 3, pattern: 4, backing: 4.5, colour: 5, support: 6 };
   let last = -1;
   const seen = new Set();
   let slidersSeen = false;

@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "site/vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "1b762af65468bf5b974f2412cb776ef68a453f35df5f12a53ddc42225c5e8215",
+  "archiveSha256": "37f9f9c1c8cd2fe663332c79d394be3472e60cc12ce99905413a8e1683304b1d",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -26,8 +26,8 @@
     },
     {
       "path": "Run Textile Tool.bat",
-      "bytes": 665,
-      "sha256": "3f9a0ad42c3eacfbae6f0a89a2288b0daf8d5847ea9df9915128d077212d8b31"
+      "bytes": 643,
+      "sha256": "f2736ee60cd1614c003243da6929cc188a82eca84891eadca409375afff186ca"
     },
     {
       "path": "dev/migrations/0001_study_exports.sql",
@@ -310,6 +310,11 @@
       "sha256": "62ee58ec1a5fbf48d3b871d00eab0edb2cfda872e44abf2d02129cdedb8a7e44"
     },
     {
+      "path": "dev/tests/fit-to-bed.test.js",
+      "bytes": 1193,
+      "sha256": "b3852e96843c5904d14bdbaf69326932c66c4d734cca1d9aed6e5551098e54b3"
+    },
+    {
       "path": "dev/tests/fix-geometry.test.js",
       "bytes": 5403,
       "sha256": "5416a42e4689773ba163890ddedea36df9b708a8f8e9105321e442a28f660277"
@@ -446,8 +451,8 @@
     },
     {
       "path": "dev/tests/library.test.js",
-      "bytes": 25606,
-      "sha256": "f17a03d6b548c50926d544d11a3631e419dd15df658cde5bf81efbf4d6f5217b"
+      "bytes": 25740,
+      "sha256": "a9861ecb37f51e4605c5d92fc425417e5280b57ba083b84dfcf005aa62a9c4ff"
     },
     {
       "path": "dev/tests/lift.test.js",
@@ -583,6 +588,11 @@
       "path": "dev/tests/perimeters.test.js",
       "bytes": 8828,
       "sha256": "e7d69636da356a1e69bc86cddac85d3554d117509df100b6cfc2f1a3516a47f7"
+    },
+    {
+      "path": "dev/tests/picture-contrast.test.js",
+      "bytes": 1503,
+      "sha256": "997c189e8099df84b737cd0cb10963dfc6477927371f4f58652e96ae516bd072"
     },
     {
       "path": "dev/tests/picture.test.js",
@@ -1371,8 +1381,8 @@
     },
     {
       "path": "dev/tests/svg-colour.test.js",
-      "bytes": 22055,
-      "sha256": "34f645368104f0ef2bdcbc361cadf611568c2a4b1602a4972a4534e3f3ec7abc"
+      "bytes": 22200,
+      "sha256": "1d609b3dd27f3cabca87b7e6328b0add2e915c3ce2880f9496bd1e76e8b7596a"
     },
     {
       "path": "dev/tests/svg-edge-regressions.test.js",
@@ -1531,8 +1541,8 @@
     },
     {
       "path": "dev/tools/import-generic-filaments.mjs",
-      "bytes": 4391,
-      "sha256": "0a81ae11756aa17c00f7af20ee77bd90f595aa88fa4af6f406d603898e40d63f"
+      "bytes": 4329,
+      "sha256": "b812e72a55e49b1ae4c396d472e51c04845a98068a86047ce380e6db084c4bbe"
     },
     {
       "path": "dev/tools/import-vendor-profiles.mjs",
@@ -1816,13 +1826,13 @@
     },
     {
       "path": "site/index.html",
-      "bytes": 36675,
-      "sha256": "9c9609e37101f81820be80696e985d92f03b32a1a8940840a9339673366d61da"
+      "bytes": 34532,
+      "sha256": "38b32a73c0b529cab24419ddb5665321f8b02f2c996d150568b3983cdb722271"
     },
     {
       "path": "site/precomputed/index.json",
       "bytes": 33892,
-      "sha256": "e121e633bf03556d9c853f75dbe7725079b2680e783fef5bac10ddea8732c9fa"
+      "sha256": "e4f5962d4998b1727332558e54e31f1e836e793792d4a23c23b51f773211e59a"
     },
     {
       "path": "site/profiles/MATERIAL_SOURCES.md",
@@ -1881,8 +1891,8 @@
     },
     {
       "path": "site/profiles/materials/generic-flex-mk3.json",
-      "bytes": 833,
-      "sha256": "f0d6c182ab1111167779c26aa046543ec40572731441170db549893e9e13d37d"
+      "bytes": 807,
+      "sha256": "cb4f71112a58b770df00acaa1b5112b8863d0133096a071ac15b6057279f8dcd"
     },
     {
       "path": "site/profiles/materials/generic-hips.json",
@@ -1921,8 +1931,8 @@
     },
     {
       "path": "site/samples/filafabric-sample.svg",
-      "bytes": 3335,
-      "sha256": "3d3de90bec5c1234bd0781371111a80699657d2280f9f97b26008b2f3226c3b5"
+      "bytes": 3430,
+      "sha256": "61331a3d9dc2f1a23ed44e056c0843e672331040848f494f3139cde151bbb44a"
     },
     {
       "path": "site/samples/floral motives.jpg",
@@ -1961,8 +1971,8 @@
     },
     {
       "path": "site/src/boot.js",
-      "bytes": 2864,
-      "sha256": "6fd5bf5a9652f645b995b04d806330d4772cf313a84dcd515e66b636be63ab26"
+      "bytes": 2857,
+      "sha256": "e5731585ffb7ac95624f9465a954203b81385068ab0bffd6aec24f66b8c7969d"
     },
     {
       "path": "site/src/engine/adaptive-solids.js",
@@ -2076,8 +2086,8 @@
     },
     {
       "path": "site/src/engine/drawing.js",
-      "bytes": 19157,
-      "sha256": "c28781f93f213d30d73edadd5c0def17b458d29ae2ee7799bb7b65f6c25c43ba"
+      "bytes": 20414,
+      "sha256": "75b5044eeb46c1bc755ae1f29c58b9ef45686966bf521a8c6fcab96c16ea075b"
     },
     {
       "path": "site/src/engine/emit.js",
@@ -2266,8 +2276,8 @@
     },
     {
       "path": "site/src/engine/picture.js",
-      "bytes": 3314,
-      "sha256": "cc94ad941391b80011fd1ed626ab39783b39697a585a314522a2fb140ccdfd2a"
+      "bytes": 4462,
+      "sha256": "49f2a57707fb1fff6b12a3d3b9b626e9f99675e91057b2758a14533ebaca958a"
     },
     {
       "path": "site/src/engine/pillars.js",
@@ -2456,8 +2466,8 @@
     },
     {
       "path": "site/src/engine/svg-parse.js",
-      "bytes": 22035,
-      "sha256": "b4fbcfcb75def29d9ed369849c31e487b942c0c234f3d96a6cbbf75658113a82"
+      "bytes": 22952,
+      "sha256": "25e1ea7d1c08a6205792c255cdcb3fb6ce5ae0042fc6328b7af7f562e219ef8d"
     },
     {
       "path": "site/src/engine/svg-solids.js",
@@ -2581,8 +2591,8 @@
     },
     {
       "path": "site/src/ui/designs.js",
-      "bytes": 52304,
-      "sha256": "5400ed2181e3bd81e9166003d3492b278b0b59c0d140a8945b40668073457ec1"
+      "bytes": 52519,
+      "sha256": "985cfdb3f58454262355105eb3dd27d22df9a9422bb064b2c899f6521fe964bb"
     },
     {
       "path": "site/src/ui/diagnostics.js",
@@ -2661,8 +2671,8 @@
     },
     {
       "path": "site/src/ui/main.js",
-      "bytes": 149777,
-      "sha256": "1005210b31651b924b5a6b071501226b0464b5f97b66b47cf27a9b92ae3aa07c"
+      "bytes": 155509,
+      "sha256": "aa926756e7c6e2c011c42a2a46d46305f2eac2ae063e292f0eb5c1151a9f8bec"
     },
     {
       "path": "site/src/ui/more-designs.js",
@@ -2706,8 +2716,8 @@
     },
     {
       "path": "site/src/ui/panels.js",
-      "bytes": 72733,
-      "sha256": "91aa4ee26eb815eeb2fe7d3f1468555982b71fbda5db6a49dd6d1c5c846fea2c"
+      "bytes": 74829,
+      "sha256": "8cc16b533c2597e7d95ecfdd544a32f266534dd5004a73d4508348377d4e2504"
     },
     {
       "path": "site/src/ui/param-schema.js",
@@ -2717,7 +2727,7 @@
     {
       "path": "site/src/ui/precomputed-version.js",
       "bytes": 198,
-      "sha256": "3f17c470566b189cb319495de7ccdcf6c324bd39e93c1ac24f80f6d4726ab2f9"
+      "sha256": "5c140cbec868ca70a9dae4c5ca0f0e5ab3184af8b34b087c72fe85539812f655"
     },
     {
       "path": "site/src/ui/preview.js",
@@ -2811,8 +2821,8 @@
     },
     {
       "path": "site/src/ui/styles.css",
-      "bytes": 60854,
-      "sha256": "78303c48c0650a5cd7943f28e0b22ad5632c2f2f9f954fb807f0652edccf6348"
+      "bytes": 62704,
+      "sha256": "c20ac189d735e1b37bcd9e0d206019a0a2fa583fc60a54c1832a66a07c822cba"
     },
     {
       "path": "site/src/ui/svg-design.js",
@@ -2848,6 +2858,11 @@
       "path": "site/src/ui/tooltip.js",
       "bytes": 3535,
       "sha256": "a206e80ef2ca7411ed1ea1313c8f07ad1decc82bff1c11011977c67591d8e166"
+    },
+    {
+      "path": "site/src/ui/tour.js",
+      "bytes": 17204,
+      "sha256": "2fa564ca9df8e04734ec4bd384d8d75009576dc37ee43fffc987896c91a86dad"
     },
     {
       "path": "site/src/ui/verdict.js",
