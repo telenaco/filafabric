@@ -228,6 +228,8 @@ export function buildRegions(machine, material, vector, regions, { seam = {}, ge
   });
   if (!allowed.length) throw new Error('Nothing to print: the holes cover the whole piece.');
   const boundary = new PolygonBoundary(allowed.length ? allowed : [rectangle]);
+  // Lines are printed as drawn, trimmed only to the page: a line across a hole is what ties an island to the rest.
+  const page = new PolygonBoundary([rectangle]);
   let strands = [], warnings = [], serial = 0;
   const metadata = [], intendedByRegion=new Map(), enabled = regions.filter(r=>r.enabled!==false).map((r,i)=>[r,i]).sort((a,b)=>(a[0].order??Infinity)-(b[0].order??Infinity)||a[1]-b[1]).map(([r])=>r); // printed in the order they were applied
   for (const [index,region] of enabled.entries()) {
@@ -267,7 +269,7 @@ export function buildRegions(machine, material, vector, regions, { seam = {}, ge
       // A line's width sets its passes side by side; Layers stacks them (folds and stiffening ribs for origami).
       for (let layer=0;layer<lineLayersOf(region);layer++) for (const points of detail.passes) generated.push({id:`line-${serial++}`,family:'lines',role:'native',kind:layer?'supported':'base',layer,pts:points.map(p=>({...p,z:(layer+1)*h}))});
     }
-    generated = clipStrands(generated,boundary,0).map(s=>({...s,id:`${region.id}-${s.id}`,source:`${region.card??region.role}@${region.hex??region.key}`,regionId:region.id,regionOrder:index}));
+    generated = clipStrands(generated,region.role==='line'?page:boundary,0).map(s=>({...s,id:`${region.id}-${s.id}`,source:`${region.card??region.role}@${region.hex??region.key}`,regionId:region.id,regionOrder:index}));
     const plan = applyColourPlan(generated,{mode:colourMode(region.settings),layerColours:region.settings?.layerColours});
     strands.push(...plan);
     metadata.push({ id:region.id, hex:region.hex, role:region.role, card:region.card??null, settingsHash:fingerprint(region.settings??{}), colourMode:colourMode(region.settings) });
@@ -292,8 +294,9 @@ export function buildRegions(machine, material, vector, regions, { seam = {}, ge
   // The piece prints layer by layer; within a layer, colour by colour in the order they were applied, each in its own
   // design's order (already nozzle-safe) with its contour first. Re-ordering every strand of the piece together for nozzle
   // clearance was slow (a minute or more for a drawing) and failed outright once one colour stood taller than the rest.
-  const rank=new Map(enabled.map((region,i)=>[region.id,i]));
-  strands=clipStrands([...seamStrands,...strands],boundary,bead/2).map((s,i)=>({s,i}))
+  const rank=new Map(enabled.map((region,i)=>[region.id,i])), lineRegions=new Set(enabled.filter(r=>r.role==='line').map(r=>r.id));
+  const isLine=s=>lineRegions.has(s.regionId);
+  strands=[...clipStrands([...seamStrands,...strands.filter(s=>!isLine(s))],boundary,bead/2),...clipStrands(strands.filter(isLine),page,0)].map((s,i)=>({s,i}))
     .sort((a,b)=>(a.s.layer??0)-(b.s.layer??0)||(rank.get(a.s.regionId)??0)-(rank.get(b.s.regionId)??0)||(a.s.role==='seam'?0:1)-(b.s.role==='seam'?0:1)||a.i-b.i).map(({s})=>s);
   if(!strands.length)throw new Error('Nothing to print: enable a region with printable shapes or lines.');
   const modes = new Set(metadata.filter(r=>r.role==='pattern').map(r=>JSON.stringify([r.colourMode,regions.find(region=>region.id===r.id)?.settings?.layerColours??[]])));

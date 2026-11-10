@@ -48,9 +48,16 @@ export class RegionControls {
     const region=regions.find(r=>r.id===selection);
     const done=el('button',{type:'button',class:'link small',text:'Whole piece'}); done.addEventListener('click',this.close);
     if(!region){this.header.replaceChildren(el('h2',{class:'eyebrow',text:'Drawing regions'}),el('p',{class:'small muted',text:'Tick a colour and choose what it prints as. Apply sets it aside as part of the piece: untick it and it keeps showing while you work on the next colour on top of it.'}),el('p',{class:'small muted',text:`Draw in ${REGION_PALETTE.map(c=>c.name).join(', ')}. Red is the pattern, blue a hole, green and yellow solids; the others are lines.`}));return;}
+    // choosing what an unticked colour prints as (or editing it) puts it in the piece: otherwise the change shows nothing
+    const edit=(patch)=>this.change(region.id,region.enabled===false?{...patch,enabled:true}:patch);
     const role=el('select',{'aria-label':'Region role',id:'region-role'},...Object.entries(ROLE_LABELS).map(([value,text])=>el('option',{value,text,selected:value===region.role})));
-    role.addEventListener('change',()=>this.change(region.id,{role:role.value}));
+    role.addEventListener('change',()=>edit({role:role.value}));
     const parts=[el('div',{class:'region-header-title'},el('span',{class:'region-paint',style:`background:${region.hex??PAINTS[region.color]}`}),el('strong',{text:`${colourName(region.hex)??region.color} ${region.hex??''}`}),done),el('label',{class:'field-row'},el('span',{text:'Print as'}),role)];
+    if(region.enabled===false){
+      const include=el('button',{type:'button',class:'link small',text:`Include ${colourName(region.hex)??region.color}`});
+      include.addEventListener('click',()=>this.change(region.id,{enabled:true}));
+      parts.push(el('p',{class:'small muted region-excluded-note'},`${colourName(region.hex)??region.color} is not in the preview yet: it is unticked in the colour row. `,include));
+    }
     if(region.role==='pattern'){
       const picker=el('select',{id:'region-card','aria-label':'Design for this region'},...this.cards.filter(c=>c.status==='ready'&&!c.hidden).map(c=>el('option',{value:c.id,text:`${c.name} · ${c.shelf}`,selected:c.id===region.card})));
       picker.addEventListener('change',()=>this.useCard(region.id,picker.value));
@@ -58,11 +65,11 @@ export class RegionControls {
     }
     if(region.role==='line'){
       const layers=el('input',{type:'number',min:1,max:LINE_LAYERS_MAX,step:1,value:lineLayersOf(region),'aria-label':'Layers'});
-      layers.addEventListener('change',()=>this.change(region.id,{lineLayers:lineLayersOf({lineLayers:layers.value})}));
+      layers.addEventListener('change',()=>edit({lineLayers:lineLayersOf({lineLayers:layers.value})}));
       const thick=el('input',{type:'number',min:.2,max:20,step:.1,value:lineWidthOf(region)??'',placeholder:'as drawn','aria-label':'Thickness in mm'});
-      thick.addEventListener('change',()=>this.change(region.id,{lineWidth:lineWidthOf({lineWidth:thick.value})}));
+      thick.addEventListener('change',()=>edit({lineWidth:lineWidthOf({lineWidth:thick.value})}));
       parts.push(el('label',{class:'field-row'},el('span',{text:'Layers'}),layers),el('label',{class:'field-row'},el('span',{text:'Thickness mm'}),thick),
-        alignSelect(region.lineAlign??'centre',value=>this.change(region.id,{lineAlign:value}),'Line sits'),
+        alignSelect(region.lineAlign??'centre',value=>edit({lineAlign:value}),'Line sits'),
         el('p',{class:'small muted',text:'Thickness is the drawn line width unless you set one: the nozzle goes round as many times as it takes. Layers stacks it taller, for folds and stiffening.'}));
     }
     if(region.applied){

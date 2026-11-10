@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "site/vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "03a440155d20a26094133252556780f86163fb4a32a206dce74052956a75c167",
+  "archiveSha256": "0c95f54f3dbcfbb047e1c99261bc4a28182b971248a4657052ff372e007724df",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -653,6 +653,16 @@
       "path": "dev/tests/raised-cards.test.js",
       "bytes": 11758,
       "sha256": "92e044d9e5e78c475e7e3cb6be679bf60bb6c767c2a058551cb4b0b366bc0e0f"
+    },
+    {
+      "path": "dev/tests/region-controls.test.js",
+      "bytes": 3365,
+      "sha256": "429d83cc1fee6ae216533f85dddac3c1044b2cfada82b1e01194092c66e162a0"
+    },
+    {
+      "path": "dev/tests/region-lines-over-holes.test.js",
+      "bytes": 2711,
+      "sha256": "2442737765b7906f8541ac1c9e053599951f5975bf79b350229ded06f8f086e4"
     },
     {
       "path": "dev/tests/region-palette.test.js",
@@ -1832,7 +1842,7 @@
     {
       "path": "site/precomputed/index.json",
       "bytes": 33892,
-      "sha256": "a5c2c16179bf9ec4ca27eaef5fde3f7a908431597c27f6530a4a8f4b3244cff3"
+      "sha256": "791f8fb6f1b69d5bc668ebc27bf74259ecf3cb22e24d9f686d823148d525960d"
     },
     {
       "path": "site/profiles/MATERIAL_SOURCES.md",
@@ -2306,8 +2316,8 @@
     },
     {
       "path": "site/src/engine/regions.js",
-      "bytes": 24086,
-      "sha256": "4e51863acfae8b22d143d2cedc576fe4e189b1b6a3ca4a1af36cb43af61a9a15"
+      "bytes": 24467,
+      "sha256": "182ee3e132dc01a964fb43a4df0e1b31ad06a0d59c75eb50acecaf0f240b99c5"
     },
     {
       "path": "site/src/engine/relief.js",
@@ -2727,7 +2737,7 @@
     {
       "path": "site/src/ui/precomputed-version.js",
       "bytes": 198,
-      "sha256": "c07bcf3287ea684f8fef92b045b07c2424cdb0bec30428c2d7b2e0a370b7d88f"
+      "sha256": "d5cbb2da2e920b3482d00d873c96f19e2d189c559ce28da6908cd83ff011d8e2"
     },
     {
       "path": "site/src/ui/preview.js",
@@ -2776,8 +2786,8 @@
     },
     {
       "path": "site/src/ui/region-controls.js",
-      "bytes": 7241,
-      "sha256": "03e1c9aa0d9ef386f538f20cab1a4e4b3965177d76c14b62dbb9973e69f359b8"
+      "bytes": 7824,
+      "sha256": "30b3305a663ef9a617855c68a8199f6009187187f6cd6ae932e6e8b71c4c475f"
     },
     {
       "path": "site/src/ui/research-cell-designs.js",
