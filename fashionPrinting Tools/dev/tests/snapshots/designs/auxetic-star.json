@@ -1,0 +1,18 @@
+[
+  {
+    "card": "auxetic-star",
+    "preset": "default",
+    "settingsHash": "ac6974f740ca",
+    "gcodeSha256": "a8dd02bae8e16365d720bd3fe06946dcdc2836eb0ba592b0aa1ace6026dadeeb",
+    "strands": 21,
+    "moves": 873,
+    "extrudeMm": 496.2,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "L1",
+      "ties"
+    ],
+    "ties": 7
+  }
+]

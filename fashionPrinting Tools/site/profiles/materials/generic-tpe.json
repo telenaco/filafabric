@@ -1,0 +1,44 @@
+{
+  "id": "generic-tpe",
+  "name": "Generic TPE Flexible",
+  "source": "Starting point for unspecified TPE: PrusaResearch 2.5.12 Generic FLEX, classic MK3 / 0.4 mm; check the spool manufacturer's temperatures",
+  "filament_diameter": 1.75,
+  "density": 1.22,
+  "temperature": { "first_layer": 240, "print": 240 },
+  "bed_temperature": 50,
+  "flow": {
+    "multiplier": 1.15,
+    "reference_line_width": null,
+    "foam_expansion": 1,
+    "max_volumetric_speed_nominal": 1.2
+  },
+  "retraction": {
+    "length": 0,
+    "speed": 35,
+    "deretract_speed": 25,
+    "z_hop": 0.4,
+    "min_travel": 1,
+    "note": "Prusa Generic FLEX disables retraction. Unused speed, lift and travel threshold are inherited from its classic MK3S printer reference."
+  },
+  "fan": { "default": 0 },
+  "print_defaults": {
+    "fan_base": 0,
+    "fan_supported": 0,
+    "fan_nonplanar": 0,
+    "fan_unsupported": 0,
+    "fan_travel": 0
+  },
+  "travel_speed_hint": 150,
+  "pressure_advance_k": null,
+  "notes": "Prusa Generic FLEX used as a generic non-foaming TPE baseline, not a manufacturer-specific TPE formulation. TPE hardness, chemistry, temperatures and density vary: match the spool data and calibrate before large prints. Density 1.22 g/cm3 and flow multiplier 1.15 are reference values, not measurements of an unspecified spool. Cooling is off as in the upstream preset. Reference setup is a classic direct-drive MK3-family printer with a 0.4 mm nozzle.",
+  "provenance": {
+    "repository": "https://github.com/prusa3d/PrusaSlicer-settings-prusa-fff",
+    "revision": "c712aaf177a915da19acad20262ab9379010b3aa",
+    "bundle_version": "2.5.12",
+    "preset": "Generic FLEX",
+    "reference_printer": "Original Prusa i3 MK3S & MK3S+ (0.4 mm)",
+    "source_url": "https://github.com/prusa3d/PrusaSlicer-settings-prusa-fff/blob/c712aaf177a915da19acad20262ab9379010b3aa/PrusaResearch/2.5.12.ini",
+    "adaptation": "Labelled as generic TPE; values are the Generic FLEX baseline and require spool-specific qualification.",
+    "physically_verified": false
+  }
+}

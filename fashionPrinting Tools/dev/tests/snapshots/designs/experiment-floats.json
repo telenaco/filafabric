@@ -1,0 +1,53 @@
+[
+  {
+    "card": "experiment-floats",
+    "preset": "default",
+    "settingsHash": "3ee386c12f3f",
+    "gcodeSha256": "a055f48097dd20dc33a9c13521e91b38aea0f61e66362eb29bb8b7db133a80a0",
+    "strands": 15,
+    "moves": 1288,
+    "extrudeMm": 344.6,
+    "zMin": 0.2,
+    "zMax": 1.4000000000000001,
+    "families": [
+      "carrier-x",
+      "carrier-y",
+      "texture"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "experiment-floats",
+    "preset": "gentle",
+    "settingsHash": "8fc4ccf80d4a",
+    "gcodeSha256": "63be9ddc62e2f18305ca5d5786d79cc1a6baea43ac4bf57840d5bd902fe4096b",
+    "strands": 15,
+    "moves": 1288,
+    "extrudeMm": 344.1,
+    "zMin": 0.2,
+    "zMax": 1,
+    "families": [
+      "carrier-x",
+      "carrier-y",
+      "texture"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "experiment-floats",
+    "preset": "open",
+    "settingsHash": "fa13e2edebde",
+    "gcodeSha256": "1a26208d6ad445772918e5506ef42040ec5e74ec6d80eae308cb15f1eaec4411",
+    "strands": 10,
+    "moves": 1003,
+    "extrudeMm": 276.2,
+    "zMin": 0.2,
+    "zMax": 1.4000000000000001,
+    "families": [
+      "carrier-x",
+      "carrier-y",
+      "texture"
+    ],
+    "ties": 0
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "upstream": "https://github.com/kimgh06/Three_Slicer",
+  "commit": "8ee934d183a9f60ab09bab9e05cd7bb747c6a51a",
+  "path": "packages/engine/src/slicer_core.js",
+  "licence": "AGPL-3.0-or-later",
+  "kernelSha256": "275ea64bcfd2ebe5527b40683acb3b63d63462a385b4da3b4008c3b588a573c3",
+  "sourceSha256": "354c5c94f81cb5af30da5402fef0bba6f32703b6605c276f2a6d8d610a042d7d"
+}

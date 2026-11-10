@@ -1,0 +1,86 @@
+[
+  {
+    "card": "starlattice",
+    "preset": "default",
+    "settingsHash": "384e45a7d9f3",
+    "gcodeSha256": "cd43178af6e70cff62ec4eb711971ade27c0912af23b190c546fad0d73c1f8ab",
+    "strands": 56,
+    "moves": 2039,
+    "extrudeMm": 1458.8,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "starlattice",
+    "preset": "stars",
+    "settingsHash": "384e45a7d9f3",
+    "gcodeSha256": "cd43178af6e70cff62ec4eb711971ade27c0912af23b190c546fad0d73c1f8ab",
+    "strands": 56,
+    "moves": 2039,
+    "extrudeMm": 1458.8,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "starlattice",
+    "preset": "hexagram",
+    "settingsHash": "b71fcebeea08",
+    "gcodeSha256": "083d296a56d49cc529e32ffcfa745b6eb2b032bf9a5dc7fea1b50da650ce1d56",
+    "strands": 44,
+    "moves": 1811,
+    "extrudeMm": 1394.3,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2",
+      "L3"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "starlattice",
+    "preset": "rosettes",
+    "settingsHash": "351bea4c2c72",
+    "gcodeSha256": "47b5d9e781f93fbd98d1ebf7744614bc4a33be28b08cf2f0c34c9ed0c4001355",
+    "strands": 44,
+    "moves": 1891,
+    "extrudeMm": 1577.2,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2",
+      "L3"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "starlattice",
+    "preset": "girih",
+    "settingsHash": "45de72f6e8cb",
+    "gcodeSha256": "f0b83aa0a1ebecf510fc15568b6baaa7a9b83dd0b0da312ef7d927df79373f7a",
+    "strands": 36,
+    "moves": 2177,
+    "extrudeMm": 1709.5,
+    "zMin": 0.2,
+    "zMax": 0.4,
+    "families": [
+      "L1",
+      "L2",
+      "L3",
+      "L4"
+    ],
+    "ties": 0
+  }
+]

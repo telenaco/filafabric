@@ -1,0 +1,19 @@
+[
+  {
+    "card": "strain-wave-cells",
+    "preset": "default",
+    "settingsHash": "7df21e3a3623",
+    "gcodeSha256": "0640b72c7a94a2a53d3aaa5b439b14e05299d399df424f571e896f8efdee6643",
+    "strands": 56,
+    "moves": 735,
+    "extrudeMm": 386.4,
+    "zMin": 0.2,
+    "zMax": 0.5900968866966473,
+    "families": [
+      "ties",
+      "wave-x",
+      "wave-y"
+    ],
+    "ties": 31
+  }
+]

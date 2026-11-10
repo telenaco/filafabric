@@ -1,0 +1,53 @@
+[
+  {
+    "card": "experiment-pearls",
+    "preset": "default",
+    "settingsHash": "3ee386c12f3f",
+    "gcodeSha256": "db28e2489ce04ed9de8eeb2644a3e63af9802393a7481c4a94d883de210a6883",
+    "strands": 33,
+    "moves": 1106,
+    "extrudeMm": 382.3,
+    "zMin": 0.2,
+    "zMax": 0.6000000000000001,
+    "families": [
+      "carrier-x",
+      "carrier-y",
+      "texture"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "experiment-pearls",
+    "preset": "gentle",
+    "settingsHash": "8fc4ccf80d4a",
+    "gcodeSha256": "44e6e9eca7f0165e13e2beffce7915f3efa4385602f77d79e01695d277c33b0b",
+    "strands": 33,
+    "moves": 1110,
+    "extrudeMm": 383.1,
+    "zMin": 0.2,
+    "zMax": 0.6000000000000001,
+    "families": [
+      "carrier-x",
+      "carrier-y",
+      "texture"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "experiment-pearls",
+    "preset": "open",
+    "settingsHash": "fa13e2edebde",
+    "gcodeSha256": "52c9e9a4d86319c4a3708ead172665de52f612c0a195ca9a3646c8c06cb57f7a",
+    "strands": 22,
+    "moves": 771,
+    "extrudeMm": 282.8,
+    "zMin": 0.2,
+    "zMax": 0.6000000000000001,
+    "families": [
+      "carrier-x",
+      "carrier-y",
+      "texture"
+    ],
+    "ties": 0
+  }
+]

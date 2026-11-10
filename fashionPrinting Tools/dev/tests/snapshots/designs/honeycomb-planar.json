@@ -1,0 +1,66 @@
+[
+  {
+    "card": "honeycomb-planar",
+    "preset": "default",
+    "settingsHash": "87ff750fb203",
+    "gcodeSha256": "0f12a6b5273baa2001889ffd46dfb5cdfa52344a87e58122b2d13b575a60cbc8",
+    "strands": 421,
+    "moves": 2411,
+    "extrudeMm": 1352.2,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "rows",
+      "struts"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "honeycomb-planar",
+    "preset": "honeycomb",
+    "settingsHash": "87ff750fb203",
+    "gcodeSha256": "0f12a6b5273baa2001889ffd46dfb5cdfa52344a87e58122b2d13b575a60cbc8",
+    "strands": 421,
+    "moves": 2411,
+    "extrudeMm": 1352.2,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "rows",
+      "struts"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "honeycomb-planar",
+    "preset": "re-entrant",
+    "settingsHash": "87ff750fb203",
+    "gcodeSha256": "0f12a6b5273baa2001889ffd46dfb5cdfa52344a87e58122b2d13b575a60cbc8",
+    "strands": 421,
+    "moves": 2411,
+    "extrudeMm": 1352.2,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "rows",
+      "struts"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "honeycomb-planar",
+    "preset": "deep-auxetic",
+    "settingsHash": "def23d49dd3e",
+    "gcodeSha256": "50ca5cdd2f2ce3981030ac2948efb9d8c099d05c4ebe95b42629e30606d6869e",
+    "strands": 274,
+    "moves": 1137,
+    "extrudeMm": 1081.5,
+    "zMin": 0.2,
+    "zMax": 0.2,
+    "families": [
+      "rows",
+      "struts"
+    ],
+    "ties": 0
+  }
+]

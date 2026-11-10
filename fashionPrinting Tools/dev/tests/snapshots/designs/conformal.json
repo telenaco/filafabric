@@ -1,0 +1,83 @@
+[
+  {
+    "card": "conformal",
+    "preset": "default",
+    "settingsHash": "626d5eea0d48",
+    "gcodeSha256": "d14e612a24111a10b5b87359ce092e266dadbdd9040ecffea8bc8451ac534b06",
+    "strands": 74,
+    "moves": 3056,
+    "extrudeMm": 1308.3,
+    "zMin": 0.2,
+    "zMax": 0.5585418821148759,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "conformal",
+    "preset": "buttonhole",
+    "settingsHash": "626d5eea0d48",
+    "gcodeSha256": "d14e612a24111a10b5b87359ce092e266dadbdd9040ecffea8bc8451ac534b06",
+    "strands": 74,
+    "moves": 3056,
+    "extrudeMm": 1308.3,
+    "zMin": 0.2,
+    "zMax": 0.5585418821148759,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "conformal",
+    "preset": "two-holes",
+    "settingsHash": "782930debb7c",
+    "gcodeSha256": "b32547ea39f327639904065c2254e8b3c416bc002cdb82f69e2fac3ac2ebad6e",
+    "strands": 69,
+    "moves": 3397,
+    "extrudeMm": 1403.6,
+    "zMin": 0.2,
+    "zMax": 0.44703721042557076,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  },
+  {
+    "card": "conformal",
+    "preset": "magnet",
+    "settingsHash": "6311c7d356d6",
+    "gcodeSha256": "f1efb11b31c311b4d4036a27e86856e841b56c9864a99e642afc4f9b7094ad86",
+    "strands": 42,
+    "moves": 1184,
+    "extrudeMm": 564.3,
+    "zMin": 0.2,
+    "zMax": 0.592387953065493,
+    "families": [
+      "L1",
+      "L2",
+      "ties"
+    ],
+    "ties": 6
+  },
+  {
+    "card": "conformal",
+    "preset": "nautilus",
+    "settingsHash": "85b4dfed1167",
+    "gcodeSha256": "c999b06f472ac6fcfdcaf1cebea4b72792e440b7d852cff74709998177a408e1",
+    "strands": 35,
+    "moves": 1308,
+    "extrudeMm": 735.4,
+    "zMin": 0.2,
+    "zMax": 0.5905111385889352,
+    "families": [
+      "L1",
+      "L2"
+    ],
+    "ties": 0
+  }
+]

@@ -1,0 +1,26 @@
+{
+  "name": "filafabric",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "contributors": [
+    {
+      "name": "Bubaki Design",
+      "url": "https://github.com/bubakiDesign"
+    }
+  ],
+  "scripts": {
+    "test": "node --test \"dev/tests/**/*.test.js\"",
+    "serve": "node dev/tools/serve.mjs --open",
+    "vendor": "node dev/tools/vendor-three.mjs",
+    "golden": "node dev/tools/update-golden.mjs",
+    "snapshots": "node dev/tools/update-design-snapshots.mjs",
+    "precompute": "node dev/tools/precompute-defaults.mjs",
+    "profiles": "node dev/tools/profiles-index.mjs",
+    "source:snapshot": "node dev/tools/source-snapshot.mjs",
+    "source:verify": "node dev/tools/source-verify.mjs"
+  },
+  "devDependencies": {
+    "three": "^0.169.0"
+  }
+}

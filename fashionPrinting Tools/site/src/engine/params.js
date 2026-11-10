@@ -1,0 +1,285 @@
+import { validateMachine, validateMaterial } from './profiles.js';
+import { airStrandDiameter, roundedRectArea } from './extrusion.js';
+
+export class ConfigError extends Error {
+  constructor(errors) {
+    super(errors.join('; '));
+    this.name = 'ConfigError';
+    this.errors = errors;
+  }
+}
+
+/**
+ * Prime line in machine coordinates (outside the print area, in front of the bed).
+ * `filamentMm` is how much filament it purges: the user's own PrusaSlicer start block pushes about 21.5 mm.
+ */
+export const PRIME = Object.freeze({ x0: 20, x1: 100, y: -3, liftZ: 2, filamentMm: 20 });
+
+export const Z_PROFILE_NAMES = ['sin2', 'bell', 'smoothstep'];
+export const FIBER_SHAPE_NAMES = ['hairpin', 'arch'];
+export const BOUNDARY_POLICIES = ['footprint', 'feet-only'];
+
+export const DEFAULT_TEXTILE = Object.freeze({
+  sample_width: 100,
+  sample_height: 100,
+  include_base: true,
+  include_loops: true,
+  base_spacing: 5,
+  corner_radius: 1,
+  layer_height: 0.2,
+  extrusion_width: 0.45,
+  free_strand_diameter: null,
+  nozzle_diameter: 0.4,
+  loop_width: 6,
+  loop_length: 15,
+  loop_pitch: 3,
+  loop_z_lift: 3,
+  loop_start_z: null,
+  anchor_dwell: 1,
+  z_profile: 'sin2',
+  fiber_shape: 'hairpin',
+  leg_gap: 0.6,
+  row_pitch_multiple: 1,
+  row_stagger: 0.5,
+  boundary_policy: 'footprint',
+  curve_resolution: 0.4,
+  support_threshold: 0.4,
+  unsupported_fraction: 0.6,
+  speed_flat: null,
+  speed_base: 15,
+  speed_supported: 12,
+  speed_nonplanar: 8,
+  speed_unsupported: 5,
+  speed_travel: 150,
+  fan_base: 0,
+  fan_supported: 0,
+  fan_nonplanar: 0,
+  fan_unsupported: 0,
+  fan_travel: 0,
+  // flow for strands in the air, in % of the nominal round strand (100 = as the material profile says)
+  flow_nonplanar: 100,
+  flow_unsupported: 100,
+  print_acceleration: 800,
+  nozzle_tip_radius: 0.6,
+  nozzle_cone_half_angle: 30,
+  clearance: 1.0,
+  retraction_length: null,
+  retraction_speed: null,
+  random_enabled: false,
+  random_seed: 1,
+  amp_length: 0,
+  amp_width: 0,
+  amp_lift: 0,
+  amp_xy: 0,
+  amp_orientation: 0,
+  amp_spacing: 0,
+  limits_mode: 'normal',
+});
+
+const POSITIVE = [
+  'sample_width', 'sample_height', 'base_spacing', 'layer_height', 'extrusion_width', 'nozzle_diameter',
+  'loop_width', 'loop_length', 'loop_pitch', 'curve_resolution', 'speed_base', 'speed_supported',
+  'speed_nonplanar', 'speed_unsupported', 'speed_travel', 'print_acceleration', 'nozzle_cone_half_angle',
+  'row_pitch_multiple',
+];
+const NON_NEGATIVE = [
+  'corner_radius', 'loop_z_lift', 'anchor_dwell', 'leg_gap', 'row_stagger', 'support_threshold',
+  'unsupported_fraction', 'nozzle_tip_radius', 'clearance', 'amp_length', 'amp_width', 'amp_lift', 'amp_xy',
+  'amp_orientation', 'amp_spacing',
+];
+const PERCENT = ['fan_base', 'fan_supported', 'fan_nonplanar', 'fan_unsupported', 'fan_travel'];
+/** Flow in % for strands in the air: below 50 they break, above 300 the hotend floods and the strand sags. */
+export const FLOW_RANGE = Object.freeze({ min: 50, max: 300 });
+const FLOW = ['flow_nonplanar', 'flow_unsupported'];
+const BOOLEAN = ['include_base', 'include_loops', 'random_enabled'];
+
+const MAX = {
+  sample_width: 1000,
+  sample_height: 1000,
+  base_spacing: 200,
+  loop_width: 100,
+  loop_length: 200,
+  loop_pitch: 100,
+  curve_resolution: 5,
+  nozzle_cone_half_angle: 85,
+  speed_flat: 500,
+  speed_base: 500,
+  speed_supported: 500,
+  speed_nonplanar: 500,
+  speed_unsupported: 500,
+  speed_travel: 500,
+  print_acceleration: 20000,
+};
+const MIN_CURVE_RESOLUTION = 0.05;
+const MAX_RETRACTION_LENGTH = 15;
+const MAX_RETRACTION_SPEED = 120;
+
+export function validateTextile(t) {
+  const errors = [];
+  const num = (k) => typeof t[k] === 'number' && Number.isFinite(t[k]);
+  for (const k of POSITIVE) if (!num(k) || t[k] <= 0) errors.push(`${k} must be a number greater than 0`);
+  for (const k of NON_NEGATIVE) if (!num(k) || t[k] < 0) errors.push(`${k} must be a number of 0 or more`);
+  for (const k of PERCENT) if (!num(k) || t[k] < 0 || t[k] > 100) errors.push(`${k} must be a number between 0 and 100`);
+  for (const k of FLOW) {
+    if (!num(k) || t[k] < FLOW_RANGE.min || t[k] > FLOW_RANGE.max) errors.push(`${k} must be a number between ${FLOW_RANGE.min} and ${FLOW_RANGE.max} (%)`);
+  }
+  for (const k of BOOLEAN) if (typeof t[k] !== 'boolean') errors.push(`${k} must be true or false`);
+  for (const k of ['free_strand_diameter', 'loop_start_z', 'retraction_speed', 'speed_flat']) {
+    if (t[k] !== null && (!num(k) || t[k] <= 0)) errors.push(`${k} must be empty or a number greater than 0`);
+  }
+  if (t.retraction_length !== null && (!num('retraction_length') || t.retraction_length < 0)) {
+    errors.push('retraction_length must be empty or a number of 0 or more');
+  }
+  if (!Number.isInteger(t.random_seed)) errors.push('random_seed must be a whole number');
+  if (num('row_pitch_multiple') && !Number.isInteger(t.row_pitch_multiple)) errors.push('row_pitch_multiple must be a whole number');
+  if (!Z_PROFILE_NAMES.includes(t.z_profile)) errors.push(`z_profile must be one of ${Z_PROFILE_NAMES.join(', ')}`);
+  if (!FIBER_SHAPE_NAMES.includes(t.fiber_shape)) errors.push(`fiber_shape must be one of ${FIBER_SHAPE_NAMES.join(', ')}`);
+  if (!BOUNDARY_POLICIES.includes(t.boundary_policy)) errors.push(`boundary_policy must be one of ${BOUNDARY_POLICIES.join(', ')}`);
+  if (typeof t.limits_mode !== 'string') errors.push('limits_mode must be a string');
+  if (num('unsupported_fraction') && t.unsupported_fraction > 1) errors.push('unsupported_fraction must be at most 1');
+  if (num('loop_length') && num('loop_width') && t.loop_length <= t.loop_width / 2) {
+    errors.push('loop_length must be greater than half of loop_width');
+  }
+  if (num('anchor_dwell') && num('loop_length') && 2 * t.anchor_dwell >= t.loop_length) {
+    errors.push('anchor_dwell must be less than half of loop_length');
+  }
+  // Upper bounds: values beyond these hang the page, exhaust memory or have no physical meaning.
+  for (const [key, max] of Object.entries(MAX)) {
+    if (num(key) && t[key] > max) errors.push(`${key} must be at most ${max}`);
+  }
+  if (num('curve_resolution') && t.curve_resolution < MIN_CURVE_RESOLUTION) {
+    errors.push(`curve_resolution must be at least ${MIN_CURVE_RESOLUTION} mm`);
+  }
+  if (typeof t.retraction_length === 'number' && t.retraction_length > MAX_RETRACTION_LENGTH) {
+    errors.push(`retraction_length must be at most ${MAX_RETRACTION_LENGTH} mm (longer retractions jam flexible filament)`);
+  }
+  if (typeof t.retraction_speed === 'number' && t.retraction_speed > MAX_RETRACTION_SPEED) {
+    errors.push(`retraction_speed must be at most ${MAX_RETRACTION_SPEED} mm/s`);
+  }
+  return errors;
+}
+
+/**
+ * Conservative suggested layer thicknesses, from a quarter to five eighths of nozzle width, in 0.05 mm steps.
+ * An explicit print profile can add its exact height, up to 80% of nozzle diameter. These are not material guarantees.
+ */
+export function layerHeightOptions(nozzle = 0.4, profileHeight = null) {
+  const d = Number.isFinite(Number(nozzle)) && Number(nozzle) >= 0.1 && Number(nozzle) <= 2 ? Number(nozzle) : 0.4;
+  const step = 0.05;
+  const lo = Math.max(step, Math.ceil((d * 0.25) / step - 1e-9) * step);
+  const hi = Math.max(lo, Math.floor((d * 0.625) / step + 1e-9) * step);
+  const out = [];
+  for (let v = lo; v <= hi + 1e-9; v += step) out.push(Math.round(v * 100) / 100);
+  // These buttons are suggestions. Keep an explicit slicer layer height exactly, including non-0.05 mm steps.
+  if (typeof profileHeight === 'number' && Number.isFinite(profileHeight) && profileHeight > 0 && profileHeight <= 0.8 * d + 1e-9 && !out.includes(profileHeight)) out.push(profileHeight);
+  out.sort((a, b) => a - b);
+  return out;
+}
+
+/** A slicer's actual print preset wins; a printer-only file falls back to about half its nozzle diameter. */
+export function defaultLayerHeight(machine) {
+  const h = machine?.print_defaults?.layer_height;
+  const choices = layerHeightOptions(machine?.nozzle_diameter, h);
+  if (choices.includes(h)) return h;
+  const nozzle = machine?.nozzle_diameter ?? 0.4;
+  return choices.reduce((best, v) => Math.abs(v - nozzle / 2) < Math.abs(best - nozzle / 2) - 1e-9 ? v : best, choices[0]);
+}
+
+/**
+ * The width of one flat bead for this printer and filament: what a design's config calls `cfg.t.extrusion_width`, the nozzle
+ * diameter × 1.125 unless the filament says otherwise. Sizes that count in beads (ui/nozzle-limits.js) follow it.
+ */
+export function beadWidth(machine, material) {
+  try { return resolveConfig(machine, material).t.extrusion_width; } catch { return Math.round((machine?.nozzle_diameter > 0 ? machine.nozzle_diameter : 0.4) * 1.125 * 10000) / 10000; }
+}
+
+export function resolveConfig(machine, material, overrides = {}) {
+  const profileErrors = [
+    ...validateMachine(machine).map((e) => `machine: ${e}`),
+    ...validateMaterial(material).map((e) => `material: ${e}`),
+  ];
+  // a material may carry `print_defaults` (the studio puts the chosen layer thickness there); a design's own overrides win
+  // a printer profile may say what nozzle it has (an imported slicer printer does); a design's own overrides win
+  const measuredWidth = material?.flow?.measured_line_width;
+  const t = { ...DEFAULT_TEXTILE,
+    ...(machine?.nozzle_diameter > 0 ? { nozzle_diameter: machine.nozzle_diameter, extrusion_width: Math.round(machine.nozzle_diameter * 1.125 * 10000) / 10000 } : {}),
+    // a filament may say how fast to travel (`travel_speed_hint`): a design's own travel speed still wins
+    ...(material?.travel_speed_hint > 0 ? { speed_travel: material.travel_speed_hint } : {}),
+    layer_height: defaultLayerHeight(machine), ...(material?.print_defaults ?? {}),
+    ...(measuredWidth > 0 ? { extrusion_width: measuredWidth } : {}), ...overrides };
+  const errors = [...profileErrors, ...validateTextile(t)];
+  if (errors.length) throw new ConfigError(errors);
+
+  const mode = t.limits_mode in machine.limits.modes ? t.limits_mode : machine.limits.default_mode;
+  // M221 from the printer profile is incorporated in E once; emitted firmware flow stays at 100%.
+  const printerFlow = machine.extrusion.flow_multiplier ?? 1;
+  const multiplier = material.flow.multiplier * printerFlow;
+  const r = material.retraction;
+  const overhang = t.include_loops && t.boundary_policy === 'feet-only' ? t.loop_length + (t.random_enabled ? t.amp_length : 0) : 0;
+  const derived = {
+    filamentDiameter: material.filament_diameter,
+    multiplier,
+    materialMultiplier: material.flow.multiplier,
+    printerFlowMultiplier: printerFlow,
+    // Legacy profiles express their ceiling before the multiplier. An explicit ceiling is raw filament input.
+    maxVolActual: material.flow.max_volumetric_speed_actual ?? material.flow.max_volumetric_speed_nominal * multiplier,
+    // Width measurement changes coverage, not the E used for the calibration line. Air strands are independent.
+    flatCalibration: measuredWidth > 0 ? {
+      measuredWidth, commandedWidth: material.flow.calibration_line_width ?? material.print_defaults?.extrusion_width ?? 0.45,
+      layerHeight: material.flow.calibration_layer_height ?? 0.2,
+    } : null,
+    flatFlowCorrection: measuredWidth > 0
+      ? roundedRectArea(material.flow.calibration_line_width ?? material.print_defaults?.extrusion_width ?? 0.45, material.flow.calibration_layer_height ?? 0.2)
+        / roundedRectArea(measuredWidth, material.flow.calibration_layer_height ?? 0.2)
+      : 1,
+    freeDiameter: t.free_strand_diameter ?? t.nozzle_diameter,
+    rowPitch: t.row_pitch_multiple * t.base_spacing,
+    // loops sit one layer above the base strand; with no base they start on the bed layer
+    loopBaseZ: t.loop_start_z ?? (t.include_base ? 2 * t.layer_height : t.layer_height),
+    limits: machine.limits.modes[mode],
+    limitsMode: mode,
+    retraction: {
+      length: t.retraction_length ?? r.length,
+      speed: t.retraction_speed ?? r.speed,
+      deretractSpeed: r.deretract_speed,
+      // pushed back after a travel on top of what was pulled: a flexible strand needs it to build its pressure up again
+      restartExtra: r.restart_extra ?? 0,
+      // how high a travel lifts over what is printed (emit.js; 0: the studio's own 3 mm)
+      zHop: r.z_hop,
+      minTravel: r.min_travel,
+      liftOnRetractOnly: r.lift_on_retract_only ?? false,
+      clearance: t.layer_height,
+      // Nozzle footprint plus the flat bead footprint for selective travel collision checks.
+      travelRadius: (t.nozzle_diameter + t.extrusion_width) / 2,
+      nozzleRadius: t.nozzle_diameter / 2,
+      // A low travel must clear the nozzle tip/cone as well as the actual deposited strand footprint.
+      nozzleTipRadius: t.nozzle_tip_radius,
+      nozzleConeSlope: Math.tan(t.nozzle_cone_half_angle * Math.PI / 180),
+      geometryClearance: t.clearance,
+      // how far short of its own start a loop stops before a travel (emit.js `seam`)
+      seamGap: r.seam_gap ?? 0,
+    },
+    temperatures: {
+      first: material.temperature.first_layer,
+      print: material.temperature.print,
+      bed: material.bed_temperature,
+    },
+    // loops on the last rows may reach past the back edge by up to a loop length ('feet-only'), so what is centred
+    // on the bed is the swatch plus that overhang
+    overhang,
+    origin: {
+      x: (machine.bed.width - t.sample_width) / 2,
+      y: (machine.bed.depth - t.sample_height - overhang) / 2,
+    },
+  };
+  const cfg = { machine, material, t, derived };
+  derived.retraction.airRadii = Object.fromEntries(['rising', 'falling', 'unsupported'].map(cls => [cls, airStrandDiameter(cls, cfg) / 2]));
+  return cfg;
+}
+
+export function startPosition(cfg) {
+  const o = cfg.derived.origin;
+  if (cfg.machine.start_position) return { x: cfg.machine.start_position.x - o.x, y: cfg.machine.start_position.y - o.y, z: cfg.machine.start_position.z };
+  const P = cfg.machine.prime ?? PRIME;
+  return { x: P.x1 - o.x, y: P.y - o.y, z: P.liftZ };
+}
