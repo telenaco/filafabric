@@ -78,7 +78,7 @@ export function createProfilePicker(root, { entries, selected, choose, search = 
       busy = false;
       input.removeAttribute('aria-busy');
       close();
-      input.focus();
+      if (root.contains(document.activeElement)) input.focus();
     }
   };
   input.addEventListener('focus', () => input.select());

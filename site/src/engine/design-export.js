@@ -15,7 +15,8 @@ import { applyBrim } from './brim.js';
 import { rotateDesignInput } from './rotate-design.js';
 import { prepareAdaptiveSolids } from './adaptive-solids.js';
 import { colourResult } from './colour-plan.js';
-import { buildRegions, regionsFromDrawing } from './regions.js';
+import { buildRegions, lineLayersOf, lineWidthOf, regionsFromDrawing } from './regions.js';
+import { stableStringify } from './default-cache-format.js';
 import { fingerprint } from '../ui/swatch.js';
 import { clipStrands } from './fabric.js';
 import { PolygonBoundary } from './boundary.js';
@@ -128,36 +129,52 @@ export async function generateDesignExportAsync(input, { progress = () => {} } =
   return generateDesignExport(input, { progress });
 }
 
+/** Preserve the original single-pattern output when region controls and print precedence match the import defaults. */
+function usesLegacyRegionLayout(input) {
+  const settings = input.studySettings ?? input.settings;
+  const { design, regions, vector } = input;
+  const patterns = regions.filter((region) => region.role === 'pattern');
+  if (patterns.length !== 1 || patterns[0].card !== design
+    || stableStringify(patterns[0].settings) !== stableStringify(settings)) return false;
+  const defaults = regionsFromDrawing(vector);
+  return defaults.length === regions.length && regions.every((region, index) => {
+    const fallback = defaults[index];
+    const ordered = index === 0 || (regions[index - 1].order ?? Infinity) <= (region.order ?? Infinity);
+    return ordered && region.key === fallback.key && region.role === fallback.role && region.enabled !== false
+      && (region.lineAlign ?? 'centre') === 'centre' && lineWidthOf(region) === null
+      && lineLayersOf(region) === 1 && (region.passSpacing ?? 0.8) === 0.8;
+  });
+}
+
 export function generateDesignExport(input, { progress = () => {} } = {}) {
   if (input.vector && input.regions?.length && !input.regionBuild) {
-    const defaults=regionsFromDrawing(input.vector,{currentCard:input.design,currentSettings:input.studySettings??input.settings});
-    const patterns=input.regions.filter(r=>r.role==='pattern');
-    const unchanged=patterns.length===1&&patterns[0].card===input.design&&fingerprint(patterns[0].settings)===fingerprint(input.studySettings??input.settings)
-      && defaults.length===input.regions.length&&defaults.every((r,i)=>r.key===input.regions[i].key&&r.role===input.regions[i].role&&input.regions[i].enabled!==false&&(input.regions[i].lineAlign??'centre')==='centre');
-    if(unchanged){
+    if (usesLegacyRegionLayout(input)) {
       const outline=input.shapeOutline?vectorPatternRings(input.vector,{scaleX:input.width/input.vector.width,scaleY:input.height/input.vector.height}):input.outline;
       const result=generateDesignExport({...input,regions:null,outline:outline?.length?outline:null});
       result.regions=input.regions.map(r=>({id:r.id,hex:r.hex,role:r.role,card:r.card,settingsHash:fingerprint(r.settings??{})}));
       result.gcode=result.gcode.replace('; BODY START',result.regions.map(r=>`; region ${r.hex??r.id}: ${r.role} ${r.card??''} settings ${r.settingsHash}`).join('\n')+'\n; BODY START');
       return result;
     }
-    // Whole-piece patterns already made for these exact settings come in with the job (patternCache) and are cut again
-    // instead of generated again; the ones made now go back out with the result, for the next job.
-    const cache = input.patternCache ?? {}, fresh = {};
+    // Reuse inner pattern geometry only for exactly matching inputs. Region composition and study metadata live outside it.
+    const { patternCache, seam, studySettings: _studySettings, panelSize: _panelSize, ...patternInput } = input;
+    const cache = patternCache ?? {}, fresh = {};
     const built = buildRegions(input.machine, input.material, input.vector, input.regions, {
-      seam: input.seam, width: input.width, height: input.height, solidCount: input.solidLayers ?? 1, extraLayers:input.extraLayers??0, progress,
+      seam, width: input.width, height: input.height, solidCount: input.solidLayers ?? 1, extraLayers: input.extraLayers ?? 0, progress,
       generate: (design, settings, outline, [width, height] = [input.width, input.height]) => {
         const mod = designById(design);
         const own = mod.sanitize({ ...settings, width, height });
-        const key = fingerprint({ design, own, outline, machine:input.machine, material:input.material });
-        if (cache[key]) return cache[key];
-        const regionInput = { ...input, width, height, patternCache:null, design, settings: design === 'loop-pile' ? { ...input.settings, ...own } : own,
+        const regionInput = { ...patternInput, width, height, design, settings: design === 'loop-pile' ? { ...input.settings, ...own } : own,
           pilePattern: own.pattern, pilePatternScale: own.patternScale, outline, vector: mod.usesVector ? {
             name: input.vector.name, width, height, paths:outline.map(ring=>[...ring,ring[0]]),
             styles:outline.map(()=>({color:'red',hex:'#ff0000',width:input.material?.extrusion_width??.45})),
           } : null, regions:null, regionBuild:true, shapeOutline:false, meshPerimeters:0, perimeters:0, brim:0 };
-        const made = generateDesignExport(regionInput);
-        return fresh[key] = { strands:made.strands, intendedFamilies:made.intendedFamilies, warnings:made.warnings };
+        // Pixel data can be large and is only reusable with an exact match. Picture jobs generate fresh geometry.
+        const key = regionInput.image ? null : stableStringify(regionInput);
+        if (key !== null && Object.hasOwn(cache, key)) return cache[key];
+        const { strands, intendedFamilies, warnings } = generateDesignExport(regionInput);
+        const made = { strands, intendedFamilies, warnings };
+        if (key !== null) fresh[key] = made;
+        return made;
       },
     });
     built.patternCache = fresh;

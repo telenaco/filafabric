@@ -26,7 +26,7 @@ export function buildSwatch(input, { signal, preview = false, trace = false, pro
     const abort = () => finish(abortError());
     try {
       const snapshot = structuredClone(input);
-      if (input.regions?.length) snapshot.patternCache = Object.fromEntries(patternCache);
+      if (input.regions?.length && !input.image) snapshot.patternCache = Object.fromEntries(patternCache);
       worker = createWorker();
       worker.onmessage = ({ data }) => {
         if (data.type === 'progress') progress(data);

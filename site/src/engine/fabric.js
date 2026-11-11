@@ -297,7 +297,7 @@ export function constructionGeometry(strands, strandWidth, layerHeight) {
   return cached?.strandWidth === strandWidth && cached.layerHeight === layerHeight ? cached : null;
 }
 
-export function analyzeFabric(strands, { strandWidth = 0.45, layerHeight = 0.2, boundary = null, supportedAt = null } = {}) {
+export function analyzeFabric(strands, { strandWidth = 0.45, layerHeight = 0.2, boundary = null, boundaryForStrand = null, supportedAt = null } = {}) {
   const graph = contactGraph(strands, { strandWidth, layerHeight });
   const { found, arcs } = findCrossings(strands, { strandWidth });
   analyzedGeometry.set(strands, { strandWidth, layerHeight, graph, found, arcs });
@@ -317,6 +317,7 @@ export function analyzeFabric(strands, { strandWidth = 0.45, layerHeight = 0.2, 
   }
   let longestUnsupported = 0, maxSlopeDeg = 0, outsideSegments = 0;
   strands.forEach((s, si) => {
+    const allowed = boundaryForStrand?.(s) ?? boundary;
     const marks = [...supports[si]];
     s.pts.forEach((p, i) => {
       if (p.z <= layerHeight + 0.04 || supportedAt?.(p)) marks.push(arcs[si][i]);
@@ -324,7 +325,7 @@ export function analyzeFabric(strands, { strandWidth = 0.45, layerHeight = 0.2, 
         const a = s.pts[i - 1], d = Math.hypot(p.x - a.x, p.y - a.y);
         if (d > 1e-8) maxSlopeDeg = Math.max(maxSlopeDeg, Math.atan2(Math.abs(p.z - a.z), d) * 180 / Math.PI);
         // a strand marked onBoundary is the outline's own edge, drawn along the boundary it defines
-        if (boundary && !s.onBoundary && !segmentInside(a, p, boundary)) outsideSegments++;
+        if (allowed && !s.onBoundary && !segmentInside(a, p, allowed)) outsideSegments++;
       }
     });
     marks.sort((a, b) => a - b);

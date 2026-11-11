@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { FEEDBACK_ENDPOINT, FEEDBACK_EMAIL, FEEDBACK_KINDS, feedbackFields, pictureMailto, problemReport, sendFeedback } from '../../site/src/ui/feedback.js';
+import { bindFeedback, FEEDBACK_ENDPOINT, FEEDBACK_EMAIL, FEEDBACK_KINDS, feedbackFields, pictureMailto, problemReport, sendFeedback } from '../../site/src/ui/feedback.js';
 import { siteRoot } from './helpers.js';
 
 test('feedback goes to the owner\'s Formspree form, and pictures to the owner\'s email', () => {
@@ -92,4 +92,91 @@ test('the page has the feedback button and its form, with every field the form s
   }
   for (const kind of Object.keys(FEEDBACK_KINDS)) assert.ok(html.includes(`name="kind" value="${kind}"`), kind);
   assert.ok(html.includes('name="_gotcha"'), 'a hidden field that only bots fill in');
+});
+
+
+
+function feedbackFixture() {
+  const element = () => ({
+    value: '', listeners: {}, children: [],
+    classList: { toggle() {}, add() {} },
+    addEventListener(type, listener) { this.listeners[type] = listener; },
+    replaceChildren(...children) { this.children = children; },
+    focus() {},
+  });
+  const ids = ['form', 'message', 'prompt', 'email', 'picture', 'mailto', 'report-box', 'include', 'report', 'status', 'send', 'cancel'];
+  const elements = Object.fromEntries(ids.map((id) => [id, element()]));
+  const radio = { value: 'opinion', checked: true };
+  elements.form.querySelector = () => radio;
+  const dialog = {
+    open: false,
+    querySelector(selector) { return elements[selector.replace('#feedback-', '')]; },
+    showModal() { this.open = true; },
+    close() { this.open = false; },
+    ownerDocument: { createElement: () => element() },
+  };
+  const submissions = [];
+  const toasts = [];
+  const binding = bindFeedback(dialog, {
+    context: () => ({ designName: 'Coil', release: 'test', report: () => '{}' }),
+    send: (fields) => new Promise((resolve, reject) => submissions.push({ fields, resolve, reject })),
+    toast: (message) => toasts.push(message),
+  });
+  const submit = () => elements.form.listeners.submit({ preventDefault() {} });
+  return { dialog, ...elements, ...binding, submit, submissions, toasts };
+}
+
+test('feedback submits once and the response leaves a reopened draft intact', async () => {
+  const feedback = feedbackFixture();
+  feedback.open();
+  feedback.message.value = 'First message';
+  const sending = feedback.submit();
+  const duplicate = feedback.submit();
+  assert.equal(feedback.submissions.length, 1);
+  assert.equal(feedback.submissions[0].fields.message, 'First message');
+  assert.equal(feedback.send.disabled, true);
+  feedback.cancel.listeners.click();
+  feedback.open();
+  feedback.message.value = 'Second message';
+  assert.equal(feedback.send.disabled, true);
+  assert.match(feedback.status.children.join(' '), /previous message/i);
+  feedback.submissions[0].resolve({ ok: true });
+  await Promise.all([sending, duplicate]);
+  assert.equal(feedback.dialog.open, true);
+  assert.equal(feedback.message.value, 'Second message');
+  assert.equal(feedback.send.disabled, false);
+  assert.doesNotMatch(feedback.status.children.join(' '), /being sent/i);
+});
+
+test('feedback rejection preserves the draft and releases Send for a retry', async () => {
+  const feedback = feedbackFixture();
+  feedback.open();
+  feedback.message.value = 'Can retry';
+  const failed = feedback.submit();
+  feedback.submissions[0].reject(new Error('transport failed'));
+  await failed;
+  assert.equal(feedback.dialog.open, true);
+  assert.equal(feedback.message.value, 'Can retry');
+  assert.equal(feedback.send.disabled, false);
+  assert.match(feedback.status.children.join(' '), /could not be sent/);
+  const retried = feedback.submit();
+  feedback.submissions[1].resolve({ ok: true });
+  await retried;
+  assert.equal(feedback.dialog.open, false);
+  assert.equal(feedback.message.value, '');
+  assert.equal(feedback.toasts.length, 1);
+});
+
+test('feedback success preserves a newer draft edited while the first one was sending', async () => {
+  const feedback = feedbackFixture();
+  feedback.open();
+  feedback.message.value = 'Submitted';
+  const sending = feedback.submit();
+  feedback.message.value = 'Still drafting';
+  feedback.submissions[0].resolve({ ok: true });
+  await sending;
+  assert.equal(feedback.dialog.open, true);
+  assert.equal(feedback.message.value, 'Still drafting');
+  assert.equal(feedback.send.disabled, false);
+  assert.match(feedback.status.children.join(' '), /sent/);
 });

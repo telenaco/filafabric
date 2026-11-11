@@ -1,19 +1,47 @@
-// The cookies and privacy notice shown on a first visit, and the visitor's answer about the anonymous export statistics.
-// There are no cookies to consent to: the notice says what is kept in the browser and what is counted, and a "no" turns
-// the counting off for this browser. The answer is kept in localStorage; without storage the notice simply shows again.
+// A choice lasts for the page session even when the browser denies access to localStorage.
 const KEY = 'filafabric:privacy';
+const browserSession = {};
+const noStorageSession = {};
+const sessionAnswers = new WeakMap();
 export const PRIVACY_VERSION = 1;
 
-/** The visitor's answer to this version of the notice, { stats }, or null when they have not answered yet. */
-export function readPrivacyChoice(storage = globalThis.localStorage) {
-  try {
-    const saved = JSON.parse(storage?.getItem(KEY) ?? 'null');
-    return saved?.v === PRIVACY_VERSION && typeof saved.stats === 'boolean' ? { stats: saved.stats } : null;
-  } catch { return null; }
+function storageArea(storage) {
+  return storage === browserSession ? globalThis.localStorage : storage;
 }
 
-export function savePrivacyChoice(stats, storage = globalThis.localStorage) {
-  try { storage?.setItem(KEY, JSON.stringify({ v: PRIVACY_VERSION, stats: !!stats })); } catch { /* storage unavailable: asked again next visit */ }
+/** The visitor's answer to this version of the notice, { stats }, or null when they have not answered yet. */
+export function readPrivacyChoice(storage = browserSession) {
+  const key = storage ?? noStorageSession;
+  const previous = sessionAnswers.get(key);
+  // A denied write can leave an older answer readable in storage.
+  if (previous && !previous.persisted) return { stats: previous.stats };
+  let value;
+  try {
+    value = storageArea(storage)?.getItem(KEY);
+  } catch {
+    return previous ? { stats: previous.stats } : null;
+  }
+  try {
+    const saved = JSON.parse(value ?? 'null');
+    if (saved?.v === PRIVACY_VERSION && typeof saved.stats === 'boolean') {
+      sessionAnswers.set(key, { stats: saved.stats, persisted: true });
+      return { stats: saved.stats };
+    }
+  } catch { /* damaged data is treated as an unanswered notice */ }
+  sessionAnswers.delete(key);
+  return null;
+}
+
+export function savePrivacyChoice(stats, storage = browserSession) {
+  const choice = { stats: !!stats, persisted: false };
+  sessionAnswers.set(storage ?? noStorageSession, choice);
+  try {
+    const area = storageArea(storage);
+    if (area) {
+      area.setItem(KEY, JSON.stringify({ v: PRIVACY_VERSION, stats: choice.stats }));
+      choice.persisted = true;
+    }
+  } catch { /* the answer remains in memory until reload */ }
 }
 
 /** Exports are counted unless the visitor said no; until they answer, the notice itself is on screen. */

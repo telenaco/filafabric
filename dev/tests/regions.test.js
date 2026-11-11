@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { regionsFromDrawing, regionPolygons, colourBarModel } from '../../site/src/engine/regions.js';
+import { regionsFromDrawing, regionPolygons, colourBarModel, regionInPiece, sanitizeRegions } from '../../site/src/engine/regions.js';
 import { interpretDrawing } from '../../site/src/engine/drawing.js';
 import { PolygonBoundary } from '../../site/src/engine/boundary.js';
+import { hashToState, sanitizeState, stateToHash } from '../../site/src/ui/share.js';
 
 const square=(x0,y0,x1,y1)=>[{x:x0,y:y0},{x:x1,y:y0},{x:x1,y:y1},{x:x0,y:y1},{x:x0,y:y0}];
 const drawing=(paths,styles)=>({name:'regions',width:20,height:20,paths,styles});
@@ -71,4 +72,45 @@ test('colour bar model preserves chip order and reports selection, role, exact c
   assert.equal(model[0].label,'Red #e53935, pattern: Wave net, included');
   assert.equal(model[0].selected,false);assert.equal(model[1].selected,true);
   assert.equal(model[1].label,'Blue #234567, hole, excluded');
+});
+
+test('a saved region with a missing pattern card is excluded even if it was applied', () => {
+  const vector = drawing([square(0, 0, 10, 10)], [{ color: 'red', hex: '#ff0000', width: 0.4 }]);
+  const [region] = regionsFromDrawing(vector, { currentCard: 'weave' });
+  const notes = [];
+  const [restored] = sanitizeRegions([{ ...region, card: 'missing', applied: true }], vector, {
+    cards: [{ id: 'weave', status: 'ready' }], currentCard: 'weave', currentSettings: { pitch: 2 }, notes,
+  });
+  assert.equal(restored.enabled, false);
+  assert.ok(!restored.applied);
+  assert.equal(restored.card, 'weave');
+  assert.match(notes[0], /excluded/);
+});
+
+test('settings files and links keep applied membership and print order independently of checkboxes', () => {
+  const vector = drawing(
+    [square(1, 1, 9, 9), square(3, 3, 5, 5), square(10, 10, 18, 18), [{ x: 2, y: 14 }, { x: 8, y: 14 }]],
+    [
+      { color: 'red', hex: '#ff0000', width: 0.4 },
+      { color: 'blue', hex: '#0000ff', width: 0.4 },
+      { color: 'green', hex: '#00ff00', width: 0.4 },
+      { color: 'other', hex: '#000000', width: 0.4 },
+    ],
+  );
+  const regions = regionsFromDrawing(vector, { currentCard: 'zigzag' });
+  Object.assign(regions[0], { enabled: false, applied: true, order: 1 });
+  Object.assign(regions[1], { enabled: true, applied: true, order: 2 });
+  regions[2].enabled = false;
+  const state = { v: 4, design: 'zigzag', vector, regions };
+  const known = { machines: ['prusa-mk3s'], materials: ['filaflex-95-foamy'] };
+  const file = JSON.parse(JSON.stringify(state));
+  const link = hashToState(stateToHash(state));
+
+  for (const data of [file, link]) {
+    const restored = sanitizeState(data, known).regions;
+    assert.deepEqual(restored.map(({ enabled, applied, order }) => [enabled, !!applied, order ?? null]), [
+      [false, true, 1], [true, true, 2], [false, false, null], [true, false, null],
+    ]);
+    assert.deepEqual(restored.map(regionInPiece), [true, true, false, true]);
+  }
 });

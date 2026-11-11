@@ -37,6 +37,7 @@ export function initDesignsResizer(bar = document.getElementById('designs-resize
   const end = () => { drag = null; document.body.classList.remove('resizing-designs'); };
   bar.addEventListener('pointerup', end);
   bar.addEventListener('pointercancel', end);
+  bar.addEventListener('lostpointercapture', end);
   bar.addEventListener('keydown', (event) => {
     const step = event.shiftKey ? 96 : 24;
     if (event.key === 'ArrowRight') set(widthNow() + step);

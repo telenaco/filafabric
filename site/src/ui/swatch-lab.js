@@ -2,6 +2,7 @@ import { el } from './dom.js';
 import { designById } from './designs.js';
 import { fingerprint } from './swatch.js';
 import { buildSwatch } from './export-builder.js';
+import { printerFileToken } from './file-name.js';
 
 export const SWATCH_SETS = {
   rings:{label:'Comparison · Rings',pieces:[['rings-flat',{}],['chainmail',{}],['rings-raised',{}]]},
@@ -39,42 +40,112 @@ export function zipFiles(files) {
   return new Blob([...chunks,...central,end.bytes],{type:'application/zip'});
 }
 
-export function bindSwatchLab({button,options,download,toast}) {
-  const picker=el('select',{'aria-label':'Comparison or calibration set'},...Object.entries(SWATCH_SETS).map(([value,set])=>el('option',{value,text:set.label})));
-  const width=el('input',{type:'number',min:10,max:1000,step:1,value:40}),height=el('input',{type:'number',min:10,max:1000,step:1,value:30});
-  const status=el('p',{class:'small muted',role:'status','aria-live':'polite'}),progress=el('progress',{max:1,value:0,hidden:true});
-  const cancel=el('button',{type:'button',class:'btn',text:'Close'}),start=el('button',{type:'button',class:'btn primary',text:'Build and download ZIP'});
-  const dialog=el('dialog',{class:'swatch-lab','aria-labelledby':'swatch-lab-title'},el('h2',{id:'swatch-lab-title',text:'Comparison & calibration swatches'}),
-    el('p',{class:'muted',text:'One separate G-code file per piece, exact dimensions, with blank print records. No automatic shrinking. These are starting recipes, not calibrated recommendations.'}),
-    el('label',{class:'field-row stacked'},el('span',{text:'Set'}),picker),
-    el('label',{class:'field-row'},el('span',{text:'Width (mm)'}),width),el('label',{class:'field-row'},el('span',{text:'Height (mm)'}),height),
-    el('p',{class:'small muted',text:'Print each file separately using the same material batch. Sliding channels: review the nozzle temperature before printing. Calibrate bed and over-net thickness separately.'}),progress,status,
-    el('div',{class:'dialog-actions'},cancel,start));
-  document.body.append(dialog);let controller=null;
-  button.addEventListener('click',()=>{dialog.showModal();});
-  cancel.addEventListener('click',()=>{controller?.abort();dialog.close();});
-  dialog.addEventListener('close',()=>controller?.abort());
-  start.addEventListener('click',async()=>{
-    const w=Number(width.value),h=Number(height.value);
-    if(!Number.isFinite(w)||!Number.isFinite(h)||w<10||h<10||w>1000||h>1000){status.textContent='Enter dimensions from 10 to 1000 mm; the selected printer must fit them.';return;}
-    controller=new AbortController();const signal=controller.signal;
-    start.disabled=true;picker.disabled=true;progress.hidden=false;cancel.textContent='Cancel build';
-    try{
-      const captured=structuredClone(options()),set=SWATCH_SETS[picker.value],files=[],manifest=[];
-      for(const [index,[card,patch,layerHeight]] of set.pieces.entries()){
-        status.textContent=`Building ${index+1} of ${set.pieces.length}: ${designById(card).name}…`;progress.value=index/set.pieces.length;
-        const mod=designById(card),settings=mod.sanitize({...mod.defaults(),...patch,width:w,height:h});
-        const input={...captured,design:card,width:w,height:h,settings,studySettings:settings,outline:null,vector:null,regions:null,image:null,extraLayers:0,legacyCopies:undefined,meshPerimeters:0};
-        if(layerHeight)input.material={...input.material,print_defaults:{...input.material.print_defaults,layer_height:layerHeight}};
-        const result=await buildSwatch(input,{signal});
-        const code=`${card}-${fingerprint({settings,material:input.material,machine:input.machine.id,width:w,height:h})}`,stem=`${String(index+1).padStart(2,'0')}-${code}`;
-        files.push([`${stem}.gcode`,result.gcode.replace('; BODY START',`; swatch ${code}\n; BODY START`)]);
-        const record={code,card,settings,machine:input.machine.id,material:input.material.id,width:w,height:h,print:{layerHeight:layerHeight??captured.material.print_defaults?.layer_height},construction:result.construction};
-        files.push([`records/${stem}.md`,swatchRecord(record)]);manifest.push({...record,construction:undefined});
+export function bindSwatchLab({ button, options, download }) {
+  const picker = el('select', { 'aria-label': 'Comparison or calibration set' },
+    ...Object.entries(SWATCH_SETS).map(([value, set]) => el('option', { value, text: set.label })));
+  const width = el('input', { type: 'number', min: 10, max: 1000, step: 1, value: 40 });
+  const height = el('input', { type: 'number', min: 10, max: 1000, step: 1, value: 30 });
+  const status = el('p', { class: 'small muted', role: 'status', 'aria-live': 'polite' });
+  const progress = el('progress', { max: 1, value: 0, hidden: true });
+  const cancel = el('button', { type: 'button', class: 'btn', text: 'Close' });
+  const start = el('button', { type: 'button', class: 'btn primary', text: 'Build and download ZIP' });
+  const dialog = el('dialog', { class: 'swatch-lab', 'aria-labelledby': 'swatch-lab-title' },
+    el('h2', { id: 'swatch-lab-title', text: 'Comparison & calibration swatches' }),
+    el('p', { class: 'muted', text: 'One separate G-code file per piece, exact dimensions, with blank print records. No automatic shrinking. These are starting recipes, not calibrated recommendations.' }),
+    el('label', { class: 'field-row stacked' }, el('span', { text: 'Set' }), picker),
+    el('label', { class: 'field-row' }, el('span', { text: 'Width (mm)' }), width),
+    el('label', { class: 'field-row' }, el('span', { text: 'Height (mm)' }), height),
+    el('p', { class: 'small muted', text: 'Print each file separately using the same material batch. Sliding channels: review the nozzle temperature before printing. Calibrate bed and over-net thickness separately.' }),
+    progress, status, el('div', { class: 'dialog-actions' }, cancel, start));
+  document.body.append(dialog);
+
+  let activeJob = null;
+  const controls = (busy) => {
+    for (const control of [start, picker, width, height]) control.disabled = busy;
+    cancel.textContent = busy ? 'Cancel build' : 'Close';
+  };
+  const finish = (job) => {
+    if (activeJob !== job) return;
+    activeJob = null;
+    controls(false);
+  };
+  const cancelBuild = () => {
+    const job = activeJob;
+    if (!job) return;
+    finish(job);
+    job.abort();
+    progress.hidden = true;
+    status.textContent = 'Build cancelled.';
+  };
+
+  button.addEventListener('click', () => {
+    if (dialog.open) return;
+    cancelBuild();
+    dialog.showModal();
+  });
+  cancel.addEventListener('click', () => { cancelBuild(); dialog.close(); });
+  dialog.addEventListener('cancel', cancelBuild);
+  // The browser queues the close event. The dialog might already host a new build when it arrives.
+  dialog.addEventListener('close', () => { if (!dialog.open) cancelBuild(); });
+
+  start.addEventListener('click', async () => {
+    if (activeJob || !dialog.open) return;
+    const w = Number(width.value), h = Number(height.value);
+    if (!Number.isFinite(w) || !Number.isFinite(h) || w < 10 || h < 10 || w > 1000 || h > 1000) {
+      status.textContent = 'Enter dimensions from 10 to 1000 mm; the selected printer must fit them.';
+      return;
+    }
+    const setKey = picker.value;
+    if (!Object.hasOwn(SWATCH_SETS, setKey)) {
+      status.textContent = 'Choose a comparison or calibration set.';
+      return;
+    }
+    const set = SWATCH_SETS[setKey];
+    const job = new AbortController();
+    activeJob = job;
+    controls(true);
+    progress.hidden = false;
+    progress.value = 0;
+
+    try {
+      const captured = structuredClone(options());
+      const printer = printerFileToken(captured.machine);
+      const files = [], manifest = [];
+      for (const [index, [card, patch, layerHeight]] of set.pieces.entries()) {
+        const mod = designById(card);
+        status.textContent = `Building ${index + 1} of ${set.pieces.length}: ${mod.name}…`;
+        progress.value = index / set.pieces.length;
+        const settings = mod.sanitize({ ...mod.defaults(), ...patch, width: w, height: h });
+        const input = { ...captured, design: card, width: w, height: h, settings, studySettings: settings,
+          outline: null, vector: null, regions: null, image: null, extraLayers: 0, legacyCopies: undefined, meshPerimeters: 0 };
+        if (layerHeight) input.material = { ...input.material, print_defaults: { ...input.material.print_defaults, layer_height: layerHeight } };
+        const result = await buildSwatch(input, { signal: job.signal });
+        if (activeJob !== job) return;
+        if (!dialog.open) { cancelBuild(); return; }
+
+        const code = `${card}-${fingerprint({ settings, material: input.material, machine: input.machine.id, width: w, height: h })}`;
+        const stem = [String(index + 1).padStart(2, '0'), printer, code].filter(Boolean).join('-');
+        files.push([`${stem}.gcode`, result.gcode.replace('; BODY START', `; swatch ${code}\n; BODY START`)]);
+        const record = { code, card, settings, machine: input.machine.id, material: input.material.id, width: w, height: h,
+          print: { layerHeight: layerHeight ?? captured.material.print_defaults?.layer_height }, construction: result.construction };
+        files.push([`records/${stem}.md`, swatchRecord(record)]);
+        manifest.push({ ...record, construction: undefined });
       }
-      files.push(['manifest.json',JSON.stringify({set:set.label,printed:false,pieces:manifest},null,2)],['README.md',`# ${set.label}\n\nPrint each G-code separately. All pieces are ${w} × ${h} mm, without resizing. Fill in records only after actual prints. No measured properties or successful prints are claimed.\n`]);
-      download(`filafabric-${picker.value}-${fingerprint(manifest)}.zip`,zipFiles(files));progress.value=1;status.textContent=`Saved ${set.pieces.length} G-code files and blank evidence records.`;
-    }catch(error){status.textContent=error.name==='AbortError'?'Build cancelled.':`Could not build this set: ${error.message}`;}
-    finally{controller=null;start.disabled=false;picker.disabled=false;cancel.textContent='Close';}
+
+      files.push(
+        ['manifest.json', JSON.stringify({ set: set.label, printed: false, pieces: manifest }, null, 2)],
+        ['README.md', `# ${set.label}\n\nPrint each G-code separately. All pieces are ${w} × ${h} mm, without resizing. Fill in records only after actual prints. No measured properties or successful prints are claimed.\n`],
+      );
+      const archive = ['filafabric', setKey, printer, fingerprint(manifest)].filter(Boolean).join('-');
+      download(`${archive}.zip`, zipFiles(files));
+      progress.value = 1;
+      status.textContent = `Saved ${set.pieces.length} G-code files and blank evidence records.`;
+    } catch (error) {
+      if (activeJob !== job) return;
+      if (!dialog.open) { cancelBuild(); return; }
+      status.textContent = error.name === 'AbortError' ? 'Build cancelled.' : `Could not build this set: ${error.message}`;
+    } finally {
+      finish(job);
+    }
   });
 }

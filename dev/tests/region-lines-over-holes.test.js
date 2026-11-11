@@ -4,6 +4,8 @@ import { regionsFromDrawing } from '../../site/src/engine/regions.js';
 import { generateDesignExport } from '../../site/src/engine/design-export.js';
 import { designById } from '../../site/src/ui/designs.js';
 import { defaultProfiles } from './helpers.js';
+import { PolygonBoundary } from '../../site/src/engine/boundary.js';
+import { analyzeFabric } from '../../site/src/engine/fabric.js';
 
 const square = (x0, y0, x1, y1) => [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }, { x: x0, y: y0 }];
 
@@ -14,12 +16,12 @@ const vector = {
   styles: [{ color: 'red', hex: '#ff0000', width: 0.4 }, { color: 'blue', hex: '#0000ff', width: 0.4 }, { color: 'other', hex: '#000000', width: 0.8 }],
 };
 
-function build(enabledRoles) {
+function build(enabledRoles, drawing = vector) {
   const zig = designById('zigzag');
-  const regions = regionsFromDrawing(vector, { currentCard: 'zigzag', currentSettings: zig.defaults() })
+  const regions = regionsFromDrawing(drawing, { currentCard: 'zigzag', currentSettings: zig.defaults() })
     .map((r) => ({ ...r, enabled: enabledRoles.includes(r.role), settings: r.settings ?? zig.defaults() }));
   // the regions carry the default settings and the design card another spacing, so the build goes through the regions
-  return generateDesignExport({ ...defaultProfiles(), design: 'zigzag', settings: { ...zig.defaults(), spacing: 4 }, width: 60, height: 60, outline: null, vector, regions, shapeOutline: false, extraLayers: 0, brim: 0 });
+  return generateDesignExport({ ...defaultProfiles(), design: 'zigzag', settings: { ...zig.defaults(), spacing: 4 }, width: 60, height: 60, outline: null, vector: drawing, regions, shapeOutline: false, extraLayers: 0, brim: 0 });
 }
 
 test('a line drawn across a hole is printed across it: it is what ties the island to the rest', () => {
@@ -30,6 +32,28 @@ test('a line drawn across a hole is printed across it: it is what ties the islan
   assert.ok(lineStrands.some((s) => Math.min(...s.pts.map((p) => p.x)) < 10 && Math.max(...s.pts.map((p) => p.x)) > 50), 'it runs the whole way across, not only up to the hole');
   const spans = result.moves.some((m, i) => m.extrude && result.moves[i - 1] && Math.abs(m.y - 30) < 1 && result.moves[i - 1].x < 18 && m.x > 42);
   assert.ok(spans, 'and the printer is told to extrude across the hole in one move');
+  assert.equal(result.fabric.outsideSegments, 0, 'the bridge is inside the page');
+});
+
+test('an open stroke in the Pattern role still respects the hole boundary', () => {
+  const result = build(['pattern', 'hole'], { ...vector, styles: [...vector.styles.slice(0, 2), { ...vector.styles[0] }] });
+  const lines = result.strands.filter((s) => /line/.test(String(s.id)));
+  assert.ok(lines.length > 0, 'the open stroke is still printed outside the hole');
+  assert.ok(lines.every((s) => s.pts.every((p) => p.x <= 15) || s.pts.every((p) => p.x >= 45)));
+});
+
+test('per-strand page checks still report Line segments that leave the page', () => {
+  const boundary = new PolygonBoundary([square(0, 0, 60, 60), square(15, 15, 45, 45)]);
+  const page = new PolygonBoundary([square(0, 0, 60, 60)]);
+  const strand = (id, x0, x1) => ({ id, pts: [{ x: x0, y: 30, z: 0.2 }, { x: x1, y: 30, z: 0.2 }] });
+  const bridge = strand('bridge', 5, 55);
+  const beyondPage = strand('beyond-page', 5, 65);
+  const pattern = strand('pattern', 5, 55);
+  const report = analyzeFabric([bridge, beyondPage, pattern], {
+    boundary,
+    boundaryForStrand: (s) => s === pattern ? boundary : page,
+  });
+  assert.equal(report.outsideSegments, 2, 'only the off-page line and the pattern crossing the hole are outside');
 });
 
 test('the pattern still stops at the hole: only lines cross it', () => {

@@ -56,7 +56,7 @@ function exportHost({ size = 200, previewSize = 100, pending = null, timer = nul
     exporting: false, exportController: null, exportLabel: '', genTimer: timer, overviewTrace: null, referenceResult: null,
     previewBuild: pending, readyGcode: ready, state: { design: 'svgdesign', docName: 'Sample', print: { layerHeight: 0.2, layers: 2 }, resultKey: 'current', result: result(previewSize) },
     exportOptions: () => ({ design: 'svgdesign', width: size, height: size, machine: { id: 'printer' }, material: { id: 'tpu' }, studySettings: { backing1Spacing: 5.12345, pattern: 'none' } }),
-    snapshotKey: () => 'current', currentSwatch: () => 'test', swatchFileName: () => 'short.gcode',
+    buildKey: () => 'current', currentSwatch: () => 'test', swatchFileName: () => 'short.gcode',
     renderBusy() {}, renderExport() {}, render() {}, toast(message) { host.message=message; }, printEstimates: { put() {} },
     async buildSwatch(input) { host.built = input; if (fail) throw new Error('Too large'); return result(input.width); },
     assertConstructionExportable() {},
@@ -172,7 +172,7 @@ test('generation errors are logged and never download a smaller fallback', async
 
 test('changed settings cancel a pending export without a download', async () => {
   const host = exportHost();
-  host.buildSwatch = async () => { host.snapshotKey = () => 'changed'; return {}; };
+  host.buildSwatch = async () => { host.buildKey = () => 'changed'; return {}; };
   await host.run();
   assert.equal(host.saved, undefined);
   assert.equal(host.failure, undefined);
@@ -232,4 +232,190 @@ test('single-filament panel headers describe the settings actually printed', asy
   assert.equal(metadata.repeat, 20);
   assert.equal(settings.colorChange, true, 'the source settings were not mutated');
   assert.doesNotMatch(text, /^M600/m);
+});
+
+test('replacing a printer under the same ID discards prepared G-code', async () => {
+  const { machine, material } = defaultProfiles();
+  const host = exportHost();
+  Object.assign(host.state, {
+    machine: machine.id, material: material.id,
+    machines: new Map([[machine.id, machine]]), materials: new Map([[material.id, material]]),
+  });
+  host.buildKey = () => runInNewContext(
+    [uiFunction('snapshotKey'), uiFunction('buildKey'), 'buildKey();'].join('\n'),
+    { state: host.state },
+  );
+  host.readyGcode = { key: host.buildKey(), result: { gcode: '; obsolete printer\n', moveCount: 1, cfg: { t: {} }, stats: {} } };
+  host.state.machines.set(machine.id, { ...machine, bed: { ...machine.bed, width: machine.bed.width - 20 } });
+  await host.run();
+  assert.ok(host.built, 'the replacement profile needs a fresh build');
+  assert.doesNotMatch(await host.saved.blob.text(), /obsolete printer/);
+});
+
+test('an obsolete construction failure cannot disable the current Export button', () => {
+  const nodes = new Map();
+  const $ = selector => {
+    if (!nodes.has(selector)) nodes.set(selector, { getAttribute: () => null });
+    return nodes.get(selector);
+  };
+  const state = {
+    design: 'zigzag', print: {}, resultKey: 'older',
+    result: { moves: [{}], construction: { errors: ['obsolete failure'] } },
+  };
+  runInNewContext(uiFunction('renderExport') + '\nrenderExport();', {
+    $, state, exporting: false, overviewActive: false, readyGcode: null,
+    buildKey: () => 'current', snapshotKey: () => 'current', currentPrintSizeProblem: () => '',
+    requiresApply: () => false, isReady: () => true, designById: () => ({}),
+  });
+  assert.equal($('#btn-export').disabled, false);
+});
+
+
+test('the latest settings-file selection wins if an earlier read finishes later', async () => {
+  const applied = [];
+  const host = { documentRequest: 0, machineRequest: 0, applySnapshot(data) { applied.push(data.name); }, commit() {}, toast() {} };
+  runInNewContext(uiFunction('openFile'), host);
+  let resolveA, resolveB;
+  const a = host.openFile({ text: () => new Promise(resolve => { resolveA = resolve; }) });
+  const b = host.openFile({ text: () => new Promise(resolve => { resolveB = resolve; }) });
+  resolveB('{"name":"new"}');
+  await b;
+  resolveA('{"name":"old"}');
+  await a;
+  assert.deepEqual(applied, ['new']);
+});
+
+test('a pending SVG import cannot put a removed drawing back', async () => {
+  let resolveSvg;
+  const state = { vector: { name: 'previous' }, regions: [], selectedRegion: null };
+  const host = {
+    documentRequest: 0, state, previewChoice: 'full',
+    readSvgLines: () => new Promise(resolve => { resolveSvg = resolve; }),
+    bedSizeLimits: () => ({ width: 100, height: 100 }), printOverhang: () => 0,
+    regionsFromDrawing: () => [], REGION_LIMIT: 12, sanitizeSeam: () => ({}),
+    settingsOf: () => ({}), selectRegion() {}, shapesOf: () => null, followVectorSize() {},
+    syncControls() {}, schedule() {}, commit() {}, renderRegions() {}, toast() {},
+    $: () => ({}), bedFitSize: () => null,
+  };
+  state.machines = new Map();
+  runInNewContext([uiFunction('importSvg'), uiFunction('removeSvg')].join('\n'), host);
+  const pending = host.importSvg({ name: 'obsolete.svg' });
+  host.removeSvg();
+  resolveSvg({ name: 'obsolete', width: 25, height: 25 });
+  await pending;
+  assert.equal(state.vector, null);
+});
+
+test('scheduling a preview retires the old epoch before the next worker starts', () => {
+  const host = {
+    regenerationEpoch: 3, genTimer: null, readyGcode: null, referenceResult: null, overviewTrace: null,
+    traceProblem: null, fixJob: null, previewBuild: null, overview: null, exportController: null,
+    captureRegionSettings() {}, buildKey: () => 'current',
+    clearTimeout() {}, setTimeout: () => 5, regenerate() {}, stopPlay() {}, renderBusy() {}, renderExport() {}, renderPreviewMode() {}, renderPlayback() {},
+  };
+  runInNewContext(uiFunction('schedule') + '\nschedule();', host);
+  assert.equal(host.regenerationEpoch, 4);
+  assert.equal(host.genTimer, 5);
+});
+
+
+test('variant generation captures setup and the printer filename once for the entire batch', async () => {
+  const nodes = new Map();
+  const $ = selector => {
+    if (!nodes.has(selector)) nodes.set(selector, { open: false, replaceChildren() {}, showModal() { this.open = true; } });
+    return nodes.get(selector);
+  };
+  const cards = [{ id: 'first', name: 'First', family: 'zigzag' }, { id: 'second', name: 'Second', family: 'zigzag' }];
+  const machine = { id: 'prusa-mk3s', name: 'Prusa MK3S' };
+  const material = { id: 'tpu' };
+  const inputs = [];
+  let captureCount = 0;
+  let namedFor;
+  let combinedPrint;
+  const host = {
+    $, AbortController, DOMException, structuredClone, exporting: false, exportController: null, exportLabel: '',
+    variantExportReady: null, variantJob: null, buildKey: () => 'current',
+    variantsOf: () => cards, BINDINGS: { first: { size: { get: () => [20, 20] } } },
+    state: { machine: machine.id, machines: new Map([[machine.id, machine]]), print: { layerHeight: 0.2 } },
+    printMaterial: () => material, planVariantLayout: () => ({
+      width: 20, height: 20, positions: [{ x: 0, y: 0 }, { x: 22, y: 0 }], totalWidth: 42, totalHeight: 20, gap: 2,
+    }),
+    settingsOf: () => ({}), placedOutline: () => null,
+    exportOptions() { captureCount++; return { machine, material, setup: captureCount }; },
+    async buildSwatch(input) { inputs.push(input); host.state.print.layerHeight = 0.3; return {}; },
+    combineVariantResults(_results, options) { combinedPrint = options.print; return { gcode: '', settingsHash: 'abcd', pieces: cards.map((c, i) => ({ card: c.id, index: i + 1, width: 20, height: 20, x: 22 * i, y: 0 })) }; },
+    variantsFileName(_family, _hash, target) { namedFor = target; return 'variants.gcode'; },
+    drawVariantPreview() {}, el() {}, renderBusy() {}, render() {}, toast() {}, recordBuildFailure(error) { throw error; },
+  };
+  await runInNewContext(uiFunction('exportAllVariants') + "\nexportAllVariants('first');", host);
+  assert.equal(captureCount, 1);
+  assert.deepEqual(inputs.map(input => input.setup), [1, 1]);
+  assert.equal(namedFor.id, machine.id);
+  assert.equal(combinedPrint.layerHeight, 0.2);
+});
+
+test('clipboard rejection after an edit does not install an obsolete share link', async () => {
+  let reject;
+  let addressReplaced = false;
+  let key = 'before';
+  const host = {
+    shareRequest: 0, snapshotKey: () => key, snapshot: () => ({}),
+    state: { design: 'zigzag' }, stateToHash: () => '#s=before',
+    location: { origin: 'http://localhost', pathname: '/' },
+    settingsOf: () => ({}), PICTURE: 'image', toast() {},
+    navigator: { clipboard: { writeText: () => new Promise((_, failure) => { reject = failure; }) } },
+    history: { replaceState() { addressReplaced = true; } },
+  };
+  runInNewContext(uiFunction('shareLink'), host);
+  const pending = host.shareLink();
+  key = 'after';
+  reject(new Error('clipboard unavailable'));
+  await pending;
+  assert.equal(addressReplaced, false);
+});
+
+
+test('Export rebuilds an equal-size 3D sample using the whole-piece generator', async () => {
+  const host = exportHost({ previewSize: 200 });
+  host.state.result.samplePreview = true;
+  await host.run();
+  assert.ok(host.built, 'a sample remains a sample even when dimensions match the whole piece');
+  assert.ok(host.saved);
+});
+
+test('failure of a retired adaptive preview cannot change the new preview', async () => {
+  let rejectKernel;
+  let failure;
+  const host = {
+    state: { machines: new Map(), vector: {}, design: 'zigzag', print: { brim: 2 } },
+    genTimer: null, regenerationEpoch: 0, previewBuild: null, previewChoice: 'sample',
+    overviewActive: false, overview: { cancel() {} },
+    BINDINGS: { zigzag: { size: { get: () => [60, 60] } } },
+    printMaterial: () => ({}), designById: () => ({}), followVectorSize() {},
+    useWholeOverview: () => false, currentPrintSizeProblem: () => '',
+    renderPreviewMode() {}, renderBusy() {}, render() {},
+    recordBuildFailure(error) { failure = error; }, console: { error() {} },
+    prepareAdaptiveSolids: () => new Promise((_, reject) => { rejectKernel = reject; }),
+  };
+  runInNewContext(uiFunction('regenerate'), host);
+  const pending = host.regenerate();
+  host.regenerationEpoch++;
+  rejectKernel(new Error('old preview failed'));
+  await pending;
+  assert.equal(failure, undefined);
+  assert.equal(host.state.error, undefined);
+});
+
+test('the studio bead width follows a replaced filament profile with the same ID', () => {
+  const machine = { nozzle_diameter: 0.4 };
+  const host = {
+    state: { machine: 'm', material: 'f', machines: new Map([['m', machine]]),
+      materials: new Map([['f', { width: 0.45 }]]), print: {} },
+    beadMemo: {}, beadWidth: (_machine, material) => material.width,
+    withFilamentSettings: material => material,
+  };
+  runInNewContext(uiFunction('beadNow'), host);
+  assert.equal(host.beadNow(), 0.45);
+  host.state.materials.set('f', { width: 0.56 });
+  assert.equal(host.beadNow(), 0.56);
 });

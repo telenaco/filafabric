@@ -11,7 +11,7 @@ export class PrintEstimates {
   put(key, result, selectedWidth, selectedHeight) {
     const t = result.cfg?.t, stats = result.stats;
     if (!t || !stats || !Number.isFinite(stats.timeSec)) return;
-    const full = t.sample_width === selectedWidth && t.sample_height === selectedHeight;
+    const full = !result.samplePreview && t.sample_width === selectedWidth && t.sample_height === selectedHeight;
     const record = { width: t.sample_width, height: t.sample_height, full,
       timeSec: stats.timeSec, filamentGrams: stats.filamentGrams, filamentMm: stats.filamentMm,
       ...(Number.isFinite(stats.estimatedTimeSec) ? {estimatedTimeSec:stats.estimatedTimeSec,motionEstimateComplete:stats.motionEstimate?.complete!==false} : {}) };

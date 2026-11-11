@@ -137,6 +137,9 @@ export function regionPolygons(vector, regions) {
   return output;
 }
 
+/** Ticked colours join the current piece, and applied colours stay in it when unticked. */
+export const regionInPiece = (region) => region.enabled !== false || !!region.applied;
+
 /** Accessible, deterministic view model for the region toolbar, suitable for rendering without knowing its DOM. */
 export function colourBarModel(regions, selection = null) {
   const names = { red:'Red', blue:'Blue', green:'Green', yellow:'Yellow', other:'Other' };
@@ -144,8 +147,10 @@ export function colourBarModel(regions, selection = null) {
   return (regions ?? []).map((region) => {
     const colour = paletteName(region.hex) ?? names[region.color] ?? 'Other';
     const role = roles[region.role] ?? 'line';
-    const label = `${colour}${region.hex ? ` ${region.hex}` : ''}, ${role}${role === 'pattern' && region.cardName ? `: ${region.cardName}` : ''}, ${region.enabled === false ? 'excluded' : 'included'}`;
-    return { id:region.id, hex:region.hex, color:region.color, role, card:region.card ?? null, enabled:region.enabled !== false, selected:region.id === selection, label };
+    const included = regionInPiece(region);
+    const applied = !!region.applied;
+    const label = `${colour}${region.hex ? ` ${region.hex}` : ''}, ${role}${role === 'pattern' && region.cardName ? `: ${region.cardName}` : ''}, ${included ? 'included' : 'excluded'}${applied ? ', applied' : ''}`;
+    return { id:region.id, hex:region.hex, color:region.color, role, card:region.card ?? null, enabled:region.enabled !== false, included, applied, selected:region.id === selection, label };
   });
 }
 
@@ -174,7 +179,13 @@ export function sanitizeRegions(raw, vector, { cards, currentCard, currentSettin
     const region = { ...base, role, enabled: saved.enabled !== false, lineAlign: ['centre','inside','outside','left','right'].includes(saved.lineAlign) ? saved.lineAlign : 'centre', passSpacing: Number.isFinite(Number(saved.passSpacing)) ? Math.max(.6, Math.min(1, Number(saved.passSpacing))) : .8, lineLayers: lineLayersOf(saved), ...(lineWidthOf(saved) ? { lineWidth: lineWidthOf(saved) } : {}), ...(Number.isInteger(saved.order) && saved.order > 0 ? { order: saved.order } : {}), ...(saved.applied === true ? { applied: true } : {}) };
     if (role === 'pattern') {
       const card = cards.find(card => card.id === (saved.card ?? base.card) && card.status === 'ready');
-      if (!card) { notes.push(`Unknown region card ${String(saved.card).slice(0, 60)} was dropped; that region is excluded.`); region.enabled = false; region.card = currentCard; region.settings = clone(currentSettings); }
+      if (!card) {
+        notes.push(`Unknown region card ${String(saved.card).slice(0, 60)} was dropped; that region is excluded.`);
+        region.enabled = false;
+        delete region.applied;
+        region.card = currentCard;
+        region.settings = clone(currentSettings);
+      }
       else { region.card = card.id; region.settings = card.sanitize(saved.settings ?? base.settings); }
     } else { delete region.card; delete region.settings; }
     return region;
@@ -307,7 +318,10 @@ export function buildRegions(machine, material, vector, regions, { seam = {}, ge
   const moves=emitStrands(strands,{retraction:cfg.derived.retraction}),stats=computeStats(moves,cfg,[]);
   const excludedPaths=regions.filter(r=>r.enabled===false).flatMap(r=>r.pathIndices.map(i=>scaled.paths[i]));
   const result={cfg,strands,moves,stats,outline:allowed.length?allowed:[rectangle],documentSize:[width,height],excludedPaths,warnings:[...new Set(warnings)],regions:metadata,layerCount:0,intendedFamilies:[]};
-  result.fabric=analyzeFabric(strands,{strandWidth:bead,layerHeight:h,boundary});
+  result.fabric = analyzeFabric(strands, {
+    strandWidth: bead, layerHeight: h, boundary,
+    boundaryForStrand: (strand) => isLine(strand) ? page : boundary,
+  });
   refreshConstruction(result);
   result.construction.regions=Object.fromEntries(metadata.map(region=>[region.hex??region.id,buildConstructionReport({...result,strands:strands.filter(s=>s.regionId===region.id),intendedFamilies:intendedByRegion.get(region.id)??[]},{strandWidth:bead,layerHeight:h})]));
   for(const [colour,report] of Object.entries(result.construction.regions))result.construction.errors.push(...report.errors.map(message=>`${colour}: ${message}`));

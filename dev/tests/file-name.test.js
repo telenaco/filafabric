@@ -282,3 +282,17 @@ test('variant jobs have a stable family and hash filename, and reject an empty h
   assert.equal(variantsFileName('ring mail','ABCDEF1234567890'),'ring-mail-variants-abcdef123456.gcode');
   assert.throws(()=>variantsFileName('rings',''),/fingerprint is required/);
 });
+
+test('automatic print names include a readable printer model and distinguish same-name profiles', () => {
+  const { mod, s } = settingsFor('zigzag');
+  const options = { size: [100, 100], print: PRINT, material: MATERIAL };
+  const machine = { id: 'prusa-mk3s', name: 'Original Prusa i3 MK3S / MK3S+' };
+  const make = printer => exportFileName(mod, s, relevantKeys(mod, s), { ...options, machine: printer });
+  const name = make(machine);
+  assert.match(name, /_printer-.*prusa.*mk3s/i);
+  assert.notEqual(name, make({ ...machine, id: 'second-mk3s' }));
+  assert.equal(parseFileName(name).material, MATERIAL);
+  assert.match(parseFileName(name).printer, /prusa.*mk3s/i);
+  assert.ok(make({ id: 'lab', name: '印刷機 : '.repeat(100) }).length <= 186);
+  assert.match(variantsFileName('zigzag', 'abc123', machine), /printer-.*prusa.*mk3s/i);
+});

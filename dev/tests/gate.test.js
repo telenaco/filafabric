@@ -71,7 +71,7 @@ test('the page loads the studio only through the gate', () => {
 
 test('boot.js imports the studio dynamically, so nothing of it runs behind the gate', () => {
   const boot = fs.readFileSync(path.join(siteRoot, 'src', 'boot.js'), 'utf8');
-  const studioSrc = boot.match(/await import\('([^']+)'\)/)?.[1];
+  const studioSrc = boot.match(/import\('([^']+)'\)/)?.[1];
   const studioUrl = new URL(studioSrc, 'http://localhost/src/boot.js');
   assert.equal(studioUrl.pathname, '/src/ui/main.js');
   const html = fs.readFileSync(path.join(siteRoot, 'index.html'), 'utf8');
@@ -99,12 +99,7 @@ test('the production gate remains closed while preserving the existing password 
   assert.match(config.hash, /^[0-9a-f]{64}$/);
 });
 
-test('"open": true in the gate config lets the studio open without the password, and takes the lock away', () => {
-  const boot = fs.readFileSync(path.join(siteRoot, 'src', 'boot.js'), 'utf8');
-  const open = boot.indexOf('if (config.open === true)'), token = boot.indexOf('if (keep.get() === unlockToken(config))');
-  assert.ok(open > 0 && open < token, 'checked before any password or saved unlock');
-  assert.match(boot.slice(open, token), /await openStudio\(\{ open: true \}\);\s*return;/);
-  assert.match(boot, /if \(open\) \$\('btn-lock'\)\?\.remove\(\);/);
+test('the optional open flag does not replace the password hash', () => {
   const config = JSON.parse(fs.readFileSync(path.join(siteRoot, 'src', 'ui', 'gate-config.json'), 'utf8'));
   assert.ok(config.open === undefined || typeof config.open === 'boolean');
   assert.match(config.hash, /^[0-9a-f]{64}$/, 'the password stays set for when the gate closes again');

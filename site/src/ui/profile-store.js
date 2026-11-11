@@ -8,8 +8,12 @@ const KEY = 'filafabric:profiles';
 const hasExtension = (name) => /\.[a-z0-9]+$/i.test(name);
 
 export class ProfileStore {
-  constructor(storage = globalThis.localStorage) {
-    this.storage = storage;
+  constructor(storage) {
+    try {
+      this.storage = storage === undefined ? globalThis.localStorage : storage;
+    } catch {
+      this.storage = null;
+    }
     this.machines = new Map();
     this.materials = new Map();
     /** Why a file in the folder could not be read: [{ file, message }] */
