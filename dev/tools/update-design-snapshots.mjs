@@ -1,6 +1,6 @@
 // Record the current printable output of every ready card and preset before the library refactors.
 // Hash every G-code line except the generator version banner (/^; Textile G-code generator v.*$/).
-// The current generators emit no date or wall-clock timestamp. Keep motion estimates and parameters in the hash.
+// Keep motion estimates and parameters in the hash, rounding JSON motion summaries to six decimal places.
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -16,6 +16,10 @@ import { defaultProfiles, projectRoot } from '../tests/helpers.js';
 const snapshotsRoot = path.join(projectRoot, 'dev', 'tests', 'snapshots', 'designs');
 const { machine, material } = defaultProfiles();
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
+const motionSummary = /^(; (?:actual )?motion summary )(.+)$/;
+const normalizeMotionSummary = (line) => line.replace(motionSummary, (_, prefix, json) =>
+  prefix + JSON.stringify(JSON.parse(json), (_, value) =>
+    typeof value === 'number' ? Number(value.toFixed(6)) : value));
 const sorted = (value) => Array.isArray(value) ? value.map(sorted)
   : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map((key) => [key, sorted(value[key])]))
     : value;
@@ -65,7 +69,8 @@ export function summarizeOutput(card, preset, settings, result) {
     }
     previous = move;
   }
-  const gcode = result.gcode.split(/\r?\n/).filter((line) => !/^; Textile G-code generator v.*$/.test(line)).join('\n');
+  const gcode = result.gcode.split(/\r?\n/).filter((line) => !/^; Textile G-code generator v.*$/.test(line))
+    .map(normalizeMotionSummary).join('\n');
   return {
     card, preset, settingsHash: sha256(JSON.stringify(sorted(settings))).slice(0, 12),
     gcodeSha256: sha256(gcode), strands: result.strands.length, moves: result.moves.length,

@@ -3,7 +3,7 @@
     "card": "zigzag-flat",
     "preset": "default",
     "settingsHash": "0e2c6f592544",
-    "gcodeSha256": "51100678dbdadace9486f21168e14cabb614265ea95ee46c7339c60afc460499",
+    "gcodeSha256": "48a78be0a9ba9402de8eba011740334bf715469c3f49a1cf67ddb7db1a96ce9f",
     "strands": 2,
     "moves": 143,
     "extrudeMm": 1015.5,

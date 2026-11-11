@@ -3,7 +3,7 @@
     "card": "squiggle-zigzag",
     "preset": "default",
     "settingsHash": "5910926a901f",
-    "gcodeSha256": "44a746318837090966e6a248c73c17dd9ff00f1191ad015031ccc494bc649b79",
+    "gcodeSha256": "288e8f9e14559f7cb5930715ee305becc78884bd6b8fdaed4f46cf64ef851c25",
     "strands": 28,
     "moves": 2300,
     "extrudeMm": 1241.6,
