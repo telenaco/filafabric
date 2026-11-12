@@ -1,7 +1,7 @@
 {
   "format": 1,
   "archive": "site/vendor/arachne/filafabric-source.tar.gz",
-  "archiveSha256": "65739880aa0c6c0a35a1619cf101e42baf857d317ebdf89cf629c7d78ebcad52",
+  "archiveSha256": "85343c14dc358cc03a23450aa653659ad569a8153a6e62e25766429ba3803252",
   "canonicalization": "CRLF to LF for allowlisted text extensions; pinned slicer_core.js and binary files unchanged",
   "files": [
     {
@@ -226,8 +226,8 @@
     },
     {
       "path": "dev/tests/diagnostics.test.js",
-      "bytes": 16787,
-      "sha256": "ddb521f2116b860e1672a4129ae57b9ff574d1fccc736c2bb1e9279f6fce4399"
+      "bytes": 22919,
+      "sha256": "3f167764a18649dfd4133551b5d90e19a5ec870989cfd5e42b7cf23369c84e6c"
     },
     {
       "path": "dev/tests/dipweave.test.js",
@@ -261,8 +261,8 @@
     },
     {
       "path": "dev/tests/export-dialog.test.js",
-      "bytes": 22465,
-      "sha256": "de7a2b1c939c4f0c4fa9e1629ded439b995af585c2dc6189f26930b3ab656eb0"
+      "bytes": 23266,
+      "sha256": "34018b7f3970c61124b2ccef5547db72afa35e568526ffa688aeb0b40040ec1e"
     },
     {
       "path": "dev/tests/extra-backing.test.js",
@@ -376,8 +376,8 @@
     },
     {
       "path": "dev/tests/gate.test.js",
-      "bytes": 5768,
-      "sha256": "58d05b78b146928af09a54c742b2585b11b0467f56cace3d31348e9cb7e1f763"
+      "bytes": 6136,
+      "sha256": "4705d543c98330bf469ca5a625065eccbefd68864bd6012b17153544d74b6399"
     },
     {
       "path": "dev/tests/gcode.test.js",
@@ -1696,8 +1696,8 @@
     },
     {
       "path": "docs/print-state.md",
-      "bytes": 5819,
-      "sha256": "5b4d1037b783d17f1158f465906472de2509855db94c55ede7c36601f00b8308"
+      "bytes": 6846,
+      "sha256": "0a230e5aec7969e06762263ccd9f37a4f7c8e5848dea0549ced7ce52e54e4d12"
     },
     {
       "path": "docs/product-direction-2026-10-14.md",
@@ -1851,13 +1851,13 @@
     },
     {
       "path": "site/index.html",
-      "bytes": 34542,
-      "sha256": "27c326454ef1199fc7012b5d5259c2cc263a7da86e4eec544876a2684f1c0d90"
+      "bytes": 34523,
+      "sha256": "0e6f7a48233c0fbfed4f744f863b7e7700521c0f3060a4aad348c4623b59489b"
     },
     {
       "path": "site/precomputed/index.json",
       "bytes": 33892,
-      "sha256": "c012e2fbf089cdd8653b322cb84c5a060a0a75fb5ad514aa6c230f0c895daea1"
+      "sha256": "df4d63d13bb9ff9e22d57a91ffe1f51238d824cfe26dc6e69bbf8f5b6d1f2988"
     },
     {
       "path": "site/profiles/MATERIAL_SOURCES.md",
@@ -1955,6 +1955,11 @@
       "sha256": "2a89b6b5f4300526b35f217e9fcb1ae0d8718036752fb48bced141dbd529fbef"
     },
     {
+      "path": "site/samples/atelier-loop-study.webp",
+      "bytes": 139106,
+      "sha256": "d1d9c811cf7a0334d9b8f3c6d5a3d6651ac6b4b811a42d2926485c27ecef4d19"
+    },
+    {
       "path": "site/samples/filafabric-sample.svg",
       "bytes": 3430,
       "sha256": "61331a3d9dc2f1a23ed44e056c0843e672331040848f494f3139cde151bbb44a"
@@ -1996,8 +2001,8 @@
     },
     {
       "path": "site/src/boot.js",
-      "bytes": 3857,
-      "sha256": "43eb564a1850bb2240bc985c4fd40da2178b2a82fe381150a662fb22e34c9da8"
+      "bytes": 3850,
+      "sha256": "9c548700567ac25ed1b9f30bfbdb524a5c7071a35733321c1c4293fb85cd8b80"
     },
     {
       "path": "site/src/engine/adaptive-solids.js",
@@ -2611,8 +2616,8 @@
     },
     {
       "path": "site/src/ui/designs-resizer.js",
-      "bytes": 2848,
-      "sha256": "f15042ea55da7afe95233081766024c900c4166cb7ad3c2b1ac6d5b8db7e724f"
+      "bytes": 3566,
+      "sha256": "faba9db2307882dd38e035f48369b748a3a9cf0dd9d8e23126a9a717347e5ff8"
     },
     {
       "path": "site/src/ui/designs.js",
@@ -2696,8 +2701,8 @@
     },
     {
       "path": "site/src/ui/main.js",
-      "bytes": 161707,
-      "sha256": "d435968b5204a4c3efde606aab8a2d37cc8b6befa9d83ea6cbd4ee4eb4a2c143"
+      "bytes": 163084,
+      "sha256": "0137ab5556c487b2b1b165d06703259257d1c1ca8b85d40fc185fe0e63ead524"
     },
     {
       "path": "site/src/ui/more-designs.js",
@@ -2742,7 +2747,7 @@
     {
       "path": "site/src/ui/panels.js",
       "bytes": 75730,
-      "sha256": "784da86a87c3ec4d90903c696eeed6608dadf86fa36ae4cfce1c589263cea0ad"
+      "sha256": "7552f04dd442ef3181f088d41bd099faaccd240fc621c6b5be4b0e612a3f4907"
     },
     {
       "path": "site/src/ui/param-schema.js",
@@ -2752,12 +2757,12 @@
     {
       "path": "site/src/ui/precomputed-version.js",
       "bytes": 198,
-      "sha256": "6e0977ca4cedf9936646cc4f50d4b7003637558b85ef65712be01588c361c00b"
+      "sha256": "45df4bd0f224be9da15ad50ed84a3ffb2296c5e06278aca7469a4b5a1397df53"
     },
     {
       "path": "site/src/ui/preview.js",
-      "bytes": 14566,
-      "sha256": "35de7179b532224db08caedd37203b52028a5a4033593b88c246b38cc4a617be"
+      "bytes": 14857,
+      "sha256": "e88ae94ebfe7e7fec966b8134a818ad37cbb7d651b0e52b3a09e99642b345d8e"
     },
     {
       "path": "site/src/ui/print-estimates.js",
@@ -2846,8 +2851,8 @@
     },
     {
       "path": "site/src/ui/styles.css",
-      "bytes": 62704,
-      "sha256": "c20ac189d735e1b37bcd9e0d206019a0a2fa583fc60a54c1832a66a07c822cba"
+      "bytes": 65797,
+      "sha256": "f69d5e331cde96f5587b55b9020396ea5d3898774feab9fef76e702368d2858c"
     },
     {
       "path": "site/src/ui/svg-design.js",

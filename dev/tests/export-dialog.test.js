@@ -64,7 +64,7 @@ function exportHost({ size = 200, previewSize = 100, pending = null, timer = nul
     reportStudyExport(type, input, stats) { host.recorded = { type, input, stats }; },
     recordBuildFailure(error, input) { host.failure = { error, input }; },
   };
-  host.run = () => runInNewContext(`${applyRequirement}\n${uiFunction('exportGcode')}\nexportGcode();`, host);
+  host.run = () => runInNewContext(`${applyRequirement}\n${uiFunction('currentBuildError')}\n${uiFunction('exportGcode')}\nexportGcode();`, host);
   return host;
 }
 
@@ -262,7 +262,7 @@ test('an obsolete construction failure cannot disable the current Export button'
     design: 'zigzag', print: {}, resultKey: 'older',
     result: { moves: [{}], construction: { errors: ['obsolete failure'] } },
   };
-  runInNewContext(uiFunction('renderExport') + '\nrenderExport();', {
+  runInNewContext(uiFunction('currentBuildError') + '\n' + uiFunction('renderExport') + '\nrenderExport();', {
     $, state, exporting: false, overviewActive: false, readyGcode: null,
     buildKey: () => 'current', snapshotKey: () => 'current', currentPrintSizeProblem: () => '',
     requiresApply: () => false, isReady: () => true, designById: () => ({}),
@@ -307,15 +307,29 @@ test('a pending SVG import cannot put a removed drawing back', async () => {
 });
 
 test('scheduling a preview retires the old epoch before the next worker starts', () => {
+  let cleared = false;
   const host = {
+    state: { buildFailure: { key: 'previous', error: new Error('previous build failed') } },
     regenerationEpoch: 3, genTimer: null, readyGcode: null, referenceResult: null, overviewTrace: null,
     traceProblem: null, fixJob: null, previewBuild: null, overview: null, exportController: null,
     captureRegionSettings() {}, buildKey: () => 'current',
-    clearTimeout() {}, setTimeout: () => 5, regenerate() {}, stopPlay() {}, renderBusy() {}, renderExport() {}, renderPreviewMode() {}, renderPlayback() {},
+    clearTimeout() {}, setTimeout: () => 5, regenerate() {}, stopPlay() {}, renderCheck() {}, renderBusy() {}, renderExport() {}, renderPreviewMode() {}, renderPlayback() {},
+    renderErrors() { cleared = true; },
   };
   runInNewContext(uiFunction('schedule') + '\nschedule();', host);
   assert.equal(host.regenerationEpoch, 4);
   assert.equal(host.genTimer, 5);
+  assert.equal(host.state.buildFailure, null);
+  assert.equal(cleared, true);
+});
+
+test('only a build failure for the active inputs is shown while a new preview is queued', () => {
+  const error = new Error('build failed');
+  const host = { state: { buildFailure: { key: 'old', error } }, buildKey: () => 'current' };
+  runInNewContext(uiFunction('currentBuildError'), host);
+  assert.equal(host.currentBuildError(), null);
+  host.state.buildFailure.key = 'current';
+  assert.equal(host.currentBuildError(), error);
 });
 
 
@@ -391,7 +405,7 @@ test('failure of a retired adaptive preview cannot change the new preview', asyn
     genTimer: null, regenerationEpoch: 0, previewBuild: null, previewChoice: 'sample',
     overviewActive: false, overview: { cancel() {} },
     BINDINGS: { zigzag: { size: { get: () => [60, 60] } } },
-    printMaterial: () => ({}), designById: () => ({}), followVectorSize() {},
+    printMaterial: () => ({}), designById: () => ({}), followVectorSize() {}, buildKey: () => 'current',
     useWholeOverview: () => false, currentPrintSizeProblem: () => '',
     renderPreviewMode() {}, renderBusy() {}, render() {},
     recordBuildFailure(error) { failure = error; }, console: { error() {} },
@@ -403,7 +417,7 @@ test('failure of a retired adaptive preview cannot change the new preview', asyn
   rejectKernel(new Error('old preview failed'));
   await pending;
   assert.equal(failure, undefined);
-  assert.equal(host.state.error, undefined);
+  assert.equal(host.state.buildFailure, undefined);
 });
 
 test('the studio bead width follows a replaced filament profile with the same ID', () => {

@@ -26,11 +26,11 @@ export function strandWidths(cfg) {
 const PALETTES = {
   light: {
     base: 0x27366b, anchored: 0x1f8179, lifting: 0xb87400, free: 0xb0316f, channel:0x7047ad,
-    centreline: 0x12161e, travel: 0x566074, hop: 0xa04b00, violation: 0xd32f2f, bed: 0xd3d7de, sample: 0x34469a,
+    centreline: 0x12161e, travel: 0x566074, hop: 0xa04b00, violation: 0xd32f2f, bed: 0xe2dcef, sample: 0x5236a6,
   },
   dark: {
     base: 0x8fa6f5, anchored: 0x4fc3b8, lifting: 0xe8b04a, free: 0xf07ab0, channel:0xb59cff,
-    centreline: 0xf2f3f0, travel: 0x9aa4b5, hop: 0xffa060, violation: 0xff6b6b, bed: 0x2f3746, sample: 0x7ba3ff,
+    centreline: 0xf2f3f0, travel: 0x9aa4b5, hop: 0xffa060, violation: 0xff6b6b, bed: 0x332a47, sample: 0xc5adff,
   },
 };
 
@@ -46,7 +46,9 @@ function countBelow(sorted, k) {
 
 export function createPreview(container) {
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(40, 1, 0.5, 6000);
+  const fieldOfView = 40;
+  const halfAngle = THREE.MathUtils.degToRad(fieldOfView / 2);
+  const camera = new THREE.PerspectiveCamera(fieldOfView, 1, 0.5, 6000);
   camera.up.set(0, 0, 1);
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setClearColor(0x000000, 0);
@@ -86,6 +88,9 @@ export function createPreview(container) {
     renderer.domElement.style.width = '100%';
     renderer.domElement.style.height = '100%';
     camera.aspect = w / h;
+    // Keep the same angle across the shorter axis, without resetting the current orbit.
+    const shortAxis = Math.min(1, camera.aspect);
+    camera.fov = 2 * THREE.MathUtils.radToDeg(Math.atan(Math.tan(halfAngle) / shortAxis));
     camera.updateProjectionMatrix();
     for (const m of materials) m.resolution.set(w, h);
   }
@@ -267,9 +272,9 @@ export function createPreview(container) {
     const w = e.maxX - e.minX, h = e.maxY - e.minY;
     const cx = (e.minX + e.maxX) / 2, cy = (e.minY + e.maxY) / 2;
     controls.target.set(cx, cy, 2);
-    // distance that fits the swatch's bounding sphere in the vertical field of view, with a little air
+    // Frame the swatch using the field of view along the shorter side of the canvas.
     const radius = Math.hypot(w, h) / 2 + 2;
-    const distance = (radius / Math.sin((camera.fov * Math.PI) / 360)) * 0.92;
+    const distance = (radius / Math.sin(halfAngle)) * 0.92;
     // 'angled' is a three-quarter view from the front right, so rows and loop heights both read
     const dir = state.camera === 'top' ? [0, -0.01, 1] : state.camera === 'side' ? [0, -1, 0.12] : [0.42, -0.78, 0.62];
     const len = Math.hypot(...dir);

@@ -7,9 +7,13 @@
 | Ordinary reload | The remembered printer, filament, layer height and filament adjustments. The design starts at Zigzag defaults. |
 | Shared link | The sanitized settings in the link. Drawings with colour regions include their vector paths. |
 | Open a settings file | The sanitized settings and any saved outline, vector paths, region roles, membership and order. |
-| Undo or redo | A document snapshot from the current tab. The region editor selects a starting colour and the studio rebuilds from the restored settings. |
+| Undo or redo | A document snapshot and its artwork revision from the current tab. The studio remembers the restored printer setup, selects a starting colour in the region editor, and rebuilds. |
 
-`snapshot()` and `sanitizeState()` define the v4 settings format and earlier version fallbacks. Region path membership is rebuilt from the drawing. A missing card leaves its region excluded with a recovery note. Profile IDs refer to the available printer and filament libraries. When an ID cannot be resolved, the studio uses a known profile. Pictures stay in memory. A picture pattern restored without its image falls back to a built-in pattern.
+`snapshot()` and `sanitizeState()` define the v4 settings format and earlier version fallbacks. Region path membership is rebuilt from the drawing. A missing card leaves its region excluded with a recovery note. Profile IDs refer to the available printer and filament libraries. When an ID cannot be resolved, the studio uses a known profile. A picture pattern opened without its image falls back to a built-in pattern.
+
+`commit()` records an accepted edit even if the last build failed. A slider gesture commits on completion. A new edit truncates Redo. `restoreHistory()` restores the snapshot and updates the remembered setup immediately. Both clear an active share hash so the restored setup takes effect on reload. Only the printer, filament, layer height and filament adjustments are needed for the next reload.
+
+The undo log keeps up to 100 entries and about 32 MiB of picture sources and thumbnails. Contrast edits share their source pixels. The studio recreates the contrast-adjusted pixels when restoring an entry. Artwork stays in tab memory, including artwork removed from the piece that can still be restored through Undo.
 
 The selected colour is editor state. The checkbox and Apply flags are document state. [Drawing colours](drawing-colours.md) defines which flag combinations build. The studio projects this membership to the engine as a single `enabled` flag. Build products such as previews, estimates, and G-code are derived from the current document and effective print setup.
 
@@ -17,13 +21,15 @@ The selected colour is editor state. The checkbox and Apply flags are document s
 
 | Workflow | Owner and transitions |
 | --- | --- |
-| Preview and estimate | `site/src/ui/main.js` debounces edits and retires the previous generation immediately. A full preview, explicit estimate, or background trace owns its worker until completion or cancellation. A late result or error can update the studio only while its job still owns the current build key. |
+| Preview and estimate | `site/src/ui/main.js` debounces edits and retires the previous generation immediately. A full preview, explicit estimate, or background trace owns its worker until completion or cancellation. A late result or error can update the studio only while its job still owns the current build key. The check and recovery controls read failures for the current inputs. |
 | Printable result | `buildKey()` compares the selected profile contents and document inputs. History uses `snapshotKey()` for document changes. Export can reuse only a matching full build. Reference browsing and the alternate 3D sample remain view-only, including when the sample dimensions match the requested dimensions. |
 | SVG, settings, picture and printer inputs | `site/src/ui/main.js` tracks the latest request in each input scope. A later document selection, removal or history restore supersedes pending work. A settings file can restore its document while a newer printer choice retains ownership of the print setup. |
 | Garment panel | `site/src/ui/panel-ui.js` claims the save picker, worker, and writable together. A chunk is acknowledged only after that job writes it. The file commit owns finalization once close starts. |
 | Variants and Swatch Lab | `site/src/ui/main.js` and `site/src/ui/swatch-lab.js` capture setup before building the first piece. Closing or cancelling retires the batch. Ready variants require a matching setup before download. |
 
 Automatic G-code and comparison ZIP names include a readable printer model from the captured job. A typed panel filename is used as entered after filesystem sanitization. Older filenames and demo names still parse. Filename changes do not alter the G-code body.
+
+Run `node --test dev/tests/diagnostics.test.js dev/tests/export-dialog.test.js` for the studio history, recovery and export acceptance cases. The tests control worker completion and storage while exercising the studio actions.
 
 ## Toolpath protocols
 

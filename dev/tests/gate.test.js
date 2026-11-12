@@ -66,7 +66,10 @@ test('the page loads the studio only through the gate', () => {
   for (const id of ['gate', 'gate-form', 'gate-password', 'gate-submit', 'gate-error', 'gate-remember', 'btn-lock']) {
     assert.ok(html.includes(`id="${id}"`), id);
   }
-  assert.match(html, /Coming soon/);
+  assert.match(html, /<label[^>]+for="gate-password"[^>]*>Private beta password<\/label>/);
+  const illustration = html.match(/<img[^>]+src="(samples\/atelier-loop-study\.webp)"[^>]+alt="[^"]+"/);
+  assert.ok(illustration, 'the gate has a local textile illustration with alt text');
+  assert.ok(fs.statSync(path.join(siteRoot, illustration[1])).isFile());
 });
 
 test('boot.js imports the studio dynamically, so nothing of it runs behind the gate', () => {
@@ -84,10 +87,11 @@ test('boot.js imports the studio dynamically, so nothing of it runs behind the g
 
 test('the gate tells a visitor without a password where to ask for one', () => {
   const html = fs.readFileSync(path.join(siteRoot, 'index.html'), 'utf8');
-  assert.match(html, /class="gate-access"[^>]*>[^<]*<a href="mailto:bubakidesign@gmail\.com[^"]*">bubakidesign@gmail\.com<\/a>/);
+  const gate = html.match(/<main\b[^>]+id="gate"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '';
+  assert.match(gate, /<a href="mailto:bubakidesign@gmail\.com[^"]*">Request beta access<\/a>/);
 });
 
-test('the coming-soon page links to the hub and LinkedIn for updates', () => {
+test('the beta landing links to the hub and LinkedIn for updates', () => {
   const html = fs.readFileSync(path.join(siteRoot, 'index.html'), 'utf8');
   assert.match(html, /https:\/\/www\.3dpstef\.eu\/hub/);
   assert.match(html, /https:\/\/www\.linkedin\.com\/in\/jlberna\//);

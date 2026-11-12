@@ -1118,7 +1118,7 @@ export class DesignPanel extends Control {
         return button;
       }), el('span', { class: 'small muted', 'aria-hidden': 'true', text: '·' }), this.printVariants) : null;
     this.node = el('div', { id: `panel-${mod.id}`, class: 'panel', hidden: true },
-      el('header', { class: 'panel-head' }, el('h1', { class: 'title', text: mod.name }), this.badges, ...(this.joins ? [this.joins] : []), ...(this.alsoOn ? [this.alsoOn] : [])));
+      el('header', { class: 'panel-head' }, el('h2', { class: 'title', text: mod.name }), this.badges, ...(this.joins ? [this.joins] : []), ...(this.alsoOn ? [this.alsoOn] : [])));
     this.sections = [];
     let sliderGroup = 0;
     mod.controls.forEach((spec, index) => {

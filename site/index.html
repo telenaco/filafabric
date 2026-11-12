@@ -8,41 +8,48 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="theme-color" content="#171c26">
+<meta name="theme-color" content="#F5F3F8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#171321" media="(prefers-color-scheme: dark)">
 <link rel="preload" href="vendor/fonts/instrument-sans/instrument-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="src/ui/styles.css?v=20261104-tour">
+<link rel="stylesheet" href="src/ui/styles.css?v=20261112-atelier">
 <script type="importmap">
 { "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
 </script>
 </head>
 <body class="locked quiet-warnings">
 <main id="gate" class="gate" aria-labelledby="gate-title">
-  <div class="gate-card">
+  <header class="gate-masthead">
     <div class="brand">
       <svg width="30" height="30" viewBox="0 0 30 30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M3 22C3 8 12 8 12 22"/><path d="M10 22C10 8 19 8 19 22"/><path d="M17 22C17 8 26 8 26 22"/><path d="M2 26H28"/></svg>
       <span class="brand-name">Filafabric</span>
     </div>
-    <p class="gate-kicker">Coming soon</p>
-    <h1 id="gate-title" class="gate-title">Fabric you can print, designed in your browser</h1>
-    <p class="gate-lead">Filafabric is a design studio for flexible fabric structures (loops, coils, weaves, meshes and lace) that turns each one into G-code for a 3D printer and flexible filament. Pick a structure, shape it with a few sliders, check every strand in the preview, and export a file that is ready to print.</p>
-    <ul class="gate-list">
-      <li><strong>Flat, layered and raised structures</strong>, from soft loop pile to auxetic mesh, star lattices and Voronoi lace.</li>
-      <li><strong>A crossing report</strong> that says whether a design will hold together before you print it.</li>
-      <li><strong>A swatch code and a link</strong> on every sample, so any one can be made again.</li>
-    </ul>
-    <form id="gate-form" class="gate-form" autocomplete="off">
-      <label class="gate-label" for="gate-password">Password</label>
-      <div class="gate-row">
-        <input id="gate-password" type="password" required autocomplete="current-password" spellcheck="false" aria-describedby="gate-error">
-        <button id="gate-submit" type="submit" class="btn primary" disabled>Open the studio</button>
-      </div>
-      <p id="gate-error" class="gate-error" role="alert" hidden></p>
-      <label class="gate-remember"><input id="gate-remember" type="checkbox" checked> Stay unlocked on this device</label>
-    </form>
-    <p class="gate-note">An early preview for testers. If you were given a link and a password, this is the place for it.</p>
-    <p class="gate-access">For the latest updates, sign up on our <a href="https://www.3dpstef.eu/hub" target="_blank" rel="noopener">Filafabric Hub</a> or <a href="https://www.linkedin.com/in/jlberna/" target="_blank" rel="noopener">follow the progress on LinkedIn</a>.</p>
-    <p class="gate-access">If you would like to be a beta tester get in touch <a href="mailto:bubakidesign@gmail.com?subject=Filafabric%20access">bubakidesign@gmail.com</a>.</p>
-    <p class="site-credit"><a href="https://www.bubaki.com/" target="_blank" rel="noopener">© 2026 Bubaki</a></p>
+    <p class="gate-masthead-label">Textile G-code studio</p>
+  </header>
+  <div class="gate-layout">
+    <div class="gate-content">
+      <p class="gate-kicker">A digital atelier for textile experiments</p>
+      <h1 id="gate-title" class="gate-title">The shape of<br>flexible things.</h1>
+      <p class="gate-lead">A new way to compose fabric. Discover the expressive possibilities of printed loops, meshes and lace, and develop a material language of your own.</p>
+      <form id="gate-form" class="gate-form" autocomplete="off">
+        <label class="gate-label" for="gate-password">Private beta password</label>
+        <div class="gate-row">
+          <input id="gate-password" type="password" required autocomplete="current-password" spellcheck="false" aria-describedby="gate-error">
+          <button id="gate-submit" type="submit" class="btn primary" disabled>Open the studio</button>
+        </div>
+        <p id="gate-error" class="gate-error" role="alert" hidden></p>
+        <label class="gate-remember"><input id="gate-remember" type="checkbox" checked> Stay unlocked on this device</label>
+      </form>
+      <nav class="gate-links" aria-label="About Filafabric">
+        <a href="https://www.3dpstef.eu/hub" target="_blank" rel="noopener">Project hub</a>
+        <a href="mailto:bubakidesign@gmail.com?subject=Filafabric%20access">Request beta access</a>
+        <a href="https://www.linkedin.com/in/jlberna/" target="_blank" rel="noopener">LinkedIn</a>
+      </nav>
+      <p class="site-credit"><a href="https://www.bubaki.com/" target="_blank" rel="noopener">© 2026 Bubaki</a></p>
+    </div>
+    <figure class="gate-figure">
+      <img src="samples/atelier-loop-study.webp" width="840" height="574" alt="Rows of raised pink filament loops interlaced over a violet lattice" fetchpriority="high">
+      <figcaption>Loop pile · Filament form study</figcaption>
+    </figure>
   </div>
 </main>
 
@@ -93,7 +100,7 @@
 
 <div class="app">
   <aside class="designs" aria-labelledby="designs-title">
-    <h2 class="eyebrow" id="designs-title" title="Essentials first, then the rest easiest first. Every design opens at 100 × 100 mm. The order ranks the default geometry by free spans, slopes, nozzle lifts and clearance flags; physical testing pending.">Designs</h2>
+    <h2 class="eyebrow" id="designs-title" title="Essentials first, then the rest easiest first. Every design opens at 100 × 100 mm. The order ranks the default geometry by free spans, slopes, nozzle lifts and clearance flags; physical testing pending.">Structure library</h2>
     <input type="search" id="design-filter" class="design-filter" placeholder="Find a design by name" aria-label="Find a design by name" autocomplete="off" spellcheck="false">
     <p class="design-filter-none small muted" id="design-filter-none" hidden>No design has that name.</p>
     <div class="design-list" id="design-list"></div>
@@ -102,22 +109,25 @@
     <p class="site-credit"><a href="https://www.bubaki.com/" target="_blank" rel="noopener">© 2026 Bubaki</a></p>
   </aside>
   <div class="designs-resizer" id="designs-resizer" role="separator" aria-orientation="vertical" aria-label="Drag to make the design list wider or narrower" tabindex="0" title="Drag to show more designs side by side. Double-click to reset."></div>
-  <main class="stage" id="stage" aria-label="Preview">
-    <div class="preview-bar">
-      <div class="preview-mode-row">
-        <div class="seg" role="group" aria-label="Preview mode">
-          <button type="button" id="preview-full" aria-pressed="true" title="The real toolpath of the whole piece, as it prints, with print time and filament">3D</button>
-          <button type="button" id="preview-whole" aria-pressed="false" title="A flat drawing of the whole piece at the size it prints, shown at once. The G-code builds behind it: then print time and filament appear, the print order can be played, and the view can be saved as SVG.">2D</button>
-          <button type="button" id="preview-detail" aria-pressed="false" title="The real toolpath of a corner of the piece (100 mm), quick for large pieces">3D sample</button>
+  <main class="stage" id="stage" aria-labelledby="stage-design">
+    <header class="stage-heading">
+      <h1 id="stage-design">Preview</h1>
+      <div class="preview-bar">
+        <div class="preview-mode-row">
+          <div class="seg" role="group" aria-label="Preview mode">
+            <button type="button" id="preview-full" aria-pressed="true" title="The real toolpath of the whole piece, as it prints, with print time and filament">3D</button>
+            <button type="button" id="preview-whole" aria-pressed="false" title="A flat drawing of the whole piece at the size it prints, shown at once. The G-code builds behind it: then print time and filament appear, the print order can be played, and the view can be saved as SVG.">2D</button>
+            <button type="button" id="preview-detail" aria-pressed="false" title="The real toolpath of a corner of the piece (100 mm), quick for large pieces">3D sample</button>
+          </div>
+          <div id="colour-bar" class="colour-bar" role="toolbar" aria-label="Drawing colour regions" hidden></div>
         </div>
-        <div id="colour-bar" class="colour-bar" role="toolbar" aria-label="Drawing colour regions" hidden></div>
+        <button type="button" id="preview-cancel" class="btn" hidden>Cancel preview</button>
+        <div id="overview-actions" hidden>
+          <button type="button" id="overview-fit" class="link">Fit piece</button>
+          <button type="button" id="overview-export-svg" class="link" disabled>Export SVG</button>
+        </div>
       </div>
-      <button type="button" id="preview-cancel" class="btn" hidden>Cancel preview</button>
-      <div id="overview-actions" hidden>
-        <button type="button" id="overview-fit" class="link">Fit piece</button>
-        <button type="button" id="overview-export-svg" class="link" disabled>Export SVG</button>
-      </div>
-    </div>
+    </header>
     <div id="print-fit-warning" class="preview-fit small" role="alert" hidden><span id="print-fit-message"></span> <button type="button" class="link" id="print-fit-printer">Change printer</button></div>
     <p id="apply-status" class="small muted" role="status" aria-live="polite" hidden></p>
     <p id="overview-status" class="small muted" role="status" aria-live="polite" hidden></p>
@@ -167,7 +177,7 @@
 
       <div id="panel-loop-pile" class="panel">
         <header class="panel-head">
-          <h1 class="title">Loop pile</h1>
+          <h2 class="title">Loop pile</h2>
         </header>
 
         <section class="group" aria-labelledby="lp-size-title">
@@ -371,6 +381,6 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-<script type="module" src="src/boot.js?v=20261111-state-machines"></script>
+<script type="module" src="src/boot.js?v=20261112-atelier"></script>
 </body>
 </html>

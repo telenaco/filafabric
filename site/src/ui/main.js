@@ -136,7 +136,7 @@ const state = {
   // settings of every design newer than the loop pile and squiggle, by design id
   designs: initialDesignSettings(DESIGNS),
   image: null, // { data, original: ImageData, contrast, name, px: [w, h], thumb: canvas }: stays on this computer, never in a link
-  imageRevision: 0, // counts picture loads and contrast changes
+  imageRevision: 0, // identity of the current picture state, including in history
   imageBoxOpen: false,
   outline: null, // { name, rings (flat, unit box), rotation }: shared by every design, travels in links
   vector: null,
@@ -147,7 +147,7 @@ const state = {
   docName: 'Untitled swatch',
   result: null,
   resultKey: null,
-  error: null,
+  buildFailure: null, // { key, error } for the inputs that failed
   fraction: 1,
   playing: false,
   details: false,
@@ -212,6 +212,7 @@ let exportLabel = '';
 let rafId = 0;
 let lastFrame = 0;
 const undoLog = { stack: [], cursor: -1 };
+let nextImageRevision = 0;
 const diagnosticLog = new DiagnosticLog();
 let feedback = null;
 let documentRequest = 0;
@@ -296,6 +297,14 @@ function printerSetupOnly(saved) {
     machine: saved?.machine, material: saved?.material, print };
 }
 
+function rememberPrintSetup() {
+  store.set(STORAGE_KEY, JSON.stringify(printerSetupOnly(snapshot())));
+  // The address-bar snapshot would take precedence over this setup on reload.
+  if (location.hash.startsWith('#s=')) {
+    try { history.replaceState(null, '', location.pathname + location.search); } catch { /* ignore */ }
+  }
+}
+
 function snapshotKey() {
   // A picture revision distinguishes document edits without serializing its pixels.
   if (state.regions?.length) return JSON.stringify({ m:state.machine, t:state.material, a:state.advanced, o:state.outline, v:state.vector, r:state.regions, s:state.seam, y:state.print, i:state.imageRevision });
@@ -311,28 +320,56 @@ function buildKey() {
   return JSON.stringify(setup) + '\n' + snapshotKey();
 }
 
+function currentBuildError(key) {
+  const failure = state.buildFailure;
+  return failure && failure.key === (key ?? buildKey()) ? failure.error : null;
+}
+
+function captureHistoryPicture() {
+  // Contrast pixels can be regenerated. Keep only the source, thumbnail and transform metadata.
+  if (!state.image) return { revision: state.imageRevision, image: null };
+  const { data, ...image } = state.image;
+  return { revision: state.imageRevision, image };
+}
+
+function trimHistory() {
+  const { stack } = undoLog;
+  const originals = new Set();
+  const budget = 32 * 1024 * 1024;
+  let bytes = 0;
+  let i = stack.length - 1;
+  for (; i >= Math.max(0, stack.length - 100); i--) {
+    const image = stack[i].picture.image;
+    if (!image || originals.has(image.original)) continue;
+    originals.add(image.original);
+    bytes += image.original.data.byteLength + image.thumb.width * image.thumb.height * 4;
+    if (bytes > budget && i < stack.length - 1) break;
+  }
+  if (i >= 0) stack.splice(0, i + 1);
+}
+
 function commit() {
-  if (state.error) return; // never record a state that cannot generate
   const key = snapshotKey();
   const current = undoLog.stack[undoLog.cursor];
   if (current && current.key === key) return;
   undoLog.stack = undoLog.stack.slice(0, undoLog.cursor + 1);
-  undoLog.stack.push({ key, data: JSON.parse(JSON.stringify(snapshot())) });
-  if (undoLog.stack.length > 100) undoLog.stack.shift();
+  undoLog.stack.push({ key, data: JSON.parse(JSON.stringify(snapshot())), picture: captureHistoryPicture() });
+  trimHistory();
   undoLog.cursor = undoLog.stack.length - 1;
-  store.set(STORAGE_KEY, JSON.stringify(snapshot()));
-  // once a link has been opened (or edited past), drop it from the address bar so a reload keeps later changes
-  if (location.hash.startsWith('#s=')) {
-    try { history.replaceState(null, '', location.pathname + location.search); } catch { /* ignore */ }
-  }
+  rememberPrintSetup();
   renderHistoryButtons();
 }
 
 /** Load sanitized settings into the state. Returns true when a picture pattern had to be replaced. */
-function loadState(data) {
+function loadState(data, picture) {
   const clean = sanitizeState(data, known());
   const loadedRegions=clean.regions??(clean.vector?regionsFromDrawing(clean.vector,{currentCard:clean.design,currentSettings:clean.design==='loop-pile'?clean.primary:clean.designs[designById(clean.design).settingsKey??clean.design]}):null);
   if(loadedRegions?.length>REGION_LIMIT)throw new Error(`This saved drawing has more than ${REGION_LIMIT} colour regions. Reduce its colours before loading it.`);
+  if (picture) {
+    const image = picture.image;
+    state.image = image ? { ...image, data: withContrast(image.original, image.contrast) } : null;
+    state.imageRevision = picture.revision;
+  }
   const designChanged = clean.design !== state.design;
   state.design = clean.design;
   state.machine = clean.machine;
@@ -356,8 +393,8 @@ function loadState(data) {
   return state.image ? false : forgetPictureChoices();
 }
 
-function applySnapshot(data, { preserveSetupRequest = false } = {}) {
-  loadState(data);
+function applySnapshot(data, { preserveSetupRequest = false, picture } = {}) {
+  loadState(data, picture);
   documentRequest++;
   pictureRequest++;
   if (!preserveSetupRequest) machineRequest++;
@@ -367,17 +404,22 @@ function applySnapshot(data, { preserveSetupRequest = false } = {}) {
   schedule();
 }
 
-function undo() {
-  if (undoLog.cursor <= 0) return;
-  undoLog.cursor--;
-  applySnapshot(undoLog.stack[undoLog.cursor].data);
+function restoreHistory(step) {
+  const cursor = undoLog.cursor + step;
+  const entry = undoLog.stack[cursor];
+  if (!entry) return;
+  applySnapshot(entry.data, { picture: entry.picture });
+  undoLog.cursor = cursor;
+  rememberPrintSetup();
   renderHistoryButtons();
 }
+
+function undo() {
+  restoreHistory(-1);
+}
+
 function redo() {
-  if (undoLog.cursor >= undoLog.stack.length - 1) return;
-  undoLog.cursor++;
-  applySnapshot(undoLog.stack[undoLog.cursor].data);
-  renderHistoryButtons();
+  restoreHistory(1);
 }
 function renderHistoryButtons() {
   $('#btn-undo').disabled = undoLog.cursor <= 0;
@@ -827,6 +869,11 @@ function schedule() {
   exportController?.abort();
   clearTimeout(genTimer);
   genTimer = setTimeout(regenerate, 140);
+  if (state.buildFailure && state.buildFailure.key !== key) {
+    state.buildFailure = null;
+    renderErrors();
+  }
+  renderCheck(key);
   renderBusy();
   renderExport();
   renderPreviewMode();
@@ -865,11 +912,10 @@ function showGenerated(result, key) {
     state.print.extraLayers = result.layerPlan.extraLayers;
     delete state.print.legacyCopies;
     key = buildKey();
-    store.set(STORAGE_KEY, JSON.stringify(snapshot()));
   }
   state.result = result;
   state.resultKey = key;
-  state.error = null;
+  state.buildFailure = null;
   const [width, height] = BINDINGS[state.design].size.get();
   if (result.referencePreview) referenceResult = { key, result };
   else printEstimates.put(key, result, width, height);
@@ -910,7 +956,7 @@ function showReferenceOverview(result) {
 }
 
 function previewAtSelectedSize(input, { estimateOnly = false, auto = false, reference = false } = {}) {
-  state.error = null;
+  state.buildFailure = null;
   previewBuild?.controller.abort();
   const key = buildKey(), controller = new AbortController();
   const kind = auto ? 'background-trace' : estimateOnly ? 'print-estimate' : 'full-preview';
@@ -956,7 +1002,7 @@ function previewAtSelectedSize(input, { estimateOnly = false, auto = false, refe
         toast('3D could not finish for this piece, so it shows the 2D drawing. Print settings are unchanged.', { kind:'warning' });
         return null;
       }
-      state.error = error;
+      state.buildFailure = { key, error };
       recordBuildFailure(error, { ...input, operation: 'preview' });
     }
     throw error;
@@ -1073,6 +1119,8 @@ function renderFilamentSettings() {
 }
 
 function renderPreviewMode() {
+  const designTitle = state.regions?.length ? 'Drawing preview' : designById(state.design).name;
+  if ($('#stage-design').textContent !== designTitle) $('#stage-design').textContent = designTitle;
   $('#overview').hidden = !overviewActive;
   $('#preview').hidden = overviewActive;
   preview?.setVisible(!overviewActive);
@@ -1106,7 +1154,8 @@ function renderPreviewMode() {
 function showWholeOverview(input, { build = true } = {}) {
   // a finished whole-piece 3D build already holds the G-code: keep it (without its 3D geometry) for Export
   const [sw, sh] = BINDINGS[state.design].size.get();
-  if (state.result && !state.result.samplePreview && !state.error && state.resultKey === buildKey() && state.result.cfg.t.sample_width === sw && state.result.cfg.t.sample_height === sh) {
+  const key = buildKey();
+  if (state.result && !state.result.samplePreview && !currentBuildError(key) && state.resultKey === key && state.result.cfg.t.sample_width === sw && state.result.cfg.t.sample_height === sh) {
     const trace = packTrace(state.result);
     if (!state.result.referencePreview) readyGcode = { key: state.resultKey, result: { ...compactDesignExport(state.result), trace } };
     overviewTrace = { key: state.resultKey, trace, referencePreview: !!state.result.referencePreview };
@@ -1116,7 +1165,7 @@ function showWholeOverview(input, { build = true } = {}) {
   stopPlay();
   state.result = null;
   state.resultKey = null;
-  state.error = null;
+  state.buildFailure = null;
   renderPreviewMode();
   const reference = referenceResult?.key === buildKey() ? referenceResult.result : null;
   if (reference?.strands) showReferenceOverview(reference);
@@ -1157,10 +1206,12 @@ async function regenerate() {
   previewBuild = null;
   const machine = state.machines.get(state.machine);
   const material = printMaterial();
+  let key;
   try {
     let result;
     const mod = designById(state.design);
     followVectorSize();
+    key = buildKey();
     const [selectedWidth, selectedHeight] = BINDINGS[state.design].size.get();
     if (state.regions?.length && previewChoice==='overview') { showRegionOverview(); return; }
     if (state.regions?.length && !state.regions.some(inPiece)) { showRegionOverview(); return; } // nothing ticked or applied: just the outlines
@@ -1237,7 +1288,7 @@ async function regenerate() {
     if (previewChoice === 'auto' && canSimplifyPreview(e)) {
       try { showWholeOverview(exportOptions(), { build: false }); return; } catch { /* invalid document dimensions still report normally */ }
     }
-    state.error = e;
+    state.buildFailure = { key: key ?? buildKey(), error: e };
     recordBuildFailure(e);
     if (!(e && Array.isArray(e.errors))) console.error(e);
   }
@@ -1266,11 +1317,15 @@ function plainError(message) {
 
 function renderErrors() {
   const box = $('#errors');
-  for (const input of $$('[data-key][aria-invalid="true"]')) input.removeAttribute('aria-invalid');
-  for (const e of $$('.field-error[data-for], .field-error[data-engine]')) { e.hidden = true; e.textContent = ''; delete e.dataset.engine; }
+  for (const input of $$('[data-build-invalid]')) {
+    input.removeAttribute('aria-invalid');
+    delete input.dataset.buildInvalid;
+  }
+  for (const e of $$('.field-error[data-engine]')) { e.hidden = true; e.textContent = ''; delete e.dataset.engine; }
   const sizeError = $(`#${state.design}-size-error`);
 
-  if (!state.error) {
+  const error = currentBuildError();
+  if (!error) {
     box.hidden = true;
     box.replaceChildren();
     const [w, h] = BINDINGS[state.design].size.get();
@@ -1284,7 +1339,7 @@ function renderErrors() {
     $('#canvas-wrap').classList.toggle('dimmed',!!stale);
     return;
   }
-  const raw = Array.isArray(state.error.errors) ? state.error.errors : [String(state.error.message || state.error)];
+  const raw = Array.isArray(error.errors) ? error.errors : [String(error.message || error)];
   const general = [];
   for (const message of raw) {
     const { key, text } = plainError(message);
@@ -1292,8 +1347,10 @@ function renderErrors() {
     const inline = key ? document.querySelector(`.field-error[data-for="${key}"]`) : null;
     if (field && inline) {
       field.setAttribute('aria-invalid', 'true');
+      field.dataset.buildInvalid = '1';
       inline.textContent = text;
       inline.hidden = false;
+      inline.dataset.engine = '1';
       if (field.closest('#advanced-body')) {
         openAdvanced(true);
         const group = field.closest('details');
@@ -1337,8 +1394,8 @@ function adviceFor(mod, text) {
 }
 
 /** The geometry check, or null when there is nothing to say: it only speaks up for a problem, and says what to change. */
-function currentVerdict() {
-  if (!state.result || state.error) return null;
+function currentVerdict(key = buildKey()) {
+  if (!state.result || state.resultKey !== key || currentBuildError(key)) return null;
   const construction = constructionVerdict(state.result.construction);
   if (construction?.blocked) return construction;
   if(state.regions?.length) {
@@ -1363,15 +1420,12 @@ function currentVerdict() {
   return { ...verdict, body: verdict.body + adviceFor(mod, `${verdict.title} ${verdict.body}`) };
 }
 
-function renderCheck() {
+function renderCheck(key = buildKey()) {
   const box = $('#check');
-  let v = currentVerdict();
-  const recovery = state.error ? suggestRecovery(designById(state.design), settingsOf(state.design), state.error) : null;
-  if (!v && state.error) {
-    // say what the problem is, and which setting to change: the same words the message above the controls uses
-    const text = Array.isArray(state.error.errors) ? state.error.errors.map((m) => plainError(m).text).join('. ') : String(state.error.message || state.error);
-    // no technical detail here: Download error log in the ··· menu keeps it for whoever needs it
-    void text;
+  let v = currentVerdict(key);
+  const error = currentBuildError(key);
+  const recovery = error ? suggestRecovery(designById(state.design), settingsOf(state.design), error) : null;
+  if (!v && error) {
     v = { level: 'error', title: 'This design can\'t be made with these settings', body: recovery ? 'Choose another design on the left, or press Simplify this pattern (Undo brings your settings back).' : 'Choose another design on the left, or make the piece smaller.', action: null };
   }
   if (!v) { box.hidden = true; return; }
@@ -1412,7 +1466,7 @@ function renderCheck() {
       btn.addEventListener('click', () => setRoomy(false));
       actions.append(btn);
     }
-    const loopFlags = state.design === 'loop-pile' && state.result && !state.error && state.result.stats.violations > 0;
+    const loopFlags = state.design === 'loop-pile' && state.result && !error && state.result.stats.violations > 0;
     if (loopFlags) {
       const show = el('button', { type: 'button', class: 'check-link', 'aria-pressed': String(state.showTight), text: state.showTight ? 'Hide tight spots' : 'Show where' });
       show.addEventListener('click', () => setShowTight(!state.showTight));
@@ -1459,7 +1513,7 @@ function renderFigures() {
     const generating = !!(previewBuild && previewBuild.kind !== 'full-preview');
     const problem = currentPrintSizeProblem();
     const scope = estimate?.full ? 'Whole-piece' : 'Sample';
-    host.classList.toggle('stale', !!state.error);
+    host.classList.toggle('stale', !!currentBuildError());
     host.replaceChildren();
     if (estimate) host.append(fig(minutes(estimate), 'min', `${scope} motion estimate`),
       fig(grams(estimate.filamentGrams ?? 0), 'g', `${scope} filament`));
@@ -1486,7 +1540,7 @@ function renderFigures() {
   const selected = BINDINGS[state.design].size.get();
   const sampled = !!state.result.samplePreview || t.sample_width !== selected[0] || t.sample_height !== selected[1];
   const mod = designById(state.design);
-  host.classList.toggle('stale', !!state.error);
+  host.classList.toggle('stale', !!currentBuildError());
   host.replaceChildren(
     fig(minutes(stats), 'min', state.result.referencePreview ? 'Reference motion estimate' : sampled ? 'Preview motion estimate' : 'Motion estimate'),
     fig(grams(stats.filamentGrams), 'g', state.result.referencePreview ? 'Reference filament' : sampled ? 'Preview filament' : 'Filament'),
@@ -1539,7 +1593,7 @@ function renderExport() {
   const btn = $('#btn-export');
   const key = buildKey();
   const result = state.resultKey === key && !state.result?.referencePreview && !state.result?.samplePreview ? state.result : null;
-  const ok = !!result && !state.error && result.moves.length > 0;
+  const ok = !!result && !currentBuildError(key) && result.moves.length > 0;
   // Export can build a selected design independently of its bounded or pending preview.
   const problem = currentPrintSizeProblem();
   const invalidDraft = ['w', 'h'].some(axis => $(`#${state.design}-${axis}`)?.getAttribute('aria-invalid') === 'true');
@@ -2111,14 +2165,14 @@ function setPictureContrast(value) {
   if (contrast === state.image.contrast) return;
   state.image.contrast = contrast;
   state.image.data = withContrast(state.image.original, contrast);
-  state.imageRevision++;
+  state.imageRevision = ++nextImageRevision;
   schedule();
 }
 
 function clearPicture() {
   pictureRequest++;
   state.image = null;
-  state.imageRevision++;
+  state.imageRevision = ++nextImageRevision;
   state.imageBoxOpen = false;
   forgetPictureChoices();
   renderControls();
@@ -2178,9 +2232,9 @@ function rotatePicture(designId = state.design) {
   state.image.thumb = turn(thumb, thumb.width, thumb.height);
   state.image.px = [state.image.px[1], state.image.px[0]];
   state.image.rotation = ((state.image.rotation ?? 0) + 90) % 360;
-  state.imageRevision++;
+  state.imageRevision = ++nextImageRevision;
   if (!state.vector) givePictureShape(designId);
-  else { renderControls(); schedule(); }
+  else { renderControls(); schedule(); commit(); }
 }
 
 function loadPicture(file, designId = 'squiggle', request = ++pictureRequest) {
@@ -2209,7 +2263,7 @@ function loadPicture(file, designId = 'squiggle', request = ++pictureRequest) {
     thumb.getContext('2d').drawImage(img, (natW - side) / 2, (natH - side) / 2, side, side, 0, 0, 112, 112);
     const original = ctx.getImageData(0, 0, canvas.width, canvas.height);
     state.image = { data: original, original, contrast: 1, name: file.name, px: [natW, natH], thumb };
-    state.imageRevision++;
+    state.imageRevision = ++nextImageRevision;
     const target = settingsOf(designId);
     if (target) target.pattern = PICTURE;
     state.imageBoxOpen = false;
@@ -2254,26 +2308,17 @@ function recordBuildFailure(error, input = null) {
 
 function applyBuildRecovery(recovery) {
   applySettingsPatch(recovery.patch);
-  if (!state.error) toast('Pattern simplified. Undo restores your previous settings.');
+  toast('Pattern settings adjusted. Undo restores your previous settings.');
 }
 
 /** Changes some of this design's settings as one step that Undo takes back, and rebuilds. */
 function applySettingsPatch(patch) {
-  // Failed edits may not have reached the normal history. Keep this exact state so Undo restores the attempt.
-  const key = snapshotKey();
-  if (undoLog.stack[undoLog.cursor]?.key !== key) {
-    undoLog.stack = undoLog.stack.slice(0, undoLog.cursor + 1);
-    undoLog.stack.push({ key, data: JSON.parse(JSON.stringify(snapshot())) });
-    if (undoLog.stack.length > 100) undoLog.stack.shift();
-    undoLog.cursor = undoLog.stack.length - 1;
-  }
+  commit(); // Preserve the exact starting settings if a control was still being edited.
   Object.assign(settingsOf(state.design), patch);
-  clearTimeout(genTimer);
   syncControls();
   renderControls();
-  regenerate();
+  schedule();
   commit();
-  renderHistoryButtons();
 }
 
 /* ---------- Fix it: the geometry check, answered by trying settings ---------- */
@@ -2299,12 +2344,13 @@ function buildWithPatch(patch, signal) {
 
 async function fixGeometry() {
   const fabric = state.result?.fabric, binding = BINDINGS[state.design];
-  if (!fabric || fabric.exportable || fixJob) return;
+  const key = buildKey();
+  if (!fabric || fabric.exportable || fixJob || state.resultKey !== key || currentBuildError(key)) return;
   const unitOf = (key) => binding.sliders.find((s) => s.key === key)?.unit ?? '';
   const advice = adviceFor(designById(state.design), fabric.issues.join('. '));
   const candidates = fixCandidates(fabric, { sliders: binding.sliders, get: binding.get, range: binding.range });
   if (!candidates.length) { toast(`None of this design's settings is likely to change this.${advice}`, { kind:'warning' }); return; }
-  const key = buildKey(), controller = new AbortController(), before = problemScore(fabric);
+  const controller = new AbortController(), before = problemScore(fabric);
   fixJob = { controller, tried: 0, total: candidates.length };
   renderCheck();
   let best = null;
@@ -2347,6 +2393,7 @@ function saveErrorLog() {
 
 /** What the feedback form knows about the studio right now: the design, and for a problem report its settings and recent errors. */
 function feedbackContext() {
+  const error = currentBuildError();
   const mod = designById(state.design);
   return {
     designName: mod?.name ?? state.design,
@@ -2366,7 +2413,7 @@ function feedbackContext() {
         material: state.material,
         // counts only: the drawing stays on this device
         drawing: state.vector ? { svgPaths: paths.length, svgPoints: paths.reduce((n, p) => n + p.length, 0), width: state.vector.width, height: state.vector.height } : null,
-        error: state.error ? (Array.isArray(state.error.errors) ? state.error.errors.join(' ') : String(state.error.message || state.error)) : null,
+        error: error ? (Array.isArray(error.errors) ? error.errors.join(' ') : String(error.message || error)) : null,
         recent: diagnosticLog.export(),
       });
     },
@@ -2441,12 +2488,13 @@ async function exportGcode() {
   if (exporting) return;
   if (requiresApply()) { toast('Apply the whole piece before exporting.'); return; }
   let input;
+  const key = buildKey();
   const controller = new AbortController();
   exportController = controller;
   exporting = true;
   try {
     input = structuredClone(exportOptions());
-    const key = buildKey(), code = currentSwatch(), name = swatchFileName(input.machine);
+    const code = currentSwatch(), name = swatchFileName(input.machine);
     const title = state.docName.replace(/[\r\n]+/g, ' ');
     const savedPrint = { ...state.print };
     exportLabel = `Preparing ${input.width} × ${input.height} mm…`;
@@ -2454,7 +2502,7 @@ async function exportGcode() {
     let result;
     let referenceWasVisible = !!(state.result?.referencePreview || overviewTrace?.referencePreview);
     const buildActual = () => buildSwatch(input, { signal: controller.signal, preview: referenceWasVisible && !overviewActive, trace: referenceWasVisible && overviewActive });
-    const fullPreview = !genTimer && !previewBuild && state.result && !state.result.referencePreview && !state.result.samplePreview && !state.error && state.resultKey === key && state.result.cfg.t.sample_width === input.width && state.result.cfg.t.sample_height === input.height;
+    const fullPreview = !genTimer && !previewBuild && state.result && !state.result.referencePreview && !state.result.samplePreview && !currentBuildError(key) && state.resultKey === key && state.result.cfg.t.sample_width === input.width && state.result.cfg.t.sample_height === input.height;
     if (fullPreview) result = state.result;
     else if (readyGcode?.key === key) result = readyGcode.result;
     else if (previewBuild?.key === key) result = await previewBuild.promise;
@@ -2475,14 +2523,15 @@ async function exportGcode() {
         ...(result.layerPlan.mode === 'backing' ? { backingLayers: result.layerPlan.backingLayers, totalBackingLayers: result.layerPlan.totalBackingLayers, textureCopies: 1 } : {}) } : {}) }, machine: input.machine.id, material: input.material.id });
     const text = result.gcode.replace('; Textile G-code generator v1\n', (head) => `${head}; swatch ${code}\n; name ${title}\n; studio settings ${settings}\n`);
     download(name, new Blob([text], { type: 'text/plain' }));
+    if (state.buildFailure?.key === key && state.buildFailure.operation === 'export') state.buildFailure = null;
     reportStudyExport('gcode-swatch', { ...input, cfg: result.cfg, moveCount, layerPlan: result.layerPlan }, result.stats);
     printEstimates.put(key, result, input.width, input.height);
     readyGcode = { key, result };
     toast(`Saved ${input.width} × ${input.height} mm: ${name}`);
   } catch (error) {
-    if (error.name === 'AbortError' || controller.signal.aborted) toast('Export cancelled because the design changed.');
+    if (error.name === 'AbortError' || controller.signal.aborted || buildKey() !== key) toast('Export cancelled because the design changed.');
     else {
-      state.error = error;
+      state.buildFailure = { key, error, operation: 'export' };
       recordBuildFailure(error, { ...input, operation: 'design-export' });
       toast(`Could not export: ${error.message}`);
     }
@@ -2832,7 +2881,6 @@ function bindStatic() {
   $('#btn-share').addEventListener('click', shareLink);
   $('#btn-advanced').addEventListener('click', () => openAdvanced($('#advanced-body').hidden));
   $('#doc-name').addEventListener('input', (e) => { state.docName = e.target.value; });
-  $('#doc-name').addEventListener('change', () => { store.set(STORAGE_KEY, JSON.stringify(snapshot())); });
   $('#doc-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
 
   anchorPopover($('#more-menu'), $('#btn-more'));
