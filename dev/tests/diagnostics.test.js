@@ -236,11 +236,16 @@ test('the shared failure recorder keeps panel metadata and study dimensions from
   };
   const host = {
     input, error: crossingError(), classifyBuildError, diagnosticLog: log,
+    $(selector) { assert.equal(selector, '#btn-error-log'); return downloadButton; },
     state: { design: 'zigzag', vector: null },
     settingsOf() { throw new Error('A captured panel must not use the newly selected design settings'); },
     reportStudyExport(type, options) { events.push({ type, options }); },
   };
+  const downloadButton = { hidden: true };
+  runInNewContext(`${uiFunction('recordBuildFailure')}\nrecordBuildFailure({ name: 'AbortError' }, input);`, host);
+  assert.equal(downloadButton.hidden, true);
   runInNewContext(`${uiFunction('recordBuildFailure')}\nrecordBuildFailure(error, input); recordBuildFailure(error, input);`, host);
+  assert.equal(downloadButton.hidden, false);
   assert.equal(events.length, 1);
   assert.equal(events[0].type, 'build-error');
   assert.equal(events[0].options.design, 'coil');

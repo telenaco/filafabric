@@ -5,8 +5,8 @@ import { estimateLine } from './estimate-line.js';
 import { validNumber } from './numeric.js';
 import { generate } from '../engine/generate.js';
 import { placeOutline, unflattenRings } from '../engine/outline.js';
-import { createPreview, ROLES } from './preview.js';
-import { createOverview } from './overview.js';
+import { createPreview, ROLES } from './preview.js?v=20261112-preferences';
+import { createOverview } from './overview.js?v=20261112-preferences';
 import { useWholeOverview, canSimplifyPreview, packLines } from '../engine/overview.js';
 import { packTrace, indexAtTime } from '../engine/trace.js';
 import { traceToSvg } from '../engine/trace-svg.js';
@@ -16,11 +16,11 @@ import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airSt
 import { PICTURE, withPicture, withContrast, PICTURE_CONTRAST } from '../engine/picture.js';
 import { buildVerdict, buildSquiggleVerdict, formatMinutes, constructionVerdict } from './verdict.js';
 import { refreshConstruction, assertConstructionExportable } from '../engine/construction-report.js';
-import { stateToHash, hashToState, sanitizeState, PRINT_DEFAULTS } from './share.js';
+import { stateToHash, hashToState, sanitizeState, PRINT_DEFAULTS } from './share.js?v=20261112-region-build';
 import { FILAMENT_FIELDS, filamentValue, withFilamentSettings, setFilamentSetting, withoutFilamentSettings, sanitizeFilamentSettings } from './filament-settings.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
 import { $, $$, el, icon, ICONS, helpBubble } from './dom.js';
-import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, SectionFold, ColourSection, SupportSection } from './panels.js';
+import { DesignPanel, SizeControl, SliderControl, PatternPicker, SvgImportCard, PrintSetupCard, SectionFold, ColourSection, SupportSection } from './panels.js?v=20261112-inspector';
 import { layerHeightOptions, defaultLayerHeight, resolveConfig, beadWidth } from '../engine/params.js';
 import { nozzleRange } from './nozzle-limits.js';
 import { TooltipLayer } from './tooltip.js';
@@ -30,10 +30,10 @@ import { searchMachines } from './machine-search.js?v=20261019-printer-setup';
 import { createProfilePicker } from './profile-picker.js';
 import { DESIGNS, designById, isReady, baseDesignSettings } from './designs.js';
 import { THUMBS, shapeThumb, presetThumb } from './thumbs.js';
-import { SHELVES, libraryGroups, initialDesignSettings, selectVariant, variantsOf, simplestFirst } from './library.js';
-import { regionsFromDrawing, REGION_LIMIT, sanitizeSeam, regionsFingerprint, colourName, regionInPiece as inPiece } from '../engine/regions.js';
-import { RegionControls } from './region-controls.js';
-import { bindSwatchLab, swatchRecord } from './swatch-lab.js';
+import { SHELVES, galleryCards, initialDesignSettings, selectVariant, variantsOf } from './library.js?v=20261112-studio';
+import { regionsFromDrawing, REGION_LIMIT, sanitizeSeam, sanitizeOutsideOutline, regionsFingerprint, colourName, regionInPiece as inPiece } from '../engine/regions.js?v=20261112-region-build';
+import { RegionControls } from './region-controls.js?v=20261112-region-build';
+import { bindSwatchLab, swatchRecord } from './swatch-lab.js?v=20261112-preferences';
 import { sanitizeWidthMaps } from '../engine/width-maps.js';
 import { swatchCode, fingerprint } from './swatch.js';
 import { exportFileName, relevantKeys, variantsFileName, printerFileToken } from './file-name.js';
@@ -57,13 +57,13 @@ import { windowRings } from '../engine/window.js';
 import { bindPanelExport } from './panel-ui.js';
 import { createStudyRecorder } from './study.js';
 import { DENSITY_REVISION, RETUNED_CARDS } from './density.js';
-import { buildSwatch } from './export-builder.js';
-import { defaultCache } from './default-cache.js';
-import { classifyBuildError, DiagnosticLog, suggestRecovery, safeMetadata } from './diagnostics.js';
+import { buildSwatch } from './export-builder.js?v=20261112-region-build';
+import { defaultCache } from './default-cache.js?v=20261112-region-build';
+import { classifyBuildError, DiagnosticLog, suggestRecovery, safeMetadata } from './diagnostics.js?v=20261112-region-build';
 import { bindFeedback, problemReport } from './feedback.js';
-import { bindPrivacyNotice, statsAllowed } from './privacy.js';
+import { bindPrivacyNotice, statsAllowed } from './privacy.js?v=20261112-preferences';
 import { describeFabric, fixCandidates, problemScore, describeChanges } from './fix-geometry.js';
-import { createTour } from './tour.js';
+import { createTour } from './tour.js?v=20261112-studio';
 import { sizeForAspect } from './squiggle-controls.js';
 
 // the release this page loaded (boot.js imports this file with ?v=), so feedback says which version it is about
@@ -199,12 +199,13 @@ let overviewActive = false;
 let overviewStatus = '';
 const printEstimates = new PrintEstimates();
 let previewBuild = null;
+let pendingRegionApply = null;
 // the G-code a "Generate G-code" step made for these exact settings, so Export saves it without building it again
 let readyGcode = null; // { key, result }
 let referenceResult = null; // { key, result }: fixed browsing sample, never printable output for the selected machine
 // the print order of that G-code (src/engine/trace.js), which the 2D view plays and exports as SVG
 let overviewTrace = null; // { key, trace, source? }
-let autoBuildStopped = ''; // the settings whose background build was stopped or failed: 2D does not start it again
+let autoBuildStopped = ''; // the settings whose background build failed: 2D does not start it again
 let traceProblem = null; // { key, message } when the background build failed
 let exporting = false;
 let exportController = null;
@@ -316,7 +317,15 @@ function snapshotKey() {
 function buildKey() {
   const setup = [state.machines.get(state.machine), state.materials.get(state.material)];
   // The region engine may take the single-design path using the active card and outline mode.
-  if (state.regions?.length) setup.push(state.design, state.primary, settingsOf(state.design));
+  if (state.regions?.length) {
+    const regions = pieceRegions();
+    // Applying keeps the same effective membership and order. Only a different toolpath invalidates the build.
+    const ordered = regions.filter(region => region.enabled).sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
+    const order = new Map(ordered.map((region, index) => [region.id, index]));
+    const geometry = regions.map(region => ({ ...region, order: order.get(region.id) }));
+    return JSON.stringify([setup, state.design, state.primary, settingsOf(state.design), state.advanced,
+      state.outline, state.vector, geometry, state.print, state.imageRevision]);
+  }
   return JSON.stringify(setup) + '\n' + snapshotKey();
 }
 
@@ -583,6 +592,7 @@ const host = {
   fitSvgToBed: () => fitSvgToBed(),
   removeSvg: () => removeSvg(),
   setShapeOutline: (on) => setShapeOutline(on),
+  setSectionOpen: setInspectorSection,
 };
 
 function renderControls() {
@@ -706,6 +716,8 @@ async function importSvg(file, request = ++documentRequest) {
     $('#doc-name').value = state.docName;
     $('#panel-width').value = state.vector.width;
     $('#panel-height').value = state.vector.height;
+    showDesign();
+    openDrawingSettings({ focus: true });
     syncControls();
     renderRegions(true); // the colours show at once, not when the first preview is done
     schedule();
@@ -749,8 +761,11 @@ function removeSvg() {
   state.vector = null;
   state.regions = null;
   state.selectedRegion = null;
+  delete state.print.outsideOutline;
   if (state.outline?.page) state.outline = null; // its shapes went with it
+  showDesign();
   syncControls();
+  renderRegions(true);
   schedule();
   commit();
 }
@@ -791,7 +806,13 @@ function selectRegion(id, { quiet=false } = {}) {
       region.settings=structuredClone(own);
     }
   }
-  if(!quiet){showDesign();syncControls();renderRegions(true);if(matchMedia('(max-width: 900px)').matches&&id)$('#region-header').scrollIntoView({block:'start',behavior:'instant'});}
+  if (!quiet) {
+    showDesign();
+    openDrawingSettings();
+    syncControls();
+    renderRegions(true);
+    if (id && matchMedia('(max-width: 900px)').matches) $('#region-header').scrollIntoView({ block: 'nearest' });
+  }
 }
 
 function regionCard(id,cardId) {
@@ -808,6 +829,7 @@ function regionCard(id,cardId) {
 
 function changeRegion(id,patch) {
   captureRegionSettings();
+  const previousKey = buildKey();
   if(!id&&patch.allEnabled!==undefined)for(const region of state.regions)region.enabled=patch.allEnabled;
   else if(!id)state.seam=sanitizeSeam(patch.seam);
   else {
@@ -818,7 +840,8 @@ function changeRegion(id,patch) {
     const only=patch.enabled!==undefined&&state.regions.filter(r=>r.enabled!==false);
     state.selectedRegion=null;selectRegion(only?.length===1?only[0].id:id);
   }
-  schedule();commit();showDesign();renderRegions(true);
+  if (buildKey() !== previousKey) schedule();
+  commit();showDesign();renderRegions(true);
 }
 
 function renderRegions(force=false) {
@@ -831,24 +854,48 @@ function renderRegions(force=false) {
   const working=workingRegions(),names=working.length>2?`${working.length} colours`:working.map(regionName).join(' and ');
   const button=$('#btn-apply');
   const empty = !!state.regions?.length && !state.regions.some(inPiece);
-  button.disabled=empty||exporting||!!currentPrintSizeProblem()||!isReady(state.design)||!working.length&&!!previewBuild;
-  button.textContent=empty?'Include a colour':working.length?`Apply to ${names}`:previewBuild?'Updating…':'Export G-code';
+  const failed = !!currentBuildError(keyNow);
+  button.disabled=empty||exporting||!!pendingRegionApply||!!currentPrintSizeProblem()||!isReady(state.design)
+    || !working.length && (!!previewBuild || !!state.regions?.length && (!built || failed));
+  button.textContent=empty?'Include a colour':pendingRegionApply?'Applying…':working.length?`Apply to ${names}`:previewBuild?'Updating…':'Export G-code';
   button.dataset.mode=working.length?'apply':'export';
   button.classList.toggle('has-changes',!!working.length);
   button.title=working.length?`Set ${names} aside as part of the piece, then untick it and work on the next colour.`:'Save the G-code for every applied colour.';
   $('#apply-status').hidden=!state.regions?.length;
   const parked=state.regions?.filter(r=>r.applied).length??0;
-  if(state.regions?.length&&!previewBuild)$('#apply-status').textContent=empty?'Include a colour to build the piece.':working.length?`Showing ${names} on top of ${parked?`${parked} applied colour${parked>1?'s':''}`:'nothing applied yet'}.`
-    :built?`${parked} colour${parked===1?'':'s'} applied. Export is ready.`:'Updating the piece…';
+  if (state.regions?.length) $('#apply-status').textContent = empty ? 'Include a colour to build the piece.'
+    : pendingRegionApply ? `Applying ${names}…`
+    : failed ? 'The latest settings could not be built. See the reason in the print summary.'
+    : working.length ? `${names} selected · ${parked} applied`
+    : built ? `${parked} colour${parked===1?'':'s'} applied. Export is ready.` : 'Updating the piece…';
 }
 
-/** Set the ticked colours aside as part of the piece. They keep showing when unticked, and print in the order applied. */
+/** Apply only after the exact toolpath has built successfully. Reuse the preview job if it is already building it. */
 function applyPiece() {
-  if(exporting)return;
+  if (exporting || pendingRegionApply || !workingRegions().length) return;
   captureRegionSettings();
+  const key = buildKey();
+  pendingRegionApply = { key };
+  if (state.resultKey === key && !currentBuildError(key)) {
+    finishRegionApply(key);
+    return;
+  }
+  if (previewBuild?.key !== key && (!genTimer || previewChoice === 'overview')) {
+    clearTimeout(genTimer);
+    genTimer = null;
+    if (previewChoice === 'overview' && !overviewActive) showRegionOverview();
+    previewAtSelectedSize(exportOptions());
+  }
+  renderRegions();
+}
+
+function finishRegionApply(key) {
+  if (pendingRegionApply?.key !== key) return;
+  pendingRegionApply = null;
   let next=Math.max(0,...state.regions.map(r=>r.order??0));
   for(const r of workingRegions()){r.applied=true;if(!r.order)r.order=++next;}
-  schedule();commit();renderRegions(true);
+  commit();
+  renderRegions(true);
 }
 
 /* ---------- generation ---------- */
@@ -858,6 +905,7 @@ function schedule() {
   stopPlay();
   captureRegionSettings();
   const key = buildKey();
+  if (pendingRegionApply && pendingRegionApply.key !== key) pendingRegionApply = null;
   if (readyGcode && readyGcode.key !== key) readyGcode = null; // made for settings that are no longer these
   if (referenceResult && referenceResult.key !== key) referenceResult = null;
   if (overviewTrace && overviewTrace.key !== key) overviewTrace = null; // likewise: made for settings that are no longer these
@@ -884,11 +932,10 @@ function renderBusy() {
   const busy = !!genTimer || !!previewBuild || exporting;
   // the G-code 2D builds in the background is quiet: the picture is already there, and the playback bar says it is building
   $('#busy-chip').hidden = !busy || (previewBuild?.kind === 'background-trace' && !genTimer && !exporting);
-  $('#busy-chip').textContent = exporting ? exportLabel : (previewBuild && previewBuild.kind !== 'full-preview') ? 'Generating G-code…' : 'Updating…';
+  const message = exporting ? exportLabel : previewBuild?.progress ?? (previewBuild && previewBuild.kind !== 'full-preview' ? 'Generating G-code…' : 'Updating…');
+  if ($('#busy-chip').textContent !== message) $('#busy-chip').textContent = message;
   if (busy) $('#stage').setAttribute('aria-busy', 'true');
   else $('#stage').removeAttribute('aria-busy');
-  $('#preview-cancel').hidden = !previewBuild;
-  $('#preview-cancel').textContent = (previewBuild && previewBuild.kind !== 'full-preview') ? 'Stop generating' : 'Cancel preview';
 }
 
 /** A captured design at its selected size, shared by preview and direct export workers. */
@@ -900,6 +947,7 @@ function exportOptions(width = null, height = null) {
     width, height, settings: state.design === 'loop-pile' ? toTextile(state.primary, state.advanced) : settingsOf(state.design),
     studySettings: { ...settingsOf(state.design) }, outline: state.regions?.length ? null : placedOutline(width, height),
     regions: pieceRegions(), seam: edgeSeam(),
+    ...(state.regions?.length && state.print.outsideOutline ? { outsideOutline: state.print.outsideOutline } : {}),
     vector: state.vector, shapeOutline: !!state.outline?.page, solidLayers: state.print.solidLayers, solidGenerator: 'arachne', extraLayers: state.print.extraLayers, legacyCopies: state.print.legacyCopies, brim: state.print.brim, perimeters: state.print.brim, meshPerimeters: edgeCount(), meshShift: edgeShift(), backing: backingFor(),
     image: state.image?.data ?? null, pilePattern: state.primary.pattern, pilePatternScale: state.primary.patternScale,
     panelSize: size,
@@ -921,7 +969,11 @@ function showGenerated(result, key) {
   else printEstimates.put(key, result, width, height);
   preview.update(regionPreviewResult(result));
   applyScrub();
-  if(state.regions?.length && !result.referencePreview) readyGcode = {key,result};
+  if (state.regions?.length && !result.referencePreview) {
+    readyGcode = { key, result };
+    finishRegionApply(key);
+    if (overviewActive) showRegionOverview();
+  }
 }
 
 function regionPreviewResult(result) {
@@ -949,8 +1001,9 @@ function canBrowseReference(input) {
     && !FILAMENT_FIELDS.some(field => Object.hasOwn(state.print, field.key)) && !Object.hasOwn(state.print, 'widthMaps');
 }
 
-function showReferenceOverview(result) {
+function showBuiltOverview(result) {
   const width = result.cfg.t.sample_width, height = result.cfg.t.sample_height;
+  overviewStatus = result.referencePreview ? '' : '2D view at true scale';
   overview.setResult({ width, height, rings: result.outline ?? [[{x:0,y:0},{x:width,y:0},{x:width,y:height},{x:0,y:height}]], source: [],
     packed: packLines(result.strands), strandWidth: result.cfg.t.extrusion_width });
 }
@@ -967,24 +1020,24 @@ function previewAtSelectedSize(input, { estimateOnly = false, auto = false, refe
   const build = async () => {
     const cached = await defaultCache.load(input, { signal: controller.signal, reference: reference && canBrowseReference(input) });
     if (cached) {
-      job.referenceGeometry = cached.referencePreview ? cached : null;
+      job.cachedGeometry = cached;
       return estimateOnly ? { ...compactDesignExport(cached), referencePreview: !!cached.referencePreview, trace: packTrace(cached) } : cached;
     }
     if (estimateOnly && overviewActive && isCurrent() && canBrowseReference(input)) overview.update(input);
     return buildSwatch(input, { signal: controller.signal, preview: !estimateOnly, trace: estimateOnly, progress: progress => {
       if (previewBuild !== job || controller.signal.aborted || !input.regions?.length) return;
-      $('#apply-status').hidden = false;
-      $('#apply-status').textContent = progress.message;
+      job.progress = progress.message;
+      renderBusy();
     } });
   };
   job.promise = build().then((result) => {
     if (isCurrent()) {
       if (estimateOnly) {
         if (result.referencePreview) {
-          referenceResult = { key, result: job.referenceGeometry ?? result };
-          if (overviewActive && job.referenceGeometry) showReferenceOverview(job.referenceGeometry);
+          referenceResult = { key, result: job.cachedGeometry ?? result };
         }
         else { printEstimates.put(key, result, input.width, input.height); readyGcode = { key, result }; }
+        if (overviewActive && job.cachedGeometry) showBuiltOverview(job.cachedGeometry);
         if (result.trace) overviewTrace = { key, trace: result.trace, referencePreview: !!result.referencePreview };
       } else showGenerated(result, key);
     }
@@ -996,7 +1049,7 @@ function previewAtSelectedSize(input, { estimateOnly = false, auto = false, refe
       traceProblem = { key, message: error.message };
       recordBuildFailure(error, { ...input, operation: 'preview' });
     } else if (error.name !== 'AbortError' && isCurrent()) {
-      if (!estimateOnly && previewChoice === 'auto' && canSimplifyPreview(error)) {
+      if (!estimateOnly && !input.regions?.length && previewChoice === 'auto' && canSimplifyPreview(error)) {
         previewBuild = null;
         showWholeOverview(input, { build: false }); // 3D just failed to build this piece: the same build would fail again
         toast('3D could not finish for this piece, so it shows the 2D drawing. Print settings are unchanged.', { kind:'warning' });
@@ -1007,7 +1060,12 @@ function previewAtSelectedSize(input, { estimateOnly = false, auto = false, refe
     }
     throw error;
   }).finally(() => {
-    if (previewBuild === job) { previewBuild = null; renderBusy(); render(); }
+    if (previewBuild === job) {
+      if (pendingRegionApply?.key === key) pendingRegionApply = null;
+      previewBuild = null;
+      renderBusy();
+      render();
+    }
   });
   void job.promise.catch(() => {});
   renderBusy();
@@ -1119,12 +1177,21 @@ function renderFilamentSettings() {
 }
 
 function renderPreviewMode() {
-  const designTitle = state.regions?.length ? 'Drawing preview' : designById(state.design).name;
-  if ($('#stage-design').textContent !== designTitle) $('#stage-design').textContent = designTitle;
+  const design = designById(state.design);
+  const drawing = !!state.regions?.length;
+  const heading = $('#stage-design');
+  const title = drawing ? 'Drawing preview' : design.name;
+  if (heading.textContent !== title) heading.textContent = title;
+  const shelf = SHELVES[design.shelf]?.label;
+  $('#stage-type').textContent = shelf ? `${shelf} textile` : '';
+  $('#stage-type').hidden = drawing || !shelf;
+  const [width, height] = BINDINGS[state.design].size.get();
+  $('#canvas-piece-size').textContent = `${Number(width.toFixed(2))} × ${Number(height.toFixed(2))} mm piece`;
+  $('#canvas-view-mode').textContent = overviewActive ? '2D view' : previewChoice === 'sample' ? '3D sample' : '3D view';
   $('#overview').hidden = !overviewActive;
   $('#preview').hidden = overviewActive;
   preview?.setVisible(!overviewActive);
-  $('#camera-seg').hidden = overviewActive;
+  $('#btn-camera').hidden = overviewActive;
   $('#btn-view').hidden = overviewActive;
   $('#overview-actions').hidden = !overviewActive;
   $('#overview-status').hidden = !overviewActive;
@@ -1141,7 +1208,7 @@ function renderPreviewMode() {
   $('#preview-detail').setAttribute('aria-pressed', String(!overviewActive && previewChoice === 'sample'));
   $('.playback').hidden = overviewActive && !trace && !building; // 2D plays the print order once the G-code is built
   $('.canvas-hint').hidden = overviewActive;
-  if (overviewActive) {
+  if (overviewActive && !currentBuildError()) {
     $('#canvas-note').hidden = true;
     $('#canvas-wrap').classList.remove('dimmed');
   }
@@ -1155,21 +1222,27 @@ function showWholeOverview(input, { build = true } = {}) {
   // a finished whole-piece 3D build already holds the G-code: keep it (without its 3D geometry) for Export
   const [sw, sh] = BINDINGS[state.design].size.get();
   const key = buildKey();
+  let wholeResult = null;
   if (state.result && !state.result.samplePreview && !currentBuildError(key) && state.resultKey === key && state.result.cfg.t.sample_width === sw && state.result.cfg.t.sample_height === sh) {
-    const trace = packTrace(state.result);
-    if (!state.result.referencePreview) readyGcode = { key: state.resultKey, result: { ...compactDesignExport(state.result), trace } };
-    overviewTrace = { key: state.resultKey, trace, referencePreview: !!state.result.referencePreview };
+    wholeResult = state.result;
+    const trace = packTrace(wholeResult);
+    if (!wholeResult.referencePreview) readyGcode = { key, result: { ...compactDesignExport(wholeResult), trace } };
+    overviewTrace = { key, trace, referencePreview: !!wholeResult.referencePreview };
   }
   overviewActive = true;
+  overviewStatus = '';
   preview.reset();
   stopPlay();
   state.result = null;
   state.resultKey = null;
   state.buildFailure = null;
   renderPreviewMode();
-  const reference = referenceResult?.key === buildKey() ? referenceResult.result : null;
-  if (reference?.strands) showReferenceOverview(reference);
-  else if (canBrowseReference(input)) overview.setResult({ width: sw, height: sh, rings: [[{x:0,y:0},{x:sw,y:0},{x:sw,y:sh},{x:0,y:sh}]], source: [], packed: packLines([]), strandWidth: .45, shapeOnly: true });
+  const reference = referenceResult?.key === key ? referenceResult.result : null;
+  const geometry = wholeResult ?? reference;
+  const waitingForCache = build && !previewBuild && autoBuildStopped !== key
+    && !overviewTrace?.trace && !readyGcode?.result.trace && canBrowseReference(input);
+  if (geometry?.strands) showBuiltOverview(geometry);
+  else if (waitingForCache) overview.setResult({ width: sw, height: sh, rings: [[{x:0,y:0},{x:sw,y:0},{x:sw,y:sh},{x:0,y:sh}]], source: [], packed: packLines([]), strandWidth: .45, shapeOnly: true });
   else overview.update(input);
   if (build) startPrintOrder(input);
   renderBusy();
@@ -1213,7 +1286,13 @@ async function regenerate() {
     followVectorSize();
     key = buildKey();
     const [selectedWidth, selectedHeight] = BINDINGS[state.design].size.get();
-    if (state.regions?.length && previewChoice==='overview') { showRegionOverview(); return; }
+    if (state.regions?.length && previewChoice==='overview') {
+      showRegionOverview();
+      if (state.resultKey !== key && state.regions.some(inPiece) && (pendingRegionApply || !workingRegions().length)) {
+        previewAtSelectedSize(exportOptions());
+      }
+      return;
+    }
     if (state.regions?.length && !state.regions.some(inPiece)) { showRegionOverview(); return; } // nothing ticked or applied: just the outlines
     if (state.regions?.length) {
       if(currentPrintSizeProblem())throw new Error(currentPrintSizeProblem());
@@ -1339,8 +1418,7 @@ function renderErrors() {
     $('#canvas-wrap').classList.toggle('dimmed',!!stale);
     return;
   }
-  const raw = Array.isArray(error.errors) ? error.errors : [String(error.message || error)];
-  const general = [];
+  const raw = Array.isArray(error.errors) && error.errors.length ? error.errors : [String(error.message || error)];
   for (const message of raw) {
     const { key, text } = plainError(message);
     const field = key ? document.querySelector(`[data-key="${key}"]`) : null;
@@ -1360,14 +1438,13 @@ function renderErrors() {
       sizeError.textContent = text;
       sizeError.hidden = false;
       sizeError.dataset.engine = '1';
-    } else general.push(text);
+    }
   }
-  // build errors are not shown as text: the check says to choose another design (the error log keeps the detail)
   box.hidden = true;
-  box.replaceChildren(...general.map((t) => el('div', { text: t })));
   const hasPreview = !!state.result;
-  $('#canvas-note').textContent = 'This design can\'t be made with these settings: choose another design on the left';
-  $('#canvas-note').hidden = !hasPreview;
+  const reason = plainError(raw[0]).text;
+  $('#canvas-note').textContent = hasPreview ? `Showing the last successful preview. ${reason}` : reason;
+  $('#canvas-note').hidden = false;
   $('#canvas-wrap').classList.toggle('dimmed', hasPreview);
 }
 
@@ -1424,9 +1501,18 @@ function renderCheck(key = buildKey()) {
   const box = $('#check');
   let v = currentVerdict(key);
   const error = currentBuildError(key);
-  const recovery = error ? suggestRecovery(designById(state.design), settingsOf(state.design), error) : null;
+  const failedRegion = state.regions?.find(region => region.id === error?.region?.id);
+  const recovery = error && (!failedRegion || failedRegion.id === state.selectedRegion)
+    ? suggestRecovery(designById(state.design), settingsOf(state.design), error) : null;
   if (!v && error) {
-    v = { level: 'error', title: 'This design can\'t be made with these settings', body: recovery ? 'Choose another design on the left, or press Simplify this pattern (Undo brings your settings back).' : 'Choose another design on the left, or make the piece smaller.', action: null };
+    const reasons = (error.errors?.length ? error.errors : [String(error.message || error)]).slice(0, 3).map(message => plainError(message).text);
+    const code = classifyBuildError(error).code;
+    const next = recovery ? 'Try Simplify this pattern. Undo restores the previous settings.'
+      : code === 'bed-fit' ? 'Check the printer bed and drawing size. An outline that sits outside the edge also needs room on the bed.'
+      : failedRegion ? `Open ${regionName(failedRegion)} in Drawing colours and adjust its pattern or outline. Undo restores the previous settings.`
+      : '';
+    v = { level: 'error', title: failedRegion ? `Could not build ${regionName(failedRegion)}` : 'Could not build the piece',
+      body: [...reasons, next].filter(Boolean).join(' '), action: null };
   }
   if (!v) { box.hidden = true; return; }
   box.hidden = false;
@@ -1602,7 +1688,7 @@ function renderExport() {
   btn.title = readyGcode?.key === key ? 'The G-code for these settings is ready: Export saves it straight away.' : '';
   $('#print-fit-warning').hidden = !problem;
   $('#print-fit-message').textContent = problem;
-  $('#btn-panel').hidden = !!state.regions?.length || designById(state.design).panel === false;
+  $('#garment-tool').hidden = !!state.regions?.length || designById(state.design).panel === false;
 }
 
 function printOverhang(id = state.design) {
@@ -1795,8 +1881,20 @@ function buildAdvanced() {
 }
 
 function openAdvanced(open) {
-  $('#advanced-body').hidden = !open;
-  $('#btn-advanced').setAttribute('aria-expanded', String(open));
+  setInspectorSection($('#btn-advanced'), open);
+}
+
+function setInspectorSection(button, open) {
+  const set = (toggle, expanded) => {
+    document.getElementById(toggle.getAttribute('aria-controls')).hidden = !expanded;
+    toggle.setAttribute('aria-expanded', String(expanded));
+  };
+  if (open) {
+    for (const other of $$('#settings-body :is(.section-fold-toggle, #btn-advanced)[aria-expanded="true"]')) {
+      if (other !== button) set(other, false);
+    }
+  }
+  set(button, open);
 }
 
 /** A tiny picture of what a pattern does: wavy lines that swing wider and tighter where the pattern is dark. */
@@ -1827,7 +1925,7 @@ function drawPatternThumb(canvas, sampler) {
 }
 
 function foldRemainingSections() {
-  for (const section of $$('#settings-body .panel > section.group')) {
+  for (const section of $$('#settings-body .panel > section.group, #drawing-region-settings')) {
     const heading = section.querySelector('h2');
     if (!heading || section.classList.contains('section-fold')) continue;
     controls.push(new SectionFold(host, section, { id: heading.id }));
@@ -1948,19 +2046,24 @@ function renderProfileList() {
 }
 
 /* ---------- designs ---------- */
-/** One tile per registry module; planned designs are visible placeholders that cannot be selected. */
+let activeLibraryFilter = 'all';
+
+/** One tile per visible design or quick-start preset. */
 function renderTiles() {
   const ranking = new Map(PRINTABILITY.map((p, i) => [p.id, { ...p, rank: i + 1 }]));
-  const presets = DESIGNS.filter((design) => design.status === 'preset');
   const makeTile = (d) => {
     const ready = d.status === 'ready';
     const planned = d.status === 'planned';
+    const shelf = d.shelf ?? designById(d.opens?.design)?.shelf;
+    const type = d.status === 'preset' ? 'Quick start' : SHELVES[shelf]?.label;
     const tile = el('button', {
       type: 'button',
       class: planned ? 'design-tile planned' : 'design-tile',
       'data-design': ready ? d.id : false,
       'data-preset-tile': d.status === 'preset' ? d.id : false,
       'data-planned': planned ? d.id : false,
+      'data-shelf': shelf ?? '',
+      'data-search': `${d.name} ${d.id}`.toLowerCase(),
       'aria-pressed': planned ? false : 'false',
       'aria-disabled': planned ? 'true' : false,
       disabled: planned,
@@ -1972,50 +2075,29 @@ function renderTiles() {
     const stateLabel = d.state === 'needs-repair' ? 'Needs repair' : d.state === 'untested' ? 'Untested' : '';
     const estimate = ready ? estimateLine(CARD_ESTIMATES[d.id]) : '';
     const badges = [supportLabel, stateLabel].filter(Boolean).map((text) => `<span class="design-badge" aria-label="${text}">${text}</span>`).join('');
-    tile.innerHTML = `${d.thumb ?? THUMBS[d.id] ?? ''}<span class="design-text"><span class="design-name">${d.name}${planned ? '<span class="soon">Soon</span>' : ''}</span><span class="design-badges">${badges}</span>${estimate ? `<span class="design-estimate" title="What it prints as at its default 100 × 100 mm">${estimate}</span>` : ''}</span>`;
+    tile.innerHTML = `${d.thumb ?? THUMBS[d.id] ?? ''}<span class="design-text"><span class="design-name">${d.name}${planned ? '<span class="soon">Soon</span>' : ''}</span>${type ? `<span class="design-type">${type}</span>` : ''}<span class="design-badges">${badges}</span>${estimate ? `<span class="design-estimate" title="What it prints as at its default 100 × 100 mm">${estimate}</span>` : ''}</span>`;
     if (ready) tile.addEventListener('click', () => setDesign(d.id));
     if (d.status === 'preset') tile.addEventListener('click', () => openPresetTile(d));
     return tile;
   };
-  const shelfNode = (shelf, groups) => {
-    const titleId = `shelf-${shelf}-title`;
-    const details = el('details', { class: `library-shelf shelf-${shelf}`, open: shelf === 'flat' });
-    const title = el('summary', { class: 'shelf-heading', id: titleId },
-      el('span', { class: 'shelf-title', text: SHELVES[shelf].label }),
-      el('span', { class: 'shelf-hint', text: SHELVES[shelf].hint }));
-    details.setAttribute('aria-labelledby', titleId);
-    details.append(title, el('div', { class: 'shelf-cards' }, ...simplestFirst(groups.flatMap(({ cards }) => cards)).map(makeTile)));
-    return details;
-  };
-  const groups = libraryGroups();
-  $('#design-list').replaceChildren(...Object.keys(SHELVES).map((shelf) => shelfNode(shelf, groups[shelf])));
-  $('#experimental-design-list').replaceChildren(...(presets.length ? [el('section', { class: 'library-shelf quick-starts', 'aria-label': 'Quick starts' },
-    el('h2', { class: 'family-heading', text: 'Quick starts' }), ...presets.map(makeTile))] : []));
+  $('#design-list').replaceChildren(...galleryCards().map(makeTile));
   applyDesignFilter();
   renderTilePressed();
 }
 
-/** Hides the cards whose name does not contain what was typed, and the shelves left empty; opens the shelves that have matches. */
-const shelfWasOpen = new Map();
+/** Search narrows the active category without changing the document or current card. */
 function applyDesignFilter() {
-  const box = $('#design-filter');
-  if (!box) return;
-  const words = box.value.toLowerCase().split(/\s+/).filter(Boolean);
+  const words = $('#design-filter').value.toLowerCase().split(/\s+/).filter(Boolean);
+  const tiles = $$('#design-list .design-tile');
   let shown = 0;
-  for (const details of document.querySelectorAll('#design-list .library-shelf')) {
-    if (!shelfWasOpen.has(details)) shelfWasOpen.set(details, details.open);
-    let here = 0;
-    for (const tile of details.querySelectorAll('.design-tile')) {
-      const text = `${tile.querySelector('.design-name')?.textContent ?? ''} ${tile.dataset.design ?? ''}`.toLowerCase();
-      const match = words.every((word) => text.includes(word));
-      tile.hidden = !match;
-      if (match) here++;
-    }
-    details.hidden = words.length > 0 && here === 0;
-    details.open = words.length ? here > 0 : shelfWasOpen.get(details);
-    shown += here;
+  for (const tile of tiles) {
+    const match = (activeLibraryFilter === 'all' || tile.dataset.shelf === activeLibraryFilter)
+      && words.every(word => tile.dataset.search.includes(word));
+    tile.hidden = !match;
+    if (match) shown++;
   }
-  $('#design-filter-none').hidden = !(words.length && shown === 0);
+  $('#design-count').textContent = `${shown} of ${tiles.length}`;
+  $('#design-filter-none').hidden = shown !== 0;
 }
 
 /** The settings object a design keeps its state in (the two older designs keep theirs at the top level). */
@@ -2084,18 +2166,46 @@ function resetRoles() {
 
 function showDesign() {
   renderTilePressed();
+  const patternSelected = !state.regions?.length || selectedRegion()?.role === 'pattern';
+  $('#btn-reset-inspector').disabled = !patternSelected;
   for (const d of DESIGNS) {
     const panel = $(`#panel-${d.id}`);
-    if (panel) panel.hidden = d.id !== state.design || !!state.regions?.length && selectedRegion()?.role!=='pattern';
+    if (panel) panel.hidden = d.id !== state.design;
   }
-  const svgSlot = $(`#panel-${state.design} .size-svg-slot`);
-  if (svgSlot && svgImportCard) svgSlot.append(svgImportCard.node);
-  const importSlot=$('#region-import');
-  importSlot.hidden=!state.regions?.length;
-  if(state.regions?.length&&svgImportCard)importSlot.append(svgImportCard.node);
+  const panel = $(`#panel-${state.design}`);
+  panel.classList.toggle('drawing-only', !patternSelected);
+  const size = panel.querySelector('.size-control');
+  const svgSlot = size.querySelector('.size-svg-slot');
+  const outside = $('#outside-outline-controls');
+  const regionSettings = $('#drawing-region-settings');
+  if (svgImportCard.node.parentElement !== svgSlot) svgSlot.append(svgImportCard.node);
+  if (outside.parentElement !== size) svgSlot.after(outside);
+  if (regionSettings.parentElement !== panel) size.closest('.group').after(regionSettings);
+  const drawing = !!state.regions?.length;
+  regionSettings.hidden = !drawing;
+  const regionToggle = regionSettings.querySelector('.section-fold-toggle');
+  if (!drawing && regionToggle.getAttribute('aria-expanded') === 'true') setInspectorSection(regionToggle, false);
+  outside.hidden = !drawing;
+  size.querySelector('.brim-control .ctl-label').textContent = drawing ? 'Default region outline' : 'Outline';
+  size.querySelector('.field-row.brim-control > span').textContent = drawing ? 'Default region outline sits' : 'Outline sits';
+  renderOutsideOutline();
   $('#tight-option').hidden = state.design !== 'loop-pile';
   renderExport();
   if (state.design !== 'loop-pile' && state.showTight) setShowTight(false);
+}
+
+function renderOutsideOutline() {
+  const { count, align } = sanitizeOutsideOutline(state.print.outsideOutline);
+  $('#outside-outline-count').value = count;
+  $('#outside-outline-align').value = align;
+  $('#outside-outline-align').disabled = count === 0;
+}
+
+function openDrawingSettings({ focus = false } = {}) {
+  const button = $('#drawing-region-settings:not([hidden]) .section-fold-toggle');
+  if (!button) return;
+  if (button.getAttribute('aria-expanded') === 'false') setInspectorSection(button, true);
+  if (focus) button.focus();
 }
 
 function setDesign(id, { fromPreset = false, fromVariant = false } = {}) {
@@ -2281,6 +2391,7 @@ function loadPicture(file, designId = 'squiggle', request = ++pictureRequest) {
 /* ---------- actions ---------- */
 function recordBuildFailure(error, input = null) {
   if (error?.name === 'AbortError') return false;
+  $('#btn-error-log').hidden = false;
   const [width, height] = input ? [input.width, input.height] : BINDINGS[state.design].size.get();
   const captured = input ?? {
     design: state.design, width, height, studySettings: { ...settingsOf(state.design) },
@@ -2787,12 +2898,18 @@ function stopPlay() {
 /* ---------- boot ---------- */
 const HAS_POPOVER = typeof HTMLElement !== 'undefined' && 'popover' in HTMLElement.prototype;
 
-/** Menus open under the button that opens them, aligned to its right edge. */
+/** Align the menu to its trigger while keeping it inside the viewport. */
 function anchorPopover(menu, button) {
   const place = () => {
     const r = button.getBoundingClientRect();
-    menu.style.top = `${Math.round(r.bottom + 6)}px`;
-    menu.style.right = `${Math.max(8, Math.round(window.innerWidth - r.right))}px`;
+    const width = Math.min(Number.parseFloat(getComputedStyle(menu).width), window.innerWidth - 16);
+    const above = r.top - 14;
+    const below = window.innerHeight - r.bottom - 14;
+    const openAbove = below < 320 && above > below;
+    menu.style.top = openAbove ? 'auto' : `${Math.round(r.bottom + 6)}px`;
+    menu.style.bottom = openAbove ? `${Math.round(window.innerHeight - r.top + 6)}px` : 'auto';
+    menu.style.maxHeight = `${Math.max(0, Math.floor(openAbove ? above : below))}px`;
+    menu.style.right = `${Math.max(8, Math.min(window.innerWidth - width - 8, Math.round(window.innerWidth - r.right)))}px`;
   };
   button.setAttribute('aria-expanded', 'false');
   if (!HAS_POPOVER) {
@@ -2820,20 +2937,55 @@ function closeMenus() {
 }
 
 function bindStatic() {
+  const outsideCount = $('#outside-outline-count'), outsideAlign = $('#outside-outline-align');
+  const changeOutsideOutline = () => {
+    if (outsideCount.value === '' || !outsideCount.validity.valid) { renderOutsideOutline(); return; }
+    state.print.outsideOutline = sanitizeOutsideOutline({ count: outsideCount.valueAsNumber, align: outsideAlign.value });
+    renderOutsideOutline();
+    schedule();
+    commit();
+  };
+  outsideCount.addEventListener('change', changeOutsideOutline);
+  outsideAlign.addEventListener('change', changeOutsideOutline);
   $('#preview-full').addEventListener('click', () => { previewChoice = 'full'; schedule(); });
   $('#preview-whole').addEventListener('click', () => { previewChoice = 'overview'; schedule(); });
   $('#preview-detail').addEventListener('click', () => { previewChoice = 'sample'; schedule(); });
-  $('#preview-cancel').addEventListener('click', () => {
-    if (previewBuild && previewBuild.kind !== 'full-preview') autoBuildStopped = buildKey(); // stopped on purpose: 2D must not start it again
-    previewBuild?.controller.abort(); previewBuild = null; previewChoice = 'overview'; schedule();
-  });
   $('#print-fit-printer').addEventListener('click', () => $('#btn-printer').click());
   $('#overview-fit').addEventListener('click', () => overview.fit());
   $('#overview-export-svg').addEventListener('click', exportOverviewSvg);
+  const cameraButton = $('#btn-camera');
+  const closeCamera = () => {
+    closeMenus();
+    cameraButton.setAttribute('aria-expanded', 'false');
+    cameraButton.focus();
+  };
   for (const b of $$('[data-camera]')) {
     b.addEventListener('click', () => {
       for (const o of $$('[data-camera]')) o.setAttribute('aria-pressed', String(o === b));
       preview.setCamera(b.dataset.camera);
+      cameraButton.textContent = b.textContent;
+      cameraButton.setAttribute('aria-label', `Camera view: ${b.textContent}`);
+      closeCamera();
+    });
+  }
+  $('#camera-fit').addEventListener('click', () => { preview.fit(); closeCamera(); });
+  const stage = $('#stage');
+  const expand = $('#preview-expand');
+  if (document.fullscreenEnabled && stage.requestFullscreen) {
+    expand.hidden = false;
+    expand.addEventListener('click', async () => {
+      closeMenus();
+      try {
+        if (document.fullscreenElement === stage) await document.exitFullscreen();
+        else await stage.requestFullscreen();
+      } catch { toast('This browser could not expand the preview.'); }
+    });
+    document.addEventListener('fullscreenchange', () => {
+      const expanded = document.fullscreenElement === stage;
+      const label = expanded ? 'Exit expanded preview' : 'Expand preview';
+      expand.setAttribute('aria-pressed', String(expanded));
+      expand.setAttribute('aria-label', label);
+      expand.title = label;
     });
   }
   for (const box of $$('#view-menu [data-layer]')) {
@@ -2862,12 +3014,23 @@ function bindStatic() {
   $('#btn-redo').addEventListener('click', redo);
   $('#btn-export').addEventListener('click', () => { void exportGcode(); });
   initDesignsResizer();
+  const libraryFilters = $$('[data-library-filter]');
+  for (const button of libraryFilters) button.addEventListener('click', () => {
+    activeLibraryFilter = button.dataset.libraryFilter;
+    for (const filter of libraryFilters) filter.setAttribute('aria-pressed', String(filter === button));
+    applyDesignFilter();
+    $('#design-list').scrollTop = 0;
+  });
   $('#design-filter').addEventListener('input', applyDesignFilter);
   $('#design-filter').addEventListener('keydown', (event) => { if (event.key === 'Escape' && event.target.value) { event.target.value = ''; applyDesignFilter(); } });
   $('#btn-details').addEventListener('click', () => { state.details = !state.details; renderFigures(); });
   $('#btn-apply').addEventListener('click', () => { if ($('#btn-apply').dataset.mode === 'export') { if (!$('#btn-export').disabled) void exportGcode(); } else void applyPiece(); });
+  const toolsDialog = $('#tools-dialog');
+  $('#btn-tools').addEventListener('click', () => { closeMenus(); toolsDialog.showModal(); });
+  for (const id of ['btn-panel', 'btn-swatch-lab', 'btn-swatch-record']) {
+    $(`#${id}`).addEventListener('click', () => toolsDialog.close());
+  }
   $('#btn-swatch-record').addEventListener('click',()=>{
-    closeMenus();
     const input=exportOptions(),code=currentSwatch();
     const record=swatchRecord({code,card:state.regions?.length?'colour regions':state.design,settings:state.regions??settingsOf(state.design),machine:state.machine,material:state.material,width:input.width,height:input.height,print:state.print,construction:state.resultKey===buildKey()?state.result?.construction:null});
     download(`${code}.md`,new Blob([record],{type:'text/markdown'}));
@@ -2877,13 +3040,13 @@ function bindStatic() {
   $('#variants-download').addEventListener('click', downloadVariants);
   variantsDialog.addEventListener('cancel', retireVariantJob);
   variantsDialog.addEventListener('close', () => { if (!variantsDialog.open) retireVariantJob(); });
-  $('#btn-panel').addEventListener('click', closeMenus);
   $('#btn-share').addEventListener('click', shareLink);
   $('#btn-advanced').addEventListener('click', () => openAdvanced($('#advanced-body').hidden));
   $('#doc-name').addEventListener('input', (e) => { state.docName = e.target.value; });
   $('#doc-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
 
   anchorPopover($('#more-menu'), $('#btn-more'));
+  anchorPopover($('#camera-menu'), cameraButton);
   anchorPopover($('#view-menu'), $('#btn-view'));
   // Getting started is the guided tour, on the real controls
   $('#btn-help').addEventListener('click', () => { closeMenus(); tour.start(); });
@@ -2893,7 +3056,7 @@ function bindStatic() {
   $('#btn-feedback').addEventListener('click', () => feedback.open());
   $('#btn-save-file').addEventListener('click', () => { closeMenus(); saveFile(); });
   $('#btn-error-log').addEventListener('click', () => { closeMenus(); saveErrorLog(); });
-  $('#btn-reset').addEventListener('click', () => { closeMenus(); resetDesign(); });
+  $('#btn-reset-inspector').addEventListener('click', resetDesign);
   $('#file-open').addEventListener('change', (e) => {
     closeMenus();
     if (e.target.files[0]) openFile(e.target.files[0]);
@@ -2937,7 +3100,7 @@ function bindStatic() {
     else if (e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
   });
 
-  window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener?.('change', () => { for (const c of controls) c.redraw(); });
+  document.addEventListener('filafabric:themechange', () => { for (const c of controls) c.redraw(); });
 
 }
 
@@ -2949,7 +3112,7 @@ export async function init() {
   controls.push(svgImportCard);
   studyRecorder = createStudyRecorder($('#study-notice'), { allowed: () => statsAllowed() });
   const privacy = bindPrivacyNotice($('#privacy-banner'), { onChange: () => studyRecorder.refresh(), openFeedback: () => feedback?.open(), toast });
-  $('#btn-privacy').addEventListener('click', () => { closeMenus(); privacy.open(); });
+  $('#btn-privacy').addEventListener('click', () => { $('#tools-dialog').close(); privacy.open(); });
 
   // start from: a shared link, then the last session, then the defaults
   const fromLink = hashToState(location.hash);

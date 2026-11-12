@@ -20,7 +20,7 @@ export function classifyBuildError(error) {
     const observed = message.match(/need (?:about )?([\d,]+) moves/i);
     return { code: 'move-limit', ...(limit ? { limit: parsedNumber(limit[1]) } : {}), ...(observed ? { observed: parsedNumber(observed[1]) } : {}) };
   }
-  if (/does not fit the bed|leave the printable volume/i.test(message)) return { code: 'bed-fit' };
+  if (/does not fit the bed|leaves? the printable volume/i.test(message)) return { code: 'bed-fit' };
   if (/nothing to print|empty geometry/i.test(message)) return { code: 'empty-geometry' };
   if (error?.name === 'ConfigError') return { code: 'invalid-settings' };
   return { code: 'unknown-build-error' };

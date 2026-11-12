@@ -10,7 +10,7 @@ import { offsetPolyline } from './drawing.js';
 
 const ringArea = (ring) => ring.reduce((sum, p, i) => { const q = ring[(i + 1) % ring.length]; return sum + p.x * q.y - q.x * p.y; }, 0) / 2;
 /** Each ring moved `distance` mm away from the material: an outer edge outwards, a hole's edge into the hole. */
-function outsetRings(rings, distance) {
+export function outsetRings(rings, distance) {
   return rings.map((ring) => {
     const probe = ring[0];
     const isHole = rings.some((other) => other !== ring && Math.abs(ringArea(other)) > Math.abs(ringArea(ring)) && new PolygonBoundary([other]).contains(probe.x, probe.y));

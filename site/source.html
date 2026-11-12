@@ -1,7 +1,16 @@
 <!doctype html>
-<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f5f3f8">
 <title>FilaFabric source and licences</title>
-<main style="max-width:48rem;margin:3rem auto;padding:0 1rem;font:1rem/1.6 system-ui">
+<script src="src/ui/theme.js?v=20261112-preferences"></script>
+<link rel="stylesheet" href="src/ui/styles.css?v=20261112-inspector">
+</head>
+<body>
+<main class="source-page">
+<a class="source-home" href="./">← Return to FilaFabric</a>
 <h1>FilaFabric source and licences</h1>
 <p>The adaptive solid slicer contains the real Arachne engine from Cura and OrcaSlicer, compiled to WebAssembly by Three_Slicer. It is used for flat walls and dense fill; FilaFabric retains its own fabric patterns and printer commands.</p>
 <p>The pinned Arachne kernel is licensed under the <a href="vendor/arachne/LICENSE.txt">GNU Affero General Public License, version 3 or later</a>, with upstream copyright notices retained. Its matching sources and the local integration source offer are linked below.</p>
@@ -11,4 +20,6 @@
 <li><a href="vendor/arachne/NOTICE.md">Upstream version, attribution and build instructions</a></li>
 <li><a href="vendor/arachne/filafabric-source.manifest.json">Integration source manifest and checksums</a> — rebuild with <code>npm run source:snapshot</code> and check currentness with <code>npm run source:verify</code> after reviewing and staging intended new source files.</li></ul>
 <p>Other components retain their respective licences, including <a href="vendor/three/LICENSE">Three.js</a> and the fonts distributed with the app. Neither this page nor using the kernel publishes any local drawing or print file.</p>
-<p><a href="./">Return to FilaFabric</a></p></main></html>
+</main>
+</body>
+</html>

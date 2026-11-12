@@ -20,7 +20,7 @@ const keep = {
   },
 };
 
-async function start({ loadStudio = () => import('./ui/main.js?v=20261112-atelier') } = {}) {
+async function start({ loadStudio = () => import('./ui/main.js?v=20261112-inspector') } = {}) {
   const form = $('gate-form');
   const input = $('gate-password');
   const error = $('gate-error');

@@ -1,4 +1,4 @@
-import { generateDesignExportAsync, compactDesignExport } from '../engine/design-export.js';
+import { generateDesignExportAsync, compactDesignExport } from '../engine/design-export.js?v=20261112-region-build';
 import { packTrace, traceBuffers } from '../engine/trace.js';
 
 self.onmessage = async ({ data }) => {
@@ -12,6 +12,6 @@ self.onmessage = async ({ data }) => {
     if (data.trace) done.trace = packTrace(result);
     self.postMessage({ type: 'done', result: done }, data.trace ? traceBuffers(done.trace) : []);
   } catch (error) {
-    self.postMessage({ type: 'error', name: error.name, message: error.message });
+    self.postMessage({ type: 'error', name: error.name, message: error.message, errors: error.errors, details: error.details, region: error.region });
   }
 };

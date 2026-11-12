@@ -372,8 +372,12 @@ export class SectionFold extends Control {
     section.classList.add('section-fold');
     section.append(this.body);
     this.button.addEventListener('click', () => {
-      this.body.hidden = !this.body.hidden;
-      this.button.setAttribute('aria-expanded', String(!this.body.hidden));
+      const open = this.body.hidden;
+      if (host.setSectionOpen) host.setSectionOpen(this.button, open);
+      else {
+        this.body.hidden = !open;
+        this.button.setAttribute('aria-expanded', String(open));
+      }
     });
     // the summary follows the controls however they change: a click, a typed size, or a redraw from elsewhere
     this.queued = false;

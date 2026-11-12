@@ -287,30 +287,59 @@ test('the latest settings-file selection wins if an earlier read finishes later'
 
 test('a pending SVG import cannot put a removed drawing back', async () => {
   let resolveSvg;
-  const state = { vector: { name: 'previous' }, regions: [], selectedRegion: null };
+  let drawingControls;
+  const state = { vector: { name: 'previous' }, regions: [], selectedRegion: null, print: { outsideOutline: { count: 2 } } };
   const host = {
     documentRequest: 0, state, previewChoice: 'full',
     readSvgLines: () => new Promise(resolve => { resolveSvg = resolve; }),
     bedSizeLimits: () => ({ width: 100, height: 100 }), printOverhang: () => 0,
     regionsFromDrawing: () => [], REGION_LIMIT: 12, sanitizeSeam: () => ({}),
     settingsOf: () => ({}), selectRegion() {}, shapesOf: () => null, followVectorSize() {},
-    syncControls() {}, schedule() {}, commit() {}, renderRegions() {}, toast() {},
+    showDesign() {}, openDrawingSettings() {}, syncControls() {}, schedule() {}, commit() {}, toast() {},
+    renderRegions() { drawingControls = state.regions; },
     $: () => ({}), bedFitSize: () => null,
   };
   state.machines = new Map();
   runInNewContext([uiFunction('importSvg'), uiFunction('removeSvg')].join('\n'), host);
   const pending = host.importSvg({ name: 'obsolete.svg' });
   host.removeSvg();
+  assert.equal(drawingControls, null, 'removing the SVG clears the drawing controls immediately');
+  assert.equal(state.print.outsideOutline, undefined);
   resolveSvg({ name: 'obsolete', width: 25, height: 25 });
   await pending;
   assert.equal(state.vector, null);
+});
+
+test('Apply waits for the matching preview and preserves its toolpath key once colours are applied', () => {
+  const regions = [{ id: 'red', applied: true, enabled: false, order: 1 }, { id: 'green', enabled: true }, { id: 'blue', enabled: true }];
+  const state = { regions, machines: new Map(), materials: new Map(), design: 'zigzag', print: {} };
+  let commits = 0;
+  const host = {
+    state, previewBuild: null, pendingRegionApply: null, exporting: false,
+    captureRegionSettings() {}, settingsOf: () => ({}), currentBuildError: () => null,
+    pieceRegions: () => regions.map(({ applied, ...r }) => ({ ...r, enabled: r.enabled || applied })),
+    workingRegions: () => regions.filter(r => r.enabled && !r.applied),
+    renderRegions() {}, commit() { commits++; },
+    previewAtSelectedSize() { throw new Error('Apply should reuse the running preview'); },
+  };
+  runInNewContext(['buildKey', 'applyPiece', 'finishRegionApply'].map(uiFunction).join('\n'), host);
+  const key = host.buildKey();
+  host.previewBuild = { key };
+  host.applyPiece();
+  host.finishRegionApply('obsolete key');
+  assert.equal(regions[1].applied, undefined);
+  assert.equal(commits, 0);
+  host.finishRegionApply(key);
+  assert.deepEqual(regions.map(r => [r.applied, r.order]), [[true, 1], [true, 2], [true, 3]]);
+  assert.equal(host.buildKey(), key);
+  assert.equal(commits, 1);
 });
 
 test('scheduling a preview retires the old epoch before the next worker starts', () => {
   let cleared = false;
   const host = {
     state: { buildFailure: { key: 'previous', error: new Error('previous build failed') } },
-    regenerationEpoch: 3, genTimer: null, readyGcode: null, referenceResult: null, overviewTrace: null,
+    regenerationEpoch: 3, genTimer: null, readyGcode: null, referenceResult: null, overviewTrace: null, pendingRegionApply: null,
     traceProblem: null, fixJob: null, previewBuild: null, overview: null, exportController: null,
     captureRegionSettings() {}, buildKey: () => 'current',
     clearTimeout() {}, setTimeout: () => 5, regenerate() {}, stopPlay() {}, renderCheck() {}, renderBusy() {}, renderExport() {}, renderPreviewMode() {}, renderPlayback() {},

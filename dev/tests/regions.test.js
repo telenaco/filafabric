@@ -99,18 +99,21 @@ test('settings files and links keep applied membership and print order independe
   );
   const regions = regionsFromDrawing(vector, { currentCard: 'zigzag' });
   Object.assign(regions[0], { enabled: false, applied: true, order: 1 });
+  regions[0].seam = { enabled: true, width: 2.44, align: 'outside' };
   Object.assign(regions[1], { enabled: true, applied: true, order: 2 });
   regions[2].enabled = false;
-  const state = { v: 4, design: 'zigzag', vector, regions };
+  const state = { v: 4, design: 'zigzag', vector, regions, print: { outsideOutline: { count: 2, align: 'centre' } } };
   const known = { machines: ['prusa-mk3s'], materials: ['filaflex-95-foamy'] };
   const file = JSON.parse(JSON.stringify(state));
   const link = hashToState(stateToHash(state));
 
   for (const data of [file, link]) {
-    const restored = sanitizeState(data, known).regions;
+    const { regions: restored, print } = sanitizeState(data, known);
     assert.deepEqual(restored.map(({ enabled, applied, order }) => [enabled, !!applied, order ?? null]), [
       [false, true, 1], [true, true, 2], [false, false, null], [true, false, null],
     ]);
     assert.deepEqual(restored.map(regionInPiece), [true, true, false, true]);
+    assert.deepEqual(restored[0].seam, { enabled: true, width: 2.44, align: 'outside' });
+    assert.deepEqual(print.outsideOutline, { count: 2, align: 'centre' });
   }
 });

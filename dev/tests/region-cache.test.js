@@ -93,3 +93,25 @@ test('applying a region out of source order changes layer-zero print order', () 
   const printed = [...new Set(result.strands.filter((strand) => strand.layer === 0).map((strand) => strand.regionId))];
   assert.deepEqual(printed, [regions[2].id, regions[0].id]);
 });
+
+test('Looped rows flat fits a tight printer bed after the temporary row turns are cut away', () => {
+  const input = inputForRegions({ design: 'coil-flat', separate: true });
+  const machine = { ...input.machine, bed: { ...input.machine.bed, width: input.width, depth: input.height } };
+  const result = generateDesignExport({ ...input, machine });
+  assert.ok(result.moves.some(move => move.extrude));
+  assert.ok(result.moves.every(move => move.x >= -1e-6 && move.x <= input.width + 1e-6 &&
+    move.y >= -1e-6 && move.y <= input.height + 1e-6));
+});
+
+test('the piece outline surrounds the exterior while a pattern outline can independently sit outside its region', () => {
+  const input = inputForRegions();
+  input.regions[0].seam = { enabled: true, width: .8, align: 'outside' };
+  const regionOnly = generateDesignExport(input);
+  assert.ok(!regionOnly.strands.some(s => s.role === 'outside-outline'));
+  assert.ok(regionOnly.strands.some(s => s.role === 'seam' && s.pts.some(p => p.x < 1)));
+  const result = generateDesignExport({ ...input, outsideOutline: { count: 2, align: 'inside' } });
+  const outside = result.strands.filter(s => s.role === 'outside-outline');
+  assert.equal(outside.length, 2, 'only the exterior gets the two passes, not the cutout');
+  assert.ok(outside.every(s => s.pts.every(p => p.x > 1 && p.x < 39)));
+  assert.ok(result.strands.some(s => s.role === 'seam' && s.pts.some(p => p.x < 1)));
+});

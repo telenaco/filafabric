@@ -1,4 +1,4 @@
-const createSwatchWorker = () => new Worker(new URL('./swatch-worker.js', import.meta.url), { type: 'module' });
+const createSwatchWorker = () => new Worker(new URL('./swatch-worker.js?v=20261112-region-build', import.meta.url), { type: 'module' });
 const abortError = () => new DOMException('Export cancelled', 'AbortError');
 // Whole-piece patterns of colour regions, kept between jobs so that only a changed colour is generated again (newest last).
 const patternCache = new Map(), PATTERN_CACHE_LIMIT = 8;
@@ -43,6 +43,9 @@ export function buildSwatch(input, { signal, preview = false, trace = false, pro
         } else if (data.type === 'error') {
           const error = new Error(data.message || 'Unable to generate export.');
           error.name = data.name || 'Error';
+          if (Array.isArray(data.errors)) error.errors = data.errors;
+          if (data.details) error.details = data.details;
+          if (data.region) error.region = data.region;
           finish(error);
         }
       };

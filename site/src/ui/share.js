@@ -7,7 +7,7 @@ import { sanitizeSvgLines } from '../engine/svg-lines.js';
 import { sanitizeFilamentSettings } from './filament-settings.js';
 import { BACKING_MESH } from '../engine/backing.js';
 import { migrateState } from './library.js';
-import { sanitizeRegions, sanitizeSeam } from '../engine/regions.js';
+import { sanitizeRegions, sanitizeSeam, sanitizeOutsideOutline } from '../engine/regions.js?v=20261112-region-build';
 
 /** The designs a link can open, in gallery order (planned placeholders are not loadable). The first opens by default. */
 export const DESIGN_IDS = READY_IDS;
@@ -72,6 +72,7 @@ export function sanitizePrint(raw) {
   const edge = Number(raw.edgeWidth);
   if (raw.edgeWidth !== undefined && Number.isFinite(edge) && edge >= 0 && edge <= 10) out.edgeWidth = Math.round(edge * 100) / 100;
   if (['inside', 'centre', 'outside'].includes(raw.edgeAlign)) out.edgeAlign = raw.edgeAlign;
+  if (raw.outsideOutline && typeof raw.outsideOutline === 'object') out.outsideOutline = sanitizeOutsideOutline(raw.outsideOutline);
   if (raw.backingOn === true) out.backingOn = true;
   for (const [key, lo, hi] of [['meshSpacing', 1, 12], ['meshDepth', 0.5, 10], ['meshWave', 3, 40]]) {
     const v = Number(raw[key]);

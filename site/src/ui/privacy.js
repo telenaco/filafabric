@@ -66,7 +66,7 @@ export function bindPrivacyNotice(banner, { storage, onChange, openFeedback, toa
     savePrivacyChoice(stats, storage);
     banner.hidden = true;
     onChange?.(stats);
-    if (!stats) toast?.('Your exports will not be counted. You can change this in ⋯ › Privacy and cookies.');
+    if (!stats) toast?.('Your exports will not be counted. Change this under Tools and information › Export statistics preferences.');
   }
 
   accept.addEventListener('click', () => answer(true));

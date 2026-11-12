@@ -12,7 +12,7 @@ test('the width is kept between the narrowest and the widest the list allows', (
 });
 
 test('at the widest, the cards fill four across or more; at the standard width, two', () => {
-  const across = (aside) => Math.floor((aside - 28 + 6) / (132 + 6)); // the list's padding, the card minimum and the gap in styles.css
+  const across = (aside) => Math.floor((aside - 28 + 8) / (104 + 8)); // the list's padding, the card minimum and the gap in styles.css
   assert.equal(across(DESIGNS_WIDTH.standard), 2);
   assert.ok(across(DESIGNS_WIDTH.max) >= 4);
 });

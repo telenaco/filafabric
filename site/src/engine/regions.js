@@ -6,10 +6,11 @@ import { clipPolyline } from './layers.js';
 import { applyColourPlan, colourMode } from './colour-plan.js';
 import { emitStrands } from './emit.js';
 import { computeStats } from './stats.js';
-import { writeGcode, bedFitErrors, PreflightError } from './gcode.js';
+import { writeGcode, bedFitErrors, preflight, PreflightError } from './gcode.js';
 import { resolveConfig } from './params.js';
 import { buildConstructionReport, refreshConstruction, assertConstructionExportable } from './construction-report.js';
 import { solidLayer } from './solid-fill.js';
+import { buildBrimStrands, insetRings, outsetRings } from './brim.js?v=20261112-region-build';
 import { fingerprint } from '../ui/swatch.js';
 
 /**
@@ -164,6 +165,10 @@ export const SEAM_ALIGNS = Object.freeze(['inside', 'centre', 'outside']);
 /** The contour printed round each pattern region: its width in mm (passes of the bead side by side) and which side of the edge it sits. */
 export const sanitizeSeam = (raw) => ({ enabled: raw?.enabled !== false, width: Number.isFinite(Number(raw?.width)) ? Math.max(.4, Math.min(10, Number(raw.width))) : 1,
   align: SEAM_ALIGNS.includes(raw?.align) ? raw.align : 'inside' });
+export const sanitizeOutsideOutline = (raw) => ({
+  count: Number.isFinite(Number(raw?.count)) ? Math.max(0, Math.min(8, Math.round(Number(raw.count)))) : 0,
+  align: SEAM_ALIGNS.includes(raw?.align) ? raw.align : 'inside',
+});
 
 /** Derive identity and path membership from the drawing, never from untrusted saved indices. */
 export function sanitizeRegions(raw, vector, { cards, currentCard, currentSettings, notes = [] } = {}) {
@@ -178,6 +183,7 @@ export function sanitizeRegions(raw, vector, { cards, currentCard, currentSettin
     const role = ['pattern', 'solid', 'hole', 'line'].includes(saved.role) ? saved.role : base.role;
     const region = { ...base, role, enabled: saved.enabled !== false, lineAlign: ['centre','inside','outside','left','right'].includes(saved.lineAlign) ? saved.lineAlign : 'centre', passSpacing: Number.isFinite(Number(saved.passSpacing)) ? Math.max(.6, Math.min(1, Number(saved.passSpacing))) : .8, lineLayers: lineLayersOf(saved), ...(lineWidthOf(saved) ? { lineWidth: lineWidthOf(saved) } : {}), ...(Number.isInteger(saved.order) && saved.order > 0 ? { order: saved.order } : {}), ...(saved.applied === true ? { applied: true } : {}) };
     if (role === 'pattern') {
+      if (saved.seam && typeof saved.seam === 'object') region.seam = sanitizeSeam(saved.seam);
       const card = cards.find(card => card.id === (saved.card ?? base.card) && card.status === 'ready');
       if (!card) {
         notes.push(`Unknown region card ${String(saved.card).slice(0, 60)} was dropped; that region is excluded.`);
@@ -221,12 +227,15 @@ export function sharedRegionBorders(polygons) {
 }
 
 /** Whole-piece build. Each card keeps its generator; only final strands are merged and clearance-ordered here. */
-export function buildRegions(machine, material, vector, regions, { seam = {}, generate, width = vector.width, height = vector.height, solidCount = 1, extraLayers=0, progress = () => {} } = {}) {
+export function buildRegions(machine, material, vector, regions, { seam = {}, outsideOutline, generate, width = vector.width, height = vector.height, solidCount = 1, extraLayers=0, progress = () => {} } = {}) {
   if (typeof generate !== 'function') throw new TypeError('A region card generator is required.');
   if (regions.length > REGION_LIMIT) throw new Error(`At most ${REGION_LIMIT} colour regions are supported.`);
   const cfg = resolveConfig(machine, material, { sample_width: width, sample_height: height });
   const fit = bedFitErrors(cfg); if (fit.length) throw new PreflightError(fit);
-  const bead = cfg.t.extrusion_width, h = cfg.t.layer_height, seamSettings = sanitizeSeam(seam);
+  const bead = cfg.t.extrusion_width, h = cfg.t.layer_height, defaultSeam = sanitizeSeam(seam);
+  const seamFor = region => region.seam ? sanitizeSeam(region.seam) : defaultSeam;
+  const outside = sanitizeOutsideOutline(outsideOutline);
+  progress({ message: 'Preparing drawing boundaries…' });
   const scaled = { ...vector, width, height, paths: vector.paths.map(path => path.map(p => ({ ...p, x:p.x*width/vector.width, y:p.y*height/vector.height }))) };
   const polygons = regionPolygons(scaled, regions), polygonById = new Map(polygons.map(p=>[p.regionId,p]));
   const rectangle = [{x:0,y:0},{x:width,y:0},{x:width,y:height},{x:0,y:height}];
@@ -241,23 +250,35 @@ export function buildRegions(machine, material, vector, regions, { seam = {}, ge
   const boundary = new PolygonBoundary(allowed.length ? allowed : [rectangle]);
   // Lines are printed as drawn, trimmed only to the page: a line across a hole is what ties an island to the rest.
   const page = new PolygonBoundary([rectangle]);
+  const origin = cfg.derived.origin;
+  const bedRing = [{ x: 0, y: 0 }, { x: cfg.machine.bed.width, y: 0 },
+    { x: cfg.machine.bed.width, y: cfg.machine.bed.depth }, { x: 0, y: cfg.machine.bed.depth }]
+    .map(({ x, y }) => ({ x: x - origin.x, y: y - origin.y }));
   let strands = [], warnings = [], serial = 0;
   const metadata = [], intendedByRegion=new Map(), enabled = regions.filter(r=>r.enabled!==false).map((r,i)=>[r,i]).sort((a,b)=>(a[0].order??Infinity)-(b[0].order??Infinity)||a[1]-b[1]).map(([r])=>r); // printed in the order they were applied
   for (const [index,region] of enabled.entries()) {
-    progress({ done:index, total:enabled.length, message:`Building ${region.hex??region.color}: ${region.card??region.role}…` });
+    progress({ done:index, total:enabled.length, message:`Building colour ${index + 1} of ${enabled.length} · ${colourName(region.hex) ?? region.color}…` });
     const polygon = polygonById.get(region.id);
     let generated = [];
     if (region.role==='pattern' && polygon?.rings.length) {
       // The pattern is made over this region's own box plus a margin, edge to edge, and the region is cut out of it: it
       // runs right to the region's edge without being made for the whole piece (slow, and past some designs' limits).
-      const pts = polygon.rings.flat(), margin = Math.min(10, Math.max(3, .1 * Math.max(width, height)));
-      const x0 = Math.max(0, Math.min(...pts.map(p=>p.x)) - margin), y0 = Math.max(0, Math.min(...pts.map(p=>p.y)) - margin);
-      const x1 = Math.min(width, Math.max(...pts.map(p=>p.x)) + margin), y1 = Math.min(height, Math.max(...pts.map(p=>p.y)) + margin);
+      const box = new PolygonBoundary(polygon.rings).bbox();
+      const margin = Math.min(10, Math.max(3, .1 * Math.max(width, height)));
+      const x0 = Math.max(0, box.minX - margin), y0 = Math.max(0, box.minY - margin);
+      const x1 = Math.min(width, box.maxX + margin), y1 = Math.min(height, box.maxY + margin);
       const boxW = x1 - x0, boxH = y1 - y0;
-      const made = generate(region.card, region.settings, [[{x:0,y:0},{x:boxW,y:0},{x:boxW,y:boxH},{x:0,y:boxH}]], [boxW, boxH]);
+      let made;
+      try {
+        made = generate(region.card, region.settings, [[{x:0,y:0},{x:boxW,y:0},{x:boxW,y:boxH},{x:0,y:boxH}]], [boxW, boxH]);
+      } catch (error) {
+        error.region = { id: region.id, hex: region.hex, card: region.card };
+        throw error;
+      }
       const result = { ...made, strands: made.strands.map(s=>({ ...s, pts:s.pts.map(p=>({ ...p, x:p.x+x0, y:p.y+y0 })) })) };
       intendedByRegion.set(region.id,result.intendedFamilies??[]);
       // with a contour, the pattern stops where the contour's inner pass is, overlapping it by half a bead, instead of crossing it
+      const seamSettings = seamFor(region);
       const contour = seamSettings.enabled ? { inside:seamSettings.width, centre:seamSettings.width/2, outside:0 }[seamSettings.align] - bead/2 : 0;
       generated = clipStrands(result.strands, new PolygonBoundary(polygon.rings), Math.max(0, contour));
       warnings.push(...(result.warnings??[]));
@@ -287,8 +308,12 @@ export function buildRegions(machine, material, vector, regions, { seam = {}, ge
   }
   // The seam is a contour round each pattern region, as wide as set (passes of the bead side by side), inside, centred on or
   // outside its edge, printed on every layer the region prints. The pattern's ends run into it, which is what joins them.
-  const seamStrands = [];
-  if (seamSettings.enabled) for (const region of enabled.filter(r=>r.role==='pattern')) {
+  progress({ message: 'Joining colours and building outlines…' });
+  const seamStrands = [], explicitSeams = [];
+  for (const region of enabled.filter(r=>r.role==='pattern')) {
+    const seamSettings = seamFor(region);
+    if (!seamSettings.enabled) continue;
+    const target = region.seam && seamSettings.align !== 'inside' ? explicitSeams : seamStrands;
     const polygon = polygonById.get(region.id);
     const layers = [...new Set(strands.filter(s=>s.regionId===region.id).map(s=>s.layer??0))];
     if (!polygon?.rings.length || !layers.length) continue;
@@ -298,7 +323,7 @@ export function buildRegions(machine, material, vector, regions, { seam = {}, ge
       const hole = polygon.rings.some(other=>other!==ring&&area(other)>area(ring)&&inside(ring[0],other));
       const align = hole ? { inside:'outside', outside:'inside' }[seamSettings.align] ?? 'centre' : seamSettings.align;
       const detail = linePassesDetailed({ pts:closedPts, width:seamSettings.width, closed:true }, bead, { align, spacing:.8 });
-      for (const layer of layers) for (const pts of detail.passes) seamStrands.push({ id:`seam-${serial++}`, name:'Region seam', family:`seam-${region.id}`, role:'seam',
+      for (const layer of layers) for (const pts of detail.passes) target.push({ id:`seam-${serial++}`, name:'Region seam', family:`seam-${region.id}`, role:'seam',
         kind:layer?'supported':'base', layer, regionId:region.id, regionOrder:-1, source:`seam@${region.hex??region.key}`, pts:pts.map(p=>({ x:p.x, y:p.y, z:(layer+1)*h })) });
     }
   }
@@ -307,7 +332,26 @@ export function buildRegions(machine, material, vector, regions, { seam = {}, ge
   // clearance was slow (a minute or more for a drawing) and failed outright once one colour stood taller than the rest.
   const rank=new Map(enabled.map((region,i)=>[region.id,i])), lineRegions=new Set(enabled.filter(r=>r.role==='line').map(r=>r.id));
   const isLine=s=>lineRegions.has(s.regionId);
-  strands=[...clipStrands([...seamStrands,...strands.filter(s=>!isLine(s))],boundary,bead/2),...clipStrands(strands.filter(isLine),page,0)].map((s,i)=>({s,i}))
+  let outerStrands = [];
+  let outsideBand = null;
+  if (outside.count) {
+    const material = polygons.map(p => new PolygonBoundary(p.rings));
+    const rings = polygonRegion(polygons.flatMap(p => p.rings), (x, y) => material.some(shape => shape.contains(x, y)));
+    const exterior = rings.filter(ring => !rings.some(other => area(other) > area(ring) && inside(ring[0], other)));
+    if (!exterior.length) throw new Error('The outside outline needs an included closed pattern or solid shape. Include one, or set Outside outline to 0.');
+    const width = bead * (1 + (outside.count - 1) * .8);
+    const shift = { inside: 0, centre: width / 2, outside: width }[outside.align];
+    outerStrands = buildBrimStrands(exterior, { count: outside.count, strandWidth: bead, layerHeight: h, shift })
+      .map(strand => ({ ...strand, name: 'Outside outline', role: 'outside-outline', family: 'outside-outline' }));
+    if (!outerStrands.length) throw new Error('The outside outline does not fit the drawing. Use fewer lines or change where the outline sits.');
+    // The outside outline owns its band on the first layer. Do not print region contours or fill twice in that band.
+    const outer = shift ? outsetRings(exterior, shift) : exterior;
+    const inner = width > shift ? insetRings(exterior, width - shift) : exterior;
+    outsideBand = new PolygonBoundary([bedRing, ...outer, ...inner]);
+  }
+  const areas = [...explicitSeams, ...clipStrands([...seamStrands, ...strands.filter(s => !isLine(s))], boundary, bead / 2)];
+  const areaStrands = outsideBand ? areas.flatMap(s => (s.layer ?? 0) === 0 ? clipStrands([s], outsideBand, 0) : [s]) : areas;
+  strands=[...outerStrands,...areaStrands,...clipStrands(strands.filter(isLine),page,0)].map((s,i)=>({s,i}))
     .sort((a,b)=>(a.s.layer??0)-(b.s.layer??0)||(rank.get(a.s.regionId)??0)-(rank.get(b.s.regionId)??0)||(a.s.role==='seam'?0:1)-(b.s.role==='seam'?0:1)||a.i-b.i).map(({s})=>s);
   if(!strands.length)throw new Error('Nothing to print: enable a region with printable shapes or lines.');
   const modes = new Set(metadata.filter(r=>r.role==='pattern').map(r=>JSON.stringify([r.colourMode,regions.find(region=>region.id===r.id)?.settings?.layerColours??[]])));
@@ -315,24 +359,37 @@ export function buildRegions(machine, material, vector, regions, { seam = {}, ge
   const first = regions.find(r=>r.enabled!==false&&r.role==='pattern');
   const pauses = applyColourPlan(strands,{mode:colourMode(first?.settings),layerColours:first?.settings?.layerColours});
   strands=strands.map((s,i)=>({...s,pauseBefore:pauses[i].pauseBefore}));
-  const moves=emitStrands(strands,{retraction:cfg.derived.retraction}),stats=computeStats(moves,cfg,[]);
+  progress({ message: 'Checking the whole piece…' });
+  const moves = emitStrands(strands, { retraction: cfg.derived.retraction });
+  if (outerStrands.length || explicitSeams.length) {
+    const errors = preflight(moves, cfg);
+    if (errors.length) throw new PreflightError(errors);
+  }
+  const stats = computeStats(moves, cfg, []);
   const excludedPaths=regions.filter(r=>r.enabled===false).flatMap(r=>r.pathIndices.map(i=>scaled.paths[i]));
   const result={cfg,strands,moves,stats,outline:allowed.length?allowed:[rectangle],documentSize:[width,height],excludedPaths,warnings:[...new Set(warnings)],regions:metadata,layerCount:0,intendedFamilies:[]};
+  const bed = new PolygonBoundary([bedRing]);
+  const customSeams = new Set(enabled.filter(r => r.seam && r.seam.align !== 'inside').map(r => r.id));
   result.fabric = analyzeFabric(strands, {
     strandWidth: bead, layerHeight: h, boundary,
-    boundaryForStrand: (strand) => isLine(strand) ? page : boundary,
+    boundaryForStrand: (strand) => strand.role === 'outside-outline' || strand.role === 'seam' && customSeams.has(strand.regionId)
+      ? bed : isLine(strand) ? page : boundary,
   });
   refreshConstruction(result);
   result.construction.regions=Object.fromEntries(metadata.map(region=>[region.hex??region.id,buildConstructionReport({...result,strands:strands.filter(s=>s.regionId===region.id),intendedFamilies:intendedByRegion.get(region.id)??[]},{strandWidth:bead,layerHeight:h})]));
   for(const [colour,report] of Object.entries(result.construction.regions))result.construction.errors.push(...report.errors.map(message=>`${colour}: ${message}`));
-  result.construction.seams={count:seamStrands.length,contacts:result.construction.crossings.byPair.filter(pair=>pair.a.startsWith('seam-')||pair.b.startsWith('seam-'))};
+  result.construction.seams={count:seamStrands.length + explicitSeams.length,contacts:result.construction.crossings.byPair.filter(pair=>pair.a.startsWith('seam-')||pair.b.startsWith('seam-'))};
   result.report={crossings:result.construction.crossings.total,perCm2:result.construction.crossings.perCm2,components:result.fabric.components};
   result.stats.loops=0;
   const totalLayers=strands.reduce((count,strand)=>Math.max(count,(strand.layer??0)+1),0);
   result.layerPlan={mode:'regions',nativeLayers:Math.max(1,totalLayers-extraLayers),patternLayers:Math.max(1,totalLayers-extraLayers),totalLayers,extraLayers,repeatable:enabled.some(r=>r.role==='pattern')};
-  result.gcode=writeGcode(moves,cfg,{stats,comments:metadata.map(r=>`region ${r.hex??r.id}: ${r.role} ${r.card??''} settings ${r.settingsHash}`)});
+  progress({ message: 'Preparing the preview and G-code…' });
+  const comments = metadata.map(r => `region ${r.hex??r.id}: ${r.role} ${r.card??''} settings ${r.settingsHash}`);
+  if (outside.count) comments.push(`Outside outline: ${outside.count} lines, ${outside.align}`);
+  result.gcode = writeGcode(moves, cfg, { stats, comments });
+  assertConstructionExportable(result);
   progress({done:enabled.length,total:enabled.length,message:'Piece built.'});
-  return assertConstructionExportable(result);
+  return result;
 }
 
 function enabledContours(vector, regions) {

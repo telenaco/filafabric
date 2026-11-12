@@ -15,7 +15,7 @@ import { applyBrim } from './brim.js';
 import { rotateDesignInput } from './rotate-design.js';
 import { prepareAdaptiveSolids } from './adaptive-solids.js';
 import { colourResult } from './colour-plan.js';
-import { buildRegions, lineLayersOf, lineWidthOf, regionsFromDrawing } from './regions.js';
+import { buildRegions, lineLayersOf, lineWidthOf, regionsFromDrawing, sanitizeOutsideOutline } from './regions.js?v=20261112-region-build';
 import { stableStringify } from './default-cache-format.js';
 import { fingerprint } from '../ui/swatch.js';
 import { clipStrands } from './fabric.js';
@@ -55,7 +55,10 @@ export const overscanFor = (mod, width, height) => OVERSCAN_CARDS.has(mod.id) ? 
 
 function generateOverscanned(mod, input, { width, height, outline, margin, options }) {
   const { machine, material, settings = {} } = input;
-  const bigMachine = { ...machine, bed: { ...machine.bed, width: (machine.bed?.width ?? width) + 2 * margin, depth: (machine.bed?.depth ?? height) + 2 * margin } };
+  // The temporary row turns can bulge up to 1.5 mm past the overscanned box.
+  // Only the trimmed output uses the real printer's dimensions and origin.
+  const padding = 2 * margin + (['coil-flat', 'figure8-rows-flat'].includes(mod.id) ? 3 : 0);
+  const bigMachine = { ...machine, bed: { ...machine.bed, width: (machine.bed?.width ?? width) + padding, depth: (machine.bed?.depth ?? height) + padding } };
   const picture = options.picture && { ...options.picture, offset: [options.picture.offset[0] - margin, options.picture.offset[1] - margin] };
   const big = mod.generate(bigMachine, material, mod.sanitize({ ...settings, width: width + 2 * margin, height: height + 2 * margin }), { ...options, outline: null, picture });
   const cfg = resolveConfig(machine, material, { ...big.cfg.t, sample_width: width, sample_height: height });
@@ -125,12 +128,17 @@ function withSolids(result, input) {
 
 /** Browser and async callers initialize WASM explicitly before entering the synchronous geometry pipeline. */
 export async function generateDesignExportAsync(input, { progress = () => {} } = {}) {
-  if (input.solidGenerator === 'arachne' && input.vector && input.perimeters > 0) await prepareAdaptiveSolids();
+  if (input.solidGenerator === 'arachne' && input.vector && input.perimeters > 0
+    && (!input.regions?.length || usesLegacyRegionLayout(input))) {
+    if (input.regions?.length) progress({ message: 'Preparing the drawing and solid fill…' });
+    await prepareAdaptiveSolids();
+  }
   return generateDesignExport(input, { progress });
 }
 
 /** Preserve the original single-pattern output when region controls and print precedence match the import defaults. */
 function usesLegacyRegionLayout(input) {
+  if (sanitizeOutsideOutline(input.outsideOutline).count || input.regions.some(region => region.role === 'pattern' && region.seam)) return false;
   const settings = input.studySettings ?? input.settings;
   const { design, regions, vector } = input;
   const patterns = regions.filter((region) => region.role === 'pattern');
@@ -149,17 +157,19 @@ function usesLegacyRegionLayout(input) {
 export function generateDesignExport(input, { progress = () => {} } = {}) {
   if (input.vector && input.regions?.length && !input.regionBuild) {
     if (usesLegacyRegionLayout(input)) {
+      progress({ message: 'Building the whole drawing and checking the toolpath…' });
       const outline=input.shapeOutline?vectorPatternRings(input.vector,{scaleX:input.width/input.vector.width,scaleY:input.height/input.vector.height}):input.outline;
       const result=generateDesignExport({...input,regions:null,outline:outline?.length?outline:null});
       result.regions=input.regions.map(r=>({id:r.id,hex:r.hex,role:r.role,card:r.card,settingsHash:fingerprint(r.settings??{})}));
       result.gcode=result.gcode.replace('; BODY START',result.regions.map(r=>`; region ${r.hex??r.id}: ${r.role} ${r.card??''} settings ${r.settingsHash}`).join('\n')+'\n; BODY START');
+      progress({ message: 'Piece built.' });
       return result;
     }
     // Reuse inner pattern geometry only for exactly matching inputs. Region composition and study metadata live outside it.
-    const { patternCache, seam, studySettings: _studySettings, panelSize: _panelSize, ...patternInput } = input;
+    const { patternCache, seam, outsideOutline, studySettings: _studySettings, panelSize: _panelSize, ...patternInput } = input;
     const cache = patternCache ?? {}, fresh = {};
     const built = buildRegions(input.machine, input.material, input.vector, input.regions, {
-      seam, width: input.width, height: input.height, solidCount: input.solidLayers ?? 1, extraLayers: input.extraLayers ?? 0, progress,
+      seam, outsideOutline, width: input.width, height: input.height, solidCount: input.solidLayers ?? 1, extraLayers: input.extraLayers ?? 0, progress,
       generate: (design, settings, outline, [width, height] = [input.width, input.height]) => {
         const mod = designById(design);
         const own = mod.sanitize({ ...settings, width, height });
@@ -195,9 +205,12 @@ export function generateDesignExport(input, { progress = () => {} } = {}) {
   result = withExtraBacking(result, input);
   // a solid already prints its own edge pass: an all-solid piece takes no brim over it
   result = applyBrim(result, { shift: input.meshShift ?? 0, count: solidOnly(input.vector) ? 0 : input.meshPerimeters ?? input.perimeters ?? input.brim ?? 2, label: input.perimeters !== undefined ? 'Perimeters' : 'Brim', requestedCount: input.perimeters });
-  if (input.regionBuild && input.outline) result.strands = clipStrands(result.strands, new PolygonBoundary(input.outline), 0);
+  if (input.regionBuild) {
+    if (input.outline) result.strands = clipStrands(result.strands, new PolygonBoundary(input.outline), 0);
+    return colourResult(result, input.settings, { record: true });
+  }
   result = refreshConstruction(colourResult(result, input.settings, { record: true }));
-  return input.regionBuild ? result : assertConstructionExportable(result);
+  return assertConstructionExportable(result);
 }
 
 /** The UI only needs printable output and summary data; geometry remains inside the worker. */

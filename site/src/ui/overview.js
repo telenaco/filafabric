@@ -290,7 +290,7 @@ export function createOverview(container, onStatus) {
   canvas.addEventListener('pointercancel', () => { drag = null; });
   canvas.addEventListener('lostpointercapture', () => { drag = null; });
   new ResizeObserver(() => draw()).observe(container);
-  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { trailTrace = null; draw(); }); // the toolpath's colours are drawn into its canvas
+  document.addEventListener('filafabric:themechange', () => { trailTrace = null; draw(); });
   return { update, cancel: stop, fit, redraw: draw, setTrace, setProgress,
     setResult(next) { stop();result=next;buildPaths();if(!size||size.w!==next.width||size.h!==next.height){zoom=1;dx=dy=0;}size={w:next.width,h:next.height};draw(); },
   };

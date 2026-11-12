@@ -1,12 +1,12 @@
 import { el } from './dom.js';
-import { colourBarModel, regionInPiece, REGION_PALETTE, lineLayersOf, LINE_LAYERS_MAX, lineWidthOf, colourName } from '../engine/regions.js';
+import { colourBarModel, regionInPiece, REGION_PALETTE, lineLayersOf, LINE_LAYERS_MAX, lineWidthOf, colourName, sanitizeSeam } from '../engine/regions.js';
 
 const PAINTS = { red:'#ff0000',blue:'#0000ff',green:'#00ff00',yellow:'#ffff00',other:'#777777' };
 const ROLE_LABELS = { pattern:'Pattern',hole:'Hole',solid:'Solid',line:'Line' };
 
 /** Region navigation. Existing card panels remain the settings editor. */
-const alignSelect=(value,onChange,label)=>{
-  const select=el('select',{'aria-label':label,'data-region-focus':'line-align'},...[['inside','Inside the edge'],['centre','Centred on the edge'],['outside','Outside the edge']].map(([v,text])=>el('option',{value:v,text,selected:v===value})));
+const alignSelect=(value,onChange,label,focus='line-align')=>{
+  const select=el('select',{'aria-label':label,'data-region-focus':focus},...[['inside','Inside the edge'],['centre','Both sides (centred)'],['outside','Outside the edge']].map(([v,text])=>el('option',{value:v,text,selected:v===value})));
   select.addEventListener('change',()=>onChange(select.value));
   return el('label',{class:'field-row'},el('span',{text:label}),select);
 };
@@ -72,7 +72,25 @@ export class RegionControls {
     if(region.role==='pattern'){
       const picker=el('select',{id:'region-card','aria-label':'Design for this region','data-region-focus':'region-card'},...this.cards.filter(c=>c.status==='ready'&&!c.hidden).map(c=>el('option',{value:c.id,text:`${c.name} · ${c.shelf}`,selected:c.id===region.card})));
       picker.addEventListener('change',()=>this.useCard(region.id,picker.value));
-      parts.push(el('label',{class:'field-row stacked'},el('span',{text:'Region design'}),picker),el('p',{class:'small muted',text:`The settings below apply to ${colourName(region.hex)??region.color} only.`}));
+      const current = region.seam ?? seam;
+      const width = el('input', { type: 'number', min: 0, max: 10, step: .01, value: current.enabled ? current.width : 0, 'data-region-focus': 'region-outline-width' });
+      width.addEventListener('change', () => {
+        if (width.value === '' || !width.validity.valid || (width.valueAsNumber > 0 && width.valueAsNumber < .4)) {
+          width.value = current.enabled ? current.width : 0;
+          return;
+        }
+        edit({ seam: sanitizeSeam({ ...current, enabled: width.valueAsNumber > 0, width: width.valueAsNumber }) });
+      });
+      const inherited = el('p', { class: 'small muted', text: 'Uses the default region outline until you change it. Set width to 0 to turn it off.' });
+      const reset = el('button', { type: 'button', class: 'link small', text: 'Use default region outline', 'data-region-focus': 'region-outline-default' });
+      reset.addEventListener('click', () => edit({ seam: undefined }));
+      parts.push(el('label',{class:'field-row stacked'},el('span',{text:'Region design'}),picker),
+        el('section', { class: 'region-outline', 'aria-label': 'Selected colour outline' },
+          el('h3', { class: 'eyebrow', text: 'This colour’s outline' }),
+          el('label', { class: 'field-row' }, el('span', { text: 'Width (mm)' }), width),
+          alignSelect(current.align, value => edit({ seam: sanitizeSeam({ ...current, align: value }) }), 'Region outline sits', 'region-outline-align'),
+          region.seam ? reset : inherited),
+        el('p',{class:'small muted',text:`The design settings below apply to ${colourName(region.hex)??region.color} only.`}));
     }
     if(region.role==='line'){
       const layers=el('input',{type:'number',min:1,max:LINE_LAYERS_MAX,step:1,value:lineLayersOf(region),'aria-label':'Layers','data-region-focus':'line-layers'});
@@ -88,7 +106,6 @@ export class RegionControls {
       out.addEventListener('click',()=>this.change(region.id,{applied:false,enabled:false}));
       parts.push(el('p',{class:'small muted'},'Applied: this colour is part of the piece. ',out));
     }
-    parts.push(el('p',{class:'small muted',text:seam.enabled?`Outline: ${seam.width} mm ${seam.align==='centre'?'centred on':seam.align} the edge of each colour, joining it to its neighbours. Change it under Size and shape.`:'No outline: the colours are not joined along their edges. Set one under Size and shape.'}));
     this.header.replaceChildren(...parts);
     restoreHeaderFocus();
   }

@@ -22,18 +22,6 @@ export function strandWidths(cfg) {
   };
 }
 
-// Roles also differ in lightness, not only hue, so they survive colour-vision differences.
-const PALETTES = {
-  light: {
-    base: 0x27366b, anchored: 0x1f8179, lifting: 0xb87400, free: 0xb0316f, channel:0x7047ad,
-    centreline: 0x12161e, travel: 0x566074, hop: 0xa04b00, violation: 0xd32f2f, bed: 0xe2dcef, sample: 0x5236a6,
-  },
-  dark: {
-    base: 0x8fa6f5, anchored: 0x4fc3b8, lifting: 0xe8b04a, free: 0xf07ab0, channel:0xb59cff,
-    centreline: 0xf2f3f0, travel: 0x9aa4b5, hop: 0xffa060, violation: 0xff6b6b, bed: 0x332a47, sample: 0xc5adff,
-  },
-};
-
 function countBelow(sorted, k) {
   let lo = 0, hi = sorted.length;
   while (lo < hi) {
@@ -77,8 +65,13 @@ export function createPreview(container) {
     extent: null, // bounding box of everything printed: loops can reach past the swatch edge
   };
 
-  const dark = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
-  const palette = () => (dark && dark.matches ? PALETTES.dark : PALETTES.light);
+  const palette = () => {
+    const styles = getComputedStyle(container);
+    const roles = [...ROLES, 'channel'].map(role => [role, `--role-${role}`]);
+    const overlays = ['centreline', 'travel', 'hop', 'violation', 'bed', 'sample'].map(name => [name, `--preview-${name}`]);
+    return Object.fromEntries([...roles, ...overlays].map(([name, property]) =>
+      [name, new THREE.Color(styles.getPropertyValue(property).trim())]));
+  };
 
   const materials = [];
   function resize() {
@@ -265,19 +258,20 @@ export function createPreview(container) {
     state.violations.geometry.setDrawRange(0, countBelow(state.buckets.viol.idx, k));
   }
 
-  function frame(force) {
+  function frame(force, keepOrbit = false) {
     const e = state.extent;
     const key = `${e.minX.toFixed(1)},${e.minY.toFixed(1)},${e.maxX.toFixed(1)},${e.maxY.toFixed(1)}:${state.camera}`;
     if (!force && state.framedFor === key) return;
     const w = e.maxX - e.minX, h = e.maxY - e.minY;
     const cx = (e.minX + e.maxX) / 2, cy = (e.minY + e.maxY) / 2;
-    controls.target.set(cx, cy, 2);
-    // Frame the swatch using the field of view along the shorter side of the canvas.
+    // Fit inside the shorter side, with room for the preview controls and legend.
     const radius = Math.hypot(w, h) / 2 + 2;
-    const distance = (radius / Math.sin(halfAngle)) * 0.92;
+    const distance = (radius / Math.sin(halfAngle)) * 1.12;
     // 'angled' is a three-quarter view from the front right, so rows and loop heights both read
-    const dir = state.camera === 'top' ? [0, -0.01, 1] : state.camera === 'side' ? [0, -1, 0.12] : [0.42, -0.78, 0.62];
+    const preset = state.camera === 'top' ? [0, -0.01, 1] : state.camera === 'side' ? [0, -1, 0.12] : [0.42, -0.78, 0.62];
+    const dir = keepOrbit ? camera.position.clone().sub(controls.target).toArray() : preset;
     const len = Math.hypot(...dir);
+    controls.target.set(cx, cy, 2);
     camera.position.set(cx + (dir[0] / len) * distance, cy + (dir[1] / len) * distance, 2 + (dir[2] / len) * distance);
     controls.update();
     state.framedFor = key;
@@ -291,7 +285,7 @@ export function createPreview(container) {
     frame(false);
   }
 
-  dark?.addEventListener?.('change', () => {
+  document.addEventListener('filafabric:themechange', () => {
     if (state.result) { build(state.result); applyVisibility(); applyRange(); }
   });
 
@@ -310,6 +304,7 @@ export function createPreview(container) {
     /** Roles that have at least one move in the current result, in legend order. */
     presentRoles() { return ROLES.filter((role) => Object.keys(state.buckets).some((key) => key.split('@')[0] === role && state.buckets[key].idx?.length > 0)); },
     setCamera(name) { state.camera = name; if (state.result) frame(true); },
+    fit() { if (state.result) frame(true, true); },
     setLayers(layers) { state.layers = { ...state.layers, ...layers }; if (state.result) { build(state.result); applyVisibility(); applyRange(); } },
     setRoles(roles) { state.roleVisible = { ...state.roleVisible, ...roles }; applyVisibility(); },
     setShowViolations(on) { state.showViolations = on; applyVisibility(); },

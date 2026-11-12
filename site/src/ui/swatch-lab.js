@@ -51,7 +51,7 @@ export function bindSwatchLab({ button, options, download }) {
   const start = el('button', { type: 'button', class: 'btn primary', text: 'Build and download ZIP' });
   const dialog = el('dialog', { class: 'swatch-lab', 'aria-labelledby': 'swatch-lab-title' },
     el('h2', { id: 'swatch-lab-title', text: 'Comparison & calibration swatches' }),
-    el('p', { class: 'muted', text: 'One separate G-code file per piece, exact dimensions, with blank print records. No automatic shrinking. These are starting recipes, not calibrated recommendations.' }),
+    el('p', { class: 'muted', text: 'Use a comparison set to print different structures side by side, or a calibration set to try several values on the same printer. The ZIP contains a separate G-code file and a worksheet for each piece, plus a list of settings.' }),
     el('label', { class: 'field-row stacked' }, el('span', { text: 'Set' }), picker),
     el('label', { class: 'field-row' }, el('span', { text: 'Width (mm)' }), width),
     el('label', { class: 'field-row' }, el('span', { text: 'Height (mm)' }), height),

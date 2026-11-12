@@ -75,18 +75,24 @@ function steps({ design }) {
     },
     {
       title: 'Three kinds of fabric',
-      text: 'The designs come in three families. Flat prints as one layer that joins in the plane: light and quick. Layered stacks strands that cross at different heights. Raised builds texture up off the fabric: loops, pile, bumps. Click a family to open it.',
-      target: () => $('#design-list'),
-      enter: () => { closePrinter(); for (const shelf of document.querySelectorAll('#design-list > details')) shelf.open = false; },
+      text: 'Use the structure filters to browse Flat, Layered or Raised designs. Flat prints in one plane, Layered stacks strands at different heights, and Raised builds texture above the fabric. All includes the experimental cards.',
+      target: () => $('.library-filters'),
+      enter: closePrinter,
     },
     {
       title: 'Start with Wave net · flat',
       text: 'Open a design by clicking its card. Click Wave net · flat: two families of waves joined where they cross.',
       target: () => $(`#design-list [data-design="${TOUR_DESIGN}"]`),
       enter: () => {
-        const shelf = $('#design-list > details.shelf-flat');
-        if (shelf) shelf.open = true;
-        $(`#design-list [data-design="${TOUR_DESIGN}"]`)?.scrollIntoView({ block: 'center' });
+        const card = $(`#design-list [data-design="${TOUR_DESIGN}"]`);
+        const category = $('[data-library-filter][aria-pressed="true"]')?.dataset.libraryFilter;
+        if (card?.hidden && category !== 'all' && category !== 'flat') $('[data-library-filter="flat"]').click();
+        if (card?.hidden) {
+          const search = $('#design-filter');
+          search.value = '';
+          search.dispatchEvent(new Event('input'));
+        }
+        card?.scrollIntoView({ block: 'nearest' });
       },
       watch: () => design(), act: () => { if (design() !== TOUR_DESIGN) $(`#design-list [data-design="${TOUR_DESIGN}"]`)?.click(); },
     },

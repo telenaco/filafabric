@@ -241,6 +241,20 @@ export function libraryGroups(designs = DESIGNS) {
   ]));
 }
 
+/** Show a mix of structure types in All while retaining the rank within each type. */
+export function galleryCards(designs = DESIGNS) {
+  const groups = libraryGroups(designs);
+  const byShelf = Object.fromEntries(Object.entries(groups).map(([shelf, families]) =>
+    [shelf, simplestFirst(families.flatMap(({ cards }) => cards))]));
+  const shelves = [byShelf.flat, byShelf.layered, byShelf.raised];
+  const mixed = [];
+  const rows = Math.max(...shelves.map(cards => cards.length));
+  for (let index = 0; index < rows; index++) {
+    for (const cards of shelves) if (cards[index]) mixed.push(cards[index]);
+  }
+  return [...mixed, ...byShelf.experimental, ...designs.filter(card => card.status === 'preset')];
+}
+
 /** Ready variants sharing an explicit comparison group or settings key, or their own permanent id. */
 export function variantsOf(id, designs = DESIGNS) {
   const card = designs.find(card => card.id === id && card.status === 'ready' && !card.hidden);
