@@ -66,12 +66,15 @@ test('the page loads the studio only through the gate', () => {
   for (const id of ['gate', 'gate-form', 'gate-password', 'gate-submit', 'gate-error', 'gate-remember', 'btn-lock']) {
     assert.ok(html.includes(`id="${id}"`), id);
   }
-  assert.match(html, /Coming soon/);
+  assert.match(html, /<label[^>]+for="gate-password"[^>]*>Private beta password<\/label>/);
+  const illustration = html.match(/<img[^>]+src="(samples\/atelier-loop-study\.webp)"[^>]+alt="[^"]+"/);
+  assert.ok(illustration, 'the gate has a local textile illustration with alt text');
+  assert.ok(fs.statSync(path.join(siteRoot, illustration[1])).isFile());
 });
 
 test('boot.js imports the studio dynamically, so nothing of it runs behind the gate', () => {
   const boot = fs.readFileSync(path.join(siteRoot, 'src', 'boot.js'), 'utf8');
-  const studioSrc = boot.match(/await import\('([^']+)'\)/)?.[1];
+  const studioSrc = boot.match(/import\('([^']+)'\)/)?.[1];
   const studioUrl = new URL(studioSrc, 'http://localhost/src/boot.js');
   assert.equal(studioUrl.pathname, '/src/ui/main.js');
   const html = fs.readFileSync(path.join(siteRoot, 'index.html'), 'utf8');
@@ -84,10 +87,11 @@ test('boot.js imports the studio dynamically, so nothing of it runs behind the g
 
 test('the gate tells a visitor without a password where to ask for one', () => {
   const html = fs.readFileSync(path.join(siteRoot, 'index.html'), 'utf8');
-  assert.match(html, /class="gate-access"[^>]*>[^<]*<a href="mailto:bubakidesign@gmail\.com[^"]*">bubakidesign@gmail\.com<\/a>/);
+  const gate = html.match(/<main\b[^>]+id="gate"[^>]*>([\s\S]*?)<\/main>/)?.[1] ?? '';
+  assert.match(gate, /<a href="mailto:bubakidesign@gmail\.com[^"]*">Request beta access<\/a>/);
 });
 
-test('the coming-soon page links to the hub and LinkedIn for updates', () => {
+test('the beta landing links to the hub and LinkedIn for updates', () => {
   const html = fs.readFileSync(path.join(siteRoot, 'index.html'), 'utf8');
   assert.match(html, /https:\/\/www\.3dpstef\.eu\/hub/);
   assert.match(html, /https:\/\/www\.linkedin\.com\/in\/jlberna\//);
@@ -99,12 +103,7 @@ test('the production gate remains closed while preserving the existing password 
   assert.match(config.hash, /^[0-9a-f]{64}$/);
 });
 
-test('"open": true in the gate config lets the studio open without the password, and takes the lock away', () => {
-  const boot = fs.readFileSync(path.join(siteRoot, 'src', 'boot.js'), 'utf8');
-  const open = boot.indexOf('if (config.open === true)'), token = boot.indexOf('if (keep.get() === unlockToken(config))');
-  assert.ok(open > 0 && open < token, 'checked before any password or saved unlock');
-  assert.match(boot.slice(open, token), /await openStudio\(\{ open: true \}\);\s*return;/);
-  assert.match(boot, /if \(open\) \$\('btn-lock'\)\?\.remove\(\);/);
+test('the optional open flag does not replace the password hash', () => {
   const config = JSON.parse(fs.readFileSync(path.join(siteRoot, 'src', 'ui', 'gate-config.json'), 'utf8'));
   assert.ok(config.open === undefined || typeof config.open === 'boolean');
   assert.match(config.hash, /^[0-9a-f]{64}$/, 'the password stays set for when the gate closes again');

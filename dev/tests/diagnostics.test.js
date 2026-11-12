@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
+import { withContrast } from '../../site/src/engine/picture.js';
 import { classifyBuildError, DiagnosticLog, suggestRecovery } from '../../site/src/ui/diagnostics.js';
 import { designById } from '../../site/src/ui/designs.js';
 import { resolveCrossings } from '../../site/src/engine/crossings.js';
@@ -117,33 +118,33 @@ test('recovery preserves exact dimensions and unrelated numeric settings', () =>
 });
 
 // Run the actual UI action functions against a small host, without starting the browser-only studio/WebGL app.
+const uiSource = readFileSync(new URL('../../site/src/ui/main.js', import.meta.url), 'utf8').replaceAll('\r\n', '\n');
 function uiFunction(name) {
-  const source = readFileSync(new URL('../../site/src/ui/main.js', import.meta.url), 'utf8').replaceAll('\r\n', '\n');
-  const start = source.indexOf(`function ${name}(`);
-  const end = source.indexOf('\n}', start) + 2;
-  if (start < 0 || end < start) throw new Error(`Missing UI function ${name}`);
-  return source.slice(start, end);
+  const body = uiSource.match(new RegExp(`^(?:async )?function ${name}\\([^]*?\\n}`, 'm'))?.[0];
+  if (!body) throw new Error(`Missing UI function ${name}`);
+  return body;
 }
 
 test('the UI recovery action keeps the exact failed attempt available through Undo', () => {
   const module = designById('coil');
   const settings = { ...module.defaults(), width: 60.12345, pitch: 0.2, size: 8, rowOverlap: 95 };
   const state = { design: 'coil', designs: { coil: settings }, machine: 'prusa-mk3s', material: 'filaflex-95-foamy', print: { layers: 1 }, error: crossingError() };
-  const undoLog = { stack: [{ key: 'previous valid state', data: { designs: { coil: { ...settings, pitch: 5 } } } }], cursor: 0 };
+  const undoLog = { stack: [{ key: 'previous valid state', data: { designs: { coil: { ...settings, pitch: 5 } } }, picture: { image: null } }], cursor: 0 };
   const recovery = suggestRecovery(module, settings, state.error);
   let generated, restored, stored;
   const host = {
-    state, undoLog, recovery, genTimer: null,
+    state, undoLog, recovery,
     settingsOf: () => settings,
-    syncControls() {}, renderControls() {}, renderHistoryButtons() {}, clearTimeout() {}, toast() {},
-    regenerate() { generated = { ...settings }; state.error = null; },
+    syncControls() {}, renderControls() {}, renderHistoryButtons() {}, toast() {},
+    schedule() { generated = { ...settings }; },
+    rememberPrintSetup() { stored = { ...state.print }; },
     applySnapshot(data) { restored = JSON.parse(JSON.stringify(data)); },
-    store: { set(key, value) { stored = JSON.parse(value); } }, STORAGE_KEY: 'test', DENSITY_REVISION: 1, location: { hash: '' },
+    DENSITY_REVISION: 1, location: { hash: '' },
   };
-  runInNewContext(['snapshot', 'snapshotKey', 'commit', 'undo', 'applySettingsPatch', 'applyBuildRecovery'].map(uiFunction).join('\n') + '\napplyBuildRecovery(recovery); undo();', host);
+  runInNewContext(['snapshot', 'snapshotKey', 'captureHistoryPicture', 'trimHistory', 'commit', 'restoreHistory', 'undo', 'applySettingsPatch', 'applyBuildRecovery'].map(uiFunction).join('\n') + '\napplyBuildRecovery(recovery); undo();', host);
   assert.equal(generated.pitch, recovery.patch.pitch);
   assert.equal(generated.width, 60.12345);
-  assert.equal(stored.designs.coil.pitch, recovery.patch.pitch);
+  assert.equal(stored.layers, 1);
   assert.equal(restored.designs.coil.pitch, 0.2);
   assert.equal(restored.designs.coil.size, 8);
   assert.equal(restored.designs.coil.rowOverlap, 95);
@@ -255,4 +256,151 @@ test('the shared failure recorder keeps panel metadata and study dimensions from
   assert.equal(entry.settings.print.layerHeight, 0.25);
   assert.equal(entry.sourceComplexity.svgPointCount, 2);
   assert.equal(entry.vector, undefined);
+});
+
+function studio() {
+  const saved = new Map();
+  const state = {
+    machine: 'first', material: 'tpu', design: 'zigzag', docName: 'Test piece',
+    primary: {}, advanced: {}, designs: { zigzag: { pattern: 'image' } },
+    print: { layerHeight: 0.2, nozzleTemp: 225 }, image: null, imageRevision: 0,
+    machines: new Map([['first', {}], ['second', {}]]), materials: new Map([['tpu', {}]]),
+  };
+  const controls = {};
+  const location = { hash: '', pathname: '/', search: '' };
+  const host = {
+    state, undoLog: { stack: [], cursor: -1 }, store: saved, STORAGE_KEY: 'setup', DENSITY_REVISION: 1,
+    REGION_LIMIT: 20, PICTURE: 'image', PICTURE_CONTRAST: { min: 1, max: 5 }, nextImageRevision: 0,
+    location, history: { replaceState() { location.hash = ''; } },
+    documentRequest: 0, pictureRequest: 0, machineRequest: 0,
+    $: id => controls[id] ??= {}, profiles: { useLibrary: async id => state.machines.get(id) },
+    machinePicker: null, defaultLayerHeight: () => 0.3, toast() {},
+    normalisePrint() {}, renderControls() {}, updateDialogNote() {}, schedule() {},
+    resetRoles() {}, showDesign() {}, syncControls() {}, known() {}, withContrast,
+    sanitizeState: data => structuredClone(data), sanitizeFilamentSettings: ({ nozzleTemp }) => ({ nozzleTemp }),
+    DESIGNS: [{ id: 'zigzag', status: 'ready', defaults: () => ({ pattern: 'centerSpot' }) }],
+    settingsOf: () => state.designs.zigzag,
+  };
+  runInNewContext([
+    'snapshot', 'snapshotKey', 'printerSetupOnly', 'rememberPrintSetup', 'captureHistoryPicture',
+    'trimHistory', 'commit', 'loadState', 'applySnapshot', 'restoreHistory', 'undo', 'redo',
+    'renderHistoryButtons', 'chooseMachine', 'forgetPictureChoices', 'setPictureContrast', 'clearPicture',
+  ].map(uiFunction).join('\n'), host);
+  return {
+    host, state, controls, saved,
+    remembered: () => host.printerSetupOnly(JSON.parse(saved.get('setup'))),
+  };
+}
+
+test('an accepted printer change is recorded while the previous build error is visible', async () => {
+  const { host, state, remembered, controls } = studio();
+  host.commit();
+  state.buildFailure = { key: 'previous', error: new Error('previous build failed') };
+  await host.chooseMachine('second');
+  assert.equal(state.machine, 'second');
+  assert.equal(remembered().machine, 'second');
+  assert.equal(controls['#btn-undo'].disabled, false);
+  host.undo();
+  assert.equal(state.machine, 'first');
+  host.redo();
+  assert.equal(state.machine, 'second');
+});
+
+test('Undo and Redo persist the restored setup before the preview finishes', async () => {
+  const { host, state, remembered, saved } = studio();
+  host.commit();
+  await host.chooseMachine('second');
+  state.print.nozzleTemp = 235;
+  host.commit();
+  host.location.hash = '#s=shared-setup';
+  host.undo();
+  assert.equal(remembered().print.nozzleTemp, 225);
+  assert.equal(host.location.hash, '');
+  host.undo();
+  assert.equal(state.machine, 'first');
+  assert.equal(remembered().machine, 'first');
+  assert.equal(remembered().print.layerHeight, 0.2);
+  host.redo();
+  host.redo();
+  assert.equal(remembered().machine, 'second');
+  assert.equal(remembered().print.layerHeight, 0.3);
+  assert.equal(remembered().print.nozzleTemp, 235);
+  assert.equal(JSON.parse(saved.get('setup')).designs, undefined);
+  host.undo();
+  state.print.nozzleTemp = 245;
+  host.commit();
+  host.redo();
+  assert.equal(remembered().print.nozzleTemp, 245);
+});
+
+const image = (pixel, rotation = 0) => {
+  const original = { width: 1, height: 1, data: new Uint8ClampedArray([pixel, pixel, pixel, 255]) };
+  return { original, data: original, contrast: 1, rotation, name: 'local-artwork', px: [1, 1], thumb: { width: 1, height: 1 } };
+};
+
+test('history restores the specific artwork and contrast after replacement, clearing and redo', () => {
+  const { host, state, saved } = studio();
+  const first = image(32);
+  state.image = first;
+  state.imageRevision = ++host.nextImageRevision;
+  host.commit();
+  host.setPictureContrast(1.5);
+  host.setPictureContrast(2);
+  host.commit();
+  const contrastRevision = state.imageRevision;
+  const second = image(128, 90);
+  state.image = second;
+  state.imageRevision = ++host.nextImageRevision;
+  host.commit();
+  host.clearPicture();
+  assert.equal(state.image, null);
+  host.undo();
+  assert.equal(state.image.original, second.original);
+  assert.equal(state.image.rotation, 90);
+  host.undo();
+  assert.equal(state.image.original, first.original);
+  assert.equal(state.image.contrast, 2);
+  assert.equal(state.imageRevision, contrastRevision);
+  host.undo();
+  assert.equal(state.image.contrast, 1);
+  host.setPictureContrast(3);
+  host.commit();
+  assert.ok(state.imageRevision > contrastRevision);
+  host.redo();
+  assert.equal(state.image.contrast, 3);
+  host.clearPicture();
+  host.undo();
+  host.redo();
+  assert.equal(state.image, null);
+  assert.equal(state.designs.zigzag.pattern, 'centerSpot');
+  assert.doesNotMatch(JSON.stringify(host.snapshot()), /local-artwork|imageRevision/);
+  assert.doesNotMatch(saved.get('setup'), /local-artwork|imageRevision/);
+});
+
+test('a settings snapshot without its tab artwork falls back to the built-in pattern', () => {
+  const { host, state } = studio();
+  state.image = image(64);
+  const saved = JSON.parse(JSON.stringify(host.snapshot()));
+  const fresh = studio();
+  fresh.host.applySnapshot(saved);
+  assert.equal(fresh.state.image, null);
+  assert.equal(fresh.state.designs.zigzag.pattern, 'centerSpot');
+});
+
+test('artwork history evicts oldest source pixels while keeping newer entries and shared contrast sources', () => {
+  const { host, state } = studio();
+  for (let revision = 1; revision <= 10; revision++) {
+    state.image = image(revision);
+    state.image.original.data = { byteLength: 4_000_000 };
+    state.imageRevision = revision;
+    host.commit();
+  }
+  const retained = host.undoLog.stack.length;
+  assert.equal(retained, 8);
+  assert.equal(host.undoLog.stack[0].picture.revision, 3);
+  state.image.contrast = 2;
+  state.imageRevision++;
+  host.commit();
+  assert.equal(host.undoLog.stack.length, retained + 1);
+  assert.equal(host.undoLog.stack[0].picture.revision, 3);
 });

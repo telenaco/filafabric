@@ -3,7 +3,7 @@
     "card": "figure8-net-flat",
     "preset": "default",
     "settingsHash": "a2286574111c",
-    "gcodeSha256": "58982e7dd94b410ea160437cddc12b2e573d616720feddb9d5093d8acec10dbc",
+    "gcodeSha256": "d81045c6d26c9cb11c7f570afde55ed59dd68cfb4cf8ffa6548cc4ee70b31afc",
     "strands": 28,
     "moves": 5345,
     "extrudeMm": 1418,

@@ -288,6 +288,7 @@ export function createOverview(container, onStatus) {
   canvas.addEventListener('pointermove', (e) => { if (drag) { dx += e.clientX - drag.x; dy += e.clientY - drag.y; drag = { x: e.clientX, y: e.clientY }; move(); } });
   canvas.addEventListener('pointerup', () => { drag = null; });
   canvas.addEventListener('pointercancel', () => { drag = null; });
+  canvas.addEventListener('lostpointercapture', () => { drag = null; });
   new ResizeObserver(() => draw()).observe(container);
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { trailTrace = null; draw(); }); // the toolpath's colours are drawn into its canvas
   return { update, cancel: stop, fit, redraw: draw, setTrace, setProgress,

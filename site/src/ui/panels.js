@@ -497,14 +497,15 @@ export class PatternPicker extends Control {
     if (this.sampleRow) {
       const trySample = el('button', { type: 'button', class: 'link small', text: 'use the sample picture' });
       trySample.addEventListener('click', async () => {
+        const request = host.requestPicture();
         try {
           const res = await fetch(encodeURI(SAMPLE_PICTURE));
           if (!res.ok) throw new Error(`${res.status}`);
           const blob = await res.blob();
           // a server may not name the type of a .jpg: it is one
-          host.loadPicture(new File([blob], SAMPLE_PICTURE.split('/').pop(), { type: blob.type.startsWith('image/') ? blob.type : 'image/jpeg' }), designId);
+          host.loadPicture(new File([blob], SAMPLE_PICTURE.split('/').pop(), { type: blob.type.startsWith('image/') ? blob.type : 'image/jpeg' }), designId, request);
         } catch {
-          host.toast?.('The sample picture could not be loaded.');
+          if (host.currentPictureRequest(request)) host.toast?.('The sample picture could not be loaded.');
         }
       });
       this.sampleRow.append('No picture to hand? ', trySample);
@@ -807,7 +808,12 @@ export class PetalSection extends Section {
     this.rays=[];this.handles=[];
     this.svg.addEventListener('pointerdown',event=>{const target=event.target.closest('[data-handle]');if(target){target.setPointerCapture(event.pointerId);this.dragIndex=Number(target.dataset.handle);this.drag(event);}});
     this.svg.addEventListener('pointermove',event=>{if(this.dragIndex!==undefined)this.drag(event);});
-    this.svg.addEventListener('pointerup',()=>{this.dragIndex=undefined;this.host.commit?.();});
+    const finishDrag = () => {
+      if (this.dragIndex === undefined) return;
+      this.dragIndex = undefined;
+      this.host.commit?.();
+    };
+    for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) this.svg.addEventListener(event, finishDrag);
     // returned for the section to hold: `this.node` is the section itself, and appending it to itself throws
     return el('div',{class:'petal-control'},this.hint(),this.svg);
   }
@@ -1112,7 +1118,7 @@ export class DesignPanel extends Control {
         return button;
       }), el('span', { class: 'small muted', 'aria-hidden': 'true', text: '·' }), this.printVariants) : null;
     this.node = el('div', { id: `panel-${mod.id}`, class: 'panel', hidden: true },
-      el('header', { class: 'panel-head' }, el('h1', { class: 'title', text: mod.name }), this.badges, ...(this.joins ? [this.joins] : []), ...(this.alsoOn ? [this.alsoOn] : [])));
+      el('header', { class: 'panel-head' }, el('h2', { class: 'title', text: mod.name }), this.badges, ...(this.joins ? [this.joins] : []), ...(this.alsoOn ? [this.alsoOn] : [])));
     this.sections = [];
     let sliderGroup = 0;
     mod.controls.forEach((spec, index) => {
@@ -1231,12 +1237,13 @@ export class SvgImportCard extends Control {
     this.node = el('div', { class: 'svg-layer-control', 'aria-label': 'SVG import' },
       el('div', { class: 'svg-layer-actions' }, this.pick, this.dropHint, this.remove), this.sample, this.info, this.fit, this.shapeRow, this.note);
     this.tryButton.addEventListener('click', async () => {
+      const request = host.requestSvg();
       try {
         const res = await fetch(SAMPLE_SVG);
         if (!res.ok) throw new Error(`${res.status}`);
-        await host.importSvg(new File([await res.text()], 'filafabric-sample.svg', { type: 'image/svg+xml' }));
+        await host.importSvg(new File([await res.text()], 'filafabric-sample.svg', { type: 'image/svg+xml' }), request);
       } catch {
-        host.toast('The sample drawing could not be loaded. Download it and import it instead.');
+        if (host.currentSvgRequest(request)) host.toast('The sample drawing could not be loaded. Download it and import it instead.');
       }
     });
 

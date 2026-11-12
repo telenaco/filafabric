@@ -138,6 +138,8 @@ export function bindFeedback(dialog, { context, toast, send = sendFeedback }) {
   const sendButton = dialog.querySelector('#feedback-send');
   const trap = dialog.querySelector('[name="_gotcha"]');
   let report = '';
+  let session = 0;
+  let pending = null;
 
   const kind = () => kindOf(form.querySelector('[name="kind"]:checked')?.value);
   const say = (text, error = false) => {
@@ -145,6 +147,19 @@ export function bindFeedback(dialog, { context, toast, send = sendFeedback }) {
     status.classList.toggle('error', error);
   };
   const refreshMailto = () => { mailto.href = pictureMailto(message.value, context().designName); };
+  const sendStatus = () => {
+    if (!pending) return '';
+    return pending.session === session ? 'Sending…' : 'A previous message is still being sent…';
+  };
+  function draft() {
+    const selected = kind();
+    return {
+      kind: selected,
+      message: message.value,
+      email: email.value,
+      report: selected === 'problem' && include.checked ? report : '',
+    };
+  }
 
   function update() {
     const k = kind();
@@ -157,14 +172,15 @@ export function bindFeedback(dialog, { context, toast, send = sendFeedback }) {
       reportText.textContent = report;
     }
     refreshMailto();
-    say('');
+    say(sendStatus());
   }
 
   function open(k = 'opinion') {
+    session++;
     const radio = form.querySelector(`[name="kind"][value="${kindOf(k)}"]`);
     if (radio) radio.checked = true;
     update();
-    sendButton.disabled = false;
+    sendButton.disabled = !!pending;
     if (!dialog.open) dialog.showModal();
     message.focus();
   }
@@ -175,25 +191,51 @@ export function bindFeedback(dialog, { context, toast, send = sendFeedback }) {
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!dialog.open || pending) return;
     if (trap?.value) { dialog.close(); return; } // a bot filled the hidden field: drop it quietly
     const { designName, release } = context();
-    const { fields, error } = feedbackFields(kind(), {
-      message: message.value, email: email.value, designName, release,
-      report: kind() === 'problem' && include.checked ? report : '',
-    });
+    const submitted = draft();
+    const { fields, error } = feedbackFields(submitted.kind, { ...submitted, designName, release });
     if (error) { say(error, true); message.focus(); return; }
+
+    const submission = { session };
+    pending = submission;
     sendButton.disabled = true;
-    say('Sending…');
-    const result = await send(fields);
+    say(sendStatus());
+    let result;
+    try {
+      result = await send(fields);
+    } catch {
+      result = { ok: false, message: 'There was no connection to the form service.' };
+    }
+    pending = null;
     sendButton.disabled = false;
+
+    // Closing the dialog leaves the POST in flight. A reopened dialog owns its own draft.
+    if (submission.session !== session) {
+      if (dialog.open) say('');
+      if (result.ok) toast('Your earlier feedback was sent.');
+      return;
+    }
+    const current = draft();
+    const unchanged = Object.keys(submitted).every((key) => submitted[key] === current[key]);
     if (result.ok) {
-      message.value = '';
-      say('');
-      dialog.close();
+      if (unchanged) {
+        message.value = '';
+        say('');
+        if (dialog.open) dialog.close();
+      } else if (dialog.open) {
+        say('Message sent. Your new draft is still here.');
+      }
       toast('Thank you: your message was sent.');
       return;
     }
-    const fallback = document.createElement('a');
+    if (!dialog.open) return;
+    if (!unchanged) {
+      say('The previous message could not be sent. Your current draft is still here.', true);
+      return;
+    }
+    const fallback = dialog.ownerDocument.createElement('a');
     fallback.href = `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(fields._subject)}&body=${encodeURIComponent(fields.message)}`;
     fallback.textContent = FEEDBACK_EMAIL;
     const why = /[.!?]$/.test(result.message) ? result.message : `${result.message}.`;

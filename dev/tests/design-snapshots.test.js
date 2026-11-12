@@ -42,6 +42,23 @@ test('snapshot summaries measure only extrusion after each travel', () => {
     'a changed print command alters the hash');
 });
 
+test('snapshot hashes tolerate roundoff in motion summaries and detect changes in timing and commands', () => {
+  const { machine, material } = defaultProfiles();
+  const cfg = resolveConfig(machine, material);
+  const hash = (extrusion, x = '3.000') => summarizeOutput('fixture', 'default', {}, {
+    cfg, moves: [], strands: [],
+    gcode: [
+      `; motion summary {"timeByKind":{"extrusion":${extrusion}}}`,
+      `G1 X${x}`,
+      `; actual motion summary {"timeByKind":{"extrusion":${extrusion}}}`,
+    ].join('\n'),
+  }).gcodeSha256;
+
+  assert.equal(hash(20.154932711859033), hash(20.154932711859036));
+  assert.notEqual(hash(20.154932711859033), hash(20.154933711859033));
+  assert.notEqual(hash(20.154932711859033), hash(20.154932711859033, '3.001'));
+});
+
 test('output snapshots cover every ready design and its presets', async (t) => {
   assert.deepEqual(
     fs.readdirSync(snapshotsRoot).filter((file) => file.endsWith('.json')).sort(),

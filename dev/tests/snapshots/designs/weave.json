@@ -3,7 +3,7 @@
     "card": "weave",
     "preset": "default",
     "settingsHash": "d3264149406a",
-    "gcodeSha256": "3ebbe103014e43373f188a0a9aac7799800121ec9e2ae300c0ac23c9900daeca",
+    "gcodeSha256": "e321ef293ba08111c157b19a3aa4bf2a38fb5d259b1b4be701ca81d360c4677e",
     "strands": 864,
     "moves": 5258,
     "extrudeMm": 1459.5,

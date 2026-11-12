@@ -9,8 +9,9 @@ class Node {
   replaceChildren(...c) { this.children = c; }
   addEventListener(type, fn) { (this.listeners[type] ??= []).push(fn); }
   fire(type) { for (const fn of this.listeners[type] ?? []) fn({}); }
-  contains() { return false; }
-  querySelector() { return null; }
+  contains(node) { return this === node || this.children.some((child) => child instanceof Node && child.contains(node)); }
+  querySelector(selector) { return find(this, (node) => node.dataset.regionFocus === selector.match(/^\[data-region-focus="(.+)"\]$/)?.[1]); }
+  focus() { document.activeElement = this; }
   walk(fn) { fn(this); for (const c of this.children) if (c instanceof Node) c.walk(fn); }
   text() { let t = this.textContent; for (const c of this.children) t += c instanceof Node ? c.text() : String(c); return t; }
 }
@@ -24,7 +25,7 @@ function controls(regions, selection) {
   const bar = new Node('div'), header = new Node('div');
   const c = new RegionControls({ bar, header, cards: [{ id: 'zigzag', name: 'Zigzag', status: 'ready', shelf: 'Flat' }], change: (id, patch) => calls.push({ id, patch }), select() {}, close() {}, useCard() {} });
   c.update(regions, selection, { enabled: true, width: 0.76, align: 'centre' });
-  return { calls, header };
+  return { calls, bar, header, redraw: (nextSelection) => c.update(regions, nextSelection, { enabled: true, width: 0.76, align: 'centre' }) };
 }
 
 const find = (root, test) => { let hit = null; root.walk((n) => { if (!hit && test(n)) hit = n; }); return hit; };
@@ -56,4 +57,43 @@ test('editing a ticked colour does not touch whether it is included', () => {
   const { calls, header } = controls([region('r2', '#000000', 'line', true)], 'r2');
   find(header, (n) => n.tag === 'select' && n.attrs.id === 'region-role').fire('change');
   assert.equal('enabled' in calls[0].patch, false);
+});
+
+test('an applied colour remains part of the piece when unticked', () => {
+  const { bar, header } = controls([{ ...region('r2', '#000000', 'line', false), applied: true }], 'r2');
+  assert.equal(find(header, (n) => /region-excluded-note/.test(n.className)), null);
+  assert.match(header.text(), /Applied: this colour is part of the piece/);
+  const chip = find(bar, (n) => n.className.startsWith('region-chip ') && !n.className.includes('region-all'));
+  assert.doesNotMatch(chip.className, /excluded/);
+  const toggle = find(chip, (n) => n.tag === 'input');
+  assert.ok(!Object.hasOwn(toggle.attrs, 'checked'), 'the working toggle stays unticked');
+  assert.match(find(chip, (n) => n.tag === 'button').attrs['aria-label'], /included/);
+});
+
+test('editing an applied unticked colour preserves its working toggle', () => {
+  const { calls, header } = controls([{ ...region('r2', '#000000', 'line', false), applied: true }], 'r2');
+  find(header, (n) => n.attrs.id === 'region-role').fire('change');
+  assert.equal(calls.length, 1);
+  assert.ok(!Object.hasOwn(calls[0].patch, 'enabled'));
+});
+
+test('Take out of the piece clears both membership flags when the colour is ticked', () => {
+  const { calls, header } = controls([{ ...region('r2', '#000000', 'line', true), applied: true }], 'r2');
+  find(header, (n) => n.textContent === 'Take out of the piece').fire('click');
+  assert.deepEqual(calls, [{ id: 'r2', patch: { applied: false, enabled: false } }]);
+});
+
+test('the region header restores keyboard focus after redraw and when returning to the whole piece', () => {
+  const { bar, header, redraw } = controls([region('r2', '#000000', 'line', true)], 'r2');
+  const role = find(header, (n) => n.attrs.id === 'region-role');
+  role.focus();
+  redraw('r2');
+  const updated = find(header, (n) => n.attrs.id === 'region-role');
+  assert.notEqual(updated, role);
+  assert.equal(document.activeElement, updated);
+
+  find(header, (n) => n.textContent === 'Whole piece').focus();
+  redraw(null);
+  assert.equal(document.activeElement, find(bar, (n) => n.dataset.regionFocus === 'r2'));
+  document.activeElement = null;
 });

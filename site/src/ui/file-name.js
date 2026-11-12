@@ -115,12 +115,24 @@ export function ownName(docName) {
   return slug && slug !== 'untitled-swatch' ? shorten(slug, 40) : '';
 }
 
+/** A readable, bounded printer model, with a distinct suffix for profiles sharing a model name. */
+export function printerFileToken(machine) {
+  if (!machine) return '';
+  const slug = value => String(value ?? '').normalize('NFKD').replace(/\p{M}/gu, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const id = slug(machine.id);
+  const model = slug(machine.name) || id || 'model';
+  const prefix = model.slice(0, 34).replace(/-+$/, '');
+  const suffix = machine.id === model && prefix === model ? '' : '-' + digest(JSON.stringify([machine.id, machine.name])).slice(0, 8);
+  return 'printer-' + prefix + suffix;
+}
+
 /** Stable family-level name for a bed containing several design variants. */
-export function variantsFileName(family, hash) {
+export function variantsFileName(family, hash, machine) {
   const cleanFamily=String(family??'fabric').toLowerCase().replace(/[^a-z0-9-]+/g,'-').replace(/^-+|-+$/g,'')||'fabric';
   const safeHash=String(hash??'').toLowerCase().replace(/[^a-f0-9]/g,'').slice(0,12);
   if(!safeHash)throw new TypeError('A settings fingerprint is required for a variants export.');
-  return `${cleanFamily}-variants-${safeHash}.gcode`;
+  return [cleanFamily, 'variants', safeHash, printerFileToken(machine)].filter(Boolean).join('-') + '.gcode';
 }
 
 /** Whether every named setting still has the design's default value (a swatch that started from no preset). */
@@ -136,11 +148,11 @@ export function untouched(keys, s, defaults) {
  * @param size    [w, h] in mm of what is exported
  * @param print   { layerHeight, extraLayers, brim } (legacy layers is also accepted), material: the filament id, docName: the swatch's name, panel: a full panel
  */
-export function exportFileName(design, s, keys, { size, print, material, docName = '', panel = false }) {
+export function exportFileName(design, s, keys, { size, print, material, machine, docName = '', panel = false }) {
   if (panel) s = { ...s, colorChange: false, colourMode: 'one', layerColours: [] };
   const preset = (design.presetMatch ? design.presetMatch(s) : null) ?? (untouched(keys, s, design.defaults()) ? 'default' : 'custom');
   const mm = (n) => String(n);
-  const head = [design.file, preset, `${mm(size[0])}x${mm(size[1])}mm`, panel ? 'panel' : ''].filter(Boolean);
+  const head = [design.file, preset, `${mm(size[0])}x${mm(size[1])}mm`, panel ? 'panel' : '', printerFileToken(machine)].filter(Boolean);
   const count = Object.hasOwn(print, 'extraLayers') ? `extra${print.extraLayers}` : `layers${print.layers}`;
   const tail = [...(print.meshPerimeters !== undefined ? [`meshOutlines${print.meshPerimeters}`] : []), ...(print.solidLayers !== undefined ? [`solid${print.solidLayers}`] : []), print.perimeters !== undefined ? `perimeters${print.perimeters}` : `brim${print.brim ?? 2}`, `lh${showValue(print.layerHeight)}`, count, material, ownName(docName)];
   return settingsFileName({ head, s, keys, tail }, { max: 180 });
@@ -165,6 +177,7 @@ export function parseFileName(name) {
   let i = 3;
   const panel = tokens[i] === 'panel';
   if (panel) i++;
+  const printer = tokens[i]?.startsWith('printer-') ? tokens[i++].slice(8) : null;
   const settings = {};
   let layerHeight = null, layers = null, extraLayers = null, solidLayers = null, perimeters = null, meshPerimeters = null, brim = null, material = null, swatchName = null, settingsDigest = null;
   for (; i < tokens.length; i++) {
@@ -189,5 +202,5 @@ export function parseFileName(name) {
     if (number) settings[({shA:'shape1',shB:'shape2',shC:'shape3',shD:'shape4',shE:'shape5',shF:'shape6'})[number[1]] ?? number[1]] = number[2];
     else if (dash > 0) settings[t.slice(0, dash)] = t.slice(dash + 1);
   }
-  return { design, preset, size: [Number(dims[1]), Number(dims[2])], panel, settings, layerHeight, layers, ...(solidLayers !== null ? { solidLayers } : {}), ...(extraLayers !== null ? { extraLayers } : {}), ...(perimeters !== null ? { perimeters } : {}), ...(meshPerimeters !== null ? { meshPerimeters } : {}), brim, material, swatchName, ...(settingsDigest ? { settingsDigest } : {}) };
+  return { design, preset, size: [Number(dims[1]), Number(dims[2])], panel, ...(printer ? { printer } : {}), settings, layerHeight, layers, ...(solidLayers !== null ? { solidLayers } : {}), ...(extraLayers !== null ? { extraLayers } : {}), ...(perimeters !== null ? { perimeters } : {}), ...(meshPerimeters !== null ? { meshPerimeters } : {}), brim, material, swatchName, ...(settingsDigest ? { settingsDigest } : {}) };
 }
