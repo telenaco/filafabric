@@ -34,7 +34,8 @@ export function preflight(moves, cfg) {
   const { first, print, bed: bedTemp } = derived.temperatures;
   if (!(first > 0 && first <= 300)) errors.push(`first layer temperature ${first} C is outside 1-300`);
   if (!(print > 0 && print <= 300)) errors.push(`print temperature ${print} C is outside 1-300`);
-  if (!(bedTemp >= 0 && bedTemp <= 120)) errors.push(`bed temperature ${bedTemp} C is outside 0-120`);
+  const bedLimit = cfg.machine.max_bed_temperature ?? 120;
+  if (!(bedTemp >= 0 && bedTemp <= bedLimit)) errors.push(`bed temperature ${bedTemp} C is outside 0-${bedLimit}`);
   let outside = 0;
   let example = null;
   for (const m of moves) {
@@ -149,7 +150,9 @@ export class GcodeWriter {
     const {t,machine,derived}=this.cfg, o=derived.origin, r=m.retraction??derived.retraction;
     if(![m.x,m.y,m.z].every(Number.isFinite) || m.x+o.x < -1e-6 || m.x+o.x > machine.bed.width+1e-6 || m.y+o.y < -1e-6 || m.y+o.y > machine.bed.depth+1e-6 || m.z < -1e-6 || m.z > machine.bed.max_z+1e-6) throw new PreflightError(['A streamed move leaves the printable volume or is not finite']);
     const out=[];this.moves++;this.maxZ=Math.max(this.maxZ,m.z);
-    if(m.comment) out.push('; '+m.comment); if(m.customGcode) out.push(m.customGcode);
+    const omitPause = machine.single_filament && /^M600\b/i.test(m.customGcode ?? '');
+    if(m.comment && !omitPause) out.push('; '+m.comment);
+    if(m.customGcode && !omitPause) out.push(m.customGcode);
     // Crossing lifts and raised fabrics have no simple layer index. Switch once on actual
     // extrusion above the bed layer; high travel approaches keep the first-layer setting.
     if(!this.printTemperatureApplied && m.extrude && m.z>t.layer_height+1e-6) {

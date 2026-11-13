@@ -265,7 +265,7 @@ test('an obsolete construction failure cannot disable the current Export button'
   runInNewContext(uiFunction('currentBuildError') + '\n' + uiFunction('renderExport') + '\nrenderExport();', {
     $, state, exporting: false, overviewActive: false, readyGcode: null,
     buildKey: () => 'current', snapshotKey: () => 'current', currentPrintSizeProblem: () => '',
-    requiresApply: () => false, isReady: () => true, designById: () => ({}),
+    requiresApply: () => false, isReady: () => true, experimentalPrinter: () => false,
   });
   assert.equal($('#btn-export').disabled, false);
 });
@@ -314,12 +314,13 @@ test('Apply waits for the matching preview and preserves its toolpath key once c
   const regions = [{ id: 'red', applied: true, enabled: false, order: 1 }, { id: 'green', enabled: true }, { id: 'blue', enabled: true }];
   const state = { regions, machines: new Map(), materials: new Map(), design: 'zigzag', print: {} };
   let commits = 0;
+  let exportUpdates = 0;
   const host = {
     state, previewBuild: null, pendingRegionApply: null, exporting: false,
     captureRegionSettings() {}, settingsOf: () => ({}), currentBuildError: () => null,
     pieceRegions: () => regions.map(({ applied, ...r }) => ({ ...r, enabled: r.enabled || applied })),
     workingRegions: () => regions.filter(r => r.enabled && !r.applied),
-    renderRegions() {}, commit() { commits++; },
+    renderRegions() {}, commit() { commits++; }, renderExport() { exportUpdates++; },
     previewAtSelectedSize() { throw new Error('Apply should reuse the running preview'); },
   };
   runInNewContext(['buildKey', 'applyPiece', 'finishRegionApply'].map(uiFunction).join('\n'), host);
@@ -333,6 +334,7 @@ test('Apply waits for the matching preview and preserves its toolpath key once c
   assert.deepEqual(regions.map(r => [r.applied, r.order]), [[true, 1], [true, 2], [true, 3]]);
   assert.equal(host.buildKey(), key);
   assert.equal(commits, 1);
+  assert.equal(exportUpdates, 1, 'applying a cached preview also enables the export action');
 });
 
 test('scheduling a preview retires the old epoch before the next worker starts', () => {

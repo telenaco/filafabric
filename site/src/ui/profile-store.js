@@ -31,11 +31,16 @@ export class ProfileStore {
    * The printer library (profiles/library, made by dev/tools/import-vendor-profiles.mjs from the slicers' vendor profiles):
    * only its index is read here, a few hundred names; a vendor's file is read when one of its printers is chosen.
    */
-  async loadLibrary(base = 'profiles/library') {
+  async loadLibrary(base = 'profiles/library', { vendorIds } = {}) {
     this.libraryBase = base;
     try {
       const res = await fetch(`${base}/index.json`);
       this.library = res.ok ? await res.json() : null;
+      if (this.library && vendorIds) {
+        const vendors = this.library.vendors.filter(vendor => vendorIds.includes(vendor.id));
+        const visible = new Set(vendors.map(vendor => vendor.id));
+        this.library = { ...this.library, vendors, machines: this.library.machines.filter(machine => visible.has(machine.vendor)) };
+      }
     } catch {
       this.library = null;
     }
@@ -99,13 +104,14 @@ export class ProfileStore {
   }
 
   /** Every profile file the folder's index lists. Entries are file names; a bare id means `<id>.json`. */
-  async loadFolders(base = 'profiles') {
+  async loadFolders(base = 'profiles', { machineFiles } = {}) {
     const res = await fetch(`${base}/index.json`);
     if (!res.ok) throw new Error('the profiles folder has no index.json');
     const index = await res.json();
     for (const kind of ['machines', 'materials']) {
       for (const entry of index[kind] ?? []) {
         const file = hasExtension(entry) ? entry : `${entry}.json`;
+        if (kind === 'machines' && machineFiles && !machineFiles.includes(file)) continue;
         try {
           const r = await fetch(`${base}/${kind}/${file}`);
           if (!r.ok) throw new ProfileImportError([`the file is listed but could not be read (${r.status})`]);

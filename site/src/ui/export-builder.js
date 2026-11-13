@@ -1,4 +1,4 @@
-const createSwatchWorker = () => new Worker(new URL('./swatch-worker.js?v=20261112-region-build', import.meta.url), { type: 'module' });
+const createSwatchWorker = () => new Worker(new URL('./swatch-worker.js?v=20261112-hole-rim', import.meta.url), { type: 'module' });
 const abortError = () => new DOMException('Export cancelled', 'AbortError');
 // Whole-piece patterns of colour regions, kept between jobs so that only a changed colour is generated again (newest last).
 const patternCache = new Map(), PATTERN_CACHE_LIMIT = 8;

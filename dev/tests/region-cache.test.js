@@ -60,16 +60,18 @@ test('picture pixels never reuse or populate the reusable region pattern cache',
   assert.equal(actual.gcode, expected.gcode);
 });
 
-test('legacy output is preserved for default controls and unchanged region order', () => {
+test('legacy output is preserved for drawings without cutouts and unchanged region order', () => {
   for (const shapeOutline of [true, false]) {
     const input = { ...inputForRegions(), shapeOutline };
+    input.vector = { ...vector, paths: [vector.paths[0], vector.paths[2]], styles: [vector.styles[0], vector.styles[2]] };
+    input.regions = regionsFromDrawing(input.vector, { currentCard: input.design, currentSettings: input.settings });
     const original = generateDesignExport(input);
     const regions = input.regions.map((region, index) => ({ ...region, order: index + 1, lineLayers: 1, passSpacing: 0.8 }));
     const applied = generateDesignExport({ ...input, regions });
     assert.equal(applied.gcode, original.gcode);
     assert.equal(applied.patternCache, undefined, 'the legacy single-pattern path still applies');
     assert.ok(applied.strands.some((strand) => strand.fixed && strand.pts.every((p) => Math.abs(p.y - 15) < 1)
-      && strand.pts.some((p) => p.x < 10) && strand.pts.some((p) => p.x > 30)), 'the dedicated line crosses the hole on the legacy path');
+      && strand.pts.some((p) => p.x < 10) && strand.pts.some((p) => p.x > 30)), 'the dedicated line stays on the legacy path');
     assert.equal(applied.fabric.outsideSegments, 0);
   }
 });

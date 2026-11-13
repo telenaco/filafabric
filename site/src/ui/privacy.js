@@ -47,7 +47,7 @@ export function savePrivacyChoice(stats, storage = browserSession) {
 /** Exports are counted unless the visitor said no; until they answer, the notice itself is on screen. */
 export const statsAllowed = (storage) => readPrivacyChoice(storage)?.stats !== false;
 
-/** Wires the notice in index.html. It opens by itself until answered, and open() brings it back from the menu. */
+/** Wires the notice in index.html. It opens by itself until answered, and open() brings it back. */
 export function bindPrivacyNotice(banner, { storage, onChange, openFeedback, toast } = {}) {
   const status = banner.querySelector('#privacy-state');
   const accept = banner.querySelector('#privacy-accept');
@@ -66,7 +66,7 @@ export function bindPrivacyNotice(banner, { storage, onChange, openFeedback, toa
     savePrivacyChoice(stats, storage);
     banner.hidden = true;
     onChange?.(stats);
-    if (!stats) toast?.('Your exports will not be counted. Change this under Tools and information › Export statistics preferences.');
+    if (!stats) toast?.('Your exports will not be counted.');
   }
 
   accept.addEventListener('click', () => answer(true));

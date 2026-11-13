@@ -7,7 +7,7 @@ import { sanitizeSvgLines } from '../engine/svg-lines.js';
 import { sanitizeFilamentSettings } from './filament-settings.js';
 import { BACKING_MESH } from '../engine/backing.js';
 import { migrateState } from './library.js';
-import { sanitizeRegions, sanitizeSeam, sanitizeOutsideOutline } from '../engine/regions.js?v=20261112-region-build';
+import { sanitizeRegions, sanitizeSeam, sanitizeOutsideOutline } from '../engine/regions.js?v=20261112-hole-rim';
 
 /** The designs a link can open, in gallery order (planned placeholders are not loadable). The first opens by default. */
 export const DESIGN_IDS = READY_IDS;

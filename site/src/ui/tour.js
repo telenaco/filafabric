@@ -55,7 +55,7 @@ function steps({ design }) {
     },
     {
       title: 'Choose your printer',
-      text: 'Type its name, for example MK4, Bambu or Ender, and pick it from the list. Choose the one with your nozzle size: 0.4 mm is the standard nozzle most printers come with.',
+      text: 'Search for your Prusa model or the Anycubic Kobra 3 Max V2. Choose the profile that matches your nozzle size.',
       target: () => $('#machine-picker'), enter: openPrinter,
     },
     {

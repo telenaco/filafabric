@@ -4,8 +4,24 @@ import { writeGcode, preflight, PreflightError, GcodeWriter } from '../../site/s
 import { resolveConfig } from '../../site/src/engine/params.js';
 import { plan } from '../../site/src/engine/planner.js';
 import { computeStats } from '../../site/src/engine/stats.js';
-import { defaultProfiles, retractingMaterial } from './helpers.js';
+import { defaultProfiles, loadProfile, retractingMaterial } from './helpers.js';
 import { scene } from './scene.js';
+
+test('the experimental Kobra profile exports one filament and rejects bed temperatures above its hardware limit', () => {
+  const machine = loadProfile('machines', 'anycubic-kobra-3-max-v2');
+  const { machine: prusa, material } = defaultProfiles();
+  const moves = [
+    { x: 0, y: 0, z: .2, cls: 'travel', customGcode: 'M600 ; Pause for filament color change' },
+    { x: 10, y: 0, z: .2, cls: 'base', extrude: true },
+  ];
+  const gcode = writeGcode(moves, resolveConfig(machine, { ...material, bed_temperature: 90 }));
+  assert.match(gcode, /^M190 S90$/m);
+  assert.match(gcode, /^BED_MESH_PROFILE LOAD=default$/m);
+  assert.match(gcode, /^G1 .+ E[\d.]+/m);
+  assert.doesNotMatch(gcode, /^M600\b/m);
+  assert.match(writeGcode(moves, resolveConfig(prusa, material)), /^M600\b/m);
+  assert.throws(() => writeGcode(moves, resolveConfig(machine, { ...material, bed_temperature: 91 })), /bed temperature 91 C is outside 0-90/);
+});
 
 test('sub-resolution extrusion is carried into the next moving segment instead of emitted as a stationary push', () => {
   const { machine, material } = defaultProfiles();

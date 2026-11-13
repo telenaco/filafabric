@@ -101,6 +101,7 @@ test('settings files and links keep applied membership and print order independe
   Object.assign(regions[0], { enabled: false, applied: true, order: 1 });
   regions[0].seam = { enabled: true, width: 2.44, align: 'outside' };
   Object.assign(regions[1], { enabled: true, applied: true, order: 2 });
+  regions[1].holeRimWidth = 1.25;
   regions[2].enabled = false;
   const state = { v: 4, design: 'zigzag', vector, regions, print: { outsideOutline: { count: 2, align: 'centre' } } };
   const known = { machines: ['prusa-mk3s'], materials: ['filaflex-95-foamy'] };
@@ -114,6 +115,7 @@ test('settings files and links keep applied membership and print order independe
     ]);
     assert.deepEqual(restored.map(regionInPiece), [true, true, false, true]);
     assert.deepEqual(restored[0].seam, { enabled: true, width: 2.44, align: 'outside' });
+    assert.equal(restored[1].holeRimWidth, 1.25);
     assert.deepEqual(print.outsideOutline, { count: 2, align: 'centre' });
   }
 });

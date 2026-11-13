@@ -1,5 +1,5 @@
 import { defaultCacheIdentity, referenceCacheIdentity, parseDefaultResult } from '../engine/default-cache-format.js';
-import { PRECOMPUTED_REVISION } from './precomputed-version.js';
+import { PRECOMPUTED_REVISION } from './precomputed-version.js?v=20261112-studio-cleanup';
 
 const abort = signal => { if (signal?.aborted) throw new DOMException('Build cancelled', 'AbortError'); };
 const sha256 = async bytes => [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(v => v.toString(16).padStart(2, '0')).join('');

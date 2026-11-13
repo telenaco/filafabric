@@ -1,4 +1,4 @@
-import { closedRing, linePassesDetailed } from './drawing.js';
+import { closedRing, linePassesDetailed, offsetPolyline, MAX_PASSES } from './drawing.js';
 import { polygonRegion } from './polygon-region.js';
 import { PolygonBoundary } from './boundary.js';
 import { clipStrands, segmentInside, segmentContact, analyzeFabric } from './fabric.js';
@@ -169,6 +169,8 @@ export const sanitizeOutsideOutline = (raw) => ({
   count: Number.isFinite(Number(raw?.count)) ? Math.max(0, Math.min(8, Math.round(Number(raw.count)))) : 0,
   align: SEAM_ALIGNS.includes(raw?.align) ? raw.align : 'inside',
 });
+export const holeRimWidthOf = (value) => value !== '' && value != null && Number.isFinite(Number(value))
+  ? Math.max(0, Math.min(10, Number(value))) : null;
 
 /** Derive identity and path membership from the drawing, never from untrusted saved indices. */
 export function sanitizeRegions(raw, vector, { cards, currentCard, currentSettings, notes = [] } = {}) {
@@ -182,6 +184,7 @@ export function sanitizeRegions(raw, vector, { cards, currentCard, currentSettin
     if (!saved) return base;
     const role = ['pattern', 'solid', 'hole', 'line'].includes(saved.role) ? saved.role : base.role;
     const region = { ...base, role, enabled: saved.enabled !== false, lineAlign: ['centre','inside','outside','left','right'].includes(saved.lineAlign) ? saved.lineAlign : 'centre', passSpacing: Number.isFinite(Number(saved.passSpacing)) ? Math.max(.6, Math.min(1, Number(saved.passSpacing))) : .8, lineLayers: lineLayersOf(saved), ...(lineWidthOf(saved) ? { lineWidth: lineWidthOf(saved) } : {}), ...(Number.isInteger(saved.order) && saved.order > 0 ? { order: saved.order } : {}), ...(saved.applied === true ? { applied: true } : {}) };
+    if (role === 'hole' && holeRimWidthOf(saved.holeRimWidth) !== null) region.holeRimWidth = holeRimWidthOf(saved.holeRimWidth);
     if (role === 'pattern') {
       if (saved.seam && typeof saved.seam === 'object') region.seam = sanitizeSeam(saved.seam);
       const card = cards.find(card => card.id === (saved.card ?? base.card) && card.status === 'ready');
@@ -199,6 +202,50 @@ export function sanitizeRegions(raw, vector, { cards, currentCard, currentSettin
 }
 
 export const regionsFingerprint = (vector, regions, seam, print = {}) => fingerprint({ vector, regions, seam: sanitizeSeam(seam), print });
+
+/** Contiguous paths along a closed contour, including a run that crosses its first point. */
+function ringRuns(points, mask) {
+  const start = mask.indexOf(false);
+  if (start < 0) return [[...points, points[0]]];
+  const runs = [];
+  let run = null;
+  for (let i = 1; i <= points.length; i++) {
+    const edge = (start + i) % points.length;
+    if (!mask[edge]) { run = null; continue; }
+    if (!run) { run = [edge]; runs.push(run); }
+    run.push((edge + 1) % points.length);
+  }
+  return runs.map(indices => indices.map(index => points[index]));
+}
+
+/** Region rings have material on their left. On the right, the innermost contour decides if they border a cutout. */
+function cutoutEdges(ring, contours, bead) {
+  return ring.map((a, i) => {
+    const b = ring[(i + 1) % ring.length], dx = b.x - a.x, dy = b.y - a.y;
+    const probe = Math.min(1e-5 / Math.hypot(dx, dy), .01);
+    const owner = contours.find(c => c.boundary.contains((a.x + b.x) / 2 + dy * probe, (a.y + b.y) / 2 - dx * probe));
+    if (owner?.role !== 'hole') return null;
+    return owner.rimWidth === 0 ? 0 : Math.max(1, Math.min(MAX_PASSES, Math.round((owner.rimWidth - bead) / (.8 * bead)) + 1));
+  });
+}
+
+/** Reserve the inner side of each rim so fill strands end against its last pass. */
+function boundaryBehindRims(material, edges, bead, seamInset) {
+  const bands = [];
+  for (const { ring, passes } of edges) {
+    const insets = passes.map(count => count === null ? seamInset : count ? (.9 + .8 * (count - 1)) * bead : 0);
+    const closed = [...ring, ring[0]];
+    for (const inset of new Set(insets.filter(n => n > 0))) {
+      const offset = offsetPolyline(closed, inset).slice(0, -1);
+      const mask = insets.map(n => n === inset);
+      const outside = ringRuns(ring, mask), inside = ringRuns(offset, mask);
+      if (mask.every(Boolean)) bands.push(new PolygonBoundary([ring, offset]));
+      else outside.forEach((run, i) => bands.push(new PolygonBoundary([[...run, ...inside[i].reverse()]])));
+    }
+  }
+  return { rings: [...material.rings, ...bands.flatMap(band => band.rings)],
+    contains: (x, y) => material.contains(x, y) && !bands.some(band => band.contains(x, y)) };
+}
 
 /** Positive-length collinear overlap; supports borders split into different segment counts. */
 function overlap(a, b, c, d) {
@@ -239,7 +286,8 @@ export function buildRegions(machine, material, vector, regions, { seam = {}, ou
   const scaled = { ...vector, width, height, paths: vector.paths.map(path => path.map(p => ({ ...p, x:p.x*width/vector.width, y:p.y*height/vector.height }))) };
   const polygons = regionPolygons(scaled, regions), polygonById = new Map(polygons.map(p=>[p.regionId,p]));
   const rectangle = [{x:0,y:0},{x:width,y:0},{x:width,y:height},{x:0,y:height}];
-  const contours = enabledContours(scaled, regions);
+  const contours = enabledContours(scaled, regions, bead, width / vector.width);
+  const hasHoles = contours.some(contour => contour.role === 'hole');
   const allowed = polygonRegion([rectangle,...contours.map(contour=>contour.ring)], (x,y)=>{
     if(x<0||x>width||y<0||y>height)return false;
     // A positive island inside a hole restores material, just like region ownership does.
@@ -255,15 +303,20 @@ export function buildRegions(machine, material, vector, regions, { seam = {}, ou
     { x: cfg.machine.bed.width, y: cfg.machine.bed.depth }, { x: 0, y: cfg.machine.bed.depth }]
     .map(({ x, y }) => ({ x: x - origin.x, y: y - origin.y }));
   let strands = [], warnings = [], serial = 0;
+  const rims = [], cutoutsByRegion = new Map();
   const metadata = [], intendedByRegion=new Map(), enabled = regions.filter(r=>r.enabled!==false).map((r,i)=>[r,i]).sort((a,b)=>(a[0].order??Infinity)-(b[0].order??Infinity)||a[1]-b[1]).map(([r])=>r); // printed in the order they were applied
   for (const [index,region] of enabled.entries()) {
     progress({ done:index, total:enabled.length, message:`Building colour ${index + 1} of ${enabled.length} · ${colourName(region.hex) ?? region.color}…` });
     const polygon = polygonById.get(region.id);
+    const material = polygon?.rings.length ? new PolygonBoundary(polygon.rings) : null;
+    const edges = hasHoles && material ? polygon.rings.map(ring => ({ ring, passes: cutoutEdges(ring, contours, bead) })) : [];
+    const bordersCutout = edges.some(edge => edge.passes.some(count => count !== null));
+    if (bordersCutout) cutoutsByRegion.set(region.id, edges);
     let generated = [];
     if (region.role==='pattern' && polygon?.rings.length) {
       // The pattern is made over this region's own box plus a margin, edge to edge, and the region is cut out of it: it
       // runs right to the region's edge without being made for the whole piece (slow, and past some designs' limits).
-      const box = new PolygonBoundary(polygon.rings).bbox();
+      const box = material.bbox();
       const margin = Math.min(10, Math.max(3, .1 * Math.max(width, height)));
       const x0 = Math.max(0, box.minX - margin), y0 = Math.max(0, box.minY - margin);
       const x1 = Math.min(width, box.maxX + margin), y1 = Math.min(height, box.maxY + margin);
@@ -280,7 +333,8 @@ export function buildRegions(machine, material, vector, regions, { seam = {}, ou
       // with a contour, the pattern stops where the contour's inner pass is, overlapping it by half a bead, instead of crossing it
       const seamSettings = seamFor(region);
       const contour = seamSettings.enabled ? { inside:seamSettings.width, centre:seamSettings.width/2, outside:0 }[seamSettings.align] - bead/2 : 0;
-      generated = clipStrands(result.strands, new PolygonBoundary(polygon.rings), Math.max(0, contour));
+      generated = bordersCutout ? clipStrands(result.strands, boundaryBehindRims(material, edges, bead, Math.max(0, contour)), 0)
+        : clipStrands(result.strands, material, Math.max(0, contour));
       warnings.push(...(result.warnings??[]));
     } else if (region.role==='solid' && polygon?.rings.length) {
       // The shared solid implementation owns offsets, holes and perimeter coverage.
@@ -289,6 +343,24 @@ export function buildRegions(machine, material, vector, regions, { seam = {}, ou
         const inner = polygon.rings.filter(ring=>ring!==root&&inside(ring[0],root));
         const layers = Array.from({length:solidCount},(_,layer)=>solidLayer(root,{bead,layer,holes:inner}));
         layers.forEach((paths,layer)=>paths.forEach(pts=>generated.push({id:`solid-${serial++}`,family:`solid-${layer+1}`,role:'native',kind:layer?'supported':'base',layer,pts:pts.map(p=>({...p,z:(layer+1)*h}))})));
+      }
+      if (bordersCutout) generated = clipStrands(generated, boundaryBehindRims(material, edges, bead, 0), 0);
+    }
+    if (bordersCutout) {
+      const layers = new Set(generated.map(strand => strand.layer ?? 0));
+      for (const { ring, passes } of edges) {
+        const count = passes.reduce((max, n) => Math.max(max, n ?? 0), 0);
+        for (let run = 0; run < count; run++) {
+          const offset = offsetPolyline([...ring, ring[0]], bead * (.5 + .8 * run)).slice(0, -1);
+          const paths = clipStrands(ringRuns(offset, passes.map(n => n > run)).map((pts, i) => ({
+            id: `hole-rim-${i}`, pts: pts.map(p => ({ ...p, z: h })),
+          })), material, 0);
+          for (const layer of layers) for (const path of paths) rims.push({
+            id: `hole-rim-${serial++}`, name: 'Hole rim', family: `hole-rim-${region.id}`, role: 'hole-rim',
+            kind: layer ? 'supported' : 'base', layer, regionId: region.id,
+            pts: path.pts.map(p => ({ ...p, z: (layer + 1) * h, width: bead })),
+          });
+        }
       }
     }
     // All open paths print as lines, even if their colour also owns closed pattern shapes.
@@ -318,12 +390,15 @@ export function buildRegions(machine, material, vector, regions, { seam = {}, ou
     const layers = [...new Set(strands.filter(s=>s.regionId===region.id).map(s=>s.layer??0))];
     if (!polygon?.rings.length || !layers.length) continue;
     for (const ring of polygon.rings) {
+      const cutout = cutoutsByRegion.get(region.id)?.find(edge => edge.ring === ring)?.passes;
+      if (cutout?.every(count => count !== null)) continue;
       const closedPts = ring.length && (ring[0].x!==ring.at(-1).x||ring[0].y!==ring.at(-1).y) ? [...ring,ring[0]] : ring;
       // a hole's edge faces the other way: "inside" the region is outside the hole's ring
       const hole = polygon.rings.some(other=>other!==ring&&area(other)>area(ring)&&inside(ring[0],other));
       const align = hole ? { inside:'outside', outside:'inside' }[seamSettings.align] ?? 'centre' : seamSettings.align;
       const detail = linePassesDetailed({ pts:closedPts, width:seamSettings.width, closed:true }, bead, { align, spacing:.8 });
-      for (const layer of layers) for (const pts of detail.passes) target.push({ id:`seam-${serial++}`, name:'Region seam', family:`seam-${region.id}`, role:'seam',
+      const paths = cutout ? detail.passes.flatMap(pts => ringRuns(pts.slice(0, -1), cutout.map(count => count === null))) : detail.passes;
+      for (const layer of layers) for (const pts of paths) target.push({ id:`seam-${serial++}`, name:'Region seam', family:`seam-${region.id}`, role:'seam',
         kind:layer?'supported':'base', layer, regionId:region.id, regionOrder:-1, source:`seam@${region.hex??region.key}`, pts:pts.map(p=>({ x:p.x, y:p.y, z:(layer+1)*h })) });
     }
   }
@@ -349,10 +424,10 @@ export function buildRegions(machine, material, vector, regions, { seam = {}, ou
     const inner = width > shift ? insetRings(exterior, width - shift) : exterior;
     outsideBand = new PolygonBoundary([bedRing, ...outer, ...inner]);
   }
-  const areas = [...explicitSeams, ...clipStrands([...seamStrands, ...strands.filter(s => !isLine(s))], boundary, bead / 2)];
+  const areas = [...rims, ...explicitSeams, ...clipStrands([...seamStrands, ...strands.filter(s => !isLine(s))], boundary, bead / 2)];
   const areaStrands = outsideBand ? areas.flatMap(s => (s.layer ?? 0) === 0 ? clipStrands([s], outsideBand, 0) : [s]) : areas;
   strands=[...outerStrands,...areaStrands,...clipStrands(strands.filter(isLine),page,0)].map((s,i)=>({s,i}))
-    .sort((a,b)=>(a.s.layer??0)-(b.s.layer??0)||(rank.get(a.s.regionId)??0)-(rank.get(b.s.regionId)??0)||(a.s.role==='seam'?0:1)-(b.s.role==='seam'?0:1)||a.i-b.i).map(({s})=>s);
+    .sort((a,b)=>(a.s.layer??0)-(b.s.layer??0)||(rank.get(a.s.regionId)??0)-(rank.get(b.s.regionId)??0)||Number(!isOutline(a.s))-Number(!isOutline(b.s))||a.i-b.i).map(({s})=>s);
   if(!strands.length)throw new Error('Nothing to print: enable a region with printable shapes or lines.');
   const modes = new Set(metadata.filter(r=>r.role==='pattern').map(r=>JSON.stringify([r.colourMode,regions.find(region=>region.id===r.id)?.settings?.layerColours??[]])));
   if(modes.size>1) warnings.push("Regions ask for different filament changes; using the first region's plan.");
@@ -385,6 +460,7 @@ export function buildRegions(machine, material, vector, regions, { seam = {}, ou
   result.layerPlan={mode:'regions',nativeLayers:Math.max(1,totalLayers-extraLayers),patternLayers:Math.max(1,totalLayers-extraLayers),totalLayers,extraLayers,repeatable:enabled.some(r=>r.role==='pattern')};
   progress({ message: 'Preparing the preview and G-code…' });
   const comments = metadata.map(r => `region ${r.hex??r.id}: ${r.role} ${r.card??''} settings ${r.settingsHash}`);
+  if (rims.length) comments.push(`Hole rims: ${rims.length} strand paths on the material side of the cutouts`);
   if (outside.count) comments.push(`Outside outline: ${outside.count} lines, ${outside.align}`);
   result.gcode = writeGcode(moves, cfg, { stats, comments });
   assertConstructionExportable(result);
@@ -392,8 +468,13 @@ export function buildRegions(machine, material, vector, regions, { seam = {}, ou
   return result;
 }
 
-function enabledContours(vector, regions) {
+const isOutline = strand => strand.role === 'seam' || strand.role === 'hole-rim';
+
+function enabledContours(vector, regions, bead, scale) {
   return regions.filter(region=>region.enabled!==false&&['pattern','solid','hole'].includes(region.role))
-    .flatMap(region=>region.pathIndices.map(index=>({role:region.role,ring:closedRing(vector.paths[index])})))
-    .filter(contour=>contour.ring).sort((a,b)=>area(a.ring)-area(b.ring));
+    .flatMap(region=>region.pathIndices.flatMap(index=>{
+      const ring = closedRing(vector.paths[index]);
+      return ring ? [{ role: region.role, ring, boundary: new PolygonBoundary([ring]), area: area(ring),
+        rimWidth: holeRimWidthOf(region.holeRimWidth) ?? Math.max(bead, (vector.styles?.[index]?.width ?? 0) * scale) }] : [];
+    })).sort((a,b)=>a.area-b.area);
 }

@@ -11,7 +11,7 @@
 <meta name="theme-color" content="#f5f3f8">
 <script src="src/ui/theme.js?v=20261112-preferences"></script>
 <link rel="preload" href="vendor/fonts/instrument-sans/instrument-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="src/ui/styles.css?v=20261112-inspector">
+<link rel="stylesheet" href="src/ui/styles.css?v=20261112-studio-cleanup">
 <script type="importmap">
 { "imports": { "three": "./vendor/three/three.module.js", "three/addons/": "./vendor/three/addons/" } }
 </script>
@@ -103,22 +103,8 @@
 <dialog id="tools-dialog" aria-labelledby="tools-title">
   <h2 id="tools-title">Tools and information</h2>
   <div class="studio-tools">
-    <div id="garment-tool">
-      <button type="button" class="link" id="btn-panel" aria-describedby="garment-description">Export a repeating garment panel</button>
-      <p id="garment-description">Repeat the current pattern across one continuous piece for your printer bed.</p>
-    </div>
-    <div>
-      <button type="button" class="link" id="btn-swatch-lab" aria-describedby="calibration-description">Compare or calibrate test prints</button>
-      <p id="calibration-description">Download one ZIP with separate G-code files and worksheets for recording what you find.</p>
-    </div>
-    <div>
-      <button type="button" class="link" id="btn-swatch-record" aria-describedby="record-description">Download a print worksheet</button>
-      <p id="record-description">Save this swatch’s settings in a template for notes, photos and measurements after printing.</p>
-    </div>
     <div>
       <a class="link" href="./source.html" target="_blank" rel="noopener">Slicing engine source and licences</a>
-      <button type="button" class="link" id="btn-privacy">Export statistics preferences</button>
-      <button type="button" class="link" id="btn-lock">Lock the studio on this device</button>
     </div>
   </div>
   <form method="dialog" class="dialog-actions"><button class="btn" autofocus>Done</button></form>
@@ -295,7 +281,9 @@
       </div>
       <div class="details" id="details" hidden></div>
       <div class="export-group">
+        <p id="experimental-printer-notice" class="small muted study-notice" hidden>Experimental printer profile · Single-filament G-code, pending a test print.</p>
         <p id="study-notice" class="study-notice small muted" hidden>Exports and build failures share anonymous settings for research. Artwork and filenames stay on your device. <button type="button" class="link inline-link" data-open-study>Details</button></p>
+        <button type="button" class="link small" id="btn-privacy" hidden>Export statistics preferences</button>
         <button type="button" id="btn-apply" class="btn primary export" disabled>Apply</button>
       </div>
     </footer>
@@ -343,46 +331,8 @@
     </fieldset>
     <p class="muted small" id="dialog-note"></p>
     <div id="print-setup"></div>
-    <div class="profile-add">
-      <label class="btn" for="profile-file">Add a printer or filament file…</label>
-      <input type="file" id="profile-file" class="visually-hidden" accept=".ini,.json,.gcode" multiple>
-      <details class="profile-import-help small muted">
-        <summary>Which files can I import?</summary>
-        <p>Use a complete PrusaSlicer .ini or sliced .gcode, or a self-contained Bambu Studio / OrcaSlicer printer or filament .json. Process-only presets and files missing parent settings cannot be imported. Review any import warnings before printing.</p>
-      </details>
-      <p class="small"><a class="link" href="samples/printer-profile.ini" download>Download sample .ini</a> · <a class="link" href="samples/printer-profile.json" download>Sample .json</a> · <a class="link" href="profiles/README.md" target="_blank" rel="noopener">Profile requirements</a></p>
-      <ul class="profile-list" id="profile-list" hidden></ul>
-    </div>
     <div class="dialog-actions"><button class="btn primary" value="close">Save and close</button></div>
   </form>
-</dialog>
-
-<dialog id="panel-dialog" aria-labelledby="panel-title">
-  <h2 id="panel-title">Export repeating garment panel</h2>
-
-  <div id="export-panel-fields" hidden>
-    <p class="muted small">A continuous crossed backing with this texture repeated above it, exported in sections. The preview stays a swatch.</p>
-    <div class="panel-dimensions">
-      <label class="field-row stacked" for="panel-width"><span>Width (mm)</span><input id="panel-width" type="number" min="1" step="1" value="1000"></label>
-      <label class="field-row stacked" for="panel-height"><span>Height (mm)</span><input id="panel-height" type="number" min="1" step="1" value="1000"></label>
-      <label class="field-row stacked" for="panel-repeat"><span>Texture repeat (mm)</span><input id="panel-repeat" type="number" min="5" step="5" value="50"></label>
-      <label class="field-row stacked" for="panel-backing"><span>Backing spacing (mm)</span><input id="panel-backing" type="number" min="0.3" step="0.1" value="5"></label>
-    </div>
-    <p class="export-warn small" id="export-fit" role="alert" hidden></p>
-    <p class="small muted" id="panel-svg-note">Radial motifs repeat per section. Outlines and holes apply to the whole panel.</p>
-  </div>
-
-  <div class="export-setup">
-    <span class="status-dot ok" aria-hidden="true"></span>
-    <span class="export-setup-text"><strong id="export-setup-name"></strong><span class="small muted" id="export-setup-sub"></span></span>
-    <button type="button" class="btn" id="export-change-setup">Change</button>
-  </div>
-
-  <label class="field-row stacked" for="export-filename"><span>File name</span><input id="export-filename" type="text" maxlength="180" spellcheck="false" autocomplete="off"></label>
-
-  <progress id="panel-progress" max="1" value="0" hidden aria-label="Panel export progress"></progress>
-  <p id="panel-status" class="small" role="status" aria-live="polite"></p>
-  <div class="dialog-actions"><button type="button" id="panel-close" class="btn">Cancel</button><button type="button" id="panel-cancel" class="btn" hidden>Cancel export</button><button type="button" id="panel-start" class="btn primary">Save G-code</button></div>
 </dialog>
 
 <dialog id="study-dialog" class="help" aria-labelledby="study-title">
@@ -396,9 +346,9 @@
     <p>The hosting provider, Cloudflare, necessarily handles network requests to serve the site. Its infrastructure processing is separate from the export records stored by this application.</p>
     <p>A separate error history stays in your browser, limited to the last 50 attempts. “Download error log” saves that history and your complete current design, including any drawing, locally. It is not sent to the study database; only share that file when you want to share its contents.</p>
     <h3>Cookies and what is kept in your browser</h3>
-    <p>Filafabric sets no cookies and uses no advertising, analytics or tracking services. Its font is served from this site, not from a font service. Your browser's local storage keeps what the studio needs to work for you: your current design and settings, printers and filaments you added, whether you unlocked the preview, your last 50 build errors, and your answer to the privacy notice. None of it is sent anywhere by keeping it there, and clearing this site's data in your browser removes it.</p>
+    <p>Filafabric sets no cookies and uses no advertising, analytics or tracking services. Its font is served from this site, not from a font service. Your browser's local storage keeps what the studio needs to work for you: your current design and settings, whether you unlocked the preview, your last 50 build errors, and your answer to the privacy notice. None of it is sent anywhere by keeping it there, and clearing this site's data in your browser removes it.</p>
     <h3>Turning the counting off</h3>
-    <p>The privacy notice shown on your first visit has a “Don't count my exports” button. You can change your answer under ⋯ › Tools and information › Export statistics preferences. While counting is off, the research notice above Export is hidden and no export or failure record is sent from that browser.</p>
+    <p>The privacy notice shown on your first visit has a “Don't count my exports” button. While the study is active, use Export statistics preferences beside the print summary to change your answer. While counting is off, the research notice above Export is hidden and no export or failure record is sent from that browser.</p>
     <h3>The feedback form</h3>
     <p>Feedback is separate from these statistics and is only sent when you press Send. The form service, Formspree, emails it to the Filafabric team at Bubaki: what you wrote, the design you had open, the studio version and, only if you give it, your email address for a reply. A problem report can also carry the recent error history and the current settings, which you can read in full in the form before sending, or leave out. Your drawing, its file name and any picture are never sent by the form; a picture goes only if you choose to email it yourself.</p>
     <h3>What an export means</h3>
@@ -445,6 +395,6 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-<script type="module" src="src/boot.js?v=20261112-inspector"></script>
+<script type="module" src="src/boot.js?v=20261112-studio-cleanup"></script>
 </body>
 </html>

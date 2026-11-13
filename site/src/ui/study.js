@@ -4,9 +4,12 @@ import { sanitizeStudyRecord, STUDY_NOTICE_VERSION } from '../engine/study-recor
  * Counts exports and build failures only while the server is configured, the visitor has not said no (allowed) and the
  * research notice is visible. Never blocks a download.
  */
-export function createStudyRecorder(notice, { fetcher = fetch, uuid = () => crypto.randomUUID(), allowed = () => true } = {}) {
+export function createStudyRecorder(notice, { fetcher = fetch, uuid = () => crypto.randomUUID(), allowed = () => true, preferences } = {}) {
   let enabled = false;
-  const show = () => { notice.hidden = !enabled || !allowed(); };
+  const show = () => {
+    notice.hidden = !enabled || !allowed();
+    if (preferences) preferences.hidden = !enabled;
+  };
   return {
     async init() {
       try {

@@ -16,7 +16,7 @@ import { RANGES, PRIMARY_DEFAULTS, sampleSize, toTextile, describePrimary, airSt
 import { PICTURE, withPicture, withContrast, PICTURE_CONTRAST } from '../engine/picture.js';
 import { buildVerdict, buildSquiggleVerdict, formatMinutes, constructionVerdict } from './verdict.js';
 import { refreshConstruction, assertConstructionExportable } from '../engine/construction-report.js';
-import { stateToHash, hashToState, sanitizeState, PRINT_DEFAULTS } from './share.js?v=20261112-region-build';
+import { stateToHash, hashToState, sanitizeState, PRINT_DEFAULTS } from './share.js?v=20261112-hole-rim';
 import { FILAMENT_FIELDS, filamentValue, withFilamentSettings, setFilamentSetting, withoutFilamentSettings, sanitizeFilamentSettings } from './filament-settings.js';
 import { ADVANCED_GROUPS, FIELD_LABELS, fieldDefault, changedFields } from './param-schema.js';
 import { $, $$, el, icon, ICONS, helpBubble } from './dom.js';
@@ -25,16 +25,14 @@ import { layerHeightOptions, defaultLayerHeight, resolveConfig, beadWidth } from
 import { nozzleRange } from './nozzle-limits.js';
 import { TooltipLayer } from './tooltip.js';
 // versioned with the release in boot.js, so a returning browser never pairs this file with an older printer loader
-import { ProfileStore } from './profile-store.js?v=20261019-printer-setup';
+import { ProfileStore } from './profile-store.js?v=20261112-studio-cleanup';
 import { searchMachines } from './machine-search.js?v=20261019-printer-setup';
 import { createProfilePicker } from './profile-picker.js';
 import { DESIGNS, designById, isReady, baseDesignSettings } from './designs.js';
 import { THUMBS, shapeThumb, presetThumb } from './thumbs.js';
 import { SHELVES, galleryCards, initialDesignSettings, selectVariant, variantsOf } from './library.js?v=20261112-studio';
-import { regionsFromDrawing, REGION_LIMIT, sanitizeSeam, sanitizeOutsideOutline, regionsFingerprint, colourName, regionInPiece as inPiece } from '../engine/regions.js?v=20261112-region-build';
-import { RegionControls } from './region-controls.js?v=20261112-region-build';
-import { bindSwatchLab, swatchRecord } from './swatch-lab.js?v=20261112-preferences';
-import { sanitizeWidthMaps } from '../engine/width-maps.js';
+import { regionsFromDrawing, REGION_LIMIT, sanitizeSeam, sanitizeOutsideOutline, regionsFingerprint, colourName, regionInPiece as inPiece } from '../engine/regions.js?v=20261112-hole-rim';
+import { RegionControls } from './region-controls.js?v=20261112-hole-rim';
 import { swatchCode, fingerprint } from './swatch.js';
 import { exportFileName, relevantKeys, variantsFileName, printerFileToken } from './file-name.js';
 import { FIELDS, FIELD_IDS, createField } from '../engine/fields.js';
@@ -54,16 +52,15 @@ import { applyBrim } from '../engine/brim.js';
 import { boundaryFor } from '../engine/layers.js';
 import { conformalGuideRegion } from '../engine/conformal.js';
 import { windowRings } from '../engine/window.js';
-import { bindPanelExport } from './panel-ui.js';
-import { createStudyRecorder } from './study.js';
+import { createStudyRecorder } from './study.js?v=20261112-studio-cleanup';
 import { DENSITY_REVISION, RETUNED_CARDS } from './density.js';
-import { buildSwatch } from './export-builder.js?v=20261112-region-build';
-import { defaultCache } from './default-cache.js?v=20261112-region-build';
+import { buildSwatch } from './export-builder.js?v=20261112-hole-rim';
+import { defaultCache } from './default-cache.js?v=20261112-studio-cleanup';
 import { classifyBuildError, DiagnosticLog, suggestRecovery, safeMetadata } from './diagnostics.js?v=20261112-region-build';
 import { bindFeedback, problemReport } from './feedback.js';
-import { bindPrivacyNotice, statsAllowed } from './privacy.js?v=20261112-preferences';
+import { bindPrivacyNotice, statsAllowed } from './privacy.js?v=20261112-studio-cleanup';
 import { describeFabric, fixCandidates, problemScore, describeChanges } from './fix-geometry.js';
-import { createTour } from './tour.js?v=20261112-studio';
+import { createTour } from './tour.js?v=20261112-studio-cleanup';
 import { sizeForAspect } from './squiggle-controls.js';
 
 // the release this page loaded (boot.js imports this file with ?v=), so feedback says which version it is about
@@ -237,12 +234,14 @@ async function fetchJson(url) {
   return response.json();
 }
 
-/** The printers and filaments: the profiles folder and what was added in the printer setup. */
+/** Public studio catalogue; experimental profiles remain available to development tools. */
 const profiles = new ProfileStore();
 
 async function loadProfiles() {
-  await Promise.all([profiles.loadFolders('profiles'), profiles.loadLibrary('profiles/library')]);
-  profiles.loadUser();
+  await Promise.all([
+    profiles.loadFolders('profiles', { machineFiles: ['prusa-mk3s.json', 'anycubic-kobra-3-max-v2.json'] }),
+    profiles.loadLibrary('profiles/library', { vendorIds: ['prusa'] }),
+  ]);
   state.machines = profiles.machines;
   state.materials = profiles.materials;
   if (!state.machines.has(state.machine)) state.machine = [...state.machines.keys()][0];
@@ -393,8 +392,12 @@ function loadState(data, picture) {
   state.selectedRegion = null;
   if (state.regions?.length) selectRegion(state.regions.find(r=>r.role==='pattern')?.id ?? state.regions[0].id, { quiet:true });
   state.print = clean.print;
+  if ((data?.machine && data.machine !== clean.machine) || (data?.material && data.material !== clean.material)) {
+    state.print = withoutFilamentSettings(state.print);
+    toast('The saved printer or filament is no longer available. Check the current printer setup before exporting.', { kind:'warning' });
+  }
   if (clean.migrationNotes?.length) toast(clean.migrationNotes.join(' '), { kind:'warning' });
-  if (data?.print?.layerHeight === undefined) state.print.layerHeight = defaultLayerHeight(state.machines.get(state.machine));
+  if (data?.print?.layerHeight === undefined || (data?.machine && data.machine !== clean.machine)) state.print.layerHeight = defaultLayerHeight(state.machines.get(state.machine));
   normalisePrint();
   if (typeof data?.name === 'string') state.docName = data.name.slice(0, 60);
   if (designChanged) resetRoles();
@@ -701,9 +704,9 @@ async function importSvg(file, request = ++documentRequest) {
     delete drawing.drawnSize; delete drawing.scaledBy;
     const regions = regionsFromDrawing(drawing, { currentCard:state.design, currentSettings:settingsOf(state.design) });
     if(regions.length>REGION_LIMIT)throw new Error(`The drawing has ${regions.length} colours; reduce it to ${REGION_LIMIT} or fewer. Nothing was imported.`);
-    // every colour loads, one ticked: work through them one at a time, then tick them all to export
-    const first = regions.find(r=>r.role==='pattern') ?? regions[0];
-    for (const r of regions) r.enabled = r === first;
+    // Include cutouts with the first printable colour so the first preview already respects the drawing.
+    const first = regions.find(r=>r.role==='pattern') ?? regions.find(r=>r.role!=='hole') ?? regions[0];
+    for (const r of regions) r.enabled = r === first || r.role === 'hole';
     previewChoice = 'auto';
     state.vector = drawing;
     state.regions = regions;
@@ -714,8 +717,6 @@ async function importSvg(file, request = ++documentRequest) {
     followVectorSize();
     state.docName = file.name.replace(/\.svg$/i, '').slice(0, 60);
     $('#doc-name').value = state.docName;
-    $('#panel-width').value = state.vector.width;
-    $('#panel-height').value = state.vector.height;
     showDesign();
     openDrawingSettings({ focus: true });
     syncControls();
@@ -747,8 +748,6 @@ function fitSvgToBed() {
   state.vector = scaleDrawing(v, size[0] / v.width);
   if (state.outline?.page) state.outline = shapesOf(state.vector);
   followVectorSize();
-  $('#panel-width').value = state.vector.width;
-  $('#panel-height').value = state.vector.height;
   syncControls();
   renderRegions(true);
   schedule();
@@ -895,6 +894,7 @@ function finishRegionApply(key) {
   let next=Math.max(0,...state.regions.map(r=>r.order??0));
   for(const r of workingRegions()){r.applied=true;if(!r.order)r.order=++next;}
   commit();
+  renderExport();
   renderRegions(true);
 }
 
@@ -1129,24 +1129,6 @@ function renderFilamentSettings() {
         el('span', { class: 'field-heading' }, el('label', { for: input.id, text: `${f.label} (${f.unit})` }), f.help && helpBubble(f.label, f.help)), input);
       (['firstLayerTemp', 'nozzleTemp'].includes(f.key) ? basic : advancedFields).append(row);
     }
-    const maps=el('details',{class:'width-maps'},el('summary',{text:'Measured thickness maps'}),el('p',{class:'small muted',text:'Enter measured flow,width pairs (one pair per line). Keep separate tables for beads on the bed and beads over another net. Leave empty until printed and measured. Tables clamp rather than extrapolate outside the measured range.'}));
-    for(const [key,label] of [['bed','On the bed'],['overNet','Over another net']]){
-      const field=el('textarea',{id:`width-map-${key}`,rows:4,'aria-label':`${label}: measured flow and width in mm`,placeholder:'flow, measured width (mm)'});
-      field.addEventListener('change',()=>{
-        try{
-          const value={};
-          for(const table of ['bed','overNet']){
-            const text=$(`#width-map-${table}`).value.trim();
-            if(text)value[table]=text.split(/\r?\n/).filter(line=>line.trim()).map(line=>{const [flow,width,...extra]=line.trim().split(/[,;\s]+/);if(extra.length||!flow||!width)throw new Error('Use exactly two numbers per row: flow, measured width.');return {flow:Number(flow),width:Number(width)};});
-          }
-          state.print.widthMaps=sanitizeWidthMaps(value);field.removeAttribute('aria-invalid');schedule();commit();renderFilamentSettings();
-        }catch(error){field.setAttribute('aria-invalid','true');toast(error.message);}
-      });
-      maps.append(el('label',{class:'field-row stacked'},el('span',{text:label}),field));
-    }
-    const save=el('button',{type:'button',class:'btn',text:'Save filament profile with measurements'});
-    save.addEventListener('click',()=>download(`${state.material}-calibration.json`,new Blob([JSON.stringify(printMaterial(),null,2)],{type:'application/json'})));
-    maps.append(save);advancedFields.append(maps);
     box.append(basic, advanced);
     $('#filament-reset').addEventListener('click', () => {
       state.print = withoutFilamentSettings(state.print);
@@ -1164,10 +1146,6 @@ function renderFilamentSettings() {
       ? (own === null ? 'Optional setting added to this print setup' : `Filament default: ${own} ${f.unit}`)
       : 'Using the filament default');
     if (value !== own) changed.push(f);
-  }
-  for(const key of ['bed','overNet']){
-    const field=$(`#width-map-${key}`),maps=Object.hasOwn(state.print,'widthMaps')?state.print.widthMaps:material.flow.width_maps;
-    if(field&&document.activeElement!==field&&!field.hasAttribute('aria-invalid'))field.value=(maps?.[key]??[]).map(row=>`${row.flow}, ${row.width}`).join('\n');
   }
   $('#filament-reset').disabled = !changed.length&&!Object.hasOwn(state.print,'widthMaps');
   const advancedChanges = changed.filter(f => !['firstLayerTemp', 'nozzleTemp'].includes(f.key)).length;
@@ -1675,6 +1653,8 @@ function renderPlayback() {
   $('#scrub').value = String(Math.round(state.fraction * 1000));
 }
 
+const experimentalPrinter = () => state.machines.get(state.machine)?.experimental === true;
+
 function renderExport() {
   const btn = $('#btn-export');
   const key = buildKey();
@@ -1688,7 +1668,7 @@ function renderExport() {
   btn.title = readyGcode?.key === key ? 'The G-code for these settings is ready: Export saves it straight away.' : '';
   $('#print-fit-warning').hidden = !problem;
   $('#print-fit-message').textContent = problem;
-  $('#garment-tool').hidden = !!state.regions?.length || designById(state.design).panel === false;
+  $('#experimental-printer-notice').hidden = !experimentalPrinter();
 }
 
 function printOverhang(id = state.design) {
@@ -1700,14 +1680,6 @@ function printOverhang(id = state.design) {
 function currentPrintSizeProblem() {
   const [width, height] = BINDINGS[state.design].size.get();
   return printSizeProblem(width, height, state.machines.get(state.machine), printOverhang());
-}
-
-/** The print setup in two lines: what the printer chip holds, repeated in the Export dialog so it can be checked. */
-function setupSummary() {
-  const machine = state.machines.get(state.machine), material = state.materials.get(state.material);
-  if (!machine || !material) return null;
-  const heat = `${filamentValue(material, state.print, 'nozzleTemp', machine)} °C`, retract = filamentValue(material, state.print, 'retraction', machine);
-  return { name: `${shortMachine(machine.name)} · ${material.name}`, sub: `${state.print.layerHeight} mm thickness · ${layerSetupText()} · ${heat} · ${retract ? `${retract} mm retraction` : 'no retraction'}` };
 }
 
 const shortMachine = (name) => name.replace('Original ', '').replace(' i3', '').replace(' / MK3S+', '');
@@ -1722,7 +1694,7 @@ function renderPrinter() {
   $('#printer-name').textContent = shortMachine(machine.name);
   $('#printer-material').textContent = `${shortMaterial(material.name)} · ${layers}`;
   $('#printer-dot').className = 'status-dot ok';
-  $('#btn-printer').title = 'Printer, filament, layer thickness and extra layers above the original design. Add your own printer or filament from a PrusaSlicer or Bambu Studio export.';
+  $('#btn-printer').title = 'Choose your printer, filament, layer thickness and extra layers.';
   $('#btn-printer').setAttribute('aria-label', `Printer setup: ${shortMachine(machine.name)} with ${shortMaterial(material.name)}, ${layers}`);
   renderFilamentSettings();
   // a new printer, filament or measured bead moves the ends of the sizes that count in beads, without waiting for the build
@@ -1953,12 +1925,12 @@ function fillDialogSelects() {
   updateDialogNote();
 }
 
-/* ---------- the printer picker: the printers here and the library's hundreds, found by typing ---------- */
+/* ---------- printer and filament pickers ---------- */
 
-/** Every printer that can be picked: the ones in the profiles folder or added here first, then the library's. */
+/** The studio's bundled printers and the visible part of the library. */
 function machineEntries() {
   const own = [...state.machines.values()].filter((m) => profiles.origins.get(`machines:${m.id}`) !== 'library')
-    .map((m) => ({ id: m.id, vendor: 'yours', name: m.name, model: m.name, nozzle: m.nozzle_diameter ?? 0.4, bed: [m.bed.width, m.bed.depth, m.bed.max_z] }));
+    .map((m) => ({ id: m.id, vendor: 'yours', name: m.name, model: m.name, nozzle: m.nozzle_diameter ?? 0.4, bed: [m.bed.width, m.bed.depth, m.bed.max_z], experimental: m.experimental === true }));
   const ids = new Set(own.map(m => m.id));
   return [...own, ...(profiles.library?.machines ?? []).filter(m => !ids.has(m.id))]
     .sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true, sensitivity: 'base' }));
@@ -1988,8 +1960,8 @@ function bindMachinePicker() {
   machinePicker = createProfilePicker($('#machine-picker'), {
     entries: machineEntries, selected: () => state.machine, choose: chooseMachine,
     search: (entries, query) => searchMachines(entries, query, [{ id: 'yours', name: 'In this studio' }, ...(profiles.library?.vendors ?? [])]),
-    meta: entry => [entry.nozzle ? `${entry.nozzle} mm nozzle` : '', entry.bed ? `${entry.bed[0]} × ${entry.bed[1]} mm` : ''].filter(Boolean).join(' · '),
-    empty: 'No printer matches. Try fewer words, or add a profile below.',
+    meta: entry => [entry.nozzle ? `${entry.nozzle} mm nozzle` : '', entry.bed ? `${entry.bed[0]} × ${entry.bed[1]} mm` : '', entry.experimental ? 'Experimental' : ''].filter(Boolean).join(' · '),
+    empty: 'No printer matches. Try fewer words.',
   });
   materialPicker = createProfilePicker($('#material-picker'), {
     entries: () => [...state.materials.values()], selected: () => state.material,
@@ -2002,7 +1974,7 @@ function bindMachinePicker() {
       schedule();
       commit();
     },
-    empty: 'No filament matches. Try fewer words, or add a profile below.',
+    empty: 'No filament matches. Try fewer words.',
   });
 }
 
@@ -2016,33 +1988,7 @@ function updateDialogNote() {
   ].filter(Boolean);
   $('#dialog-note').textContent = notes.join(' ');
   $('#dialog-note').hidden = !notes.length;
-  renderProfileList();
   renderFilamentSettings();
-}
-
-/** The profiles added here, each with a way to remove it. The ones in the profiles folder go when their file does. */
-function renderProfileList() {
-  const items = [];
-  for (const kind of ['machines', 'materials']) {
-    for (const profile of profiles.user[kind]) {
-      const remove = el('button', { type: 'button', class: 'link small', text: 'Remove' });
-      remove.addEventListener('click', () => {
-        machineRequest++;
-        profiles.remove(kind, profile.id);
-        if (!state.machines.has(state.machine)) state.machine = [...state.machines.keys()][0];
-        if (!state.materials.has(state.material)) state.material = [...state.materials.keys()][0];
-        normalisePrint();
-        renderControls();
-        fillDialogSelects();
-        renderPrinter();
-        schedule();
-        commit();
-      });
-      items.push(el('li', {}, el('span', { text: `${profile.name} (${kind === 'machines' ? 'printer' : 'filament'})` }), remove));
-    }
-  }
-  $('#profile-list').replaceChildren(...items);
-  $('#profile-list').hidden = items.length === 0;
 }
 
 /* ---------- designs ---------- */
@@ -2843,7 +2789,7 @@ async function openFile(file) {
     }
     applySnapshot(data, { preserveSetupRequest: true });
     commit();
-    toast('Settings loaded');
+    if ((!data.machine || data.machine === state.machine) && (!data.material || data.material === state.material)) toast('Settings loaded');
   } catch (e) {
     if (request !== documentRequest) return;
     $('#errors').hidden = false;
@@ -3027,14 +2973,6 @@ function bindStatic() {
   $('#btn-apply').addEventListener('click', () => { if ($('#btn-apply').dataset.mode === 'export') { if (!$('#btn-export').disabled) void exportGcode(); } else void applyPiece(); });
   const toolsDialog = $('#tools-dialog');
   $('#btn-tools').addEventListener('click', () => { closeMenus(); toolsDialog.showModal(); });
-  for (const id of ['btn-panel', 'btn-swatch-lab', 'btn-swatch-record']) {
-    $(`#${id}`).addEventListener('click', () => toolsDialog.close());
-  }
-  $('#btn-swatch-record').addEventListener('click',()=>{
-    const input=exportOptions(),code=currentSwatch();
-    const record=swatchRecord({code,card:state.regions?.length?'colour regions':state.design,settings:state.regions??settingsOf(state.design),machine:state.machine,material:state.material,width:input.width,height:input.height,print:state.print,construction:state.resultKey===buildKey()?state.result?.construction:null});
-    download(`${code}.md`,new Blob([record],{type:'text/markdown'}));
-  });
   const variantsDialog = $('#variants-dialog');
   $('#variants-cancel').addEventListener('click', () => { retireVariantJob(); variantsDialog.close('cancel'); });
   $('#variants-download').addEventListener('click', downloadVariants);
@@ -3067,32 +3005,6 @@ function bindStatic() {
   $('#btn-printer').addEventListener('click', () => { fillDialogSelects(); dialog.showModal(); });
   dialog.querySelector('button[value="close"]').addEventListener('click', () => dialog.close('close'));
   bindMachinePicker();
-  // a printer or filament profile as the slicers export it: PrusaSlicer .ini or sliced .gcode, Bambu Studio .json
-  $('#profile-file').addEventListener('change', async (e) => {
-    const request = ++machineRequest;
-    const files = [...e.target.files];
-    e.target.value = '';
-    const reads = await Promise.allSettled(files.map(file => file.text()));
-    if (request !== machineRequest) return;
-    for (const [index, read] of reads.entries()) {
-      const file = files[index];
-      try {
-        if (read.status === 'rejected') throw read.reason;
-        const got = profiles.add(read.value, file.name);
-        if (got.machines[0]) { state.machine = got.machines[0].id; state.print.layerHeight = defaultLayerHeight(got.machines[0]); }
-        if (got.materials[0]) { state.material = got.materials[0].id; state.print = withoutFilamentSettings(state.print); }
-        toast(`Added ${[...got.machines.map((m) => `${m.name} (printer)`), ...got.materials.map((m) => `${m.name} (filament)`)].join(' and ')}`);
-      } catch (err) {
-        toast(`${file.name}: ${err.errors?.[0] ?? err.message}`);
-      }
-    }
-    normalisePrint();
-    renderControls();
-    fillDialogSelects();
-    renderPrinter();
-    schedule();
-    commit();
-  });
 
   document.addEventListener('keydown', (e) => {
     if (!(e.ctrlKey || e.metaKey) || e.target.closest('input, select, textarea')) return;
@@ -3110,9 +3022,10 @@ export async function init() {
   overview = createOverview($('#overview'), text => { overviewStatus = text; if (overviewActive) renderPreviewMode(); });
   svgImportCard = new SvgImportCard(host);
   controls.push(svgImportCard);
-  studyRecorder = createStudyRecorder($('#study-notice'), { allowed: () => statsAllowed() });
+  const preferences = $('#btn-privacy');
+  studyRecorder = createStudyRecorder($('#study-notice'), { allowed: () => statsAllowed(), preferences });
   const privacy = bindPrivacyNotice($('#privacy-banner'), { onChange: () => studyRecorder.refresh(), openFeedback: () => feedback?.open(), toast });
-  $('#btn-privacy').addEventListener('click', () => { $('#tools-dialog').close(); privacy.open(); });
+  preferences.addEventListener('click', () => privacy.open());
 
   // start from: a shared link, then the last session, then the defaults
   const fromLink = hashToState(location.hash);
@@ -3150,18 +3063,6 @@ export async function init() {
   fillDialogSelects();
   renderTiles();
   bindStatic();
-  bindSwatchLab({button:$('#btn-swatch-lab'),options:exportOptions,download,toast});
-  bindPanelExport({
-    options: exportOptions,
-    machines: () => state.machines, machineId: () => state.machine,
-    setupSummary,
-    openSetup: () => $('#btn-printer').click(),
-    panelAvailable: () => designById(state.design).panel !== false,
-    download, filename: (w, h, repeat, backingSpacing, machine) => exportName([w, h], true, { repeat, backingSpacing }, machine), toast,
-    onExport: (options, stats) => reportStudyExport('gcode-panel', options, stats),
-    onError: (error, input) => recordBuildFailure(error, input),
-    onDownloadErrorLog: saveErrorLog,
-  });
   new TooltipLayer();
   showDesign();
   $('#doc-name').value = state.docName;

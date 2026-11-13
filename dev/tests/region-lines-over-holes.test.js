@@ -5,7 +5,7 @@ import { generateDesignExport } from '../../site/src/engine/design-export.js';
 import { designById } from '../../site/src/ui/designs.js';
 import { defaultProfiles } from './helpers.js';
 import { PolygonBoundary } from '../../site/src/engine/boundary.js';
-import { analyzeFabric } from '../../site/src/engine/fabric.js';
+import { analyzeFabric, segmentContact } from '../../site/src/engine/fabric.js';
 
 const square = (x0, y0, x1, y1) => [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }, { x: x0, y: y0 }];
 
@@ -60,4 +60,43 @@ test('the pattern still stops at the hole: only lines cross it', () => {
   const result = build(['pattern', 'hole', 'line']);
   const patternInside = result.strands.filter((s) => !/line/.test(String(s.id)) && !/seam/.test(String(s.id)) && s.pts.some((p) => p.x > 18 && p.x < 42 && p.y > 18 && p.y < 42));
   assert.equal(patternInside.length, 0, 'no pattern strand inside the hole');
+});
+
+test('an SVG cutout and its enclosed red island get printed rims without filling the gap', () => {
+  const drawing = { ...vector, paths: [...vector.paths, square(24, 24, 36, 36)],
+    styles: [vector.styles[0], { ...vector.styles[1], width: 1 }, vector.styles[2], vector.styles[0]] };
+  const result = build(['pattern', 'hole'], drawing);
+  const rims = result.strands.filter(s => s.role === 'hole-rim');
+  const outer = rims.filter(s => s.pts.some(p => p.x < 15));
+  const island = rims.filter(s => s.pts.every(p => p.x > 24 && p.x < 36 && p.y > 24 && p.y < 36));
+  for (const outlines of [outer, island]) {
+    assert.ok(outlines.length, 'each side of the cutout has its own outline');
+    assert.ok(outlines.some(rim => result.strands.some(s => s.role === 'native' && s.layer === rim.layer &&
+      [s.pts[0], s.pts.at(-1)].some(end => rim.pts.slice(1).some((p, i) =>
+        segmentContact(end, end, rim.pts[i], p).distance < result.cfg.t.extrusion_width / 2)))),
+    'pattern endpoints reach their rim');
+  }
+  assert.ok(rims.every(s => s.pts.every(p => p.width === result.cfg.t.extrusion_width)));
+  assert.ok(result.moves.some(m => m.extrude && m.tag.startsWith('hole-rim-') && m.width > 0));
+  assert.ok(result.strands.every(s => s.pts.every(p => !(p.x > 16 && p.x < 23 && p.y > 16 && p.y < 44))));
+  assert.match(result.gcode, /; Hole rims:/);
+});
+
+test('a hole stays open with its rim set to zero', () => {
+  const mod = designById('zigzag');
+  const settings = mod.defaults();
+  const regions = regionsFromDrawing(vector, { currentCard: mod.id, currentSettings: settings });
+  regions.find(r => r.role === 'hole').holeRimWidth = 0;
+  const result = generateDesignExport({ ...defaultProfiles(), design: mod.id, settings, vector, regions, width: 60, height: 60 });
+  assert.ok(!result.strands.some(s => s.role === 'hole-rim'));
+  assert.ok(result.strands.filter(s => !s.id.includes('line')).every(s => s.pts.every(p => !(p.x > 16 && p.x < 44 && p.y > 16 && p.y < 44))));
+});
+
+test('a fill-only SVG cutout receives a one-pass rim by default', () => {
+  const drawing = { ...vector, styles: [vector.styles[0], { ...vector.styles[1], width: 0 }, vector.styles[2]] };
+  const result = build(['pattern', 'hole'], drawing);
+  const rims = result.strands.filter(s => s.role === 'hole-rim');
+  const layers = new Set(rims.map(s => s.layer));
+  assert.ok(layers.size > 0);
+  assert.equal(rims.length, layers.size);
 });

@@ -15,7 +15,7 @@ import { applyBrim } from './brim.js';
 import { rotateDesignInput } from './rotate-design.js';
 import { prepareAdaptiveSolids } from './adaptive-solids.js';
 import { colourResult } from './colour-plan.js';
-import { buildRegions, lineLayersOf, lineWidthOf, regionsFromDrawing, sanitizeOutsideOutline } from './regions.js?v=20261112-region-build';
+import { buildRegions, lineLayersOf, lineWidthOf, regionsFromDrawing, sanitizeOutsideOutline } from './regions.js?v=20261112-hole-rim';
 import { stableStringify } from './default-cache-format.js';
 import { fingerprint } from '../ui/swatch.js';
 import { clipStrands } from './fabric.js';
@@ -139,6 +139,7 @@ export async function generateDesignExportAsync(input, { progress = () => {} } =
 /** Preserve the original single-pattern output when region controls and print precedence match the import defaults. */
 function usesLegacyRegionLayout(input) {
   if (sanitizeOutsideOutline(input.outsideOutline).count || input.regions.some(region => region.role === 'pattern' && region.seam)) return false;
+  if (input.regions.some(region => region.enabled !== false && region.role === 'hole')) return false;
   const settings = input.studySettings ?? input.settings;
   const { design, regions, vector } = input;
   const patterns = regions.filter((region) => region.role === 'pattern');

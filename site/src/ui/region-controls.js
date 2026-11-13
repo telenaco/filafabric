@@ -1,5 +1,6 @@
 import { el } from './dom.js';
-import { colourBarModel, regionInPiece, REGION_PALETTE, lineLayersOf, LINE_LAYERS_MAX, lineWidthOf, colourName, sanitizeSeam } from '../engine/regions.js';
+import { MAX_PASSES } from '../engine/drawing.js';
+import { colourBarModel, regionInPiece, REGION_PALETTE, lineLayersOf, LINE_LAYERS_MAX, lineWidthOf, colourName, sanitizeSeam, holeRimWidthOf } from '../engine/regions.js?v=20261112-hole-rim';
 
 const PAINTS = { red:'#ff0000',blue:'#0000ff',green:'#00ff00',yellow:'#ffff00',other:'#777777' };
 const ROLE_LABELS = { pattern:'Pattern',hole:'Hole',solid:'Solid',line:'Line' };
@@ -100,6 +101,16 @@ export class RegionControls {
       parts.push(el('label',{class:'field-row'},el('span',{text:'Layers'}),layers),el('label',{class:'field-row'},el('span',{text:'Thickness mm'}),thick),
         alignSelect(region.lineAlign??'centre',value=>edit({lineAlign:value}),'Line sits'),
         el('p',{class:'small muted',text:'Thickness is the drawn line width unless you set one: the nozzle goes round as many times as it takes. Layers stacks it taller, for folds and stiffening.'}));
+    }
+    if (region.role === 'hole') {
+      const width = el('input', { type: 'number', min: 0, max: 10, step: 'any', value: region.holeRimWidth ?? '',
+        placeholder: 'As drawn', 'data-region-focus': 'hole-rim-width' });
+      width.addEventListener('change', () => {
+        if (!width.validity.valid) { width.value = region.holeRimWidth ?? ''; return; }
+        edit({ holeRimWidth: holeRimWidthOf(width.value) });
+      });
+      parts.push(el('label', { class: 'field-row' }, el('span', { text: 'Hole rim width (mm)' }), width),
+        el('p', { class: 'small muted', text: `The rim prints on the material side in up to ${MAX_PASSES} passes. Leave blank to use the SVG stroke width, or enter 0 to turn it off.` }));
     }
     if(region.applied){
       const out=el('button',{type:'button',class:'link small',text:'Take out of the piece','data-region-focus':'remove-region'});

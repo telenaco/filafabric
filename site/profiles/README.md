@@ -1,31 +1,28 @@
 # Printers and filaments
 
-The studio reads every file in `machines/` and `materials/` (listed in `index.json`). A file can be
+The studio reads the approved printer files in `machines/` and the filaments in `materials/` (listed in `index.json`). The development importer accepts
 
 - a **PrusaSlicer** config export: `.ini` (Printer Settings, Filament Settings or a whole config export), or a sliced
   `.gcode`, which ends with the config it was sliced with. One file with both a printer and a filament gives you both;
 - a **Bambu Studio / OrcaSlicer** preset exported as `.json`;
 - this tool's own `.json` profile (see `machines/prusa-mk3s.json` for the shape).
 
-To add a printer or filament: put the file in the right folder and run `node dev/tools/profiles-index.mjs` (the local
-server picks new files up by itself). To remove one: delete the file and run the same command. A person can also add
-a file in the studio's *Printer setup*: it is kept in their browser only, and has a *Remove* button there.
+To add a bundled filament, put its file in `materials/` and run `npm run profiles` (the local server picks new files up automatically). Bundled printers also need to be approved in `loadProfiles()` in `site/src/ui/main.js`. The public studio does not currently accept printer or filament uploads.
 
 ## The printer library
 
-`library/` holds printers taken from the slicers' own vendor profiles, so a printer can be picked in the printer setup
-(type a little of its name in the search) without anyone exporting a file first. For now it holds the most used
-**Bambu Lab** printers (A1 mini, A1, P1S, P1P, P2S, X1 Carbon, X1E, H2D, from Bambu Studio) and **Prusa** printers
-(CORE One, MK4S, MK4, MK3.9S, MK3.5, MINI, XL, from PrusaSlicer's vendor bundle), each with a 0.4, 0.6 and 0.8 mm nozzle.
-The studio's own `machines/prusa-mk3s.json` stays the MK3S.
-**Creality Ender-3, Ender-3 Pro, Ender-3 V2 and Ender-3 S1** are included with the 0.4 and 0.6 mm nozzles available in PrusaSlicer's Creality vendor bundle. Search `ender3`, `ender 3` or the model name.
+Only the Prusa vendor library, the bundled MK3S, and the bundled Anycubic Kobra 3 Max V2 appear in the public printer picker. Other vendor data is retained for development.
 
 The library is generated: `node dev/tools/import-vendor-profiles.mjs` downloads the latest vendor files from GitHub and
 rebuilds it (`--all` adds Creality, Anycubic, Elegoo, Voron and a dozen more, about 500 printers). Only the small
 `index.json` is read when the studio opens; a vendor's file is read when one of its printers is chosen. Printer and
 filament pickers each show the selected profile in one editable box. Click the box or its arrow to browse the names
 alphabetically, or type to filter. Arrow keys and Enter select; Escape or leaving the field restores the selected
-name if no option was chosen. Printer searches also recognise aliases such as `ender3v2`.
+name if no option was chosen.
+
+### Anycubic Kobra 3 Max V2
+
+The experimental profile uses [Anycubic's 420 × 420 × 500 mm build volume and 0.4 mm stock nozzle](https://store.anycubic.com/products/kobra-3-max-v2-combo-3d-printer?variant=47591944388770). It exports a plain `.gcode` file. For an initial single-filament test, run the printer's levelling routine, verify that the default mesh is saved, prime the nozzle, and compare the startup with a small swatch sliced for this exact model in Anycubic Slicer Next. The FilaFabric startup uses a saved mesh and standard heating and homing commands. It has not been verified on the hardware and does not configure ACE 2 Pro slot changes.
 
 ## Generic Prusa filaments
 
@@ -45,7 +42,7 @@ the library does not overwrite tuned materials; review existing profiles separat
 
 ## Import requirements and samples
 
-Download [a complete example .ini](../samples/printer-profile.ini) or [a self-contained example .json](../samples/printer-profile.json) from Printer setup. These are **illustrations, not qualified printer presets**. Replace the values and startup/shutdown commands for your actual machine.
+For importer development, see [an example .ini](../samples/printer-profile.ini) or [an example .json](../samples/printer-profile.json). These are **illustrations, not qualified printer presets**. Replace the values and startup/shutdown commands for the actual machine.
 
 Supported formats are PrusaSlicer/Slic3r-style `key = value` configs and bundles, PrusaSlicer text G-code config trailers, Bambu Studio/OrcaSlicer self-contained JSON printer or filament presets, and Filafabric JSON profiles. This is **not a universal importer**: Cura `.curaprofile`, zipped preset bundles, `.3mf`, binary `.bgcode` and arbitrary firmware `.cfg` files are not supported.
 Filafabric generates single-extruder prints: when a slicer supplies arrays of nozzle/filament values, only the first extruder's values are read. A successful import is not physical qualification; check firmware commands, temperatures and the import notes, then print a small swatch.

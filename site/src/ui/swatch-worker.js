@@ -1,4 +1,4 @@
-import { generateDesignExportAsync, compactDesignExport } from '../engine/design-export.js?v=20261112-region-build';
+import { generateDesignExportAsync, compactDesignExport } from '../engine/design-export.js?v=20261112-hole-rim';
 import { packTrace, traceBuffers } from '../engine/trace.js';
 
 self.onmessage = async ({ data }) => {

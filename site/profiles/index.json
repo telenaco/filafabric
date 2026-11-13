@@ -1,5 +1,6 @@
 {
   "machines": [
+    "anycubic-kobra-3-max-v2.json",
     "large-gantry-1000.json",
     "prusa-mk3s.json"
   ],

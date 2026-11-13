@@ -133,6 +133,7 @@ parts print as separate strands instead of across the gap, and "Match its shape"
 proportions. Rotate it with the slider. The outline travels in share links and settings files; scripts and links
 inside the SVG are stripped before it is read.
 For an SVG with color regions, **Outside outline** in **Size and shape** adds first-layer lines around the included shapes. Select a color in the preview to open **Drawing colours**, where a pattern color can use the default outline or set its own width and placement. Only one inspector section stays open at a time. **Apply** reuses the current build and marks colors applied when their toolpath is ready. Build progress appears at the top of the preview.
+SVG cutouts are included on import. Their rims print on the surrounding material and around any islands inside the opening. **Hole rim width** in **Drawing colours** uses the SVG stroke when left blank, or one pass for a shape with no stroke. Set it to 0 to keep the cutout open without a rim.
 **Squiggle & Gyroid, Parallel:** layer 2 runs halfway between the layer 1 lines in opposite phase, and every wave is
 kept at least a quarter of the line spacing plus half a strand deep, so each layer 2 line crosses the lines on both
 sides and the two layers form one connected net (two layers of parallel lines that never cross would come apart).
@@ -150,7 +151,7 @@ height and the red tight-spot marks (the clearance model's moves that come too c
 where" in the check turns them on too). For the loop pile, everything else lives under Advanced settings (38
 settings in groups that show what you changed). The page always opens on the Zigzag mesh (what was set in the other
 designs is kept for when you choose them; a shared link opens the design it was made from). The printer chip in the
-header opens the printer setup: printer, filament, the **layer thickness** (suggested buttons plus an imported print preset's exact height) and **Extra layers**. Printer search starts with two suggestions and includes the Ender-3 family; typing searches all profiles. Imported print defaults follow the selected printer/nozzle. Sample `.ini` and `.json` downloads and [import requirements](site/profiles/README.md) are linked in Printer setup. Settings sections start folded under a title
+header opens the printer setup: printer, filament, **layer thickness** and **Extra layers**. Search the Prusa profiles or choose the experimental **Anycubic Kobra 3 Max V2**. Settings sections start folded under a title
 and a summary of their current values. Open a section to see its cards or sliders; choosing a card keeps the section
 open. Option and preset pictures use the same line colours as the preview. **Reset** in Parameters restores the current
 design's defaults. The **⋯** menu has Getting started and Save/Open settings file. Download error log appears after a build error.
@@ -160,7 +161,7 @@ and seed in comment lines.
 
 ## Printers and filaments
 
-The printer and filament lists are the files in `site/profiles/machines/` and `site/profiles/materials/`, read the way a slicer reads its own folders. Each file can be this tool's JSON or what a slicer exports as it is:
+The public studio uses the curated printer catalogue in `site/src/ui/main.js` and the filaments in `site/profiles/materials/`. Printer and filament file upload is paused. Maintainers can still use the profile importer in development with these files:
 
 | Export | What it gives |
 |---|---|
@@ -168,7 +169,7 @@ The printer and filament lists are the files in `site/profiles/machines/` and `s
 | A `.gcode` PrusaSlicer sliced | The config it carries at the end of the file |
 | Bambu Studio / OrcaSlicer preset (`.json`) | A printer or a filament |
 
-Bed size, nozzle and filament diameter, temperatures, flow, retraction, machine limits and start/end G-code are read; the slicer's own start and end G-code is kept where its placeholders can be filled and the rest is left out, with a note saying so. Run `node dev/tools/profiles-index.mjs` (or `npm run profiles`) after adding or removing a file to refresh `site/profiles/index.json`; the local server does it on the fly. In the printer setup dialog **Add a printer or filament file…** keeps a file in this browser only, with a **Remove** button; to share it, put the file in the folder.
+Bed size, nozzle and filament diameter, temperatures, flow, retraction, machine limits and start/end G-code are read; the slicer's own start and end G-code is kept where its placeholders can be filled and the rest is left out, with a note saying so. Run `npm run profiles` after adding or removing a bundled file to refresh `site/profiles/index.json`; the local server does it on the fly. See the [printer profile notes](site/profiles/README.md) for the Anycubic test setup.
 
 The bundled filament choices include **NinjaTek NinjaFlex 85A (Midnight Black)**, **Generic TPE Flexible**, and
 **Generic PLA**, alongside the existing Filaflex and Generic FLEX profiles. These use PrusaResearch 2.5.12's
@@ -250,7 +251,7 @@ Colour comes from the fill, or from the stroke when the fill is `none`; the stro
 
 Switching to 2D retains any whole-piece time/filament estimate already worked out for the exact current settings, and keeps a finished 3D build's G-code for Export. If only a 3D sample has been built, its figures remain labelled **Sample**, with the sample dimensions, and are never extrapolated to the whole garment. Otherwise the summary says plainly that a drawing has no print time and offers **Generate G-code for time and filament**: the real full-size toolpath, built in the background without loading the 3D meshes. The G-code it makes is kept for those exact settings, so **Export saves it straight away** instead of building it again; changing any setting or the printer drops it and the old figures. Estimates still ignore acceleration.
 
-**Export** saves the selected design at its chosen dimensions and settings directly. It never substitutes the preview dimensions or repeats a smaller motif. Full-size generation runs in a worker, and machine limits or generation budgets produce an error rather than a smaller file. Seeing a large piece in the preview does not bypass physical bed limits. **⋯ → Tools and information → Export a repeating garment panel** is a separate advanced tool for repeating texture sections over one continuous crossed backing, with the SVG drawing printed once across the full document. Its sections bound memory, not the physical bed: the **whole panel must fit the selected machine**. Radial motifs repeat per section in that tool. Repeating panels use one filament, support progress and cancellation, and stream to a file in supported browsers with a 128 MB download fallback limit. The generic 1000 × 1000 × 300 mm profile is a template: add your own printer from a slicer export (see *Printers and filaments*) or edit its startup, levelling and priming.
+**Export** saves the selected design at its chosen dimensions and settings directly. It never substitutes the preview dimensions or repeats a smaller motif. Full-size generation runs in a worker, and machine limits or generation budgets produce an error rather than a smaller file. Seeing a large piece in the preview does not bypass physical bed limits. Repeating garment panels, calibration bundles and print worksheets are hidden from the public studio while their workflows are being reviewed. The source and licence link remains under **⋯ → Tools and information**.
 
 The gallery lists estimated easier prints first, using the default 100 mm geometry: connection faults, unsupported spans, slopes, starts and loop-pile clearance flags. This is a comparative screen, not physical qualification. Details show the actual geometry and between-path travel for the current settings. Flat patterns start near the lower-left corner and choose the nearest remaining endpoint or closed-loop seam within each pass; raised pile and fringe preserve safe row order. Short structural ties connect isolated motifs, and crossing heights follow the previously printed material.
 

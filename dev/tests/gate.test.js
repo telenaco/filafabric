@@ -63,7 +63,7 @@ test('the page loads the studio only through the gate', () => {
   assert.equal(bootUrl.pathname, '/src/boot.js');
   assert.ok(bootUrl.searchParams.get('v'), 'the gate markup loads a matching startup script despite older browser caches');
   assert.equal(html.includes('src/ui/main.js'), false, 'the studio is imported by boot.js after the password, never directly');
-  for (const id of ['gate', 'gate-form', 'gate-password', 'gate-submit', 'gate-error', 'gate-remember', 'btn-lock']) {
+  for (const id of ['gate', 'gate-form', 'gate-password', 'gate-submit', 'gate-error', 'gate-remember']) {
     assert.ok(html.includes(`id="${id}"`), id);
   }
   assert.match(html, /<label[^>]+for="gate-password"[^>]*>Private beta password<\/label>/);
